@@ -20,7 +20,7 @@ html, body {
 }
 
 .mainview .form-horizontal {
-	padding-top: 3em;
+	padding-top: 0.5em;
 	width: 100%;
 }
 
@@ -36,6 +36,8 @@ html, body {
 .logo {
 	max-width: 50px;
 	height: auto;
+	outline: 1px solid black;
+	margin-left: 1em;
 }
 
 #btnDeselect {
@@ -43,8 +45,8 @@ html, body {
 }
 
 .title {
-	margin-top: 0px;
-	margin-bottom: 0px;
+	width: auto;
+	height: 35px;
 	margin-left: 10em;
 }
 
@@ -110,9 +112,19 @@ html, body {
 }
 
 .left-label {
-	min-width: 40%;
+	width: 35%;
 }
-  	
+
+.right-label {
+	width: 15%;
+}
+  
+#inHead {
+	display: block;
+	width: 100%;
+	margin-bottom: 1em;
+}
+    	
 #btnSignOut, #tabSaved, #tabCustom {
 	display: none;
 }
@@ -137,7 +149,7 @@ html, body {
 	width: 80%;
 	margin-left: 10%;
 }
-
+	
 .form-group.input-group-sm {
 	position: relative;
 	padding: 0.5em;
@@ -219,6 +231,10 @@ html, body {
 .entry .chk_grid {
 	vertical-align: top;
 	display: none;
+}
+
+.entry .status {
+	color: #428bca; /* bootstrap ĺink blue */
 }
 
 #diaStatus {

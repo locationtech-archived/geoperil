@@ -12,8 +12,8 @@ pois = open( sys.argv[1], 'r')
 for line in pois:
   arr = line.split()
   poi = { "_id": arr[0],
-	  "lon": arr[1],
-	  "lat": arr[2]
+	  "lon": float(arr[1]),
+	  "lat": float(arr[2])
 	}
   coll.insert( poi );
   print poi

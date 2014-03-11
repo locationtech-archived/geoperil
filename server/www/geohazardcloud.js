@@ -45,6 +45,8 @@ function initialize() {
 	$( "#tabCustom" ).click( { tab: "custom" }, tabChanged );
 	
 	$( "#diaSignIn" ).click( diaSignIn );
+	
+	$( "#custom" ).find( "input" ).blur( checkInput );
 		    						
 	getEvents();
 }
@@ -194,8 +196,8 @@ function updateProgress( id, process, list ) {
 		    	list[i].div.find( '.progress' ).css( 'display', 'block' );
 		    	list[i].div.find( '.progress-bar' ).css( 'width', filled + "%" );
 		    	list[i].div.find( '.resource' ).html( process['resources'] );
-		    	list[i].div.find( '.calc' ).html( 'Runtime: ' + process['calcTime'] / 1000 + 's &#183; SimDuration: ' + process['simTime'] + "m" );
-		    	list[i].div.find( '.grid' ).html( 'Grid: ' + process['resolution'] + '\' &#183; BBox: (' + latMin + ', ' + lonMin + '), (' + latMax + ', ' + lonMax + ')' ); 
+		    	list[i].div.find( '.calc' ).html( 'Runtime: ' + process['calcTime'] / 1000 + ' sec &#183; SimDuration: ' + process['simTime'] + " min" );
+		    	list[i].div.find( '.grid' ).html( 'Grid: ' + process['resolution'] + '&prime; &#183; BBox: (' + latMin + ', ' + lonMin + '), (' + latMax + ', ' + lonMax + ')' ); 
 		    	
 		    	if( filled == 100 ) {
 		    		list[i].div.find( '.progress' ).css( 'display', 'none' );
@@ -260,15 +262,19 @@ function addEntry( widget, data, i ) {
 		var yearstr = data['_id'].substring(3,7);
 		$div.find( '.beach' ).attr( "src", "http://geofon.gfz-potsdam.de/data/alerts/" + yearstr + "/" + data['_id'] + "/bb32.png" );
 		$div.find( '.geofon' ).attr( "href", "http://geofon.gfz-potsdam.de/eqinfo/event.php?id=" + data['_id'] );
+	} else {
+		$div.find( '.geofon' ).css( 'display', 'none' );
 	}
 		
 	$div.find( '.progress' ).css( 'display', 'none' );
-	$div.find( '.status' ).css( 'color', $div.find( '.region' ).css('color') );
 	
 	if( data['process'].length > 0 ) {
 		updateProgress( data['_id'], data['process'][0], new Array( data ) );
 	} else {
-		if( ! prop['sea_area'] ) {
+		
+		if( widget.is( '#saved' ) ) {
+			$div.find( '.status' ).html( 'Simulation is being prepared' );
+		} else if( ! prop['sea_area'] ) {
 			$div.find( '.status' ).html( 'Inland, no simulation processed' );
 		} else {
 			$div.find( '.status' ).html( 'No tsunami potential' );
@@ -296,22 +302,13 @@ function addEntry( widget, data, i ) {
 	options.title = 'Learn more';
 	$div.find( '.lnkLearn' ).tooltip( options );
 	
-	var color = '#00FF00';
-	
-	if( prop['magnitude'] > 7.0 ) {
-		color = '#FF0000';
-	} else if( prop['magnitude'] > 6.0 ) {
-		color = '#FF8C00';
-	} else if( prop['magnitude'] > 5.0 ) {
-		color = '#FFFF00';
-	}
+	var color = getMarkerColor( prop['magnitude'] );
 	
 	if( widget[0] == $('#saved')[0] )
 		color = '#0000FF';
 	
 	var link = getMarkerIconLink( i, color );
 		
-	//$div.find( '.progress-bar' ).css( 'background-color', color );
 	$div.find( '.marker' ).attr( 'src', link );
 		    	
 	$div.bind( 'mouseover', { turnOn: true }, highlight );
@@ -338,6 +335,39 @@ function addEntry( widget, data, i ) {
 		    			    			    	
 	widget.prepend( $div );
 }
+
+function getMarkerColor( mag ) {
+	
+	var color = 'gray';
+	
+	if( mag < 2.0 ) {
+		color = '#FFFFFF';
+	} else if( mag < 3.0 ) {
+		color = '#BFCCFF';
+	} else if( mag < 4.0 ) {
+		color = '#9999FF';
+	} else if( mag < 5.0 ) {
+		color = '#80FFFF';
+	} else if( mag < 5.3 ) {
+		color = '#7DF894';
+	} else if( mag < 6.0 ) {
+		color = '#FFFF00';
+	} else if( mag < 7.0 ) {
+		color = '#FFC800';
+	} else if( mag < 7.4 ) {
+		color = '#FF9100';
+	} else if( mag < 7.8 ) {
+		color = '#FF0000';
+	} else if( mag < 8.5 ) {
+		color = '#C80000';
+	} else if( mag < 9.0 ) {
+		color = '#800000';
+	} else {
+		color = '#400000';
+	}
+	
+	return color;
+} 
 
 function entryOnClick() {
 		
@@ -370,7 +400,7 @@ function highlight( event ) {
 		return;
 		    	
 	if( turnOn ) {
-		color = '#99b3cc'; //'#cacaf7';
+		color = '#c3d3e1'; //#99b3cc';
 		entry['marker'].setAnimation( google.maps.Animation.BOUNCE );
 	} else {
 		color = '#fafafa';
@@ -489,11 +519,14 @@ function getPois( entry ) {
 						}
 					});
 				
-				var txt =  "<b>" + poi.station + "</b><br>";
+				var txt = "<b>" + poi.station + "</b><br>";
+				
+				var min = Math.floor( poi.eta );
+				var sec = Math.floor( (poi.eta % 1) * 60.0 );
 				
 				if( poi.eta != -1 ) {
-					txt += "<span>Estimated Arrival Time: " + poi.eta + "</span><br>";
-					txt += "<span>Estimated Wave Height: " + poi.ewh + "</span><br>";
+					txt += "<span>Estimated Arrival Time: " + min + ":" + sec + " minutes</span><br>";
+					txt += "<span>Estimated Wave Height: " + poi.ewh.toFixed(2) + " meters</span><br>";
 				} else {
 					txt += "<span>Uneffected.</span><br>";
 				}
@@ -531,15 +564,15 @@ function getPoiColor( poi ) {
 	var color;
 	
 	if( poi.eta == -1 ) {
-		color = "gray";
+		color = "#ADADAD";
 	} else if( poi.ewh <= 1 ) {
-		color = "DodgerBlue";
+		color = "#00CCFF";
 	} else if( poi.ewh <= 3 ) {
-		color = "yellow";
+		color = "#FFFF00";
 	} else if( poi.ewh <= 5 ) {
-		color = "orange";
+		color = "#FF6600";
 	} else {
-		color = "red";
+		color = "#FF0000";
 	}
 	
 	return color;
@@ -800,6 +833,7 @@ function getParams() {
 	
 	var params = {};
 	
+	params['name'] = $('#inName').val();
 	params['lon'] = $('#inLon').val();
 	params['lat'] = $('#inLat').val();
 	params['mag'] = $('#inMag').val();
@@ -816,6 +850,7 @@ function fillForm( entry ) {
 	
 	var prop = entry['prop'];
 	
+	$('#inName').val( prop['region'] );
 	$('#inLon').val( prop['longitude'] );
 	$('#inLat').val( prop['latitude'] );
 	$('#inMag').val( prop['magnitude'] );
@@ -824,12 +859,13 @@ function fillForm( entry ) {
 	$('#inStrike').val( prop['strike'] );
 	$('#inRake').val( prop['rake'] );
 	$('#inDuration').val( 180 );
-	
-	setMarker();
+		
+	checkInput();
 }
 
 function clearForm() {
 	$('#custom :input').val('');
+	checkInput();
 }
 
 function context( e ) {
@@ -952,4 +988,61 @@ function enableGrid( args ) {
 	
 	if( active.index == entry['index'] )
 		showGrid( active, entry['show_grid'] );
+}
+
+function checkInput() {
+	
+	var validLon = checkRange( '#inLon', -180, 180 );
+	var validLat = checkRange( '#inLat', -90, 90 );
+	
+	var stat = validLon;
+	stat = validLat && stat;
+	stat = checkRange( '#inMag', 0, 10.6 ) && stat;
+	stat = checkRange( '#inDepth', 0, 1000 ) && stat;
+	stat = checkRange( '#inDip', 0, 90 ) && stat;
+	stat = checkRange( '#inStrike', 0, 360 ) && stat;
+	stat = checkRange( '#inRake', -180, 180 ) && stat;
+	stat = checkRange( '#inDuration', 0, 480 ) && stat;
+	
+	$('#btnStart').prop('disabled', !stat);
+	
+	if( validLon && validLat ) {
+		setMarker();
+	} else if( global.marker ) {
+		global.marker.setMap(null);
+	}
+	
+	return stat;
+}
+
+function checkRange( id, start, end ) {
+
+    var val = $( id ).val().replace( ",", "." );
+    
+    $( id ).val( val );
+    $(id).css( "color", "" );
+    
+    if( val == '' ) {
+    	return false;
+    }
+	
+    if( checkFloat( val ) == false ) {
+    	$(id).css( "color", "red" );
+        return false;
+    }
+
+    if( val < start || val > end ) {
+    	$(id).css( "color", "red" );
+        return false;
+    }
+
+    return true;
+}
+
+function checkFloat( val ) {
+
+    if( isNaN( parseFloat( +val ) ) || ! isFinite( val ) )
+        return false;
+
+    return true;
 }

@@ -39,8 +39,8 @@ try:
       continue
       
     poi = avail[ arr[0] ]
-    poi['eta'] = arr[1]
-    poi['ewh'] = arr[2]
+    poi['eta'] = float(arr[1])
+    poi['ewh'] = float(arr[2])
   
   pois.close()
   

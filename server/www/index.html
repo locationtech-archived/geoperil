@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-   	<title>GeoHazardCloud</title>
+   	<title>GeohazardCloud</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://code.jquery.com/jquery.js"></script>
@@ -40,7 +40,7 @@
         				<li><button id="btnDeselect" class="btn btn-primary" type="submit">Deselect</button></li>
 	  				</ul>
 	  				<ul class="nav navbar-nav navbar-form">
-	  					<li><h3 class="title"><span class="label label-default">GeoHazardCloud</span></h3></li>
+	  					<li><img class="title" alt="GeohazardCloud" src="img/geohazardcloud-logo-blue.png"></li>
 	  				</ul>
 	  				<ul class="nav navbar-nav navbar-right navbar-form">
 	  					<li class="logo"><img alt="gfz_logo" src="http://www-extern.gfz-potsdam.de/fileadmin/templates/images/logo_gfz_de.gif"></li>
@@ -69,49 +69,55 @@
 		  			<div class="col-md-12 tab-pane" id="saved"></div>
 		  			<div class="col-md-12 tab-pane" id="custom">  					  					
 		  				<form class="form-horizontal" role="form">
+		  					<h3><span id="inHead" class="label label-default">Create your own scenario</span></h3>
 		  					<div class="input-group input-group-sm">
+		  						<span class="input-group-addon left-label">Name:</span>
+		  						<input id="inName" type="text" class="form-control" placeholder="Custom">
+		  						<!-- <span class="input-group-addon right-label"></span> -->
+		  					</div>
+		  					<div class="input-group input-group-sm lat">
 		  						<span class="input-group-addon left-label">Latitude:</span>
-		  						<input id="inLat" type="text" class="form-control" maxlength="10" size="10">
-		  						<span class="input-group-addon">&deg;</span>
+		  						<input id="inLat" type="text" class="form-control" maxlength="10">
+		  						<span class="input-group-addon right-label">&deg;</span>
 		  					</div>
 		  					<div class="input-group input-group-sm">
 		  						<span class="input-group-addon left-label">Longitude:</span>
-		  						<input id="inLon" type="text" class="form-control" maxlength="10" size="10">
-		  						<span class="input-group-addon">&deg;</span>
+		  						<input id="inLon" type="text" class="form-control" maxlength="10">
+		  						<span class="input-group-addon right-label">&deg;</span>
 		  					</div>
 		  					<div class="input-group input-group-sm">
 	  							<span class="input-group-addon left-label">Magnitude:</span>
-	  							<input id="inMag" type="text" class="form-control" maxlength="10" size="10">
-	  							<span class="input-group-addon">mw</span>
+	  							<input id="inMag" type="text" class="form-control" maxlength="10">
+	  							<span class="input-group-addon right-label">Mw</span>
 	  						</div>
 	  						<div class="input-group input-group-sm">
 	  							<span class="input-group-addon left-label">Depth:</span>
-	  							<input id="inDepth" type="text" class="form-control" maxlength="10" size="10">
-	  							<span class="input-group-addon">km</span>
+	  							<input id="inDepth" type="text" class="form-control" maxlength="10">
+	  							<span class="input-group-addon right-label">km</span>
 	  						</div>
 	  						<div class="input-group input-group-sm">
 	  							<span class="input-group-addon left-label">Dip:</span>
-	  							<input id="inDip" type="text" class="form-control" maxlength="10" size="10">
-	  							<span class="input-group-addon">&deg;</span>
+	  							<input id="inDip" type="text" class="form-control" maxlength="10">
+	  							<span class="input-group-addon right-label">&deg;</span>
 	  						</div>
 	  						<div class="input-group input-group-sm">
 	  							<span class="input-group-addon left-label">Strike:</span>
-	  							<input id="inStrike" type="text" class="form-control" maxlength="10" size="10">
-	  							<span class="input-group-addon">&deg;</span>
+	  							<input id="inStrike" type="text" class="form-control" maxlength="10">
+	  							<span class="input-group-addon right-label">&deg;</span>
 	  						</div>
 	  						<div class="input-group input-group-sm">
 	  							<span class="input-group-addon left-label">Rake:</span>
-	  							<input id="inRake" type="text" class="form-control" maxlength="10" size="10">
-	  							<span class="input-group-addon">&deg;</span>
+	  							<input id="inRake" type="text" class="form-control" maxlength="10">
+	  							<span class="input-group-addon right-label">&deg;</span>
 	  						</div>
 	  						<div class="input-group input-group-sm">
 	  							<span class="input-group-addon left-label">Duration:</span>
-	  							<input id="inDuration" type="text" class="form-control" maxlength="10" size="10">
-	  							<span class="input-group-addon">&deg;</span>
+	  							<input id="inDuration" type="text" class="form-control" maxlength="10">
+	  							<span class="input-group-addon right-label">min</span>
 	  						</div>
 	  						<div class="form-group input-group-sm">
 					  			<button id="btnClear" type="button" class="btn btn-default btn-lg">Clear</button>
-					  			<button id="btnStart" type="button" class="btn btn-primary btn-lg">Start</button>
+					  			<button id="btnStart" type="button" class="btn btn-primary btn-lg" disabled>Start</button>
 					  		</div>						  		
 		  				</form>
 	  				</div>
@@ -174,6 +180,7 @@
 				<span class="medium status"></span>
 				<a class="lnkLearn" href="#"><span class="glyphicon glyphicon-info-sign"></span></a>
 				<a class="lnkEdit" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
+				<!-- <button class="lnkEdit btn btn-primary btn-sm"><span class="glyphicon glyphicon-repeat"></span></button> -->
 			</div>
 			<div class="calc_data">
 				<div class="row off">
@@ -227,10 +234,7 @@
 	      </div>
 	    </div><!-- /.modal-content -->
 	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
-	
-	<!-- popover dialog -->
-	
+	</div><!-- /.modal -->	
 	
 </body>
 </html>

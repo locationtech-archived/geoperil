@@ -110,7 +110,7 @@ public class Services {
 	  	  		
 	  /* TODO: this is just a static workaround until we get a push service from GEOFON */
 	  /* check if this is an authorized request */
-	  if( ! key.equals("ABC0123456789def") )
+	  if( key == null || ! key.equals("ABC0123456789def") )
 		  return "{ \"status\": \"denied\" }";
 	  
 	  /* get earthquake collection */
@@ -173,7 +173,7 @@ public class Services {
 	  return "{ \"status\": \"success\", \"id\": "+ id + " }";
   }
     
-  /*** TODO: added for jabc ***/
+  /*** TODO: added for jabc - please do not change! ***/
   private String getVirtualSession( String username, String password ) {
 	  	  	 	  
 	  if( username == null || password == null || username.equals("") || password.equals("") )
@@ -235,7 +235,7 @@ public class Services {
 	  	  
 	  String session = getVirtualSession( user, password );
 	  
-	  return compute( request, lon, lat, mag, depth, dip, strike, rake, dur, session );
+	  return compute( request, "Custom", lon, lat, mag, depth, dip, strike, rake, dur, session );
   }
   
   @GET
@@ -270,6 +270,7 @@ public class Services {
   @Produces(MediaType.APPLICATION_JSON)
   public String compute(
 		  @Context HttpServletRequest request,
+		  @FormParam("name") @DefaultValue("Custom") String name,
 		  @FormParam("lon") double lon, 
 		  @FormParam("lat") double lat,
 		  @FormParam("mag") double mag,
@@ -324,7 +325,7 @@ public class Services {
 	  /* create new sub object that stores the properties */
 	  BasicDBObject sub = new BasicDBObject();
 	  sub.put( "date", timestamp );
-	  sub.put( "region", "Custom" );
+	  sub.put( "region", name );
 	  sub.put( "latitude", lat );
 	  sub.put( "longitude", lon );
 	  sub.put( "magnitude", mag );
@@ -364,7 +365,12 @@ public class Services {
   public String register(
 		  @Context HttpServletRequest request,
 		  @QueryParam("username") String username,
-		  @QueryParam("password") String password ) {
+		  @QueryParam("password") String password,
+		  @QueryParam("key") String key ) {
+	  
+	  /* check if this is an authorized request */
+	  if( key == null ||  ! key.equals("Malaga2014") )
+		  return "Denied";
 	  
 	  DB db = mongoClient.getDB( "easywave" );
 	  DBCollection coll = db.getCollection("users");

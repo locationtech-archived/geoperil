@@ -152,8 +152,8 @@ def main( s ):
                         "longitude": float(prop[4]),
                         "magnitude": float(prop[5]),
                         "depth": float(prop[6]),
-                        "dip": float(prop[7]),
-                        "strike": float(prop[8]),
+                        "strike": float(prop[7]),
+                        "dip": float(prop[8]),
                         "rake": float(prop[9]),
                         "sea_area": iho_region
                        },

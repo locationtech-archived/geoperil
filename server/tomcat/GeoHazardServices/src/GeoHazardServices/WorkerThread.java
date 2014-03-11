@@ -291,7 +291,7 @@ public class WorkerThread implements Runnable {
 						BasicDBObject dbObject = new BasicDBObject();
 						dbObject.put( "progress", 0.0 );
 						dbObject.put( "grid_dim", (BasicDBObject) JSON.parse("{ lonMin: " + lonMin + ", lonMax: " + lonMax + ", latMin: " + latMin + ", latMax: " + latMax + " }" ) );
-						dbObject.put( "resolution", 60 );
+						dbObject.put( "resolution", 2 );
 						dbObject.put( "simTime", task.duration );
 						dbObject.put( "curSimTime", 0.0 );
 						dbObject.put( "calcTime", 0.0 );
