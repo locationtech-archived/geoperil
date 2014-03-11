@@ -16,19 +16,7 @@
 	  	<div class="row headline"> 
 	  		<nav class="navbar navbar-default" role="navigation">	  		
 	  			<div class="navbar-collapse collapse">
-	  				<ul class="nav navbar-nav navbar-left navbar-form">
-	  					<li class="logo"><img alt="gfz_logo" src="http://www-extern.gfz-potsdam.de/fileadmin/templates/images/logo_gfz_de.gif"></li>
-	  				</ul>
-	  				<ul class="nav navbar-nav navbar-left	">
-	  					<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
-	  					<li><a href="#">Contact</a></li>
-	  					<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
-	  				</ul>	  	
-					<ul class="nav navbar-nav navbar-form">
-	  					<li><h3 class="title"><span class="label label-default">GeoHazardCloud</span></h3></li>
-	  				</ul>					  				
-	  				<ul class="nav navbar-nav navbar-form navbar-right">
-	  					<li><button id="btnDeselect" class="btn btn-primary" type="submit">Deselect</button></li>
+	  				<ul class="nav navbar-nav navbar-form navbar-left">
 	  					<li>
 	  						<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
 	  					</li>
@@ -41,6 +29,7 @@
         									<h4>Please sign in</h4>
 									    	<input id="inUsername" type="text" class="form-control" placeholder="Username" required autofocus>
 									    	<input id="inPassword" type="password" class="form-control" placeholder="Password" required>
+									    	<p id="drpStatus" class="form-control-static"></p>
 									    	<label class="checkbox"><input type="checkbox" value="remember-me"> Remember me</label>
 									    	<button id="btnSignIn" class="btn btn-primary btn-block" type="button">Sign In</button>
         								</div>
@@ -48,6 +37,18 @@
         						</li>
         					</ul>
         				</li>
+        				<li><button id="btnDeselect" class="btn btn-primary" type="submit">Deselect</button></li>
+	  				</ul>
+	  				<ul class="nav navbar-nav navbar-form">
+	  					<li><h3 class="title"><span class="label label-default">GeoHazardCloud</span></h3></li>
+	  				</ul>
+	  				<ul class="nav navbar-nav navbar-right navbar-form">
+	  					<li class="logo"><img alt="gfz_logo" src="http://www-extern.gfz-potsdam.de/fileadmin/templates/images/logo_gfz_de.gif"></li>
+	  				</ul>
+	  				<ul class="nav navbar-nav navbar-right">
+	  					<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
+	  					<li><a href="#ContactDialog" data-toggle="modal">Contact</a></li>
+	  					<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
 	  				</ul>
 	  			</div>
 	  		</nav>
@@ -170,11 +171,9 @@
 				<div class="progress">
 					<div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
 				</div>
-				<a class="calc_lnk" href="#">
-					<span class="medium status"></span>
-					<span class="glyphicon glyphicon-chevron-down arrow_down"></span>
-					<span class="glyphicon glyphicon-chevron-up arrow_up"></span>
-				</a>
+				<span class="medium status"></span>
+				<a class="lnkLearn" href="#"><span class="glyphicon glyphicon-info-sign"></span></a>
+				<a class="lnkEdit" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
 			</div>
 			<div class="calc_data">
 				<div class="row off">
@@ -184,12 +183,54 @@
 					<span class="small calc"></span>
 				</div>
 				<div>
-					<span class="small grid"></span>
 					<input class="chk_grid" type="checkbox">
+					<span class="small grid"></span>
 				</div>
 			</div>
 		</div>
 	</div>
+	
+	<!-- modal "SignIn" dialog -->
+	<div class="modal fade" id="SignInDialog" tabindex="-1" role="dialog" aria-labelledby="SignInDialog" aria-hidden="true">
+	  <div class="modal-dialog">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <h4 class="modal-title">Please sign in to continue</h4>
+	      </div>
+	      <div class="modal-body">
+	      	<input id="diaUser" type="text" class="form-control" placeholder="Username" required autofocus>
+		  	<input id="diaPass" type="password" class="form-control" placeholder="Password" required>
+		  	<p id="diaStatus" class="form-control-static"></p>
+	      </div>
+	      <div class="modal-footer">
+	      	<a id="diaAccount" href="mailto:spazier@uni-potsdam.de?subject=Registration&amp;body=Body" class="btn btn-primary pull-left">Get Account</a>
+	        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+	        <button id="diaSignIn" type="button" class="btn btn-primary">Sign In</button>
+	      </div>
+	    </div><!-- /.modal-content -->
+	  </div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+	
+	<!-- modal contact dialog -->
+	<div class="modal fade" id="ContactDialog" tabindex="-1" role="dialog" aria-labelledby="ContactDialog" aria-hidden="true">
+	  <div class="modal-dialog modal-sm">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <h4 class="modal-title">Contact</h4>
+	      </div>
+	      <div class="modal-body">
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
+	      </div>
+	    </div><!-- /.modal-content -->
+	  </div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+	
+	<!-- popover dialog -->
+	
 	
 </body>
 </html>

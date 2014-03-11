@@ -10,6 +10,8 @@ var curtab = "#tabRecent";
 var loggedIn = false;
 var username = "";
 
+var signTarget = null;
+
 var global = {	context: -1,
 				marker: null,
 			  	saved: []
@@ -31,17 +33,18 @@ function initialize() {
 	
 	checkSession();
 	
-	$( "#btnSignIn" ).click( signIn );
+	$( "#btnSignIn" ).click( drpSignIn );
 	$( "#btnSignOut" ).click( signOut );
 	$( "#btnStart" ).click( compute );
 	$( "#btnClear" ).click( clearForm );
-	$( document ).click( { show: false }, context );
-	$( "#ctxEdit" ).click( fillCustomForm );
+	//$( document ).click( { show: false }, context );
 	$( "#btnDeselect" ).click( deselect );
 	
 	$( "#tabRecent" ).click( { tab: "recent" }, tabChanged );
 	$( "#tabSaved" ).click( { tab: "saved" }, tabChanged );
 	$( "#tabCustom" ).click( { tab: "custom" }, tabChanged );
+	
+	$( "#diaSignIn" ).click( diaSignIn );
 		    						
 	getEvents();
 }
@@ -171,7 +174,6 @@ function updateProgress( id, process, list ) {
 			
 			if( list[i]['process'].length == 0 ) {
 				list[i]['process'].push( null );
-				list[i].div.find( '.status' ).css( 'display', 'none' );
 			}
 			
 			list[i]['process'][0] = process;
@@ -186,17 +188,18 @@ function updateProgress( id, process, list ) {
 				var latMax = grid['latMax'].toFixed(2);
 				var lonMax = grid['lonMax'].toFixed(2);
 				
+				list[i].div.find( '.chk_grid' ).css( 'display', 'inline' );
+				list[i].div.find( '.status' ).css( 'display', 'none' );
 		    	list[i].div.find( '.progress-bar' ).css( 'width', filled + "%" );
 		    	list[i].div.find( '.progress' ).css( 'display', 'block' );
 		    	list[i].div.find( '.progress-bar' ).css( 'width', filled + "%" );
 		    	list[i].div.find( '.resource' ).html( process['resources'] );
-		    	list[i].div.find( '.calc' ).html( 'Runtime: ' + process['calcTime'] / 1000 + 's &#183; Res: ' + process['resolution'] + 's &#183; Simulation: ' + process['simTime'] + 's' );
-		    	list[i].div.find( '.grid' ).html( 'Grid: (' + latMin + ', ' + lonMin + '), (' + latMax + ', ' + lonMax + ')' ); 
-		    	list[i].div.find( '.status' ).html( 'Processed' );
+		    	list[i].div.find( '.calc' ).html( 'Runtime: ' + process['calcTime'] / 1000 + 's &#183; SimDuration: ' + process['simTime'] + "m" );
+		    	list[i].div.find( '.grid' ).html( 'Grid: ' + process['resolution'] + '\' &#183; BBox: (' + latMin + ', ' + lonMin + '), (' + latMax + ', ' + lonMax + ')' ); 
 		    	
 		    	if( filled == 100 ) {
 		    		list[i].div.find( '.progress' ).css( 'display', 'none' );
-		    		list[i].div.find( '.status' ).html( 'Processed' );
+		    		list[i].div.find( '.status' ).html( 'Simulation processed' );
 		    		list[i].div.find( '.status' ).css( 'display', 'inline' );
 		    	}
 			}
@@ -260,11 +263,38 @@ function addEntry( widget, data, i ) {
 	}
 		
 	$div.find( '.progress' ).css( 'display', 'none' );
-	$div.find( '.status' ).html( 'Not processed' );
+	$div.find( '.status' ).css( 'color', $div.find( '.region' ).css('color') );
 	
 	if( data['process'].length > 0 ) {
 		updateProgress( data['_id'], data['process'][0], new Array( data ) );
+	} else {
+		if( ! prop['sea_area'] ) {
+			$div.find( '.status' ).html( 'Inland, no simulation processed' );
+		} else {
+			$div.find( '.status' ).html( 'No tsunami potential' );
+			$div.find( '.lnkLearn' ).css( "display", "inline" );
+			
+			var options = { placement:'bottom',
+							title:'Info',
+							content:'Content',
+							container: $div,
+							animation: false
+						   };
+			
+			$div.find( '.lnkLearn' ).popover( options );
+		}
 	}
+	
+	options = { placement:'top',
+				title:'Modify and reprocess',
+				container: $div,
+				animation: false
+		   	   };
+	
+	$div.find( '.lnkEdit' ).tooltip( options );
+	
+	options.title = 'Learn more';
+	$div.find( '.lnkLearn' ).tooltip( options );
 	
 	var color = '#00FF00';
 	
@@ -288,8 +318,8 @@ function addEntry( widget, data, i ) {
 	$div.bind( 'mouseout', { turnOn: false }, highlight );
 	$div.find( '.region' ).bind( 'click', entryOnClick );
 	$div.bind( 'contextmenu', { show: true }, context );
-	$div.find( '.calc_lnk' ).bind( 'click', showCalcData );
 	$div.find( '.chk_grid' ).bind( 'click', { entry: data }, enableGrid );
+	$div.find( '.lnkEdit' ).bind( 'click', fillCustomForm );
 	
 	if( data['marker'] )
 		data['marker'].setMap( null );
@@ -442,23 +472,34 @@ function getPois( entry ) {
 						  	  info: null,
 						  	  isOpen: false
 							};
-								
+							
+				var color = getPoiColor( poi );
+				
 				point.marker = new google.maps.Marker ({
 					position: center,
 					map: map,
 					icon: {
 						path: google.maps.SymbolPath.CIRCLE,
-					    fillOpacity: 0.5,
-					    fillColor: '#fff000',
+					    fillOpacity: 0.7,
+					    fillColor: color,
 					    strokeOpacity: 1.0,
-					    strokeColor: '#fff000',
+					    strokeColor: color,
 					    strokeWeight: 2.0,
 					    scale: 5 //pixels
 						}
 					});
 				
+				var txt =  "<b>" + poi.station + "</b><br>";
+				
+				if( poi.eta != -1 ) {
+					txt += "<span>Estimated Arrival Time: " + poi.eta + "</span><br>";
+					txt += "<span>Estimated Wave Height: " + poi.ewh + "</span><br>";
+				} else {
+					txt += "<span>Uneffected.</span><br>";
+				}
+				
 				point.info = new google.maps.InfoWindow({
-						content: poi.station
+						content: txt
 					});
 				
 				entry.pois.push( point );
@@ -483,6 +524,25 @@ function getPois( entry ) {
 		}	
 	});	
 	
+}
+
+function getPoiColor( poi ) {
+	
+	var color;
+	
+	if( poi.eta == -1 ) {
+		color = "gray";
+	} else if( poi.ewh <= 1 ) {
+		color = "DodgerBlue";
+	} else if( poi.ewh <= 3 ) {
+		color = "yellow";
+	} else if( poi.ewh <= 5 ) {
+		color = "orange";
+	} else {
+		color = "red";
+	}
+	
+	return color;
 }
 
 function showPolygons( pointer, visible ) {
@@ -602,19 +662,14 @@ function checkSession() {
 	});
 }
 
-function signIn() {
-		    	
-	$( "#drpSignIn" ).dropdown("toggle");
-	
-	username = $('#inUsername').val();
-	var password = $('#inPassword').val();
+function signIn( user, password ) {
 	
 	var status = null;
 	
 	$.ajax({
 		type: 'POST',
 		url: "srv/signin",
-		data: { username: username, password: password },
+		data: { username: user, password: password },
 		dataType: 'json',
 		success: function( result ) {
 			
@@ -622,12 +677,48 @@ function signIn() {
 		},
 		error: function() {
 		},
-		complete: function() {			
+		complete: function() {
+			
 			if( status == "success" ) {
 				logIn();
+				
+				/* reset all password and status fields of sign-in widgets */
+				$( "#SignInDialog" ).modal("hide");
+				$( "#drpSignIn" ).dropdown("toggle");
+				$('#diaStatus').html("");
+				$('#drpStatus').html("");
+				$('#diaPass').val("");
+				$('#inPassword').val("");
+				
+				if( signTarget )
+					signTarget();
+				
+			} else {
+
+				/* set status to error and clear password fields */
+				$('#diaStatus').html("Login failed!");
+				$('#drpStatus').html("Login failed!");
+				$('#diaPass').val("");
+				$('#inPassword').val("");
 			}
 		}
 	});
+}
+
+function drpSignIn() {
+			
+	username = $('#inUsername').val();
+	var password = $('#inPassword').val();
+	
+	signIn( username, password );
+}
+
+function diaSignIn() {
+	
+	username = $('#diaUser').val();
+	var password = $('#diaPass').val();
+
+	signIn( username, password );
 }
 
 function logIn() {
@@ -745,7 +836,7 @@ function context( e ) {
 	
 	var show = e.data.show;
 		
-	if( ! loggedIn )
+	/*if( ! loggedIn )*/
 		return !show;
 	
 	if( show ) {
@@ -769,8 +860,18 @@ function context( e ) {
 	return false;
 }
 
-function fillCustomForm() {
-	fillForm( curlist[ global.context ] );
+function fillCustomForm( e ) {
+	
+	if( !loggedIn ) {
+		
+		e.stopPropagation();
+		signTarget = fillCustomForm.bind(this, e);
+		$( "#SignInDialog" ).modal("show");
+		return;
+	}
+	
+	var index = curlist.length - $(this).parents('.entry').index() - 1;
+	fillForm( curlist[ index ] );
 	$( '#tabCustom' ).find('a').trigger('click');
 }
 
@@ -840,30 +941,6 @@ function tabChanged( args ) {
 		
 		if( global.marker )
 			global.marker.setMap( null );
-	}
-}
-
-function showCalcData() {
-	
-	var calc_data = $(this).parents( '.entry' ).find( '.calc_data' );
-	var display = calc_data.css( "display" );
-	
-	var status = $(this).find( '.status' );
-	
-	if( status.text() == "Not processed" )
-		return;
-	
-	if( display == "none" ) {
-		
-		calc_data.css( "display", "block" );
-		$(this).find( ".arrow_down" ).css( "display", "none" );
-		$(this).find( ".arrow_up" ).css( "display", "inline" );
-		
-	} else {
-		
-		calc_data.css( "display", "none" );
-		$(this).find( ".arrow_down" ).css( "display", "inline" );
-		$(this).find( ".arrow_up" ).css( "display", "none" );
 	}
 }
 

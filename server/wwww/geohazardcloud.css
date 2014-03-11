@@ -28,7 +28,7 @@ html, body {
 	margin-bottom: 0px;
 }
 
-.headline .navbar-left img {
+.headline .navbar-right img {
 	width: 100%;
 	height: 100%;
 }
@@ -39,7 +39,7 @@ html, body {
 }
 
 #btnDeselect {
-	margin-right: 5em;
+	margin-left: 5em;
 }
 
 .title {
@@ -52,11 +52,15 @@ html, body {
 	padding-left: 0px;
 }
 
-.headline .navbar-right .dropdown-menu {
+.nav.navbar-nav.navbar-right.navbar-form {
+	padding-right: 0px;
+}
+	
+.headline .navbar-left .dropdown-menu {
 	width: 20em;
 }
 
-.headline .navbar-right .dropdown-menu .form-group {
+.headline .navbar-left .dropdown-menu .form-group {
 	padding: 1em;
 	z-index:5;
 }
@@ -163,6 +167,7 @@ html, body {
 .entry {
 	border-bottom: 0.1em solid #acaaa7;
 	display:none;
+	padding-bottom: 0.3em;
 }
 
 .entry .marker {
@@ -198,30 +203,35 @@ html, body {
 	width: 60%;
 }
 
-.entry .calc_data {
-	display: none;
-}
-
-.entry .calc_lnk {
-	text-decoration: none;
-}
-
 .entry .process {
 	padding-top: 0.2em;
 }
 
-.entry .arrow_down {
-	display: inline;
-	padding-left: 0.3em;
-} 
+.entry .lnkEdit {
+	margin-left: 0.7em;
+}
 
-.entry .arrow_up {
+.entry .lnkLearn {
+	margin-left: 0.3em;
 	display: none;
-	padding-left: 0.3em;
 }
 
 .entry .chk_grid {
-	position: absolute;
-	margin-left: 0.5em;
-	vertical-align: baseline;
+	vertical-align: top;
+	display: none;
+}
+
+#diaStatus {
+	padding-top: 1em;
+	color: red;
+}
+
+#drpStatus {
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	color: red;
+}
+
+#SignInDialog .modal-body {
+	padding-bottom: 0px;
 }
