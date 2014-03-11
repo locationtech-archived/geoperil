@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+   	<title>GeoHazardCloud</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.jquery.com/jquery.js"></script>
+	<script src="js/bootstrap.js"></script>
+	<link href="css/bootstrap.css" rel="stylesheet">
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>
+    <script src="geohazardcloud.js"></script>
+    <link href="geohazardcloud.css" rel="stylesheet">
+</head>
+<body>
+  	<div class="container fullsize">
+	  	<div class="row headline"> 
+	  		<nav class="navbar navbar-default" role="navigation">	  		
+	  			<div class="navbar-collapse collapse">
+	  				<ul class="nav navbar-nav navbar-left navbar-form">
+	  					<li class="logo"><img alt="gfz_logo" src="http://www-extern.gfz-potsdam.de/fileadmin/templates/images/logo_gfz_de.gif"></li>
+	  				</ul>
+	  				<ul class="nav navbar-nav navbar-left	">
+	  					<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
+	  					<li><a href="#">Contact</a></li>
+	  					<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
+	  				</ul>	  	
+					<ul class="nav navbar-nav navbar-form">
+	  					<li><h3 class="title"><span class="label label-default">GeoHazardCloud</span></h3></li>
+	  				</ul>					  				
+	  				<ul class="nav navbar-nav navbar-form navbar-right">
+	  					<li><button id="btnDeselect" class="btn btn-primary" type="submit">Deselect</button></li>
+	  					<li>
+	  						<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
+	  					</li>
+	  					<li class="dropdown">
+	  						<button id="drpSignIn" type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">Sign In <span class="caret"></span></button>
+        					<ul class="dropdown-menu">
+        						<li>
+        							<form role="form">
+        								<div class="form-group">
+        									<h4>Please sign in</h4>
+									    	<input id="inUsername" type="text" class="form-control" placeholder="Username" required autofocus>
+									    	<input id="inPassword" type="password" class="form-control" placeholder="Password" required>
+									    	<label class="checkbox"><input type="checkbox" value="remember-me"> Remember me</label>
+									    	<button id="btnSignIn" class="btn btn-primary btn-block" type="button">Sign In</button>
+        								</div>
+        							</form>
+        						</li>
+        					</ul>
+        				</li>
+	  				</ul>
+	  			</div>
+	  		</nav>
+	  	</div> <!-- end of headline -->
+	  	
+	  	<div class="row mainview">
+	  		<div class="col-md-4 left-col" id="side">
+	  			<div class="row tabs">
+					<ul class="nav nav-tabs">
+						<li id="tabRecent" class="active"><a href="#sidebar" data-toggle="tab">Recent</a></li>
+					 	<li id="tabSaved"><a href="#saved" id="hrefSaved" data-toggle="tab">Saved</a></li>
+					  	<li id="tabCustom"><a href="#custom" data-toggle="tab">Custom</a></li>
+					</ul>	
+	  			</div>
+	  			
+	  			<div class="tab-content">
+		  			<div class="col-md-12 tab-pane active" id="sidebar"></div>
+		  			<div class="col-md-12 tab-pane" id="saved"></div>
+		  			<div class="col-md-12 tab-pane" id="custom">  					  					
+		  				<form class="form-horizontal" role="form">
+		  					<div class="input-group input-group-sm">
+		  						<span class="input-group-addon left-label">Latitude:</span>
+		  						<input id="inLat" type="text" class="form-control" maxlength="10" size="10">
+		  						<span class="input-group-addon">&deg;</span>
+		  					</div>
+		  					<div class="input-group input-group-sm">
+		  						<span class="input-group-addon left-label">Longitude:</span>
+		  						<input id="inLon" type="text" class="form-control" maxlength="10" size="10">
+		  						<span class="input-group-addon">&deg;</span>
+		  					</div>
+		  					<div class="input-group input-group-sm">
+	  							<span class="input-group-addon left-label">Magnitude:</span>
+	  							<input id="inMag" type="text" class="form-control" maxlength="10" size="10">
+	  							<span class="input-group-addon">mw</span>
+	  						</div>
+	  						<div class="input-group input-group-sm">
+	  							<span class="input-group-addon left-label">Depth:</span>
+	  							<input id="inDepth" type="text" class="form-control" maxlength="10" size="10">
+	  							<span class="input-group-addon">km</span>
+	  						</div>
+	  						<div class="input-group input-group-sm">
+	  							<span class="input-group-addon left-label">Dip:</span>
+	  							<input id="inDip" type="text" class="form-control" maxlength="10" size="10">
+	  							<span class="input-group-addon">&deg;</span>
+	  						</div>
+	  						<div class="input-group input-group-sm">
+	  							<span class="input-group-addon left-label">Strike:</span>
+	  							<input id="inStrike" type="text" class="form-control" maxlength="10" size="10">
+	  							<span class="input-group-addon">&deg;</span>
+	  						</div>
+	  						<div class="input-group input-group-sm">
+	  							<span class="input-group-addon left-label">Rake:</span>
+	  							<input id="inRake" type="text" class="form-control" maxlength="10" size="10">
+	  							<span class="input-group-addon">&deg;</span>
+	  						</div>
+	  						<div class="input-group input-group-sm">
+	  							<span class="input-group-addon left-label">Duration:</span>
+	  							<input id="inDuration" type="text" class="form-control" maxlength="10" size="10">
+	  							<span class="input-group-addon">&deg;</span>
+	  						</div>
+	  						<div class="form-group input-group-sm">
+					  			<button id="btnClear" type="button" class="btn btn-default btn-lg">Clear</button>
+					  			<button id="btnStart" type="button" class="btn btn-primary btn-lg">Start</button>
+					  		</div>						  		
+		  				</form>
+	  				</div>
+	  			</div>
+	  		</div>
+	  		
+	  		<div class="col-md-8 right-col" id="mapview"></div>
+	  		
+	  	</div> <!-- end of main view -->
+	  	
+	</div> <!-- end of container -->
+	
+	<!-- the following content is not shown directly and only used
+		 by JavaScript code to dynamically add prepared content -->
+		 
+	<!-- sidebar context menu template that appears on right click -->
+	<div id="contextMenu" class="dropdown clearfix">
+	    <ul class="dropdown-menu" role="menu" aria-labelledby="contextMenu">
+	    	<li><a id="ctxEdit" href="#" tabindex="-1">Edit</a></li>
+	    	<li class="divider"></li>
+	    </ul>
+  	</div>
+
+	<!-- sidebar entry template -->
+	<div id="entry" class="row entry">
+		<div class="col-md-2">
+			<div class="row row-marker">
+				<img class="marker" alt="marker" src="javascript:void(0);">
+			</div>
+			<div class="row">
+				<h4 class="mag"></h4>
+			</div>
+		</div>
+		<div class="col-md-10 off">
+			<div class="row off">
+				<a href="#" class="big region"></a>
+			</div>
+			<div class="row">
+				<div class="col-md-10">
+					<div class="row off">
+						<span class="small datetime"></span>
+					</div>
+					<div class="row off">
+						<span class="small lonlat"></span>
+					</div>
+					<div class="row off">
+						<span class="small dip"></span>
+					</div>
+				</div>
+				<div class="col-md-2">
+					<div class="row">
+						<a class="geofon" href="#" target="_blank"><img class="beach" alt="" src="javascript:void(0);"></a>
+					</div>
+				</div>
+			</div>
+			<div class="row off process">
+				<div class="progress">
+					<div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+				</div>
+				<a class="calc_lnk" href="#">
+					<span class="medium status"></span>
+					<span class="glyphicon glyphicon-chevron-down arrow_down"></span>
+					<span class="glyphicon glyphicon-chevron-up arrow_up"></span>
+				</a>
+			</div>
+			<div class="calc_data">
+				<div class="row off">
+					<span class="small resource"></span>
+				</div>
+				<div class="row off">
+					<span class="small calc"></span>
+				</div>
+				<div>
+					<span class="small grid"></span>
+					<input class="chk_grid" type="checkbox">
+				</div>
+			</div>
+		</div>
+	</div>
+	
+</body>
+</html>

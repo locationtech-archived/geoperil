@@ -1,0 +1,227 @@
+html, body {
+	height: 100%;
+}
+        	
+.fullsize {
+	height: 100%;
+	width: 100%;
+}
+
+.mainview {
+	height: 90%;
+}
+
+.mainview .tabs {
+	background-color: #fafafa;
+}
+
+.mainview .nav-tabs {
+	position: relative;
+}
+
+.mainview .form-horizontal {
+	padding-top: 3em;
+	width: 100%;
+}
+
+.headline .navbar {
+	margin-bottom: 0px;
+}
+
+.headline .navbar-left img {
+	width: 100%;
+	height: 100%;
+}
+
+.logo {
+	max-width: 50px;
+	height: auto;
+}
+
+#btnDeselect {
+	margin-right: 5em;
+}
+
+.title {
+	margin-top: 0px;
+	margin-bottom: 0px;
+	margin-left: 10em;
+}
+
+.nav.navbar-nav.navbar-left.navbar-form {
+	padding-left: 0px;
+}
+
+.headline .navbar-right .dropdown-menu {
+	width: 20em;
+}
+
+.headline .navbar-right .dropdown-menu .form-group {
+	padding: 1em;
+	z-index:5;
+}
+
+.right-col { 
+	height: 100%;
+	outline: 0.1em solid #acaaa7;
+	width: 72%;
+}
+
+.left-col { 
+	background-color: #fafafa;
+	height: 100%;
+	outline: 0.1em solid #acaaa7;
+	float: left;
+	width: 28%;
+}
+
+.big {
+	font-size: 1.3em;
+	font-weight: bold;
+}
+
+.medium {
+	font-size: 1em;
+}
+
+.small {
+	font-size: 0.8em;
+}
+
+.off {
+	padding-left: 1em;
+}
+    
+#sidebar, #saved, #custom {
+	position: absolute;
+	top: 3em;
+	left: 0px;
+	bottom: 0px;
+	right: 0px;
+	overflow-y: auto;
+}
+
+#side {
+	position: relative;
+}
+
+.left-label {
+	min-width: 40%;
+}
+  	
+#btnSignOut, #tabSaved, #tabCustom {
+	display: none;
+}
+  	
+#contextMenu {
+	position: absolute;
+	display: none;
+}
+
+#tabOptions {
+	position: absolute;
+	right: 0em;
+}
+
+#custom {
+	padding: 0px;
+	width: 100%;
+}
+
+.input-group.input-group-sm {
+	padding: 0.5em;
+	width: 80%;
+	margin-left: 10%;
+}
+
+.form-group.input-group-sm {
+	position: relative;
+	padding: 0.5em;
+	padding-top: 1em;
+	width: 80%;
+	margin-left: 10%;
+}
+
+#btnClear {
+	position: absolute;
+	left: 0.5em;
+	width: 40%;
+}
+
+#btnStart {
+	position: absolute;
+	right: 0.5em;
+	width: 40%;
+}
+
+#contextMenu .dropdown-menu {
+	display: block;
+	position: static;
+	margin-bottom: 5px;
+}
+
+.entry {
+	border-bottom: 0.1em solid #acaaa7;
+	display:none;
+}
+
+.entry .marker {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.entry .row-marker {
+	padding-top: 2.5em;
+}
+
+.entry .beach {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.entry .mag {
+	font-weight: bold;
+	text-align: center;
+}
+
+.entry .progress {
+	float: left;
+	height:0.9em;
+	margin-top:0.2em;
+	margin-bottom:0em;
+	width: 80%;
+}
+
+.entry .progress-bar {
+	width: 60%;
+}
+
+.entry .calc_data {
+	display: none;
+}
+
+.entry .calc_lnk {
+	text-decoration: none;
+}
+
+.entry .process {
+	padding-top: 0.2em;
+}
+
+.entry .arrow_down {
+	display: inline;
+	padding-left: 0.3em;
+} 
+
+.entry .arrow_up {
+	display: none;
+	padding-left: 0.3em;
+}
+
+.entry .chk_grid {
+	position: absolute;
+	margin-left: 0.5em;
+	vertical-align: baseline;
+}
