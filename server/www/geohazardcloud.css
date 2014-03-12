@@ -30,43 +30,31 @@ html, body {
 
 .headline .navbar-right img {
 	width: 100%;
-	height: 100%;
 }
 
 .logo {
 	max-width: 50px;
 	height: auto;
 	outline: 1px solid black;
-	margin-left: 1em;
 }
 
-#btnDeselect {
-	margin-left: 5em;
+.nav_logo {
+	padding-right: 0px;
+}
+
+.nav_title {
+	padding-left: 0px;
+}
+
+.nav_buttons {
+	padding-right: 2em;
 }
 
 .title {
 	width: auto;
 	height: 35px;
-	margin-left: 10em;
-}
-
-.nav.navbar-nav.navbar-left.navbar-form {
-	padding-left: 0px;
-}
-
-.nav.navbar-nav.navbar-right.navbar-form {
-	padding-right: 0px;
 }
 	
-.headline .navbar-left .dropdown-menu {
-	width: 20em;
-}
-
-.headline .navbar-left .dropdown-menu .form-group {
-	padding: 1em;
-	z-index:5;
-}
-
 .right-col { 
 	height: 100%;
 	outline: 0.1em solid #acaaa7;
@@ -134,9 +122,10 @@ html, body {
 	display: none;
 }
 
-#tabOptions {
+#tabDeselect {
 	position: absolute;
-	right: 0em;
+	right: 0.5em;
+	bottom: 0.5em;
 }
 
 #custom {
@@ -156,6 +145,7 @@ html, body {
 	padding-top: 1em;
 	width: 80%;
 	margin-left: 10%;
+	padding-bottom: 4em;
 }
 
 #btnClear {
@@ -168,6 +158,19 @@ html, body {
 	position: absolute;
 	right: 0.5em;
 	width: 40%;
+}
+
+#labPreset {
+	font-size: 1em;
+	font-weight: bold;
+	padding: 0.5em;
+	width: 80%;
+	margin-left: 10%;
+}
+
+.list-group-item {
+	width: 80%;
+	margin-left: 10%;
 }
 
 #contextMenu .dropdown-menu {
@@ -189,7 +192,7 @@ html, body {
 }
 
 .entry .row-marker {
-	padding-top: 2.5em;
+	padding-top: 2em;
 }
 
 .entry .beach {

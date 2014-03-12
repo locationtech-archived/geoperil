@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://code.jquery.com/jquery.js"></script>
+    <script src="jquery.cookie.js"></script>
 	<script src="js/bootstrap.js"></script>
 	<link href="css/bootstrap.css" rel="stylesheet">
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>
@@ -16,39 +17,21 @@
 	  	<div class="row headline"> 
 	  		<nav class="navbar navbar-default" role="navigation">	  		
 	  			<div class="navbar-collapse collapse">
-	  				<ul class="nav navbar-nav navbar-form navbar-left">
-	  					<li>
-	  						<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
-	  					</li>
-	  					<li class="dropdown">
-	  						<button id="drpSignIn" type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">Sign In <span class="caret"></span></button>
-        					<ul class="dropdown-menu">
-        						<li>
-        							<form role="form">
-        								<div class="form-group">
-        									<h4>Please sign in</h4>
-									    	<input id="inUsername" type="text" class="form-control" placeholder="Username" required autofocus>
-									    	<input id="inPassword" type="password" class="form-control" placeholder="Password" required>
-									    	<p id="drpStatus" class="form-control-static"></p>
-									    	<label class="checkbox"><input type="checkbox" value="remember-me"> Remember me</label>
-									    	<button id="btnSignIn" class="btn btn-primary btn-block" type="button">Sign In</button>
-        								</div>
-        							</form>
-        						</li>
-        					</ul>
-        				</li>
-        				<li><button id="btnDeselect" class="btn btn-primary" type="submit">Deselect</button></li>
-	  				</ul>
-	  				<ul class="nav navbar-nav navbar-form">
+	  				<ul class="nav navbar-nav navbar-form navbar-left nav_title">
 	  					<li><img class="title" alt="GeohazardCloud" src="img/geohazardcloud-logo-blue.png"></li>
 	  				</ul>
-	  				<ul class="nav navbar-nav navbar-right navbar-form">
+	  				<ul class="nav navbar-nav navbar-right navbar-form nav_logo">
 	  					<li class="logo"><img alt="gfz_logo" src="http://www-extern.gfz-potsdam.de/fileadmin/templates/images/logo_gfz_de.gif"></li>
 	  				</ul>
 	  				<ul class="nav navbar-nav navbar-right">
 	  					<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
-	  					<li><a href="#ContactDialog" data-toggle="modal">Contact</a></li>
+	  					<li><a href="#AboutDia" data-toggle="modal">About</a></li>
+	  					<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
 	  					<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
+	  				</ul>
+	  				<ul class="nav navbar-nav navbar-form navbar-right nav_buttons">
+	  					<li><button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button></li>
+	  					<li><button id="btnSignIn" type="button" class="btn btn-primary">Sign In</button></li>
 	  				</ul>
 	  			</div>
 	  		</nav>
@@ -59,17 +42,21 @@
 	  			<div class="row tabs">
 					<ul class="nav nav-tabs">
 						<li id="tabRecent" class="active"><a href="#sidebar" data-toggle="tab">Recent</a></li>
-					 	<li id="tabSaved"><a href="#saved" id="hrefSaved" data-toggle="tab">Saved</a></li>
-					  	<li id="tabCustom"><a href="#custom" data-toggle="tab">Custom</a></li>
-					</ul>	
+					 	<li id="tabSaved"><a href="#saved" id="hrefSaved" data-toggle="tab">My List</a></li>
+					  	<li id="tabCustom"><a href="#custom" data-toggle="tab">Compose</a></li>
+					  	<li id="tabDeselect">
+						  	<button id="btnDeselect" type="button" class="btn btn-primary btn-sm">
+						  		<span class="glyphicon glyphicon-globe"></span>
+							</button>
+					  	</li>
+					</ul>
 	  			</div>
 	  			
 	  			<div class="tab-content">
 		  			<div class="col-md-12 tab-pane active" id="sidebar"></div>
 		  			<div class="col-md-12 tab-pane" id="saved"></div>
-		  			<div class="col-md-12 tab-pane" id="custom">  					  					
+		  			<div class="col-md-12 tab-pane" id="custom">					  					
 		  				<form class="form-horizontal" role="form">
-		  					<h3><span id="inHead" class="label label-default">Create your own scenario</span></h3>
 		  					<div class="input-group input-group-sm">
 		  						<span class="input-group-addon left-label">Name:</span>
 		  						<input id="inName" type="text" class="form-control" placeholder="Custom">
@@ -118,8 +105,27 @@
 	  						<div class="form-group input-group-sm">
 					  			<button id="btnClear" type="button" class="btn btn-default btn-lg">Clear</button>
 					  			<button id="btnStart" type="button" class="btn btn-primary btn-lg" disabled>Start</button>
-					  		</div>						  		
+					  		</div>
 		  				</form>
+		  				
+		  				<p id="labPreset" class="form-control-static">Load from preset events</p>
+		  				<div id="preset" class="list-group">
+		  					<a id="preset2" class="list-group-item" href="#">Sumatra 2012 (historic)</a>
+				  			<a id="preset1" class="list-group-item" href="#">Tohoku 2011 (historic)</a>
+	  						<a id="preset13" class="list-group-item" href="#">Mentawai 2010 1. Patch (historic)</a>
+	  						<a id="preset14" class="list-group-item" href="#">Mentawai 2010 2. Peak (historic)</a>
+	  						<a id="preset3" class="list-group-item" href="#">Solomon 2007 (historic)</a>
+	  						<a id="preset15" class="list-group-item" href="#">Crete AD365 (historic)</a>
+	  						<a id="preset7" class="list-group-item" href="#">East Crete 1(hypothetic)</a>
+	  						<a id="preset4" class="list-group-item" href="#">East Crete 2 (hypothetic)</a>
+	  						<a id="preset5" class="list-group-item" href="#">West Cyprus (hypothetic)</a>
+	  						<a id="preset6" class="list-group-item" href="#">West Anatolia  (hypothetic)</a>
+	  						<a id="preset8" class="list-group-item" href="#">Marques de Pombal Fault (MPF, hypothetic)</a>
+	  						<a id="preset9" class="list-group-item" href="#">Gorringe Bank Fault (GBF, hypothetic)</a>
+	  						<a id="preset10" class="list-group-item" href="#">Horseshoe Fault (HSF, hypothetic)</a>
+	  						<a id="preset11" class="list-group-item" href="#">Portimao Bank Fault (PBF, hypothetic)</a>
+	  						<a id="preset12" class="list-group-item" href="#">Cadiz Wedge Fault (CWF, hypothetic)</a>
+	  					</div>
 	  				</div>
 	  			</div>
 	  		</div>
@@ -143,7 +149,7 @@
 
 	<!-- sidebar entry template -->
 	<div id="entry" class="row entry">
-		<div class="col-md-2">
+		<div class="col-md-2 entry-left">
 			<div class="row row-marker">
 				<img class="marker" alt="marker" src="javascript:void(0);">
 			</div>
@@ -206,12 +212,12 @@
 	        <h4 class="modal-title">Please sign in to continue</h4>
 	      </div>
 	      <div class="modal-body">
-	      	<input id="diaUser" type="text" class="form-control" placeholder="Username" required autofocus>
+	      	<input id="diaUser" type="text" class="form-control" placeholder="E-Mail" required autofocus>
 		  	<input id="diaPass" type="password" class="form-control" placeholder="Password" required>
 		  	<p id="diaStatus" class="form-control-static"></p>
 	      </div>
 	      <div class="modal-footer">
-	      	<a id="diaAccount" href="mailto:spazier@uni-potsdam.de?subject=Registration&amp;body=Body" class="btn btn-primary pull-left">Get Account</a>
+	      	<a id="diaAccount" href="mailto:martin.hammitzsch@gfz-potsdam.de,spazier@uni-potsdam.de?subject=Get%20account%20for%20GeohazardCloud&amp;body=Hello%20you,%0D%0A%0D%0AI%20am%20totally%20excited%20about%20the%20GeohazardCloud%20and%20would%20like%20to%20get%20an%20account.%0D%0A%0D%0ACheers" class="btn btn-primary pull-left">Get Account</a>
 	        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
 	        <button id="diaSignIn" type="button" class="btn btn-primary">Sign In</button>
 	      </div>
@@ -225,9 +231,23 @@
 	    <div class="modal-content">
 	      <div class="modal-header">
 	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	        <h4 class="modal-title">Contact</h4>
+	        <h4 class="modal-title">Connect</h4>
 	      </div>
 	      <div class="modal-body">
+	      	<span>
+	      		Are  you looking to learn more about what we are doing? Still trying to figure out how this might be applicable to your work? Looking to help? 
+				<br><br>
+				You’ve come to the right place. 
+				<br><br>
+				We’ll  be building out resource around some of the pillars of scientific GPU computing, in particular the computation of models for simulating forecasts for geohazards and other natural hazards.
+				<br><br>
+				We want you to join us. Here are a few ways you can get involved:
+			</span>
+			<ul>
+				<li>Get in contact and follow us: Martin (<a href="http://www.gfz-potsdam.de/en/staff-search/martin-hammitzsch/" target="_blank">staff page</a>, <a href="http://twitter.com/mrtnhmtz" target="_blank">@mrtnhmtz</a>, <a href="http://de.linkedin.com/in/martinhammitzsch" target="_blank">LinkedIn</a>), Johannes, and Andrey (<a href="http://www.gfz-potsdam.de/en/staff-search/andrey-babeyko/" target="_blank">staff page</a>).</li>
+				<li>Write an <a href="mailto:martin.hammitzsch@gfz-potsdam.de,spazier@uni-potsdam.de,babeyko@gfz-potsdam.de?subject=Need%20more%20information%20on%20GeohazardCloud&amp;body=Hello%20you,%0D%0A%0D%0AI%20am%20totally%20excited%20about%20the%20GeohazardCloud%20and%20would%20like%20to%20get%20more%20information.%0D%0A%0D%0ACheers" target="_blank">e-mail</a> and ask questions and let us know what you’re doing.</li>
+				<li>Coming soon: Join our mailing list and stay up to date with our latest news as well as share your thoughts and questions.</li>
+			</ul>
 	      </div>
 	      <div class="modal-footer">
 	        <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
@@ -235,6 +255,53 @@
 	    </div><!-- /.modal-content -->
 	  </div><!-- /.modal-dialog -->
 	</div><!-- /.modal -->	
+	
+	<!-- modal disclaimer dialog -->
+	<div class="modal fade" id="DisclaimDia" tabindex="-1" role="dialog" aria-labelledby="Disclaimer" aria-hidden="true">
+	  <div class="modal-dialog modal-sm">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <button type="button" class="close disClose" aria-hidden="true">&times;</button>
+	        <h4 class="modal-title">About</h4>
+	      </div>
+	      <div class="modal-body">
+	        <span>GeohazardCloud is a platform and activity that will help researchers around the world use cloud based GPU computation services for analysing geohazards and other natural hazards. The website you use is an early alpha version for demonstration purposes to give the concept a whirl and to shape science’s future. Further functionality, improvements and possible profound changes will be implemented in the next weeks and months. If you would like to get involved then feel free to connect with us.
+			  <br><br>
+				However, the service is aimed for research purposes only. You may NOT use the service for early warning or crisis management purposes in its current version. So please note that:
+			  <br><br>
+				THE SERVICE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SERVICE OR THE USE OR OTHER DEALINGS IN THE SERVICE.
+			</span>
+	      </div>
+	      <div class="modal-footer">
+	      	<button type="button" class="btn btn-default disClose">Cancel</button>
+	        <button id="disAccept" type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
+	      </div>
+	    </div><!-- /.modal-content -->
+	  </div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+	
+	<!-- modal about dialog -->
+	<div class="modal fade" id="AboutDia" tabindex="-1" role="dialog" aria-labelledby="About" aria-hidden="true">
+	  <div class="modal-dialog modal-sm">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <h4 class="modal-title">About</h4>
+	      </div>
+	      <div class="modal-body">
+	        <span>GeohazardCloud is a platform and activity that will help researchers around the world use cloud based GPU computation services for analysing geohazards and other natural hazards. The website you use is an early alpha version for demonstration purposes to give the concept a whirl and to shape science’s future. Further functionality, improvements and possible profound changes will be implemented in the next weeks and months. If you would like to get involved then feel free to connect with us.
+			  <br><br>
+				However, the service is aimed for research purposes only. You may NOT use the service for early warning or crisis management purposes in its current version. So please note that:
+			  <br><br>
+				THE SERVICE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SERVICE OR THE USE OR OTHER DEALINGS IN THE SERVICE.
+			</span>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
+	      </div>
+	    </div><!-- /.modal-content -->
+	  </div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
 	
 </body>
 </html>

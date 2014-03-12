@@ -47,7 +47,25 @@ function initialize() {
 	$( "#diaSignIn" ).click( diaSignIn );
 	
 	$( "#custom" ).find( "input" ).blur( checkInput );
-		    						
+	
+	// set tooltip for deselect button 
+	options = { placement:'top',
+			title:'Deselect and show map only',
+			container: 'body',
+			animation: false
+	   	   };
+
+	$( '#btnDeselect' ).tooltip( options );
+		    			
+	// show disclaimer - redirect to xkcd if not accepted
+	if( ! $.cookie('disclaimer') ) {
+		$( '.disClose' ).click( function() { window.location.href = "http://dynamic.xkcd.com/random/comic/"; } );
+		$( '#disAccept' ).click( function() { $.cookie('disclaimer', 'true'); } );
+		$( '#DisclaimDia' ).modal( { show: true, backdrop: 'static' } );
+	}
+	
+	$( '#preset > .list-group-item' ).click( loadPreset );
+		
 	getEvents();
 }
 
@@ -56,7 +74,7 @@ function getEvents() {
 	$.ajax({
 		url: "srv/fetch",
 		type: 'POST',
-		data: { limit: 10 },
+		data: { limit: 20 },
 		dataType: 'json',
 				
 		success: function( data ) {
@@ -196,8 +214,8 @@ function updateProgress( id, process, list ) {
 		    	list[i].div.find( '.progress' ).css( 'display', 'block' );
 		    	list[i].div.find( '.progress-bar' ).css( 'width', filled + "%" );
 		    	list[i].div.find( '.resource' ).html( process['resources'] );
-		    	list[i].div.find( '.calc' ).html( 'Runtime: ' + process['calcTime'] / 1000 + ' sec &#183; SimDuration: ' + process['simTime'] + " min" );
-		    	list[i].div.find( '.grid' ).html( 'Grid: ' + process['resolution'] + '&prime; &#183; BBox: (' + latMin + ', ' + lonMin + '), (' + latMax + ', ' + lonMax + ')' ); 
+		    	list[i].div.find( '.calc' ).html( 'Runtime ' + process['calcTime'] / 1000 + ' sec &#183; SimDuration ' + process['simTime'] + " min" );
+		    	list[i].div.find( '.grid' ).html( 'Grid ' + process['resolution'] + '&prime; &#183; BBox (' + latMin + ', ' + lonMin + '), (' + latMax + ', ' + lonMax + ')' ); 
 		    	
 		    	if( filled == 100 ) {
 		    		list[i].div.find( '.progress' ).css( 'display', 'none' );
@@ -250,13 +268,13 @@ function addEntry( widget, data, i ) {
 	var seconds = date.getUTCSeconds();
 	
 	var datestr = year + "/" + zeroPad( month, 2 ) + "/" + zeroPad( day, 2 );
-	var timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 ) + ":" + zeroPad( seconds, 2 );
+	var timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 ); // + ":" + zeroPad( seconds, 2 );
 		    		    		    	
 	$div.find( '.region' ).text( prop['region'] );
 	$div.find( '.mag').text( prop['magnitude'] );
-	$div.find( '.datetime' ).html( datestr + " &#183; " + timestr + " UTC" );
-	$div.find( '.lonlat' ).html( 'Lat: ' + prop['latitude'] + '&deg; Lon: ' + prop['longitude'] + '&deg; Depth: ' + prop['depth'] + ' km' );
-	$div.find( '.dip' ).html( 'Dip: ' + prop['dip'] + '&deg; Strike: ' + prop['strike'] + '&deg; Rake: ' + prop['rake'] + '&deg;' );
+	$div.find( '.datetime' ).html( datestr + " &#183; " + timestr + " UTC" + " &#183; " + data['_id'] );
+	$div.find( '.lonlat' ).html( 'Lat ' + prop['latitude'] + '&deg; &#183;  Lon ' + prop['longitude'] + '&deg; &#183;  Depth ' + prop['depth'] + ' km' );
+	$div.find( '.dip' ).html( 'Dip ' + prop['dip'] + '&deg; &#183; Strike ' + prop['strike'] + '&deg; &#183; Rake ' + prop['rake'] + '&deg;' );
 	
 	if( widget[0] != $('#saved')[0] ) {
 		var yearstr = data['_id'].substring(3,7);
@@ -282,11 +300,11 @@ function addEntry( widget, data, i ) {
 			
 			var options = { placement:'bottom',
 							title:'Info',
-							content:'Content',
+							html: true,
 							container: $div,
 							animation: false
 						   };
-			
+			options.content = "<span style='font-size: 0.8em;'>Currently, we use a rough and simple threshold mechanism to identify the tsunami potential of an earthquake. If the location of the earthquake is inland, deeper than 100km, or has a magnitude less than 5.5 then we don't consider the earthquake for any wave propagation computation. However, if you think the earthquake is relevant for computation then you can do so by using 'Modify and reprocess'. <br><br>Anyhow, in the near future we plan to use an improved mechanism by adopting region dependent decision matrices defined by the UNESCO-IOC ICGs, that is ICG/NEAMTWS, ICG/IOTWS, ICG/PTWS, and ICG/CARIBE EWS.</span>";
 			$div.find( '.lnkLearn' ).popover( options );
 		}
 	}
@@ -305,7 +323,7 @@ function addEntry( widget, data, i ) {
 	var color = getMarkerColor( prop['magnitude'] );
 	
 	if( widget[0] == $('#saved')[0] )
-		color = '#0000FF';
+		color = '#E4E7EB';
 	
 	var link = getMarkerIconLink( i, color );
 		
@@ -565,11 +583,11 @@ function getPoiColor( poi ) {
 	
 	if( poi.eta == -1 ) {
 		color = "#ADADAD";
-	} else if( poi.ewh <= 1 ) {
+	} else if( poi.ewh < 0.75 ) {
 		color = "#00CCFF";
-	} else if( poi.ewh <= 3 ) {
+	} else if( poi.ewh < 1.5 ) {
 		color = "#FFFF00";
-	} else if( poi.ewh <= 5 ) {
+	} else if( poi.ewh < 3 ) {
 		color = "#FF6600";
 	} else {
 		color = "#FF0000";
@@ -717,9 +735,7 @@ function signIn( user, password ) {
 				
 				/* reset all password and status fields of sign-in widgets */
 				$( "#SignInDialog" ).modal("hide");
-				$( "#drpSignIn" ).dropdown("toggle");
 				$('#diaStatus').html("");
-				$('#drpStatus').html("");
 				$('#diaPass').val("");
 				$('#inPassword').val("");
 				
@@ -738,12 +754,16 @@ function signIn( user, password ) {
 	});
 }
 
-function drpSignIn() {
-			
-	username = $('#inUsername').val();
-	var password = $('#inPassword').val();
+function drpSignIn( e ) {
+					
+	if( ! loggedIn ) {
+		
+		e.stopPropagation();
+		signTarget = null;
+		$( "#SignInDialog" ).modal("show");
+		return;
+	}
 	
-	signIn( username, password );
 }
 
 function diaSignIn() {
@@ -758,7 +778,7 @@ function logIn() {
 	
 	loggedIn = true;
 	
-	$( "#drpSignIn" ).css( "display", "none" );
+	$( "#btnSignIn" ).css( "display", "none" );
 	$( "#btnSignOut" ).css( "display", "block" );
 	
 	$( '#tabSaved').css( "display", "block" );
@@ -793,7 +813,7 @@ function logOut() {
 	
 	loggedIn = false;
 	
-	$( "#drpSignIn" ).css( "display", "block" );
+	$( "#btnSignIn" ).css( "display", "block" );
 	$( "#btnSignOut" ).css( "display", "none" );
 	
 	$( '#tabSaved').css( "display", "none" );
@@ -930,7 +950,7 @@ function setMarker() {
     if( global.marker ) { global.marker.setMap(null); }
 
     // create new marker on selected position
-    var link = getMarkerIconLink( "%E2%80%A2", "#0000FF" );
+    var link = getMarkerIconLink( "%E2%80%A2", "#E4E7EB" );
     global.marker = addMarker( $('#inLat').val(), $('#inLon').val(), new google.maps.MarkerImage( link ) );
 }
 
@@ -1045,4 +1065,34 @@ function checkFloat( val ) {
         return false;
 
     return true;
+}
+
+function loadPreset() {
+	
+	var data = {};
+	var id = $(this).attr('id');
+	
+	data.preset1 = { latitude: 38.321, longitude: 142.369, magnitude: 9.0, depth: 24, strike: 193, dip: 14, rake: 81 };
+	data.preset2 = { latitude: 2.3, longitude: 92.9, magnitude: 8.57, depth: 25, strike: 199, dip: 80, rake: 3 };
+	data.preset3 = { latitude: 7.965, longitude: 156.40, magnitude: 8.1, depth: 23, strike: 331, dip: 38, rake: 120 };
+	data.preset4 = { latitude: 35, longitude: 29, magnitude: 8.5, depth: 24.1, strike: 260, dip: 42, rake: 95 };
+	data.preset5 = { latitude: 35.5, longitude: 31.9, magnitude: 7.3, depth: 15.1, strike: 310, dip: 69, rake: 111 };
+	data.preset6 = { latitude: 38.9, longitude: 26.4, magnitude: 6.5, depth: 11.4, strike: 140, dip: 56, rake: -120 };
+	data.preset7 = { latitude: 34.5, longitude: 27.1, magnitude: 8, depth: 21.3, strike: 66, dip: 33, rake: 90 };
+	data.preset8 = { latitude: 36.574, longitude: -9.890, magnitude: 8.1, depth: 4, strike: 20, dip: 35, rake: 90 };
+	data.preset9 = { latitude: 36.665, longitude: -11.332, magnitude: 8.1, depth: 5, strike: 53, dip: 35, rake: 90 };
+	data.preset10 = { latitude: 35.796, longitude: -9.913, magnitude: 8.3, depth: 4, strike: 42, dip: 35, rake: 90 };
+	data.preset11 = { latitude: 36.314, longitude: -8.585, magnitude: 8, depth: 2.5, strike: 266, dip: 24, rake: 90 };
+	data.preset12 = { latitude: 35.407, longitude: -8.059, magnitude: 8.6, depth: 20, strike: 349, dip: 5, rake: 90 };
+	data.preset13 = { latitude: -3.55, longitude: 100.05, magnitude: 7.7, depth: 15, strike: 325, dip: 12, rake: 90 };
+	data.preset14 = { latitude: -3.2, longitude: 99.70, magnitude: 7.5, depth: 15, strike: 325, dip: 12, rake: 90 };
+	data.preset15 = { latitude: 35.2, longitude: 23.4, magnitude: 8.3, depth: 0, strike: 315, dip: 30, rake: 90 };
+
+	var prop = data[id];
+	prop.region = $(this).html();
+	
+	var entry = { prop: prop };
+	fillForm( entry );
+	
+	$( '#custom' ).scrollTop(0);
 }
