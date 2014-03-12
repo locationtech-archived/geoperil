@@ -325,7 +325,7 @@ function addEntry( widget, data, i ) {
 	if( widget[0] == $('#saved')[0] )
 		color = '#E4E7EB';
 	
-	var link = getMarkerIconLink( i, color );
+	var link = getMarkerIconLink( i + 1, color );
 		
 	$div.find( '.marker' ).attr( 'src', link );
 		    	
