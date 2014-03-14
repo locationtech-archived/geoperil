@@ -5,8 +5,8 @@ import sys
 import re
 import time
 import datetime
-import urllib
-import urllib2
+import urllib.request, urllib.parse, urllib.error
+import urllib.request, urllib.error, urllib.parse
 import atexit
 
 from pymongo import MongoClient
@@ -79,11 +79,11 @@ def main( s ):
         
     pidfile = "/tmp/dbmanager.pid"
     if os.path.isfile( pidfile ):
-        print "%s already running, exiting" % pidfile
+        print("%s already running, exiting" % pidfile)
         sys.exit()
     else:
         atexit.register( cleanup, pidfile )
-        file( pidfile, 'w' ).write("")
+        open( pidfile, 'w' ).write("")
     
     startTime = time.time()
     
@@ -103,7 +103,7 @@ def main( s ):
     
     while True:
     
-        response = urllib2.urlopen( url + str(page) )
+        response = urllib.request.urlopen( url + str(page) )
         data = response.read()
         text = data.decode('utf-8')
         
@@ -119,17 +119,17 @@ def main( s ):
         #ids = re.findall( "<a href='event.php\?id=(gfz(\d\d\d\d)\w\w\w\w)'>", text )
                     
         for m in matches:
-            print m
+            print(m)
             eid = re.findall( "/(gfz\d\d\d\d\w\w\w\w)/", m )[0]
-            print eid
-            response = urllib2.urlopen( 'http://geofon.gfz-potsdam.de' + m )
+            print(eid)
+            response = urllib.request.urlopen( 'http://geofon.gfz-potsdam.de' + m )
             data = response.read()
             txt = data.decode('utf-8')
             
             prop = re.findall( s, txt )
             
             if len(prop) == 0:
-                print 'Error'
+                print('Error')
                 cntError += 1
                 continue
                 
@@ -137,10 +137,10 @@ def main( s ):
                 
             date = datetime.datetime.strptime( prop[0] + " " + prop[1], "%y/%m/%d %H:%M:%S.%f")
             
-            print date
-            print 'lon, lat: %f, %f' % ( float(prop[4]), float(prop[3]) )
+            print(date)
+            print('lon, lat: %f, %f' % ( float(prop[4]), float(prop[3]) ))
             
-            iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( float(prop[3]), float(prop[4]) ) )
+#            iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( float(prop[3]), float(prop[4]) ) )
             
             entry = { "_id": eid,
                       "user": "gfz",
@@ -155,7 +155,7 @@ def main( s ):
                         "strike": float(prop[7]),
                         "dip": float(prop[8]),
                         "rake": float(prop[9]),
-                        "sea_area": iho_region
+#                        "sea_area": iho_region
                        },
                      }
                                                     
@@ -163,14 +163,24 @@ def main( s ):
             ret = collection.find( { "_id": eid } )
             
             if ret.count() == 0:
-                             
+                iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( float(prop[3]), float(prop[4]) ) )
+                entry["prop"]["sea_area"] = iho_region
                 entries.append( (1, entry) )
             
             else:
                 
                 # now check if the stored entry matches in all components --> else we have an update here
+                for i in range(ret.count()):
+                    if ret[i]["prop"]["latitude"] == entry["prop"]["latitude"] and \
+                       ret[i]["prop"]["longitude"] == entry["prop"]["longitude"]:
+                        entry["prop"]["sea_area"] = ret[i]["prop"]["sea_area"]
+                        break
+                if "sea_area" not in entry["prop"]:
+                    iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( float(prop[3]), float(prop[4]) ) )
+                    entry["prop"]["sea_area"] = iho_region
+                    
                 ret2 = collection.find( entry )
-                
+
                 if ret2.count() == 0:
                     # update entry
                     entries.append( (2, entry) )
@@ -206,9 +216,9 @@ def main( s ):
         
         if prop["sea_area"] != None and prop["magnitude"] > 5.5 and prop["depth"] < 100:
             # request simulation of this event
-            req = urllib2.Request('http://localhost:8080/GeoHazardServices/srv/requestById')
-            req.add_data( urllib.urlencode( {'id' : entry[1]['_id'], 'key' : 'ABC0123456789def' } ) )
-            urllib2.urlopen( req )
+            req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/requestById')
+            req.add_data( urllib.parse.urlencode( {'id' : entry[1]['_id'], 'key' : 'ABC0123456789def' } ) )
+            urllib.request.urlopen( req )
             
             cntSim += 1
                    
@@ -216,17 +226,17 @@ def main( s ):
             # TODO: can this be handled by the server?
             db["events"].insert( event )
                     
-        time.sleep( 0.001 )
+        time.sleep( 0.01 )
                     
-    print 'Inserted: %u' % cntInsert
-    print 'Updated: %u' % cntUpdate
-    print 'Errors: %u' % cntError
-    print 'Pages: %u' % page
-    print 'Simulated: %u' % cntSim
+    print('Inserted: %u' % cntInsert)
+    print('Updated: %u' % cntUpdate)
+    print('Errors: %u' % cntError)
+    print('Pages: %u' % page)
+    print('Simulated: %u' % cntSim)
     
     endTime = time.time()
     
-    print "Duration: %u" % (endTime - startTime)
+    print("Duration: %u" % (endTime - startTime))
     
     
 if __name__ == "__main__":
