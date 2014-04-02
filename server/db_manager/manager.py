@@ -89,11 +89,13 @@ def main( s ):
     
     url = 'http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt&page='
     page = 1
-        
+       
+    cntTotal = 0
     cntInsert = 0
     cntUpdate = 0
     cntError = 0
     cntSim = 0
+    cntKnown = 0
     
     client = MongoClient()
     db = client['easywave']
@@ -101,7 +103,8 @@ def main( s ):
     
     entries = []
     
-    while True:
+    # stop if we have seen at least 100 known entries (rounded up to a multiple of page size) --> updates for older entries are unlikely
+    while cntKnown < 100:
     
         response = urllib.request.urlopen( url + str(page) )
         data = response.read()
@@ -117,19 +120,19 @@ def main( s ):
             
         page += 1
         #ids = re.findall( "<a href='event.php\?id=(gfz(\d\d\d\d)\w\w\w\w)'>", text )
-                    
+        
         for m in matches:
-            print(m)
+
+            cntTotal += 1
             eid = re.findall( "/(gfz\d\d\d\d\w\w\w\w)/", m )[0]
-            print(eid)
             response = urllib.request.urlopen( 'http://geofon.gfz-potsdam.de' + m )
             data = response.read()
             txt = data.decode('utf-8')
             
             prop = re.findall( s, txt )
-            
+       
             if len(prop) == 0:
-                print('Error')
+                print('Error: ', eid)
                 cntError += 1
                 continue
                 
@@ -137,10 +140,9 @@ def main( s ):
                 
             date = datetime.datetime.strptime( prop[0] + " " + prop[1], "%y/%m/%d %H:%M:%S.%f")
             
-            print(date)
-            print('lon, lat: %f, %f' % ( float(prop[4]), float(prop[3]) ))
+            print( date, eid )
             
-#            iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( float(prop[3]), float(prop[4]) ) )
+            #iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( float(prop[3]), float(prop[4]) ) )
             
             entry = { "_id": eid,
                       "user": "gfz",
@@ -155,7 +157,7 @@ def main( s ):
                         "strike": float(prop[7]),
                         "dip": float(prop[8]),
                         "rake": float(prop[9]),
-#                        "sea_area": iho_region
+                        #"sea_area": iho_region
                        },
                      }
                                                     
@@ -185,8 +187,8 @@ def main( s ):
                     # update entry
                     entries.append( (2, entry) )
                 else:
-                    break;
-    
+                    cntKnown += 1
+
     for entry in reversed( entries ):
         
         timestamp = datetime.datetime.utcnow()
@@ -217,7 +219,9 @@ def main( s ):
         if prop["sea_area"] != None and prop["magnitude"] > 5.5 and prop["depth"] < 100:
             # request simulation of this event
             req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/requestById')
-            req.add_data( urllib.parse.urlencode( {'id' : entry[1]['_id'], 'key' : 'ABC0123456789def' } ) )
+            data = urllib.parse.urlencode( {'id' : entry[1]['_id'], 'key' : 'ABC0123456789def' } )
+            binary_data = data.encode('ascii')
+            req.add_data( binary_data )
             urllib.request.urlopen( req )
             
             cntSim += 1
@@ -228,6 +232,7 @@ def main( s ):
                     
         time.sleep( 0.01 )
                     
+    print('Total: %u' % cntTotal)
     print('Inserted: %u' % cntInsert)
     print('Updated: %u' % cntUpdate)
     print('Errors: %u' % cntError)
