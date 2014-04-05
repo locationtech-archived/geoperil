@@ -11,7 +11,7 @@ import java.io.PrintStream;
 import java.io.Writer;
 import java.net.UnknownHostException;
 import java.util.Date;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,9 +22,9 @@ import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.util.JSON;
 
-public class WorkerThread implements Runnable {
+public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 
-	private BlockingQueue<TaskParameter> queue;
+	private PriorityBlockingQueue<WorkerThread> workerQueue;
 	private File workdir;
 	
 	private boolean remote;
@@ -35,10 +35,16 @@ public class WorkerThread implements Runnable {
 	
 	private String hardware;
 	
-	public WorkerThread( BlockingQueue<TaskParameter> queue,
+	private Integer priority;
+	private Object lock;
+	private TaskParameter task;
+	
+	public WorkerThread( PriorityBlockingQueue<WorkerThread> queue,
 						 String workdir ) throws IOException {
 		
-		this.queue = queue;
+		this.workerQueue = queue;
+		this.lock = new Object();
+		this.priority = new Integer( 0 );
 		
 		this.workdir = new File( workdir );
 		
@@ -74,6 +80,10 @@ public class WorkerThread implements Runnable {
 	
 	public void setHardware( String hardware ) {
 		this.hardware = hardware;
+	}
+	
+	public void setPriority( int priority ) {
+		this.priority = priority;
 	}
 		
 	public void start() {
@@ -114,7 +124,7 @@ public class WorkerThread implements Runnable {
 		while( true ) {
 		
 			try {
-				params = queue.take();
+				params = getWork();
 				handleRequest( params );
 								
 			} catch (InterruptedException e) {
@@ -128,16 +138,43 @@ public class WorkerThread implements Runnable {
 				
 		task.status = TaskParameter.STATUS_RUN;
 		
+		checkSshConnection();
+		
 		writeFault( task.eqparams );
 		
 		if( startEasyWave( task ) != 0 ) {
 			task.status = TaskParameter.STATUS_ERROR;
 			return 0;
 		}
-		
-		addPoiResults( task.id );
-				
+										
 		task.status = TaskParameter.STATUS_DONE;
+		
+		return 0;
+	}
+	
+	private int checkSshConnection() {
+		
+		if( remote ) {
+			
+			/* check if ssh connection is still established */
+			sshCon[0].out.println( "echo '\n'" );
+			sshCon[0].out.flush();
+			
+			try {
+							
+				if( sshCon[0].in.readLine() == null ) {
+				
+					System.err.println( "Error: ssh connection was closed. Trying to reconnect..." );
+					sshCon[0].connect();
+					sshCon[1].connect();
+				}
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+				return 1;
+			}
+			
+		}
 		
 		return 0;
 	}
@@ -187,20 +224,22 @@ public class WorkerThread implements Runnable {
 		if( task.user.equals("jabc") ) {
 			cmdParams = " -grid ../grid4.grd -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop";
 		}
-				
+			
+		System.out.println( "Thread " + this.thread.getId() + " processes the request." );
+		
 		try {
 			
 			BufferedReader reader = null;
 			
 			if( remote ) {
-				
+								
 				sshCon[0].out.println( "rm eWave.* arrival.* easywave.log error.msg" );
 				sshCon[0].out.println( "easywave " + cmdParams );
 				sshCon[0].out.println( "echo '\004'" );
 				sshCon[0].out.flush();
 				
 				reader = sshCon[0].in;
-				
+								
 			} else {
 				
 				p = Runtime.getRuntime().exec( GlobalParameter.easyWave + cmdParams, null, workdir );
@@ -213,7 +252,7 @@ public class WorkerThread implements Runnable {
 						
 			int processIndex = -1;
 			
-			String line = reader.readLine();
+			String line = reader.readLine();			
 			while (line != null && ! line.equals("\004")) {
 								
 				/* check if output line contains progress report */
@@ -235,7 +274,14 @@ public class WorkerThread implements Runnable {
 					/* create a kml file if at least 10 minutes of simulation are done */
 					if( totalMin > 10 )
 						createVectorFile( totalMin, task.id );
-										
+							
+					if( task.progress == 100.0f ) {
+						for( String ewh: GlobalParameter.ewhs.keySet() )
+							getWaveHeights( task.id, ewh );
+					
+						addPoiResults( task.id );
+					}
+					
 					/* check if a new process entry was inserted previously - return otherwise */
 					if( processIndex < 0 ) {
 						System.err.println( "Error: Invalid index into process array!" );
@@ -346,10 +392,12 @@ public class WorkerThread implements Runnable {
 			BufferedReader reader = null;
 			
 			if( remote ) {
-				
+					
+				/* ssh should be okay upon here, therefore run commands */
 				sshCon[1].out.println( gdal );
 				sshCon[1].out.println( "echo '\004'" );
 				sshCon[1].out.flush();
+						
 				reader = sshCon[1].in;
 				
 			} else {
@@ -359,7 +407,7 @@ public class WorkerThread implements Runnable {
 				reader = new BufferedReader(new InputStreamReader( p.getInputStream() ) );
 			}
 	  		  
-			String line = reader.readLine();
+			String line = reader.readLine();			
 			while (line != null && ! line.equals("\004")) {
 				line = reader.readLine();
 			}
@@ -401,6 +449,79 @@ public class WorkerThread implements Runnable {
 		return 0;
 	}
 	
+	private int getWaveHeights( String id, String ewh ) {
+		
+		Process p;
+				
+		String gdal = String.format( "gdal_contour -f kml -fl %s eWave.2D.sshmax heights.%s.kml", ewh, ewh);
+		
+		String kml_parser = String.format( "python ../getEWH.py heights.%s.kml %s %s", ewh, ewh, id );
+		
+		String kml_file = String.format( "heights.%s.kml", ewh );
+		
+		try {
+						
+			BufferedReader reader = null;
+			
+			if( remote ) {
+					
+				/* ssh should be okay upon here, therefore run commands */
+				sshCon[1].out.println( gdal );
+				sshCon[1].out.println( "echo '\004'" );
+				sshCon[1].out.flush();
+						
+				reader = sshCon[1].in;
+				
+			} else {
+				p = Runtime.getRuntime().exec( gdal, null, workdir );
+				p.waitFor();
+				
+				reader = new BufferedReader(new InputStreamReader( p.getInputStream() ) );
+			}
+	  		  
+			String line = reader.readLine();			
+			while (line != null && ! line.equals("\004")) {
+				line = reader.readLine();
+			}
+			
+			if( remote ) {
+				sshCon[1].out.println( "cat " + kml_file );
+				sshCon[1].out.println( "echo -n '\004'" );
+				sshCon[1].out.flush();
+				
+				Writer writer = new BufferedWriter(new OutputStreamWriter( new FileOutputStream( workdir + "/" + kml_file ) ) );
+				int ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
+				while( ret > 0 ) {
+					if( sshCon[1].buffer[ ret - 1 ] == '\004' ) {
+						ret -= 1;
+						writer.write( sshCon[1].buffer, 0, ret );
+						break;
+					}
+					writer.write( sshCon[1].buffer, 0, ret );
+					ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
+				}
+				writer.close();
+			}
+			
+			p = Runtime.getRuntime().exec( kml_parser, null, workdir );
+			p.waitFor();
+			
+			reader = new BufferedReader(new InputStreamReader( p.getInputStream() ) );
+			  
+			line = reader.readLine();
+			while (line != null) {
+				line = reader.readLine();
+			}
+				  
+		} catch (IOException | InterruptedException e) {
+			e.printStackTrace();
+			return 1;
+		}		
+		
+		return 0;
+		
+	}
+	
 	private int addPoiResults( String id ) {
 				
 		String poi_parser = "python ../getPois.py eWave.poi.summary " + id;
@@ -436,6 +557,36 @@ public class WorkerThread implements Runnable {
 		}
 		
 		return 0;
+	}
+
+	@Override
+	public int compareTo( WorkerThread o ) {
+		return priority.compareTo( o.priority );
+	}
+	
+	private TaskParameter getWork() throws InterruptedException {
+		
+		synchronized( lock ) {
+						
+			workerQueue.offer( this );
+			task = null;
+			
+			while( task == null )
+				lock.wait();
+			
+		}
+		
+		return task;
+	}
+	
+	public void putWork( TaskParameter task ) {
+		
+		this.task = task;
+		
+		synchronized( lock ) {
+			lock.notify();
+		}
+		
 	}
 
 }

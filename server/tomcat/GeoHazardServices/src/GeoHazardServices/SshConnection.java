@@ -14,9 +14,17 @@ public class SshConnection {
 	
 	public char[] buffer;
 	
+	private String ssh;
+	private String dir;
+	
 	public SshConnection( String user, String host, String dir ) throws IOException {
 		
-		String ssh = "ssh " + user + "@" + host;
+		this.ssh = "ssh " + user + "@" + host;
+		this.dir = dir;
+		connect();
+	}
+	
+	public void connect() throws IOException {
 		
 		System.out.println( ssh );
 		process = Runtime.getRuntime().exec( ssh );
@@ -28,7 +36,11 @@ public class SshConnection {
 		
 		System.out.println( "cd " + dir );
 		out.println( "cd " + dir );
+		out.println( "echo '\004'" );
 		out.flush();
+		
+		String line;
+		while( (line = in.readLine()) != null && ! line.equals("\004") );
 	}
 	
 	public void close() {

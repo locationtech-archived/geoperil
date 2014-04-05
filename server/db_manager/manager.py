@@ -194,17 +194,20 @@ def main( s ):
         timestamp = datetime.datetime.utcnow()
         
         entry[1].update( {"timestamp": timestamp} );
-        
-        process = { "process": [] }
-    
-        entry[1].update( process );
-        
+                
         if entry[0] == 1:
             cntInsert += 1
             
         if entry[0] == 2:
             collection.remove( { "_id": entry[1]["_id"] } )
             cntUpdate += 1
+            
+        prop = entry[1]["prop"]
+        
+        simulate = (prop["sea_area"] != None and prop["magnitude"] > 5.5 and prop["depth"] < 100)
+        
+        if simulate:
+            entry[1].update( { "process": [] } );
             
         collection.insert( entry[1] )
         
@@ -214,9 +217,7 @@ def main( s ):
                   "event": "new"
                  }
         
-        prop = entry[1]["prop"]
-        
-        if prop["sea_area"] != None and prop["magnitude"] > 5.5 and prop["depth"] < 100:
+        if simulate:
             # request simulation of this event
             req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/requestById')
             data = urllib.parse.urlencode( {'id' : entry[1]['_id'], 'key' : 'ABC0123456789def' } )

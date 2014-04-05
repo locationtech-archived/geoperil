@@ -13,6 +13,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 
 import javax.inject.Singleton;
 import javax.servlet.http.Cookie;
@@ -45,6 +46,7 @@ import com.mongodb.util.Base64Codec;
 public class Services {
 
   private BlockingQueue<TaskParameter> queue;
+  private PriorityBlockingQueue<WorkerThread> workerQueue;
   private final int capacity = 3000;
   private WorkerThread[] worker;
   private final int numWorker = 6;
@@ -56,12 +58,13 @@ public class Services {
 	  
 	  System.out.println("Constructor");
 	  queue = new ArrayBlockingQueue<TaskParameter>(capacity);
+	  workerQueue = new PriorityBlockingQueue<WorkerThread>(100);
 	  	  
 	  worker = new WorkerThread[numWorker];
 	  for( int i = 0; i < numWorker; i++ ) {
 		  
 		  try {
-			worker[i] = new WorkerThread( queue, GlobalParameter.workingDir + "/w" + i );
+			worker[i] = new WorkerThread( workerQueue, GlobalParameter.workingDir + "/w" + i );
 		  } catch (IOException e) {
 			  System.err.println("Error: Could not create worker thread.");
 			  e.printStackTrace();
@@ -71,13 +74,17 @@ public class Services {
 		  if( i < 2 ) {
 			  worker[i].setRemote( "sysop", "139.17.3.159", "~/EasyWave/web/worker" + i );
 			  worker[i].setHardware("GeForce GTX TITAN GPU");
+			  worker[i].setPriority(100);
 		  } else {
 			  worker[i].setRemote( "worker", "139.17.3.234", "~/EasyWave/web/worker" + i );
 			  worker[i].setHardware("Tesla C1060 GPU");
+			  worker[i].setPriority(200);
 		  }
 		  
 		  worker[i].start();
 	  }
+	  
+	  new Thread( new WorkScheduler( queue, workerQueue ) ).start();
 	  
 	  try {
 		mongoClient = new MongoClient();
@@ -168,9 +175,8 @@ public class Services {
 		  return "{ \"status\": \"failure\" }";
 	  }
 	  	  
-	  /* TODO: id is jabc specific */
-	  System.out.println( "{ \"status\": \"success\", \"id\": "+ id + " }" );
-	  return "{ \"status\": \"success\", \"id\": "+ id + " }";
+	  System.out.println( "{ \"status\": \"success\", \"id\": \""+ id + "\" }" );
+	  return "{ \"status\": \"success\", \"id\": \""+ id + "\" }";
   }
     
   /*** TODO: added for jabc - please do not change! ***/
@@ -579,18 +585,16 @@ public class Services {
  @Produces(MediaType.APPLICATION_JSON)
  public String fetch(
 		  @Context HttpServletRequest request,
-		  @FormParam("limit") int limit,
+		  @FormParam("limit") @DefaultValue("0") int limit,
+		  @FormParam("delay") @DefaultValue("0") int delay,
 		  @FormParam("undersea") @DefaultValue("false") boolean undersea,
 		  @CookieParam("server_cookie") String sessionCookie) {
 	 
 	/* check session key and find out if the request comes from an authorized user */
 	UUID session = getSessionUUID( sessionCookie );
 	String user = signedIn( session ); /* returns null if user is not logged in */
-	 	
-	/* set default limit */
-	if( limit <= 0 ) limit = 10;
-			
-	/* create lists for generals and user specific earthquake entries */
+	 				
+	/* create lists for general and user specific earthquake entries */
 	ArrayList<DBObject> mlist = new ArrayList<DBObject>();
 	ArrayList<DBObject> ulist = new ArrayList<DBObject>();
 	
@@ -605,7 +609,10 @@ public class Services {
 	DB db = mongoClient.getDB( "easywave" );
 	DBCollection coll = db.getCollection("eqs");
 		
-	String users[] = { "gfz", user }; 
+	String users[] = { "gfz", user };
+	
+	/* return only entries that are older than 'delay' minutes */
+	Date upperTimeLimit = new Date( System.currentTimeMillis() - delay * 60 * 1000 );
 	
 	/* get earthquakes for each of the given users */
 	for( int i = 0; i < users.length; i++ ) {
@@ -616,8 +623,14 @@ public class Services {
 		if( undersea )
 			inQuery.append( "prop.sea_area", new BasicDBObject( "$ne", null ) );
 		
+		if( delay > 0 )
+			inQuery.append( "prop.date", new BasicDBObject( "$lt", upperTimeLimit ) );
+				
 		/* query DB, sort the results by date and limit the number of returned entries */
-		DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("prop.date", -1) ).limit(limit);
+		DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("prop.date", -1) );
+		
+		if( limit > 0 )
+			cursor = cursor.limit( limit );
 					
 		/* walk through the returned entries */
 		for( DBObject obj: cursor ) {
@@ -645,7 +658,7 @@ public class Services {
 	jsonObj.addProperty("ts", sdf.format( maxTimestamp ) );
 	jsonObj.add( "main", gson.toJsonTree( mlist ) );	
 	jsonObj.add( "user", gson.toJsonTree( ulist ) );
-				
+					
 	return jsonObj.toString();
  }
  	
@@ -655,13 +668,14 @@ public class Services {
  public String update(
 		 @Context HttpServletRequest request,
 		 @FormParam("ts") String ts,
+		 @FormParam("delay") @DefaultValue("0") int delay,
 		 @CookieParam("server_cookie") String sessionCookie ) {
 			 
 	/* check session key and find out if the request comes from an authorized user */
 	UUID session = getSessionUUID( sessionCookie );
 	String user = signedIn( session );
 	 
-	/* create lists for generals and user specific earthquake entries */
+	/* create lists for general and user specific earthquake entries */
 	ArrayList<DBObject> mlist = new ArrayList<DBObject>();
 	ArrayList<DBObject> ulist = new ArrayList<DBObject>();
 	 
@@ -690,29 +704,39 @@ public class Services {
 	if( user != null )
 		users.add( new BasicDBObject( "user", user ) );
 	
+	/* return only entries that are older than 'delay' minutes */
+	Date upperTimeLimit = new Date( System.currentTimeMillis() - delay * 60 * 1000 );
+	
 	/* create DB query - search for newer events related to the general list or the user */
 	BasicDBObject inQuery = new BasicDBObject();
 	inQuery.put( "timestamp", new BasicDBObject( "$gt", timestamp ) );
 	inQuery.put( "$or", users );
-						
+							
 	/* query DB, sort the results by timestamp */
 	DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("timestamp", -1) );
 			
 	boolean first = true;
-	
+		
 	/* walk through the returned entries */
 	for( DBObject obj: cursor ) {
 		
 		/* get corresponding entry from earthquake collection */
 		String id = (String) obj.get("id");
-		DBCursor cursor2 = db.getCollection("eqs").find( new BasicDBObject( "_id", id ) );
+		
+		BasicDBObject objQuery = new BasicDBObject( "_id", id );
+		
+		if( delay > 0 )
+			objQuery.put( "prop.date", new BasicDBObject( "$lt", upperTimeLimit ) );
+		
+		DBCursor cursor2 = db.getCollection("eqs").find( objQuery );
 		
 		/*  */
 		if( cursor2.hasNext() ) {
 			
 			/* add event type to entry */
-			DBObject obj2 = cursor2.next();			
-			obj2.put( "event", (String) obj.get("event") );
+			DBObject obj2 = cursor2.next();
+			String event = (String) obj.get("event");
+			obj2.put( "event", event );
 
 			/* check if entry belongs to general or user specific list */
 			if( obj.get("user").toString().equals("gfz") ) {
@@ -721,18 +745,18 @@ public class Services {
 				ulist.add( obj2 );
 			}
 			
-		} else {
-			System.err.println("Could not find 'id' in earthquake collection.");
+			/* update timestamp */
+			/* TODO: this is just a temporary solution, because progress events could be delivered multiple times */
+			if( delay <= 0 || event.equals( "new" ) ) {
+				if( first ) {
+					timestamp = (Date) obj.get( "timestamp" );
+					first = false;
+				}
+			}
 		}
 		
 		/* clean up query */
 		cursor2.close();
-
-		/* update timestamp */
-		if( first ) {
-			timestamp = (Date) obj.get( "timestamp" );
-			first = false;
-		}
 	}
 	
 	/* clean up query */
@@ -743,7 +767,7 @@ public class Services {
 	jsonObj.addProperty( "ts", sdf.format( timestamp ) );
 	jsonObj.add( "main", gson.toJsonTree( mlist ) );
 	jsonObj.add( "user", gson.toJsonTree( ulist ) );
-	
+		
 	return jsonObj.toString();
  }
   
@@ -777,6 +801,37 @@ public class Services {
 	 
 	 return ret;
  }
+ 
+ @GET
+ @Path("/getWaveHeights")
+ @Produces(MediaType.APPLICATION_JSON)
+ public String getWaveHeights(
+		 @Context HttpServletRequest request,
+		 @QueryParam("id") String id ) {
+	 
+	 ArrayList<DBObject> entries = new ArrayList<DBObject>();
+	 
+	 DB db = mongoClient.getDB( "easywave" );
+	 DBCollection coll = db.getCollection("results2");
+	 
+	 BasicDBObject inQuery = new BasicDBObject();
+	 inQuery.put( "id", id );
+	 inQuery.put( "process", 0 );
+	 	 
+	 DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject( "ewh", 1 ) );
+	 
+	 for( DBObject obj: cursor ) {
+		String ewh = (String) obj.get( "ewh" );
+		obj.put( "color", GlobalParameter.ewhs.get( ewh ) );
+		entries.add( obj );
+	 }
+		
+	 cursor.close();
+	 
+	 String ret = new Gson().toJson( entries );
+	 
+	 return ret;
+ }	
  
  @GET
  @Path("/getPois")

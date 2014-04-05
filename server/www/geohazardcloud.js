@@ -1,8 +1,40 @@
 var map;
-var eqlist = [];
-var active = { index: -1,
-			   list: eqlist
-			  };
+
+function CustomList( widget ) {
+	
+   this.list = [];
+   this.startIdx = 0;
+   this.endIdx = 19;
+   this.widget = widget;
+   
+   this.getElem = function( i ) {
+	   return this.list[ this.list.length - i - 1 ];
+   };
+   
+   this.reset = function() {
+	   this.list.length = 0;
+	   this.startIdx = 0;
+	   this.endIdx = 19;
+   };
+   
+   this.push = function( entry ) {
+	   	   							
+	   entry['arrT'] = 0;
+	   entry['polygons'] = {};
+	   entry['rectangle'] = null;
+	   entry['show_grid'] = false;
+	   entry['pois'] = null;
+	   entry['heights'] = {};
+	   	   
+	   this.list.push( entry );
+   };
+}
+
+var eqlist = new CustomList( '#sidebar' );
+
+var entries = {};
+
+var active = null;
 
 var curlist = eqlist;
 var curtab = "#tabRecent";
@@ -10,11 +42,30 @@ var curtab = "#tabRecent";
 var loggedIn = false;
 var username = "";
 
+var default_delay = 24*60;
+var delay = default_delay;
+var events = {};
+var timerId = null;
+
+var defaultText = { no: "No simulation",
+					inland: "No simulation",
+					prepared: "Simulation is being prepared",
+					done: "Simulation processed"
+				   };
+
+var userText = { no: "No tsunami potential",
+				 inland: "Inland, no simulation processed",
+				 prepared: "Simulation is being prepared",
+				 done: "Simulation processed"
+			   };
+
+var simText = defaultText;
+
 var signTarget = null;
 
 var global = {	context: -1,
 				marker: null,
-			  	saved: []
+			  	saved: new CustomList( '#saved' )
 				};
 
 google.maps.event.addDomListener(window, 'load', initialize);
@@ -65,16 +116,23 @@ function initialize() {
 	}
 	
 	$( '#preset > .list-group-item' ).click( loadPreset );
+	
+	$( '#sidebar' ).scroll( scrollList );
+	$( '#saved' ).scroll( scrollList );
 		
-	getEvents();
 }
 
-function getEvents() {
+function getEvents( callback ) {
+	
+	if( timerId != null ) {
+		clearTimeout( timerId );
+		timerId = null;
+	}
 	
 	$.ajax({
 		url: "srv/fetch",
 		type: 'POST',
-		data: { limit: 20 },
+		data: { limit: 0, delay: delay },
 		dataType: 'json',
 				
 		success: function( data ) {
@@ -85,27 +143,35 @@ function getEvents() {
 			
 			for ( var i = mlist.length -1; i >= 0; i-- ) {
 				eqlist.push( mlist[i] );
+				entries[ mlist[i]._id ] = mlist[i];
 			}
 			
 			for ( var i = ulist.length -1; i >= 0; i-- ) {
 				global.saved.push( ulist[i] );
+				entries[ ulist[i]._id ] = ulist[i];
 			}
 			
 			showEntries( eqlist, $('#sidebar') );
-			showEntries( global.saved, $('#saved') );
+			
+			if( global.saved.list.length > 0 )
+				showEntries( global.saved, $('#saved') );
+			
 			$( curtab ).click();
 			
 			getUpdates( timestamp );
+			
+			if( callback != null )
+				callback();
 		}
 	});
 }
 
 function getUpdates( timestamp ) {
-	
+		
 	$.ajax({
 		url: "srv/update",
 		type: 'POST',
-		data: { ts: timestamp },
+		data: { ts: timestamp, delay: delay },
 		dataType: 'json',
 		success: function( result ) {
 			
@@ -123,13 +189,19 @@ function getUpdates( timestamp ) {
 				if( obj['event'] == 'new' ) {
 					
 					eqlist.push( obj );
+					entries[ obj['_id'] ] = obj;
 					madd = true;
 					
 				} else if( obj['event'] == 'progress' ) {
 		
 					var id = obj['_id'];
 					var process = obj['process'][0];
-					updateProgress( id, process, eqlist );
+					
+					/* TODO: just a workaround to omit duplicated progress events caused by delay concept */
+					if( ! events[id] )
+						updateProgress( id, process, eqlist.list );
+					
+					events[id] = true;
 				}
 			}
 			
@@ -140,17 +212,17 @@ function getUpdates( timestamp ) {
 				if( obj['event'] == 'new' ) {
 					
 					global.saved.push( obj );
+					entries[ obj['_id'] ] = obj;
 					uadd = true;
 					
 				} else if( obj['event'] == 'progress' ) {
 		
 					var id = obj['_id'];
 					var process = obj['process'][0];
-					updateProgress( id, process, global.saved );
+					updateProgress( id, process, global.saved.list );
 				}
 			}
 			
-			// this is not performant if only one element must be updated
 			if( madd ) {
 				showEntries( eqlist, $('#sidebar') );
 			}
@@ -166,24 +238,28 @@ function getUpdates( timestamp ) {
 		},
 		complete: function() {
 			// schedule the next request when the current one's complete
-			setTimeout( function() { getUpdates( timestamp ); }, 1000);
+			timerId = setTimeout( function() { getUpdates( timestamp ); }, 1000);
 		}
+	});
+}
+
+function removeMarker( widget ) {
+	
+	widget.children().each( function() {
+		$(this).data( "entry" ).marker.setMap( null );
 	});
 }
 
 function showEntries( list, widget ) {
 	
+	removeMarker( widget );
 	widget.empty();
-	
-	//var bounds = new google.maps.LatLngBounds ();
-	
-	for( var i = 0; i < list.length; i++ ) {
 		
-		addEntry( widget, list[i], i );
-		//bounds.extend( list[i]['marker'].getPosition() );
+	for( var i = list.endIdx; i < list.list.length && i >= list.startIdx; i-- ) {
+
+		addEntry( widget, list.getElem(i), i );
 	}
 	
-	//map.fitBounds(bounds);
 }
 
 function updateProgress( id, process, list ) {
@@ -219,17 +295,20 @@ function updateProgress( id, process, list ) {
 		    	
 		    	if( filled == 100 ) {
 		    		list[i].div.find( '.progress' ).css( 'display', 'none' );
-		    		list[i].div.find( '.status' ).html( 'Simulation processed' );
+		    		list[i].div.find( '.status' ).html( simText['done'] );
 		    		list[i].div.find( '.status' ).css( 'display', 'inline' );
 		    	}
 			}
 	    	
-			if( active.list == list && active.index == i ) {
+			if( active == id ) {
 				getIsos( list[i] );
 				
 				if( filled == 100 ) {
 					getPois( list[i] );
-					showPois(active, true);
+					showPois( active, true );
+					
+					//getWaveHeights( list[i] );
+					//showWaveHeights( active, true );
 				}
 			}
 		}
@@ -254,8 +333,8 @@ function addEntry( widget, data, i ) {
 	$div.attr('id', id );
 	$div.css('display', 'block' );
 	
+	$div.data( "entry", data );
 	data['div'] = $div;
-	data['index'] = i;
 	
 	var prop = data['prop'];
 	
@@ -286,16 +365,12 @@ function addEntry( widget, data, i ) {
 		
 	$div.find( '.progress' ).css( 'display', 'none' );
 	
-	if( data['process'].length > 0 ) {
-		updateProgress( data['_id'], data['process'][0], new Array( data ) );
-	} else {
+	if( ! data['process'] ) {
 		
-		if( widget.is( '#saved' ) ) {
-			$div.find( '.status' ).html( 'Simulation is being prepared' );
-		} else if( ! prop['sea_area'] ) {
-			$div.find( '.status' ).html( 'Inland, no simulation processed' );
+		if( ! prop['sea_area'] ) {
+			$div.find( '.status' ).html( simText['inland'] );
 		} else {
-			$div.find( '.status' ).html( 'No tsunami potential' );
+			$div.find( '.status' ).html( simText['no'] );
 			$div.find( '.lnkLearn' ).css( "display", "inline" );
 			
 			var options = { placement:'bottom',
@@ -307,6 +382,11 @@ function addEntry( widget, data, i ) {
 			options.content = "<span style='font-size: 0.8em;'>Currently, we use a rough and simple threshold mechanism to identify the tsunami potential of an earthquake. If the location of the earthquake is inland, deeper than 100km, or has a magnitude less than 5.5 then we don't consider the earthquake for any wave propagation computation. However, if you think the earthquake is relevant for computation then you can do so by using 'Modify and reprocess'. <br><br>Anyhow, in the near future we plan to use an improved mechanism by adopting region dependent decision matrices defined by the UNESCO-IOC ICGs, that is ICG/NEAMTWS, ICG/IOTWS, ICG/PTWS, and ICG/CARIBE EWS.</span>";
 			$div.find( '.lnkLearn' ).popover( options );
 		}
+		
+	} else if( data['process'].length == 0 ) {
+		$div.find( '.status' ).html( simText['prepared'] );
+	} else {
+		updateProgress( data['_id'], data['process'][0], new Array( data ) );
 	}
 	
 	options = { placement:'top',
@@ -342,14 +422,6 @@ function addEntry( widget, data, i ) {
 	data['marker'] = addMarker( prop['latitude'], prop['longitude'], new google.maps.MarkerImage( link ) );
 	data['marker'].setAnimation( null );
 	data['marker'].setMap( null );
-	
-	if( data['arrT'] == null ) {
-		data['arrT'] = 0;
-		data['polygons'] = {};
-		data['rectangle'] = null;
-		data['show_grid'] = false;
-		data['pois'] = null;
-	}
 		    			    			    	
 	widget.prepend( $div );
 }
@@ -388,31 +460,46 @@ function getMarkerColor( mag ) {
 } 
 
 function entryOnClick() {
+			
+	var id = $(this).parents( ".entry" ).data( "entry" )['_id'];
 		
-	var index = curlist.length - $(this).parents( ".entry" ).index() - 1;
-	var entry = curlist[ index ];
+	if( !loggedIn ) {
 		
+		signTarget = visualize.bind( this, id );
+		$( "#SignInDialog" ).modal("show");
+		return;
+	}
+	
+	visualize( id );
+}
+
+function visualize( id ) {
+	
+	var entry = entries[id];		
+		
+	//showWaveHeights( active, false );
 	showPolygons( active, false );
 	showGrid( active, false );
 	showPois( active, false );
 	
-	active.index = index;
-	active.list = curlist;
+	active = id;
+	//getWaveHeights( entry );
 	getIsos( entry );
 	getPois( entry );
 	
+	//showWaveHeights( active, true );
 	showPolygons( active, true );
 	showGrid( active, entry['show_grid'] );
 	showPois( active, true );
 		
-	//map.setZoom(3);
-	map.panTo( entry['marker'].position );
+	if( entry['marker'] )
+		map.panTo( entry['marker'].position );
 }
 
 function highlight( event ) {
 		   	
 	var turnOn = event.data["turnOn"];
-	var entry = curlist[ curlist.length - $(this).index() - 1 ];
+	var entry = $(this).data( "entry" );
 	
 	if( jQuery.contains( event.currentTarget, event.relatedTarget ) )
 		return;
@@ -485,6 +572,58 @@ function getIsos( entry ) {
 				}
 			
 				entry['polygons'][ resultObj['arrT'] ] = sub;
+			}
+			
+		}
+	});
+		    	
+}
+
+function getWaveHeights( entry ) {
+	
+	var id = entry['_id'];
+				
+	if( ! $.isEmptyObject( entry['heights'] ) )
+		return;
+	
+	$.ajax({
+		url: "srv/getWaveHeights",
+		data: { "id": id, "process": 0 },
+		dataType: 'json',
+		success: function( result ) {
+			
+			for( var i = 0; i < result.length; i++ ) {
+				
+				var resultObj = result[i];
+								
+				sub = [];
+				
+				lines = resultObj['points'];    				
+				for( var j = 0; j < lines.length; j++ ) {
+					
+					points = lines[j];
+					coords = [];
+    				for( var k = 0; k < points.length; k++ ) {
+    					xy = points[k];
+    					coords.push( new google.maps.LatLng( xy['d'], xy['e'] ) );
+    				}
+    				
+    				polygon = new google.maps.Polygon({
+    				    path: coords,
+    				    geodesic: true,
+    				    strokeColor: resultObj['color'],
+    				    strokeOpacity: 0.5,
+    				    fillColor: resultObj['color'],
+    				    fillOpacity: 0.8,
+    				    zIndex: i
+				  	});
+    				
+    				polygon.setMap( map );
+
+    				sub.push( polygon );
+				}
+			
+				entry['heights'][ resultObj['ewh'] ] = sub;
 			}
 			
 		}
@@ -598,7 +737,7 @@ function getPoiColor( poi ) {
 
 function showPolygons( pointer, visible ) {
 		    	
-	if( pointer.index < 0 )
+	if( pointer == null )
 		return;
 	
 	var tmap = null;
@@ -606,7 +745,7 @@ function showPolygons( pointer, visible ) {
 	if( visible )
 		tmap = map;
 		
-	var entry = pointer.list[ pointer.index ];
+	var entry = entries[ pointer ];
 	
 	for( var arrT in entry['polygons'] ) {
 		
@@ -619,12 +758,35 @@ function showPolygons( pointer, visible ) {
 	}
 }
 
-function showGrid( pointer, visible ) {
-		
-	if( pointer.index < 0 )
+function showWaveHeights( pointer, visible ) {
+	
+	if( pointer == null )
 		return;
 	
-	var entry = pointer.list[ pointer.index ];
+	var tmap = null;
+	
+	if( visible )
+		tmap = map;
+		
+	var entry = entries[ pointer ];
+	
+	for( var ewh in entry['heights'] ) {
+		
+		polygons = entry['heights'][ewh];
+		
+		for( var i = 0; i < polygons.length; i++ ) {
+			
+			polygons[i].setMap( tmap );
+		}
+	}
+}
+
+function showGrid( pointer, visible ) {
+		
+	if( pointer == null )
+		return;
+	
+	var entry = entries[ pointer ];
 	
 	if( ! visible ) {
 		if( entry['rectangle'] != null ) {
@@ -634,7 +796,7 @@ function showGrid( pointer, visible ) {
 		return;
 	}
 		
-	if( entry['process'].length == 0 )
+	if( ! entry['process'] || entry['process'].length == 0 )
 		return;
 		
 	if( entry['rectangle'] )
@@ -665,7 +827,7 @@ function showGrid( pointer, visible ) {
 
 function showPois( pointer, visible ) {
 	
-	if( pointer.index < 0 )
+	if( pointer == null )
 		return;
 	
 	var tmap = null;
@@ -673,7 +835,7 @@ function showPois( pointer, visible ) {
 	if( visible )
 		tmap = map;
 	
-	var entry = pointer.list[ pointer.index ];
+	var entry = entries[ pointer ];
 	
 	for( var i in entry.pois ) {
 		
@@ -683,11 +845,12 @@ function showPois( pointer, visible ) {
 
 function deselect() {
 	
+	showWaveHeights(active, false);
 	showPolygons(active, false);
 	showGrid(active, false);
 	showPois(active, false);
 	
-	active.index = -1;
+	active = null;
 }
 	    
 function checkSession() {
@@ -703,7 +866,9 @@ function checkSession() {
 			
 			if( status == 'success' ) {
 				username = result.username;
-				logIn();
+				logIn( null );
+			} else {
+				getEvents( null );
 			}
 		},
 		error: function() {
@@ -731,7 +896,6 @@ function signIn( user, password ) {
 		complete: function() {
 			
 			if( status == "success" ) {
-				logIn();
 				
 				/* reset all password and status fields of sign-in widgets */
 				$( "#SignInDialog" ).modal("hide");
@@ -739,9 +903,8 @@ function signIn( user, password ) {
 				$('#diaPass').val("");
 				$('#inPassword').val("");
 				
-				if( signTarget )
-					signTarget();
-				
+				logIn( signTarget );
+								
 			} else {
 
 				/* set status to error and clear password fields */
@@ -774,9 +937,17 @@ function diaSignIn() {
 	signIn( username, password );
 }
 
-function logIn() {
+function logIn( callback ) {
 	
 	loggedIn = true;
+	
+	simText = userText;
+	
+	delay = 0;
+	eqlist.list.length = 0;
+	global.saved.list.length = 0;
+	entries = {};
+	getEvents( callback );
 	
 	$( "#btnSignIn" ).css( "display", "none" );
 	$( "#btnSignOut" ).css( "display", "block" );
@@ -813,6 +984,8 @@ function logOut() {
 	
 	loggedIn = false;
 	
+	simText = defaultText;
+		
 	$( "#btnSignIn" ).css( "display", "block" );
 	$( "#btnSignOut" ).css( "display", "none" );
 	
@@ -820,6 +993,13 @@ function logOut() {
 	$( '#tabCustom').css( "display", "none" );
 	
 	$( '#tabRecent' ).find('a').trigger('click');
+	
+	deselect();	
+	delay = default_delay;
+	eqlist.reset();
+	global.saved.reset();
+	entries = {};
+	getEvents( null );
 }
 
 function compute() {
@@ -830,8 +1010,7 @@ function compute() {
 	$( "#hrefSaved" ).click();
 	
 	deselect();
-	active.list = global.saved;
-	active.index = active.list.length;
+	active = null;
 	
 	$.ajax({
 		type: 'POST',
@@ -840,6 +1019,7 @@ function compute() {
 		dataType: 'json',
 		success: function( result ) {
 			status = result['status'];
+			active = result['id'];
 		},
 		error: function() {
 		},
@@ -926,8 +1106,8 @@ function fillCustomForm( e ) {
 		return;
 	}
 	
-	var index = curlist.length - $(this).parents('.entry').index() - 1;
-	fillForm( curlist[ index ] );
+	var entry = $(this).parents('.entry').data('entry');
+	fillForm(entry );
 	$( '#tabCustom' ).find('a').trigger('click');
 }
 
@@ -964,26 +1144,25 @@ function tabChanged( args ) {
 		
 		curlist = eqlist;
 		
-		for( var i = 0; i < eqlist.length; i++ )
-			eqlist[i].marker.setMap( map );
-			
+		for( var i = eqlist.endIdx; i >= eqlist.startIdx; i-- )
+			eqlist.getElem(i).marker.setMap( map );
+				
 	} else {
 		
-		for( var i = 0; i < eqlist.length; i++ )	
-			eqlist[i].marker.setMap( null );
+		removeMarker( $('#sidebar') );
 	}
 	
 	if( tab == "saved" ) {
 		
 		curlist = global.saved;
 		
-		for( var i = 0; i < global.saved.length; i++ )
-			global.saved[i].marker.setMap( map );
+		for( var i = global.saved.endIdx; i < global.saved.list.length && i >= global.saved.startIdx; i-- ) {
+			global.saved.getElem(i).marker.setMap( map );
+		}
 		
 	} else {
 		
-		for( var i = 0; i < global.saved.length; i++ )
-			global.saved[i].marker.setMap( null );
+		removeMarker( $('#saved') );
 	}
 	
 	if( tab == "custom" ) {
@@ -1006,7 +1185,7 @@ function enableGrid( args ) {
 	
 	entry['show_grid'] = $(this).is(':checked');
 	
-	if( active.index == entry['index'] )
+	if( active == entry['_id'] )
 		showGrid( active, entry['show_grid'] );
 }
 
@@ -1095,4 +1274,59 @@ function loadPreset() {
 	fillForm( entry );
 	
 	$( '#custom' ).scrollTop(0);
+}
+
+function nextEntries() {
+	
+	var step = Math.min( curlist.endIdx + 10, curlist.list.length - 1 ) - curlist.endIdx;
+	curlist.startIdx += step;
+	curlist.endIdx += step;
+	
+	showEntries( curlist, $( curlist.widget ) );
+	
+	$( curtab ).click();
+}
+
+function prevEntries() {
+	
+	var step = curlist.startIdx - Math.max( curlist.startIdx - 10, 0 );
+	curlist.startIdx -= step;
+	curlist.endIdx -= step;
+	
+	showEntries( curlist, $( curlist.widget ) );
+	
+	$( curtab ).click();
+}
+
+function scrollList() {
+	
+	var maxValue = $( curlist.widget ).prop('scrollHeight') - $( curlist.widget ).innerHeight();
+	var curValue = $( curlist.widget ).scrollTop();
+		
+	if( curValue == maxValue ) {
+		
+		var elem = $( curlist.widget ).children().last();
+		var top = elem.offset().top;
+		var id = elem.data('entry')['_id'];
+		
+		nextEntries();
+		
+		elem = entries[ id ]['div'];
+		$( curlist.widget ).scrollTop( 0 );
+		$( curlist.widget ).scrollTop( elem.offset().top - top );
+	}
+	
+	if( curValue == 0 ) {
+		
+		var elem = $( curlist.widget ).children().first();
+		var top = elem.offset().top;
+		var id = elem.data('entry')['_id'];
+		
+		prevEntries();
+		
+		elem = entries[ id ]['div'];
+		$( curlist.widget ).scrollTop( 0 );
+		$( curlist.widget ).scrollTop( elem.offset().top - top );
+	}
+	
 }
