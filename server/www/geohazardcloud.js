@@ -132,7 +132,7 @@ function getEvents( callback ) {
 	$.ajax({
 		url: "srv/fetch",
 		type: 'POST',
-		data: { limit: 0, delay: delay },
+		data: { limit: 200, delay: delay },
 		dataType: 'json',
 				
 		success: function( data ) {
@@ -150,11 +150,15 @@ function getEvents( callback ) {
 				global.saved.push( ulist[i] );
 				entries[ ulist[i]._id ] = ulist[i];
 			}
-			
+		
+                        eqlist.endIdx = Math.min( eqlist.endIdx, eqlist.list.length - 1 );
+                        global.saved.endIdx = Math.min( global.saved.endIdx, global.saved.list.length - 1 );
+
 			showEntries( eqlist, $('#sidebar') );
 			
-			if( global.saved.list.length > 0 )
+                        if( global.saved.list.length > 0 ) {
 				showEntries( global.saved, $('#saved') );
+                                }
 			
 			$( curtab ).click();
 			
@@ -181,6 +185,7 @@ function getUpdates( timestamp ) {
 				    		
 			var madd = false;
 			var uadd = false;
+                        var show = false;
 			
 			for ( var i = mlist.length -1; i >= 0; i-- ) {
 					    
@@ -195,6 +200,10 @@ function getUpdates( timestamp ) {
 				} else if( obj['event'] == 'progress' ) {
 		
 					var id = obj['_id'];
+
+                                        if( id == active )
+                                            show = true;
+
 					var process = obj['process'][0];
 					
 					/* TODO: just a workaround to omit duplicated progress events caused by delay concept */
@@ -217,7 +226,11 @@ function getUpdates( timestamp ) {
 					
 				} else if( obj['event'] == 'progress' ) {
 		
-					var id = obj['_id'];
+					var id = obj['_id'];i
+
+                                        if( id == active )
+                                            show = true;
+
 					var process = obj['process'][0];
 					updateProgress( id, process, global.saved.list );
 				}
@@ -233,12 +246,26 @@ function getUpdates( timestamp ) {
 			
 			if( madd || uadd )
 				$( curtab ).click();
+
+                        if( show ) {
+                            
+                            var filled = entries[ active ]['process'][0]['progress'];
+                            if( filled == 100 ) {
+                                getPois( entries[ active ] );
+                                //getWaveHeights( entries[ active ] );
+                            }
+
+                            getIsos( entries[ active ], function() { getUpdates( timestamp ); } );
+
+                        } else {
+
+                            timerId = setTimeout( function() { getUpdates( timestamp ); }, 1000);
+                        }
+
 		},
 		error: function() {
 		},
 		complete: function() {
-			// schedule the next request when the current one's complete
-			timerId = setTimeout( function() { getUpdates( timestamp ); }, 1000);
 		}
 	});
 }
@@ -255,9 +282,10 @@ function showEntries( list, widget ) {
 	removeMarker( widget );
 	widget.empty();
 		
-	for( var i = list.endIdx; i < list.list.length && i >= list.startIdx; i-- ) {
+        var start = Math.min( list.list.length - 1, list.endIdx );
+        for( var i = start; i >= list.startIdx; i-- ) {
 
-		addEntry( widget, list.getElem(i), i );
+                addEntry( widget, list.getElem(i), i );
 	}
 	
 }
@@ -300,17 +328,6 @@ function updateProgress( id, process, list ) {
 		    	}
 			}
 	    	
-			if( active == id ) {
-				getIsos( list[i] );
-				
-				if( filled == 100 ) {
-					getPois( list[i] );
-					showPois( active, true );
-					
-					//getWaveHeights( list[i] );
-					//showWaveHeights( active, true );
-				}
-			}
 		}
 	}
 }
@@ -477,21 +494,21 @@ function visualize( id ) {
 	
 	var entry = entries[id];		
 		
-	//showWaveHeights( active, false );
-	showPolygons( active, false );
-	showGrid( active, false );
-	showPois( active, false );
+        if( active != id ) {
+
+            //showWaveHeights( active, false );
+            showPolygons( active, false );
+            showGrid( active, false );
+            showPois( active, false );
+
+            active = id;
+	    //getWaveHeights( entry );
+	    getIsos( entry, null );
+	    getPois( entry );
 	
-	active = id;
-	//getWaveHeights( entry );
-	getIsos( entry );
-	getPois( entry );
-	
-	//showWaveHeights( active, true );
-	showPolygons( active, true );
-	showGrid( active, entry['show_grid'] );
-	showPois( active, true );
-		
+	    showGrid( active, entry['show_grid'] );
+        }
+
 	if( entry['marker'] )
 		map.panTo( entry['marker'].position );
 }
@@ -529,11 +546,11 @@ function getMarkerIconLink( text, color ) {
 	return link;
 }
 	    	
-function getIsos( entry ) {
+function getIsos( entry, callback ) {
 	
 	var id = entry['_id'];
 	var arrT = entry['arrT'];
-				
+		
 	$.ajax({
 		url: "srv/getIsolines",
 		data: { "id": id, "process": 0, "arrT": arrT },
@@ -566,14 +583,20 @@ function getIsos( entry ) {
     				    strokeWeight: 1
 				  	});
     				
-    				polyline.setMap( map );
+    				polyline.setMap( null );
 
     				sub.push( polyline );
 				}
-			
+		
 				entry['polygons'][ resultObj['arrT'] ] = sub;
 			}
 			
+                        if( active == id )
+                            showPolygons( id, true );
+
+                        if( callback != null )
+                            callback();
+                        
 		}
 	});
 		    	
@@ -583,8 +606,10 @@ function getWaveHeights( entry ) {
 	
 	var id = entry['_id'];
 				
-	if( ! $.isEmptyObject( entry['heights'] ) )
+	if( ! $.isEmptyObject( entry['heights'] ) ) {
+                showWaveHeights( id, true );
 		return;
+        }
 	
 	$.ajax({
 		url: "srv/getWaveHeights",
@@ -618,14 +643,16 @@ function getWaveHeights( entry ) {
     				    zIndex: i
 				  	});
     				
-    				polygon.setMap( map );
+    				polygon.setMap( null );
 
     				sub.push( polygon );
 				}
 			
 				entry['heights'][ resultObj['ewh'] ] = sub;
 			}
-			
+                        
+                        if( active == id )
+    			    showWaveHeights( id, true );
 		}
 	});
 		    	
@@ -635,8 +662,10 @@ function getPois( entry ) {
 	
 	var id = entry._id;
 	
-	if( entry.pois != null )
+	if( entry.pois != null ) {
+                showPois( id, true );
 		return;
+        }
 				
 	$.ajax({
 		url: "srv/getPois",
@@ -664,7 +693,7 @@ function getPois( entry ) {
 				
 				point.marker = new google.maps.Marker ({
 					position: center,
-					map: map,
+					map: null,
 					icon: {
 						path: google.maps.SymbolPath.CIRCLE,
 					    fillOpacity: 0.7,
@@ -711,6 +740,9 @@ function getPois( entry ) {
 					});
 				}
 			}
+
+                        if( active == id )
+                            showPois( id, true );
 		}	
 	});	
 	
@@ -746,13 +778,12 @@ function showPolygons( pointer, visible ) {
 		tmap = map;
 		
 	var entry = entries[ pointer ];
-	
+
 	for( var arrT in entry['polygons'] ) {
 		
 		polylines = entry['polygons'][arrT];
 		
 		for( var i = 0; i < polylines.length; i++ ) {
-			
 			polylines[i].setMap( tmap );
 		}
 	}
@@ -845,7 +876,7 @@ function showPois( pointer, visible ) {
 
 function deselect() {
 	
-	showWaveHeights(active, false);
+	//showWaveHeights(active, false);
 	showPolygons(active, false);
 	showGrid(active, false);
 	showPois(active, false);
@@ -945,7 +976,7 @@ function logIn( callback ) {
 	
 	delay = 0;
 	eqlist.list.length = 0;
-	global.saved.list.length = 0;
+	global.saved.reset();
 	entries = {};
 	getEvents( callback );
 	
@@ -1155,8 +1186,9 @@ function tabChanged( args ) {
 	if( tab == "saved" ) {
 		
 		curlist = global.saved;
-		
-		for( var i = global.saved.endIdx; i < global.saved.list.length && i >= global.saved.startIdx; i-- ) {
+	
+                var start = Math.min( global.saved.list.length - 1, global.saved.endIdx );
+		for( var i = start; i >= global.saved.startIdx; i-- ) {
 			global.saved.getElem(i).marker.setMap( map );
 		}
 		
@@ -1277,11 +1309,11 @@ function loadPreset() {
 }
 
 function nextEntries() {
-	
+
 	var step = Math.min( curlist.endIdx + 10, curlist.list.length - 1 ) - curlist.endIdx;
 	curlist.startIdx += step;
 	curlist.endIdx += step;
-	
+
 	showEntries( curlist, $( curlist.widget ) );
 	
 	$( curtab ).click();
