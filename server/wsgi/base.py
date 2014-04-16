@@ -36,17 +36,17 @@ def createsaltpwhash(password):
 def jssuccess(**d):
     cherrypy.response.headers['Content-Type'] = 'application/json'
     d["status"] = "success"
-    return json.dumps(d)
+    return bytes(json.dumps(d),"utf-8")
 
 def jsfail(**d):
     cherrypy.response.headers['Content-Type'] = 'application/json'
     d["status"] = "failed"
-    return json.dumps(d)
+    return bytes(json.dumps(d),"utf-8")
 
 def jsdeny(**d):
     cherrypy.response.headers['Content-Type'] = 'application/json'
     d["status"] = "denied"
-    return json.dumps(d)
+    return bytes(json.dumps(d),"utf-8")
 
 class Base:
     def __init__(self,db):
