@@ -19,7 +19,7 @@ class MsgSrv(Base):
         # TODO: propper attachment handling
         user = self.getUser()
         if user is None:
-            return json.dumps({ "status": "denied" })
+            return jsdeny()
         if apiver == "1":
             warnings = []
             send_from = user["username"]
@@ -31,6 +31,7 @@ class MsgSrv(Base):
             send_msgid = make_msgid()
 
             dbmsg = {
+                "userid" : user["_id"],
                 "msgid" : send_msgid,
                 "from" : send_from,
                 "to" : send_to,
@@ -45,8 +46,9 @@ class MsgSrv(Base):
 
             self._db["emails"].insert(dbmsg)
             for recv in send_to + send_cc:
-                if self._db["users"].find_one({"username":recv}) is not None:
-                    recv = {"username":recv, "msgid":send_msgid}
+                ruser = self._db["users"].find_one({"username":recv})
+                if ruser is not None:
+                    recv = {"userid":ruser["_id"], "recvaddress":recv, "msgid":send_msgid}
                     if self._db["email_recipients"].find_one(recv) is None:
                         recv["read"] = False
                         self._db["email_recipients"].insert(recv)
@@ -69,19 +71,35 @@ class MsgSrv(Base):
                     msg.attach(part)
 
             smtp = smtplib.SMTP('cgp1.gfz-potsdam.de')
+            errors = None
+            success = False
             try:
                 res = smtp.send_message(msg)
                 for k,v in res.items():
                     res[k] = (v[0],v[1].decode('utf-8'))
-                return json.dumps({"status": "success", "errors": res})
+                success = True
+                errors = res
             except smtplib.SMTPRecipientsRefused as ex:
-                return json.dumps({"status": "failure", "errors": ex.receipients})
+                errors = {}
+                for k,v in ex.receipients:
+                    errors[k] = (v[0],v[1].decode('utf-8'))
             except smtplib.SMTPSenderRefused as ex:
-                return json.dumps({"status": "failure", "errors": str(ex)})
-            finally:
-                smtp.quit()
+                errors = {ex.sender: (ex.smtp_code,str(ex.smtp_error))}
+                success = None
+            if success is False and errors is not None:
+                errtext = "There were errors while sending your Message.\n"
+                for k,v in errors:
+                    errtext+="\n%s\t%d: %s" % (k,v[0],v[1])
+                errmsg = MIMEMultipart()
+                errmsg["From"] = user["username"]
+                errmsg["To"] = user["username"]
+                errmsg["Date"] = formatdate()
+                errmsg["Subject"] = "Error in Tridec Cloud Mailing System"
+                errmsg.attach(MIMEText(errtext))
+                smtp.send_message(errmsg)
+            smtp.quit()
+            return jssuccess(errors = errors) if success else jsfail(errors = errors)
         else:
-            return json.dumps({ "status": "failure", "errors": ["API version not supported."]})
-            
+            return jsfail(errors = ["API version not supported."])
 
 application = startapp( MsgSrv )
