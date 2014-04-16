@@ -81,15 +81,15 @@ class MsgSrv(Base):
                 errors = res
             except smtplib.SMTPRecipientsRefused as ex:
                 errors = {}
-                for k,v in ex.receipients:
+                for k,v in ex.receipients.items():
                     errors[k] = (v[0],v[1].decode('utf-8'))
             except smtplib.SMTPSenderRefused as ex:
                 errors = {ex.sender: (ex.smtp_code,str(ex.smtp_error))}
                 success = None
-            if success is False and errors is not None:
+            if success is not None and errors is not None:
                 errtext = "There were errors while sending your Message.\n"
-                for k,v in errors:
-                    errtext+="\n%s\t%d: %s" % (k,v[0],v[1])
+                for k,v in errors.items():
+                    errtext+="\n%s:\t%d: %s" % (k,v[0],v[1])
                 errmsg = MIMEMultipart()
                 errmsg["From"] = user["username"]
                 errmsg["To"] = user["username"]
