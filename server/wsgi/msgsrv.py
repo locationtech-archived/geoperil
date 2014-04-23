@@ -128,17 +128,12 @@ class MsgSrv(Base):
                     else:
                         errors[nr] = e.text
                 if len(success) > 0:
-                    return jssuccsess(sendfaxes = success, errors = errors)
+                    return jssuccess(sendfaxes = success, errors = errors)
                 else:
                     return jsfail(errors = errors)
             else:
                 return jsfail(errors = ["API version not supported."])
         else:
             return jsdeny()
-
-#        print('Testing SendCharFax...')
-#        c = interfax.client.InterFaxClient('dewsgfz','Raiphi5h') # Enter your Interfax username/password here
-#        result = c.sendCharFax('+493312881703', 'This is a test') # Enter the destination fax number here.
-#        print('   Char Fax was sent with result code: %d' % result)
 
 application = startapp( MsgSrv )
