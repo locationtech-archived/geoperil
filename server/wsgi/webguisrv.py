@@ -58,7 +58,7 @@ class WebGuiSrv(Base):
     @cherrypy.tools.allow(methods=['POST'])
     def register(self, username, password, inst = None):
         user = self.getUser()
-        if user is not None and user.get("admin",False):
+        if user is not None and user["permissions"].get("admin",False):
             username = str(username)
             password = str(password)
             inst = str(inst)
@@ -71,7 +71,12 @@ class WebGuiSrv(Base):
                     "pwhash" : pwhash,
                     "session": None,
                     "inst": inst,
-                    "admin": False,
+                    "permissions": {
+                        "admin": False,
+                        "fax": True,
+                        "mail": True,
+                    },
+                    "properties": {},
                 }
                 if inst is not None and self._db["institutions"].find_one({"id":inst}) is None:
                     self._db["institutions"].insert({"id":inst, "name":inst, "secret":None})
