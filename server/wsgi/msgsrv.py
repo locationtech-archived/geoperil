@@ -6,6 +6,8 @@ from email.utils import formatdate, make_msgid
 import smtplib
 import requests
 from xml.etree import ElementTree
+import ftplib
+import io
 
 logger = logging.getLogger("MsgSrv")
 
@@ -127,10 +129,44 @@ class MsgSrv(Base):
                         success[nr] = e.text
                     else:
                         errors[nr] = e.text
+                self._db["faxes"].insert({"userid": user["_id"], "text": text, "sendfaxes": success, "errors": errors})
                 if len(success) > 0:
                     return jssuccess(sendfaxes = success, errors = errors)
                 else:
                     return jsfail(errors = errors)
+            else:
+                return jsfail(errors = ["API version not supported."])
+        else:
+            return jsdeny()
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def ftp(self, apiver, text):
+        user = self.getUser()
+        if user is not None and user["permissions"].get("ftp",False):
+            if apiver == "1":
+                host = user["properties"].get("FtpHost","")
+                port = user["properties"].get("FtpPort",21)
+                path = user["properties"].get("FtpPath","")
+                username = user["properties"].get("FtpUser","anonymous")
+                password = user["properties"].get("FtpPassword","anonymous")
+                error = None
+                try:
+                    ftp = ftplib.FTP()
+                    ftp.connect(host,port)
+                    ftp.login(username,password)
+                    ftp.set_pasv(True)
+                    path = os.path.normpath(path)
+                    ftp.cwd(os.path.dirname(path))
+                    ftp.storbinary("STOR %s" % ps.path.basename(path),io.BytesIO(bytes(text,"utf-8")))
+                    ftp.quit()
+                except ftplib.all_errors as e:
+                    error = str(e)
+                self._db["ftptrans"].insert({"userid": user["_id"], "text": text, "error": error})
+                if error is None:
+                    jssuccess()
+                else:
+                    jsfail(errors = [error])
             else:
                 return jsfail(errors = ["API version not supported."])
         else:
