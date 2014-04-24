@@ -158,15 +158,15 @@ class MsgSrv(Base):
                     ftp.set_pasv(True)
                     path = os.path.normpath(path)
                     ftp.cwd(os.path.dirname(path))
-                    ftp.storbinary("STOR %s" % ps.path.basename(path),io.BytesIO(bytes(text,"utf-8")))
+                    ftp.storbinary("STOR %s" % os.path.basename(path),io.BytesIO(bytes(text,"utf-8")))
                     ftp.quit()
                 except ftplib.all_errors as e:
                     error = str(e)
                 self._db["ftptrans"].insert({"userid": user["_id"], "text": text, "error": error})
                 if error is None:
-                    jssuccess()
+                    return jssuccess()
                 else:
-                    jsfail(errors = [error])
+                    return jsfail(errors = [error])
             else:
                 return jsfail(errors = ["API version not supported."])
         else:
