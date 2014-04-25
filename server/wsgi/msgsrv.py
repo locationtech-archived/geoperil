@@ -38,7 +38,7 @@ class MsgSrv(Base):
                 success = False
                 send_to = to.replace(","," ").replace(";"," ").split()
                 for to in send_to:
-                    ruser = self._db["users"].find_one({"username":to}
+                    ruser = self._db["users"].find_one({"username":to})
                     if ruser is None:
                         errors[to] = "Unknown User %s" % to
                     else:
@@ -107,7 +107,7 @@ class MsgSrv(Base):
                         dbmsg["attachments"][a.filename] = cnt
 
                 smtp = smtplib.SMTP('cgp1.gfz-potsdam.de')
-                errors = None
+                errors = {}
                 success = False
                 try:
                     res = smtp.send_message(msg)
@@ -122,7 +122,7 @@ class MsgSrv(Base):
                 except smtplib.SMTPSenderRefused as ex:
                     errors = {ex.sender: (ex.smtp_code,str(ex.smtp_error))}
                     success = None
-                if success is not None and errors is not None:
+                if len(errors) > 0 and success is not None:
                     errtext = "There were errors while sending your Message.\n"
                     for k,v in errors.items():
                         errtext+="\n%s:\t%d: %s" % (k,v[0],v[1])
