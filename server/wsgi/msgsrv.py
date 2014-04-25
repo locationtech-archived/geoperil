@@ -179,7 +179,7 @@ class MsgSrv(Base):
                 dbmsg["sentfaxids"] = success
                 self._db["messages_sent"].insert(dbmsg)
                 if len(success) > 0:
-                    return jssuccess(sendfaxes = success, errors = errors)
+                    return jssuccess(sentfaxids = success, errors = errors)
                 else:
                     return jsfail(errors = errors)
             else:
@@ -204,7 +204,7 @@ class MsgSrv(Base):
                 dbmsg["To"] = to
                 dbmsg["Text"] = text
                 errors = {}
-                success = False
+                success = {}
                 twisid = user["properties"].get("TwilioSID","")
                 twitoken = user["properties"].get("TwilioToken","")
                 twifrom = user["properties"].get("TwilioFrom","")
@@ -215,10 +215,21 @@ class MsgSrv(Base):
                     payload["From"] = twifrom
                     payload["Body"] = text
                     r = requests.post("https://api.twilio.com/2010-04-01/Accounts/%s/Messages" % twisid, data=payload, auth=auth)
-                    print(r.text)
+                    e = ElementTree.fromstring(r.text)
+                    ex = e.find("RestException")
+                    if ex is None:
+                        for side in e.iter("Sid"):
+                            success[nr] = side.text
+                            break
+                    else:
+                        errors[nr] = ElementTree.tostring(ex,encoding='unicode')
+                dbmsg["sentsmsids"] = success
                 dbmsg["errors"] = errors
                 self._db["messages_sent"].insert(dbmsg)
-                return jssuccess(errors = errors) if success else jsfail(errors = errors)
+                if len(success) > 0:
+                    return jssuccess(sentsmsids = success, errors = errors)
+                else:
+                    return jsfail(errors = errors)
             else:
                 return jsfail(errors = ["API version not supported."])
         else:
