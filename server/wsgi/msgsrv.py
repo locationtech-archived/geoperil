@@ -8,6 +8,8 @@ import requests
 from xml.etree import ElementTree
 import ftplib
 import io
+import datetime
+import copy
 
 logger = logging.getLogger("MsgSrv")
 
@@ -19,11 +21,55 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def mail(self, apiver, to, subject, text, cc = "", attachments = []):
-        # TODO: propper attachment handling
+    def intmsg(self, apiver, to, subject, text, evid = None, parentid = None ):
+        user = self.getUser()
+        if user is not None:
+            if apiver == "1":
+                dbmsg={
+                    "Type": "INTERNAL",
+                    "SenderID": user["_id"], 
+                    "CreatedTime": datetime.datetime.utcnow(),
+                    "EventID": evid,
+                    "ParentId": parentid,
+                    }
+                dbmsg["Text"] = text
+                dbmsg["Subject"] = subject
+                errors = {}
+                success = False
+                send_to = to.replace(","," ").replace(";"," ").split()
+                for to in send_to:
+                    ruser = self._db["users"].find_one({"username":to}
+                    if ruser is None:
+                        errors[to] = "Unknown User %s" % to
+                    else:
+                        success = True
+                        rmsg = copy.deepcopy(dbmsg)
+                        rmsg["ReceiverID"] = ruser["_id"]
+                        rmsg["ReadTime"] = None
+                        self._db["messages_received"].insert(rmsg)
+                dbmsg["To"] = send_to
+                dbmsg["errors"] = errors
+                self._db["messages_sent"].insert(dbmsg)
+                return jssuccess(errors = errors) if success else jsfail(errors = errors)
+            else:
+                return jsfail(errors = ["API version not supported."])
+        else:
+            return jsdeny()
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def mail(self, apiver, to, subject, text, cc = "", attachments = [], evid = None, parentid = None):
+        # TODO: propper attachment handling testing
         user = self.getUser()
         if user is not None and user["permissions"].get("mail",False):
             if apiver == "1":
+                dbmsg={
+                    "Type": "MAIL",
+                    "SenderID": user["_id"], 
+                    "CreatedTime": datetime.datetime.utcnow(),
+                    "EventID": evid,
+                    "ParentId": parentid,
+                    }
                 warnings = []
                 send_from = user["username"]
                 send_to = to.replace(","," ").replace(";"," ").split()
@@ -33,45 +79,32 @@ class MsgSrv(Base):
                 send_date = formatdate()
                 send_msgid = make_msgid()
 
-                dbmsg = {
-                    "userid" : user["_id"],
-                    "msgid" : send_msgid,
-                    "from" : send_from,
-                    "to" : send_to,
-                    "cc" : send_cc,
-                    "date" : send_date,
-                    "subject" : send_subject,
-                    "text" : send_text,
-                }
-
-                self._db["emails"].remove({"msgid":send_msgid})
-                self._db["email_recipients"].remove({"msgid":send_msgid})
-
-                self._db["emails"].insert(dbmsg)
-                for recv in send_to + send_cc:
-                    ruser = self._db["users"].find_one({"username":recv})
-                    if ruser is not None:
-                        recv = {"userid":ruser["_id"], "recvaddress":recv, "msgid":send_msgid}
-                        if self._db["email_recipients"].find_one(recv) is None:
-                            recv["read"] = False
-                            self._db["email_recipients"].insert(recv)
-
                 msg = MIMEMultipart()
                 msg["From"] = send_from
-                if len(send_from) > 0:
+                dbmsg["From"] = send_from
+                if len(send_to) > 0:
                     msg["To"] = ", ".join(send_to)
+                    dbmsg["To"] = send_to
                 if len(send_cc) > 0:
                     msg["Cc"] = ", ".join(send_cc)
+                    dbmsg["Cc"] = send_cc
                 msg["Subject"] = send_subject
+                dbmsg["Subject"] = send_subject
                 msg["Date"] = send_date
+                dbmsg["Date"] = send_date
                 msg["Message-ID"] = send_msgid
+                dbmsg["Message-ID"] = send_msgid
                 msg.attach(MIMEText(send_text))
+                dbmsg["Text"] = send_text
+                dbmsg["Attachments"] = {}
                 for a in attachments:
                     if a.file:
                         a.file.seek(0)
-                        part = MIMEApplication(a.file.readall())
+                        cnt = a.file.readall()
+                        part = MIMEApplication(cnt)
                         part.add_header('Content-Disposition', 'attachment; filename="%s"' % a.filename)
                         msg.attach(part)
+                        dbmsg["attachments"][a.filename] = cnt
 
                 smtp = smtplib.SMTP('cgp1.gfz-potsdam.de')
                 errors = None
@@ -101,6 +134,10 @@ class MsgSrv(Base):
                     errmsg.attach(MIMEText(errtext))
                     smtp.send_message(errmsg)
                 smtp.quit()
+
+                dbmsg["errors"] = errors
+                self._db["messages_sent"].insert(dbmsg)
+
                 return jssuccess(errors = errors) if success else jsfail(errors = errors)
             else:
                 return jsfail(errors = ["API version not supported."])
@@ -109,11 +146,20 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def fax(self, apiver, to, text):
+    def fax(self, apiver, to, text, evid = None, parentid = None):
         user = self.getUser()
         if user is not None and user["permissions"].get("fax",False):
             if apiver == "1":
+                dbmsg={
+                    "Type": "FAX",
+                    "SenderID": user["_id"], 
+                    "CreatedTime": datetime.datetime.utcnow(),
+                    "EventID": evid,
+                    "ParentId": parentid,
+                    }
                 to = to.replace(",",";").split(";")
+                dbmsg["To"] = to
+                dbmsg["Text"] = text
                 errors = {}
                 success = {}
                 for nr in to:
@@ -129,7 +175,9 @@ class MsgSrv(Base):
                         success[nr] = e.text
                     else:
                         errors[nr] = e.text
-                self._db["faxes"].insert({"userid": user["_id"], "text": text, "sendfaxes": success, "errors": errors})
+                dbmsg["errors"] = errors
+                dbmsg["sentfaxids"] = success
+                self._db["messages_sent"].insert(dbmsg)
                 if len(success) > 0:
                     return jssuccess(sendfaxes = success, errors = errors)
                 else:
@@ -141,15 +189,61 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def ftp(self, apiver, text):
+    def sms(self, apiver, to, text, evid = None, parentid = None):
+        user = self.getUser()
+        if user is not None and user["permissions"].get("sms",False):
+            if apiver == "1":
+                dbmsg={
+                    "Type": "SMS",
+                    "SenderID": user["_id"], 
+                    "CreatedTime": datetime.datetime.utcnow(),
+                    "EventID": evid,
+                    "ParentId": parentid,
+                    }
+                to = to.replace(",",";").split(";")
+                dbmsg["To"] = to
+                dbmsg["Text"] = text
+                errors = {}
+                success = False
+                twisid = user["properties"].get("TwilioSID","")
+                twitoken = user["properties"].get("TwilioToken","")
+                twifrom = user["properties"].get("TwilioFrom","")
+                auth = requests.auth.HTTPBasicAuth( twisid, twitoken )
+                for nr in to:
+                    payload = {}
+                    payload["To"] = nr
+                    payload["From"] = twifrom
+                    payload["Body"] = text
+                    r = requests.post("https://api.twilio.com/2010-04-01/Accounts/%s/Messages" % twisid, data=payload, auth=auth)
+                    print(r.text)
+                dbmsg["errors"] = errors
+                self._db["messages_sent"].insert(dbmsg)
+                return jssuccess(errors = errors) if success else jsfail(errors = errors)
+            else:
+                return jsfail(errors = ["API version not supported."])
+        else:
+            return jsdeny()
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def ftp(self, apiver, text, evid = None, parentid = None):
         user = self.getUser()
         if user is not None and user["permissions"].get("ftp",False):
             if apiver == "1":
+                dbmsg={
+                    "Type": "FTP",
+                    "SenderID": user["_id"], 
+                    "CreatedTime": datetime.datetime.utcnow(),
+                    "EventID": evid,
+                    "ParentId": parentid,
+                    }
                 host = user["properties"].get("FtpHost","")
                 port = user["properties"].get("FtpPort",21)
                 path = user["properties"].get("FtpPath","")
                 username = user["properties"].get("FtpUser","anonymous")
                 password = user["properties"].get("FtpPassword","anonymous")
+                dbmsg["Destination"] = "%s@%s:%d%s" % (username,host,port,path)
+                dbmsg["Text"] = text
                 error = None
                 try:
                     ftp = ftplib.FTP()
@@ -162,7 +256,8 @@ class MsgSrv(Base):
                     ftp.quit()
                 except ftplib.all_errors as e:
                     error = str(e)
-                self._db["ftptrans"].insert({"userid": user["_id"], "text": text, "error": error})
+                dbmsg["errors"] = error
+                self._db["messages_sent"].insert(dbmsg)
                 if error is None:
                     return jssuccess()
                 else:
