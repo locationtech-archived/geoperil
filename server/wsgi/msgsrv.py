@@ -20,6 +20,19 @@ class MsgSrv(Base):
         return "Hello World!" + str(self.getUser())
 
     @cherrypy.expose
+    def readmsg(self, apiver, msgid ):
+        user = self.getUser()
+        if user is not None:
+            if apiver == "1":
+                msg = self._db["messages_received"].update({"Message-ID": msgid, "ReadTime": None}, \
+                                                           {"$set":{"ReadTime": datetime.datetime.utcnow()}})
+                return jssuccess()
+            else:
+                return jsfail(errors = ["API version not supported."])
+        else:
+            return jsdeny()
+
+    @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
     def intmsg(self, apiver, to, subject, text, evid = None, parentid = None, groupID = None ):
         user = self.getUser()
@@ -31,6 +44,7 @@ class MsgSrv(Base):
                     "CreatedTime": datetime.datetime.utcnow(),
                     "EventID": evid,
                     "ParentId": parentid,
+                    "Message-ID": make_msgid(),
                     }
                 dbmsg["Text"] = text
                 dbmsg["Subject"] = subject
@@ -156,6 +170,7 @@ class MsgSrv(Base):
                     "CreatedTime": datetime.datetime.utcnow(),
                     "EventID": evid,
                     "ParentId": parentid,
+                    "Message-ID": make_msgid(),
                     }
                 to = to.replace(",",";").split(";")
                 dbmsg["To"] = to
@@ -199,6 +214,7 @@ class MsgSrv(Base):
                     "CreatedTime": datetime.datetime.utcnow(),
                     "EventID": evid,
                     "ParentId": parentid,
+                    "Message-ID": make_msgid(),
                     }
                 to = to.replace(",",";").split(";")
                 dbmsg["To"] = to
@@ -247,13 +263,14 @@ class MsgSrv(Base):
                     "CreatedTime": datetime.datetime.utcnow(),
                     "EventID": evid,
                     "ParentId": parentid,
+                    "Message-ID": make_msgid(),
                     }
                 host = user["properties"].get("FtpHost","")
                 port = user["properties"].get("FtpPort",21)
                 path = user["properties"].get("FtpPath","")
                 username = user["properties"].get("FtpUser","anonymous")
                 password = user["properties"].get("FtpPassword","anonymous")
-                dbmsg["To"] = "%s@%s:%d%s" % (username,host,port,path)
+                dbmsg["To"] = [ "%s@%s:%d%s" % (username,host,port,path) ]
                 dbmsg["Text"] = text
                 error = None
                 try:
