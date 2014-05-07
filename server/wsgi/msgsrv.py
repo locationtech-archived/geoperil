@@ -21,7 +21,7 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def intmsg(self, apiver, to, subject, text, evid = None, parentid = None ):
+    def intmsg(self, apiver, to, subject, text, evid = None, parentid = None, groupID = None ):
         user = self.getUser()
         if user is not None:
             if apiver == "1":
@@ -58,7 +58,7 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def mail(self, apiver, to, subject, text, cc = "", attachments = [], evid = None, parentid = None):
+    def mail(self, apiver, to, subject, text, cc = "", attachments = [], evid = None, parentid = None, groupID = None ):
         # TODO: propper attachment handling testing
         user = self.getUser()
         if user is not None and user["permissions"].get("mail",False):
@@ -146,7 +146,7 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def fax(self, apiver, to, text, evid = None, parentid = None):
+    def fax(self, apiver, to, text, evid = None, parentid = None, groupID = None ):
         user = self.getUser()
         if user is not None and user["permissions"].get("fax",False):
             if apiver == "1":
@@ -189,7 +189,7 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def sms(self, apiver, to, text, evid = None, parentid = None):
+    def sms(self, apiver, to, text, evid = None, parentid = None, groupID = None ):
         user = self.getUser()
         if user is not None and user["permissions"].get("sms",False):
             if apiver == "1":
@@ -237,7 +237,7 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def ftp(self, apiver, text, evid = None, parentid = None):
+    def ftp(self, apiver, text, evid = None, parentid = None, groupID = None ):
         user = self.getUser()
         if user is not None and user["permissions"].get("ftp",False):
             if apiver == "1":
@@ -253,7 +253,7 @@ class MsgSrv(Base):
                 path = user["properties"].get("FtpPath","")
                 username = user["properties"].get("FtpUser","anonymous")
                 password = user["properties"].get("FtpPassword","anonymous")
-                dbmsg["Destination"] = "%s@%s:%d%s" % (username,host,port,path)
+                dbmsg["To"] = "%s@%s:%d%s" % (username,host,port,path)
                 dbmsg["Text"] = text
                 error = None
                 try:
