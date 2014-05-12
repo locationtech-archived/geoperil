@@ -38,7 +38,7 @@ class MsgSrv(Base):
         user = self.getUser()
         if user is not None:
             if apiver == "1":
-                dbmsg={
+                dbmsg = {
                     "Type": "INTERNAL",
                     "SenderID": user["_id"], 
                     "CreatedTime": datetime.datetime.utcnow(),
@@ -61,9 +61,23 @@ class MsgSrv(Base):
                         rmsg["ReceiverID"] = ruser["_id"]
                         rmsg["ReadTime"] = None
                         self._db["messages_received"].insert(rmsg)
+                        msgevt2 = {
+                            "id": rmsg["Message-ID"],
+                            "user": rmsg["ReceiverID"],
+                            "timestamp": dbmsg["CreatedTime"],
+                            "event": "msg_recv",
+                            }
+                        self._db["events"].insert(msgevt2)
                 dbmsg["To"] = send_to
                 dbmsg["errors"] = errors
                 self._db["messages_sent"].insert(dbmsg)
+                msgevt = {
+                    "id": dbmsg["Message-ID"],
+                    "user": dbmsg["SenderID"],
+                    "timestamp": dbmsg["CreatedTime"],
+                    "event": "msg_sent",
+                    }
+                self._db["events"].insert(msgevt)
                 return jssuccess(errors = errors) if success else jsfail(errors = errors)
             else:
                 return jsfail(errors = ["API version not supported."])
@@ -151,6 +165,13 @@ class MsgSrv(Base):
 
                 dbmsg["errors"] = errors
                 self._db["messages_sent"].insert(dbmsg)
+                msgevt = {
+                    "id": dbmsg["Message-ID"],
+                    "user": dbmsg["SenderID"],
+                    "timestamp": dbmsg["CreatedTime"],
+                    "event": "msg_sent",
+                    }
+                self._db["events"].insert(msgevt)
 
                 return jssuccess(errors = errors) if success else jsfail(errors = errors)
             else:
@@ -193,6 +214,13 @@ class MsgSrv(Base):
                 dbmsg["errors"] = errors
                 dbmsg["sentfaxids"] = success
                 self._db["messages_sent"].insert(dbmsg)
+                msgevt = {
+                    "id": dbmsg["Message-ID"],
+                    "user": dbmsg["SenderID"],
+                    "timestamp": dbmsg["CreatedTime"],
+                    "event": "msg_sent",
+                    }
+                self._db["events"].insert(msgevt)
                 if len(success) > 0:
                     return jssuccess(sentfaxids = success, errors = errors)
                 else:
@@ -242,6 +270,13 @@ class MsgSrv(Base):
                 dbmsg["sentsmsids"] = success
                 dbmsg["errors"] = errors
                 self._db["messages_sent"].insert(dbmsg)
+                msgevt = {
+                    "id": dbmsg["Message-ID"],
+                    "user": dbmsg["SenderID"],
+                    "timestamp": dbmsg["CreatedTime"],
+                    "event": "msg_sent",
+                    }
+                self._db["events"].insert(msgevt)
                 if len(success) > 0:
                     return jssuccess(sentsmsids = success, errors = errors)
                 else:
@@ -286,6 +321,13 @@ class MsgSrv(Base):
                     error = str(e)
                 dbmsg["errors"] = error
                 self._db["messages_sent"].insert(dbmsg)
+                msgevt = {
+                    "id": dbmsg["Message-ID"],
+                    "user": dbmsg["SenderID"],
+                    "timestamp": dbmsg["CreatedTime"],
+                    "event": "msg_sent",
+                    }
+                self._db["events"].insert(msgevt)
                 if error is None:
                     return jssuccess()
                 else:
