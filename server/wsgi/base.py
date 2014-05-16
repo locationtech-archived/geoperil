@@ -55,8 +55,8 @@ class Base:
     def getUser(self):
         if "server_cookie" in cherrypy.request.cookie:
             uuid = cherrypy.request.cookie["server_cookie"].value
-            uuid = list(UUID(uuid).bytes)
             # java uuid workaround
+            uuid = list(UUID(uuid).bytes)
             uuid = UUID(bytes=bytes(list(reversed(uuid[0:8])) + list(reversed(uuid[8:16]))))
             return self._db["users"].find_one({"session":uuid})
         return None

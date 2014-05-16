@@ -24,9 +24,10 @@ class MsgSrv(Base):
         user = self.getUser()
         if user is not None:
             if apiver == "1":
-                msg = self._db["messages_received"].update({"Message-ID": msgid, "ReadTime": None}, \
-                                                           {"$set":{"ReadTime": datetime.datetime.utcnow()}})
-                return jssuccess()
+                self._db["messages_received"].update({"Message-ID": msgid, "ReadTime": None, "ReceiverID": user["_id"]}, \
+                                                     {"$set":{"ReadTime": datetime.datetime.utcnow()}})
+                msg = self._db["messages_received"].find_one({"Message-ID": msgid, "ReceiverID": user["_id"]})
+                return jssuccess(readtime = None if msg is None else msg["ReadTime"])
             else:
                 return jsfail(errors = ["API version not supported."])
         else:
