@@ -8,6 +8,7 @@ import datetime
 import urllib.request, urllib.parse, urllib.error
 import urllib.request, urllib.error, urllib.parse
 import atexit
+import json
 
 from pymongo import MongoClient
 
@@ -75,6 +76,65 @@ def isPointInsidePoylgon( regions_file, t ):
 def cleanup( pidfile ):
     os.unlink( pidfile )
 
+# this is now still left in the manager to unburden the Tomcat server
+# however we could move this into the server as well
+def getType( db, inst, entry ):
+        
+    ret = db['eqs'].find( { "id": entry["id"] } )
+    
+    if ret.count() == 0:
+        
+        # no entry with same id found --> new entry
+        iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( entry["lat"], entry["lon"] ) )
+        if iho_region != None:
+            entry["sea_area"] = iho_region
+        
+        return "new"
+    
+    # convert iso date string of form YYYY-MM-DDTHH:MM:SS.mmmZ to datetime
+    date = datetime.datetime.strptime( entry["date"], "%Y-%m-%dT%H:%M:%S.%fZ" )
+        
+    query = { "prop.region": entry["name"],
+              "prop.latitude": entry["lat"],
+              "prop.longitude": entry["lon"],
+              "prop.magnitude": entry["mag"],
+              "prop.depth": entry["depth"],
+              "prop.strike": entry["strike"],
+              "prop.dip": entry["dip"],
+              "prop.rake": entry["rake"],
+              "prop.date": date,
+            }
+        
+    query.update( { "id": entry['id'],
+                    "user": inst["_id"],
+                  })
+    
+    # check if IHO region was set already in one of the related entries returned in ret
+    for r in ret:
+        
+        if r["prop"]["latitude"] == entry["lat"] and \
+           r["prop"]["longitude"] == entry["lon"]:
+            
+            if "sea_area" in r["prop"] and r["prop"]["sea_area"]:
+                entry["sea_area"] = r["prop"]["sea_area"]
+                break
+                        
+    # check for update
+    ret = db['eqs'].find( query )
+    
+    if ret.count() == 0:
+        
+        # no matching entry for all properties found --> update
+        if "sea_area" not in entry:
+            iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( entry["lat"], entry["lon"] ) )
+            if iho_region != None:
+                entry["sea_area"] = iho_region
+        
+        return "update"
+       
+    # entry exists already
+    return "existing"
+        
 def main( s ):
         
     pidfile = "/tmp/dbmanager.pid"
@@ -96,12 +156,13 @@ def main( s ):
     cntError = 0
     cntSim = 0
     cntKnown = 0
-    
+        
     client = MongoClient()
     db = client['easywave']
-    collection = db['eqs']
     
-    entries = []
+    inst = db['institutions'].find( { "name": "gfz" } )[0]
+        
+    elist = []
     
     # stop if we have seen at least 100 known entries (rounded up to a multiple of page size) --> updates for older entries are unlikely
     while cntKnown < 100:
@@ -112,14 +173,13 @@ def main( s ):
         
         matches = re.findall( "<a href='([^>]*?/mt.txt)'>", text )
         
-        #if page == 3:
-        #    break
+        if page == 2:
+            break
         
         if len( matches ) == 0:
             break
             
         page += 1
-        #ids = re.findall( "<a href='event.php\?id=(gfz(\d\d\d\d)\w\w\w\w)'>", text )
         
         for m in matches:
 
@@ -140,97 +200,73 @@ def main( s ):
                 
             date = datetime.datetime.strptime( prop[0] + " " + prop[1], "%y/%m/%d %H:%M:%S.%f")
             
-            print( date, eid )
-            
-            #iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( float(prop[3]), float(prop[4]) ) )
-            
-            entry = { "_id": eid,
-                      "user": "gfz",
-                      "prop":
-                      {
-                        "date": date,
-                        "region": prop[2],
-                        "latitude": float(prop[3]),
-                        "longitude": float(prop[4]),
-                        "magnitude": float(prop[5]),
-                        "depth": float(prop[6]),
-                        "strike": float(prop[7]),
-                        "dip": float(prop[8]),
-                        "rake": float(prop[9]),
-                        #"sea_area": iho_region
-                       },
+            print( "Fetch: ", date, eid )
+                        
+            entry = { "inst": inst["name"],
+                      "secret": inst["secret"],
+                      "id": eid,
+                      "name": prop[2],
+                      "lat": float(prop[3]),
+                      "lon": float(prop[4]),
+                      "mag": float(prop[5]),
+                      "depth": float(prop[6]),
+                      "strike": float(prop[7]),
+                      "dip": float(prop[8]),
+                      "rake": float(prop[9]),
+                      "date": date.isoformat()[:-3] + 'Z', #ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
                      }
+                            
+            # get type of entry and set IHO region
+            type = getType( db, inst, entry )
                                                     
-            # check if there is already an entry for this id
-            ret = collection.find( { "_id": eid } )
-            
-            if ret.count() == 0:
-                iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( float(prop[3]), float(prop[4]) ) )
-                entry["prop"]["sea_area"] = iho_region
-                entries.append( (1, entry) )
-            
+            if type == "new" or type == "update":
+                
+                elist.append( { "type": type, "entry": entry } )
+                                
             else:
-                
-                # now check if the stored entry matches in all components --> else we have an update here
-                for i in range(ret.count()):
-                    if ret[i]["prop"]["latitude"] == entry["prop"]["latitude"] and \
-                       ret[i]["prop"]["longitude"] == entry["prop"]["longitude"]:
-                        entry["prop"]["sea_area"] = ret[i]["prop"]["sea_area"]
-                        break
-                if "sea_area" not in entry["prop"]:
-                    iho_region = isPointInsidePoylgon( "World_Seas.kml", LatLon( float(prop[3]), float(prop[4]) ) )
-                    entry["prop"]["sea_area"] = iho_region
-                    
-                ret2 = collection.find( entry )
+                cntKnown += 1
 
-                if ret2.count() == 0:
-                    # update entry
-                    entries.append( (2, entry) )
-                else:
-                    cntKnown += 1
+    print('\n')
 
-    for entry in reversed( entries ):
-        
-        timestamp = datetime.datetime.utcnow()
-        
-        entry[1].update( {"timestamp": timestamp} );
+    for elem in reversed( elist ):
                 
-        if entry[0] == 1:
+        type = elem["type"]
+        entry = elem["entry"]
+        refineId = 0
+                
+        if type == "new":
             cntInsert += 1
             
-        if entry[0] == 2:
-            collection.remove( { "_id": entry[1]["_id"] } )
+            #print( "New: ", entry  )
+            data = urllib.parse.urlencode( entry ).encode('ascii')
+            req = urllib.request.Request('http://localhost/srv/data_insert', data)
+            res = urllib.request.urlopen( req ).read()
+            #print( "Result: ", res )
+            
+        elif type == "update":
             cntUpdate += 1
             
-        prop = entry[1]["prop"]
-        
-        simulate = (prop["sea_area"] != None and prop["magnitude"] > 5.5 and prop["depth"] < 100)
-        
-        if simulate:
-            entry[1].update( { "process": [] } );
-            
-        collection.insert( entry[1] )
-        
-        event = { "id": entry[1]["_id"],
-                  "user": "gfz",
-                  "timestamp": timestamp,
-                  "event": "new"
-                 }
-        
-        if simulate:
-            # request simulation of this event
-            req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/requestById')
-            data = urllib.parse.urlencode( {'id' : entry[1]['_id'], 'key' : 'ABC0123456789def' } )
-            binary_data = data.encode('ascii')
-            req.add_data( binary_data )
-            urllib.request.urlopen( req )
-            
+            #print( "Update", entry )
+            data = urllib.parse.urlencode( entry ).encode('ascii')
+            req = urllib.request.Request('http://localhost/srv/data_update', data )
+            res = urllib.request.urlopen( req ).read().decode("utf-8")
+            js = json.loads( res )
+            #print( "Result: ", js )
+            refineId = js["refineId"]
+                
+        if "sea_area" in entry and entry["mag"] > 5.5 and entry["depth"] < 100:
             cntSim += 1
-                   
-        else:
-            # TODO: can this be handled by the server?
-            db["events"].insert( event )
-                    
+            
+            # request simulation of this event
+            entry.update( { "refineId": refineId,
+                            "dur": 180 } );
+            
+            #print( "Compute: ", entry )
+            data = urllib.parse.urlencode( entry ).encode('ascii')
+            req = urllib.request.Request('http://localhost/srv/computeById', data)
+            res = urllib.request.urlopen( req )
+            #print( "Result: ", res.read() )
+                                                               
         time.sleep( 0.01 )
                     
     print('Total: %u' % cntTotal)
