@@ -10,7 +10,7 @@ public class TaskParameter {
 	
 	public EQParameter eqparams;
 	public String id;
-	public String user;
+	public User user;
 	public int duration;
 	
 	public int status;
@@ -22,7 +22,7 @@ public class TaskParameter {
 		this.progress = 0;
 	}
 	
-	public TaskParameter( EQParameter eqp, String id, String user, int duration ) {
+	public TaskParameter( EQParameter eqp, String id, User user, int duration ) {
 		this( eqp );
 		this.id = id;
 		this.user = user;

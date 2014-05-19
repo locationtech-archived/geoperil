@@ -219,11 +219,6 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		int simTime = task.duration + 10;
 		
 		String cmdParams = " -grid ../gridtwo.grd -poi ../points-all.csv -poi_dt_out 0 -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
-		
-		/*** TODO: jabc specific ***/
-		if( task.user.equals("jabc") ) {
-			cmdParams = " -grid ../grid4.grd -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop";
-		}
 			
 		System.out.println( "Thread " + this.thread.getId() + " processes the request." );
 		
@@ -306,7 +301,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					/* create DB object that holds all event data */
 					BasicDBObject event = new BasicDBObject();
 					event.append( "id", task.id );
-					event.append( "user", task.user );
+					event.append( "user", task.user.objId );
 					event.append( "timestamp", new Date() );
 					event.append( "event", "progress" );
 					event.append( "progress", task.progress );

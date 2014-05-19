@@ -7,7 +7,12 @@ import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -41,6 +46,96 @@ import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.util.Base64Codec;
 
+class User {
+	
+	public String name;
+	public Object objId;
+	
+	public User( DBObject obj ) {
+		
+		this.objId = (Object) obj.get( "_id" );
+		this.name = (String) obj.get( "username" );
+	}
+	
+}
+
+class Inst extends User {
+	
+	public String secret;
+	
+	public Inst( DBObject obj ) {
+		
+		super( obj );
+		this.name = (String) obj.get( "name" );
+		this.secret = (String) obj.get( "secret" );
+	}
+	
+}
+
+class CompId {
+	
+	private String compId;
+	public String inst;
+	public String id;
+	public long refineId;
+	
+	public CompId( String compId ) {
+		this.compId = compId;
+		setSingleIds();
+	}
+	
+	public CompId( String inst, String id, long refineId  ) {
+		this.inst = inst;
+		this.id = id;
+		this.refineId = refineId;
+		this.compId = getCompId();
+	}
+	
+	private String getCompId() {
+		return id + "_" + inst + "_" + refineId;
+	}
+	  
+	private void setSingleIds() {
+	  
+		String[] parts = compId.split("_");
+		
+		int len = parts.length;
+		
+		inst = parts[ --len ];
+		refineId = Integer.valueOf( parts[ --len ] );
+		id = parts[ 0 ];
+		
+		for( int i = 1; i < len; i++ )
+			id += "_" + parts[i];
+	}
+	
+	@Override
+	public String toString() {
+		return compId;
+	}
+}
+
+class DateComparator implements Comparator<DBObject> {
+	
+	private String key;
+	private int order;
+	
+	public DateComparator( String key, int order ) {
+		
+		this.key = key;
+		this.order = order;
+	}
+	
+    @Override
+    public int compare(DBObject o1, DBObject o2) {
+    	
+    	Date d1 = (Date) o1.get( key );
+    	Date d2 = (Date) o2.get( key );
+    	
+        return d1.compareTo( d2 ) * order;
+    }
+}
+
 @Path("")
 @Singleton /* Use one global instance of this class instead of creating a new one for each request */
 public class Services {
@@ -52,14 +147,17 @@ public class Services {
   private final int numWorker = 6;
   
   private MongoClient mongoClient;
+  private DB db;
   private Gson gson;
+  
+  private Map<String,Inst> institutions;
 	
   public Services() {
 	  
 	  System.out.println("Constructor");
 	  queue = new ArrayBlockingQueue<TaskParameter>(capacity);
 	  workerQueue = new PriorityBlockingQueue<WorkerThread>(100);
-	  	  
+	  
 	  worker = new WorkerThread[numWorker];
 	  for( int i = 0; i < numWorker; i++ ) {
 		  
@@ -87,11 +185,16 @@ public class Services {
 	  new Thread( new WorkScheduler( queue, workerQueue ) ).start();
 	  
 	  try {
+		  
 		mongoClient = new MongoClient();
+		db = mongoClient.getDB( "easywave" );
+		
 	  } catch (UnknownHostException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();
 	  }
+	  	  
+	  loadInstitutions();
 	  
 	  gson = new Gson();
 	  
@@ -106,51 +209,114 @@ public class Services {
  		 worker[i].stop();
  	 }
   }
-    	
-  @POST
-  @Path("/requestById")
-  @Produces(MediaType.APPLICATION_JSON)
-  public String requestById(
-		  @Context HttpServletRequest request,
-		  @FormParam("id") String id,
-		  @FormParam("key") String key ) {
-	  	  		
-	  /* TODO: this is just a static workaround until we get a push service from GEOFON */
-	  /* check if this is an authorized request */
-	  if( key == null || ! key.equals("ABC0123456789def") )
-		  return "{ \"status\": \"denied\" }";
+  
+  private void loadInstitutions() {
+	  	  
+	  institutions = new HashMap<String,Inst>();
 	  
-	  /* get earthquake collection */
-	  DB db = mongoClient.getDB( "easywave" );
-	  DBCollection coll = db.getCollection("eqs");
-	
-	  /* search for given ID */
-	  DBCursor cursor = coll.find( new BasicDBObject("_id", id) );
-	
-	  /* return if ID not found */
+	  DBCollection coll = db.getCollection("institutions");
+	  
+	  DBCursor cursor = coll.find();
+	  
+	  for( DBObject obj: cursor ) {
+		  Inst inst = new Inst( obj );
+		  institutions.put( inst.name, inst );
+	  }
+	  
+	  cursor.close();
+  }
+    
+  @GET
+  @Path("/addInst")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String addInst(
+		  @Context HttpServletRequest request,
+		  @QueryParam("name") String name,
+		  @QueryParam("secret") String secret) {
+	  
+	  Object[] required = { name, secret };
+	  	  
+	  /* this is maybe not reliable! */
+	  String ip = request.getHeader("X-FORWARDED-FOR");
+	  	  
+	  /* allow access only from localhost */
+	  if( ip == null || ! ip.equals( "127.0.0.1" ) )
+		  return jsdenied();
+	  	  
+	  if( ! checkParams( request, required ) )
+		  return jsfailure();
+	  
+	  DBCollection coll = db.getCollection("institutions");
+	  
+	  BasicDBObject obj = new BasicDBObject( "name", name );
+	  
+	  /* check if the institution already exist */
+	  if( coll.find( obj ).hasNext() )
+		  return jsfailure();
+	  
+	  obj.put( "secret", secret );
+	  
+	  Inst inst = new Inst( obj );
+	  institutions.put( inst.name, inst );
+	  
+	  coll.insert( obj );
+	  
+	  return jssuccess();
+  }
+  
+  private boolean checkParams( HttpServletRequest request, Object[] list ) {
+
+	  for( Object o: list ) {
+		  if( o == null )
+			  return false;
+	  }
+	  
+	  return true;
+  }
+  
+  @POST
+  @Path("/computeById")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String computeById(
+		  @Context HttpServletRequest request,
+		  @FormParam("inst") String inst,
+		  @FormParam("secret") String secret,
+		  @FormParam("id") String id,
+		  @FormParam("refineId") Long refineId,
+		  @FormParam("dur") Integer dur) {
+	  	  		
+	  Object[] required = { inst, secret, id, refineId, dur };
+	  
+	  /* check required parameters */
+	  if( ! checkParams( request, required ) )
+		  return jsfailure();
+	  
+	  /* check if we got a valid institution and the correct secret */
+	  Inst instObj = institutions.get( inst );
+	  if( instObj == null || ! instObj.secret.equals( secret ) )
+		  return jsdenied();
+	  	  	
+	  /* search for given id */
+	  CompId compId = new CompId( inst, id, refineId );
+	  BasicDBObject query = new BasicDBObject( "_id", compId.toString() );
+	  DBCursor cursor = db.getCollection("eqs").find( query );
+	  	  
+	  /* return if id not found */
 	  if( cursor.count() != 1 )
-		  return "{ \"status\": \"failure\" }";
+		  return jsfailure();
 	
-	  /* get properties of return entry */
+	  /* get properties of returned entry */
 	  BasicDBObject entry = (BasicDBObject) cursor.next();
 	  BasicDBObject prop = (BasicDBObject) entry.get("prop");
 	
 	  /* clean up query */
 	  cursor.close();
-	  
-	  /* get timestamp to ensure consistency */
-	  Date timestamp = entry.getDate( "timestamp" );
-	  
-	  /* create a new event */
-	  BasicDBObject event = new BasicDBObject();
-	  event.put( "id", id );
-	  event.put( "user", "gfz" );
-	  event.put( "timestamp", timestamp );
-	  event.put( "event", "new" );
-	  
-	  /* insert new event into 'events'-collection */
-	  db.getCollection("events").insert( event );
-	  
+	  	  	  
+	  /* TODO: do we have to set { "process": [] } here? */
+	  BasicDBObject process = new BasicDBObject( "process", new BasicDBList() );
+	  BasicDBObject set = new BasicDBObject( "$set", process );
+	  db.getCollection("eqs").update( entry, set );
+	  	  
 	  /* extract properties to pass them to the request method */
 	  double lat = prop.getDouble("latitude");
 	  double lon = prop.getDouble("longitude");
@@ -161,155 +327,60 @@ public class Services {
 	  double depth = prop.getDouble("depth");
 	
 	  /* prepare the simulation for execution */
-	  return request( lon, lat, mag, depth, dip, strike, rake, id, "gfz", 180 );
+	  return request( lon, lat, mag, depth, dip, strike, rake, compId.toString(), instObj, dur );
   }
 
-  public String request( double lon, double lat, double mag, double depth, double dip,
-		  				 double strike, double rake, String id, String user, int dur ) {
+  private String request( double lon, double lat, double mag, double depth, double dip,
+		  				 double strike, double rake, String id, User user, int dur ) {
 	  	  
 	  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake);
 	  TaskParameter task = new TaskParameter( eqp, id, user, dur );
 	  		  
 	  if( queue.offer( task ) == false ) {
 		  System.err.println("Work queue is full");
-		  return "{ \"status\": \"failure\" }";
+		  return jsfailure();
 	  }
 	  	  
-	  System.out.println( "{ \"status\": \"success\", \"id\": \""+ id + "\" }" );
-	  return "{ \"status\": \"success\", \"id\": \""+ id + "\" }";
+	  return jssuccess();
   }
-    
-  /*** TODO: added for jabc - please do not change! ***/
-  private String getVirtualSession( String username, String password ) {
-	  	  	 	  
-	  if( username == null || password == null || username.equals("") || password.equals("") )
-		  return null;
-	  	  	 	  	  	  
-	  DB db = mongoClient.getDB( "easywave" );
-	  DBCollection coll = db.getCollection("users");
-	  	  
-	  DBCursor cursor = coll.find( new BasicDBObject("username", username) );
-	  DBObject obj;
-	  
-	  if( cursor.hasNext() ) {
-		  		  
-		  obj = cursor.next();
-		  String hash = (String) obj.get( "password" );
-		  UUID session = (UUID) obj.get( "session" );
-		  
-		  MessageDigest sha256;
-		  
-		  try {
-			sha256 = MessageDigest.getInstance("SHA-256");
-		  } catch (NoSuchAlgorithmException e) {
-			return null;
-		  }
-		  
-		  Base64Codec base64Codec = new Base64Codec();
-		  		  
-		  if( hash.equals( base64Codec.encode( sha256.digest( password.getBytes() ) ) ) ) {
-			  
-			  if( session == null ) {
-				  session = getSessionKey();
-				  obj.put("session", session);
-				  coll.update( new BasicDBObject("username", username), obj );
-			  }
-			  
-			  return session.toString();
-		  }
-	  }
-	  
-	  return null;
-  }
-  
-  @GET
-  @Path("/simulate")
-  @Produces(MediaType.APPLICATION_JSON)
-  public String simulate(
-		  @Context HttpServletRequest request,
-		  @Context HttpServletResponse response,
-		  @QueryParam("user") String user,
-		  @QueryParam("password") String password,
-		  @QueryParam("lon") double lon, 
-		  @QueryParam("lat") double lat,
-		  @QueryParam("mag") double mag,
-		  @QueryParam("depth") double depth,
-		  @QueryParam("dip") double dip,
-		  @QueryParam("strike") double strike,
-		  @QueryParam("rake") double rake,
-		  @QueryParam("dur") int dur ) {
-	  	  
-	  String session = getVirtualSession( user, password );
-	  
-	  return compute( request, "Custom", lon, lat, mag, depth, dip, strike, rake, dur, session );
-  }
-  
-  @GET
-  @Path("/progress")
-  @Produces(MediaType.APPLICATION_JSON)
-  public String progress(
-		  @QueryParam("id") String id ) {
-	  
-	  DB db = mongoClient.getDB( "easywave" );
-	  DBCollection coll = db.getCollection("events");
-	
-	  BasicDBObject inQuery = new BasicDBObject();
-	  inQuery.put( "id", id );
-	  inQuery.put( "event", "progress" );
-	  
-	  BasicDBObject filter = new BasicDBObject();
-	  filter.put( "_id", 0 );
-	  filter.put( "progress", 1 );
-	  
-	  DBCursor cursor = coll.find( inQuery, filter );
- 
-	  if( cursor.count() == 0 )
-		  return "{ \"progress\": 0 }";
- 		 
-	  return gson.toJson( cursor.next() );
-  }
-		  
-  /****************************/
-  
+      
   @POST
   @Path("/compute")
   @Produces(MediaType.APPLICATION_JSON)
   public String compute(
 		  @Context HttpServletRequest request,
 		  @FormParam("name") @DefaultValue("Custom") String name,
-		  @FormParam("lon") double lon, 
-		  @FormParam("lat") double lat,
-		  @FormParam("mag") double mag,
-		  @FormParam("depth") double depth,
-		  @FormParam("dip") double dip,
-		  @FormParam("strike") double strike,
-		  @FormParam("rake") double rake,
-		  @FormParam("dur") int dur,
-		  @CookieParam("server_cookie") String sess) {
+		  @FormParam("lon") Double lon, 
+		  @FormParam("lat") Double lat,
+		  @FormParam("mag") Double mag,
+		  @FormParam("depth") Double depth,
+		  @FormParam("dip") Double dip,
+		  @FormParam("strike") Double strike,
+		  @FormParam("rake") Double rake,
+		  @FormParam("dur") Integer dur,
+		  @FormParam("root") String root,
+		  @FormParam("parent") String parent,
+		  @CookieParam("server_cookie") String session) {
 	  	  
+	  Object[] required = { name, lon, lat, mag, depth,
+							dip, strike, rake, dur };
+
+	  if( ! checkParams( request, required ) )
+		  return jsfailure();
+	  
 	  /* only privileged users are allowed to compute own scenarios - check for valid session */
-	  if( sess == null )
-		  return "{ \"status\": \"denied\" }";
-	  
-	  /* try to convert session to UUID */
-	  UUID session = null;
-	  
-	  try {
-		  session = UUID.fromString( sess );
-	  } catch( IllegalArgumentException e ) {	  
-		  return "{ \"status\": \"denied\" }";
-	  }
-	  
+	  if( session == null )
+		  return jsdenied();
+	  	  
 	  /* check if session is valid and if the user is logged in */
-	  String user = signedIn( session );
+	  User user = signedIn( session );
 	  
 	  if( user == null )
-		  return "{ \"status\": \"denied\" }";
+		  return jsdenied();
 	  
 	  /* upon here, we assume an authorized user */
 	  
 	  /* get collection that stores the earthquake entries */
-	  DB db = mongoClient.getDB( "easywave" );
 	  DBCollection coll = db.getCollection("eqs");
 	  
 	  /* create an unique ID that is not already present in the DB */
@@ -319,7 +390,7 @@ public class Services {
 	  while ( true ) {
 		  
 		  Integer nr = rand.nextInt( 90000 ) + 10000;
-		  id = user + nr.toString(); 
+		  id = user.name + nr.toString(); 
 		
 		  if( coll.find( new BasicDBObject("_id", id) ).count() == 0 )
 			  break;
@@ -343,10 +414,12 @@ public class Services {
 	  /* create new DB object that should be added to the earthquake collection */
 	  BasicDBObject obj = new BasicDBObject();
 	  obj.put( "_id", id );
-	  obj.put( "user", user );
+	  obj.put( "user", user.objId );
 	  obj.put( "timestamp", timestamp );
 	  obj.put( "process", new ArrayList<>() );
 	  obj.put( "prop", sub );
+	  obj.put( "root", root );
+	  obj.put( "parent", parent );
 	  
 	  /* insert object into collection */
 	  coll.insert( obj );
@@ -354,7 +427,7 @@ public class Services {
 	  /* create a new event */
 	  BasicDBObject event = new BasicDBObject();
 	  event.put( "id", id );
-	  event.put( "user", user );
+	  event.put( "user", user.objId );
 	  event.put( "timestamp", timestamp );
 	  event.put( "event", "new" );
 	  
@@ -364,7 +437,90 @@ public class Services {
 	  /* start request */
 	  return request( lon, lat, mag, depth, dip, strike, rake, id, user, dur );
   }
-  
+    
+  @POST
+  @Path("/data_insert")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String data_insert(
+		  @Context HttpServletRequest request,
+		  @FormParam("inst") String inst,
+		  @FormParam("secret") String secret,
+		  @FormParam("id") String id,
+		  @FormParam("name") String name,
+		  @FormParam("lon") Double lon,
+		  @FormParam("lat") Double lat,
+		  @FormParam("mag") Double mag,
+		  @FormParam("depth") Double depth,
+		  @FormParam("dip") Double dip,
+		  @FormParam("strike") Double strike,
+		  @FormParam("rake") Double rake,
+		  @FormParam("date") String dateStr,
+		  @FormParam("sea_area") String sea_area,
+		  @FormParam("root") String root,
+		  @FormParam("parent") String parent ) {
+	  
+	  Object[] required = { inst, secret, id, name, lon, lat, mag, depth,
+			  				dip, strike, rake, dateStr };
+	  	  	  
+	  if( ! checkParams( request, required ) )
+		  return jsfailure();
+	  	  
+	  /* check if we got a valid institution and the correct secret */
+	  Inst instObj = institutions.get( inst );
+	  if( instObj == null || ! instObj.secret.equals( secret ) )
+		  return jsdenied();
+	
+	  /* get Date object from date string */
+	  Date date = parseIsoDate( dateStr );
+	  if( date == null )
+		  return jsfailure();
+	  
+	  /* get current timestamp */
+	  Date timestamp = new Date();
+	  
+	  /* create new sub object that stores the properties */
+	  BasicDBObject sub = new BasicDBObject();
+	  sub.put( "date", date );
+	  sub.put( "region", name );
+	  sub.put( "latitude", lat );
+	  sub.put( "longitude", lon );
+	  sub.put( "magnitude", mag );
+	  sub.put( "depth", depth );
+	  sub.put( "dip", dip );
+	  sub.put( "strike", strike );
+	  sub.put( "rake", rake );
+	  sub.put( "sea_area", sea_area );
+	  
+	  long refineId = 0;
+	  CompId compId = new CompId( instObj.name, id, refineId );
+	  
+	  /* create new DB object that should be added to the eqs collection */
+	  BasicDBObject obj = new BasicDBObject();
+	  obj.put( "_id", compId.toString() );
+	  obj.put( "id", id );
+	  obj.put( "user", instObj.objId );
+	  obj.put( "refineId", refineId );
+	  obj.put( "timestamp", timestamp );
+	  obj.put( "prop", sub );
+	  obj.put( "root", root );
+	  obj.put( "parent", parent );
+	  
+	  /* create a new event */
+	  BasicDBObject event = new BasicDBObject();
+	  event.put( "id", compId.toString() );
+	  event.put( "user", instObj.objId );
+	  event.put( "timestamp", timestamp );
+	  event.put( "event", "new" );
+	  	  
+	  /* insert object into 'eqs' collection */
+	  db.getCollection("eqs").insert( obj );
+	  
+	  /* insert new event into 'events'-collection */
+	  db.getCollection("events").insert( event );
+			 
+	  return jssuccess( new BasicDBObject( "refineId", refineId ) );
+  }
+    
   @GET
   @Path("/register")
   @Produces(MediaType.APPLICATION_JSON)
@@ -378,7 +534,6 @@ public class Services {
 	  if( key == null ||  ! key.equals("Malaga2014") )
 		  return "Denied";
 	  
-	  DB db = mongoClient.getDB( "easywave" );
 	  DBCollection coll = db.getCollection("users");
 	  	  
 	  if( username == null || password == null || username.length() < 3 || password.length() < 6 )
@@ -424,9 +579,8 @@ public class Services {
 	  //sessionCookie.setSecure( true );
 	 	  
 	  if( username == null || password == null || username.equals("") || password.equals("") )
-		  return "{ \"status\": \"failure\" }";
+		  return jsfailure();
 	  	  	 	  	  	  
-	  DB db = mongoClient.getDB( "easywave" );
 	  DBCollection coll = db.getCollection("users");
 	  	  
 	  DBCursor cursor = coll.find( new BasicDBObject("username", username) );
@@ -436,7 +590,7 @@ public class Services {
 		  		  
 		  obj = cursor.next();
 		  String hash = (String) obj.get( "password" );
-		  UUID session = (UUID) obj.get( "session" );
+		  String session = (String) obj.get( "session" );
 		  
 		  MessageDigest sha256;
 		  
@@ -456,14 +610,17 @@ public class Services {
 				  coll.update( new BasicDBObject("username", username), obj );
 			  }
 
-			  sessionCookie.setValue( session.toString() );
+			  sessionCookie.setValue( session );
 			  response.addCookie( sessionCookie );
+			  			  
+			  BasicDBObject result = new BasicDBObject("status", "success");
+			  result.put( "user", getUserObj(username) );
 			  
-			  return "{ \"status\": \"success\" }";
+			  return gson.toJson( result );
 		  }
 	  }
 	  
-	  return "{ \"status\": \"failure\" }";
+	  return jsfailure();
   }
   
   @POST
@@ -473,19 +630,11 @@ public class Services {
 		  @Context HttpServletRequest request,
 		  @Context HttpServletResponse response,
 		  @FormParam("username") String username,
-		  @CookieParam("server_cookie") String sessionCockie ) {
+		  @CookieParam("server_cookie") String session ) {
 	  
-	  if( username == null || username.equals("") || sessionCockie == null )
-		  return "{ \"status\": \"failure\" }";
-		  
-	  UUID session = null;
-	  try {
-		  session = UUID.fromString( sessionCockie );
-	  } catch( IllegalArgumentException e ) {
-		  return "{ \"status\": \"failure\" }";
-	  }
-	  
-	  DB db = mongoClient.getDB( "easywave" );
+	  if( username == null || username.equals("") || session == null )
+		  return jsfailure();
+		  	  
 	  DBCollection coll = db.getCollection("users");
 	  
 	  DBCursor cursor = coll.find( new BasicDBObject("username", username) );
@@ -495,7 +644,7 @@ public class Services {
 		
 		  obj = cursor.next();
 		  
-		  if( session.equals( (UUID) obj.get( "session" ) ) ) {
+		  if( session.equals( (String) obj.get( "session" ) ) ) {
 			  
 			  obj.put("session", null);
 			  coll.update( new BasicDBObject("username", username), obj );
@@ -505,11 +654,11 @@ public class Services {
 			  sessionCookie.setMaxAge( 0 );
 			  response.addCookie( sessionCookie );
 			  
-			  return "{ \"status\": \"success\" }";
+			  return jssuccess();
 		  }
 	  }
 	  	  
-	  return "{ \"status\": \"failure\" }";
+	  return jsfailure();
   }
 		  
   @POST
@@ -518,31 +667,48 @@ public class Services {
   public String session(
 		  @Context HttpServletRequest request,
 		  @Context HttpServletResponse response,
-		  @CookieParam("server_cookie") String sessionCockie ) {
+		  @CookieParam("server_cookie") String session ) {
 	  
-	  if( sessionCockie == null )
-		  return "{ \"status\": \"failure\" }";
+	  if( session == null )
+		  return jsfailure();
+	  	  
+	  User user = signedIn( session );
 	  
-	  UUID session = null;
-	  try {
-		  session = UUID.fromString( sessionCockie );
-	  } catch( IllegalArgumentException e ) {
-		  return "{ \"status\": \"failure\" }";
+	  if( user != null ) {
+		  
+		  BasicDBObject result = new BasicDBObject("status", "success");
+		  result.put( "user", getUserObj( user.name ) );
+		  
+		  return gson.toJson( result );
 	  }
 	  
-	  String user = signedIn( session );
-	  if( user != null )
-		  return "{ \"status\": \"success\", \"username\": \"" + user + "\" }";
-	  
-	  return "{ \"status\": \"failure\" }";
+	  return jsfailure();
   }
   
-  private String signedIn( UUID session ) {
+  private DBObject getUserObj( String username ) {
+	  
+	  DBCollection coll = db.getCollection("users");
+	  
+	  DBCursor cursor = coll.find( new BasicDBObject("username", username) );
+	  
+	  if( ! cursor.hasNext() )
+		  return null;
+	  
+	  DBObject obj = cursor.next();
+	  cursor.close();	  
+	  
+	  BasicDBObject userObj = new BasicDBObject( "username", obj.get("username") );
+	  userObj.put("permissions", obj.get("permissions"));
+	  userObj.put("properties", obj.get("properties"));
+	  
+	  return userObj;
+  }
+  
+  private User signedIn( String session ) {
 	  	  
 	  if( session == null )
 		  return null;
 	  
-	  DB db = mongoClient.getDB( "easywave" );
 	  DBCollection coll = db.getCollection("users");
 	  
 	  DBCursor cursor = coll.find( new BasicDBObject("session", session) );
@@ -553,33 +719,17 @@ public class Services {
 		  /* we have found a valid session key */
 		  obj = cursor.next();
 		  
-		  return (String)obj.get("username");
+		  return new User( obj );
 	  }
 	  
 	  return null;
   }
     
-  public UUID getSessionKey() {
+  public String getSessionKey() {
 	  
-	  return UUID.randomUUID();
+	  return UUID.randomUUID().toString();
   }
-        
-  private UUID getSessionUUID( String sessionCockie ) {
-	  
-	  UUID session = null;
-	  
-	  if( sessionCockie == null )
-		  return null;
-	  
-	  try {
-		  session = UUID.fromString( sessionCockie );
-	  } catch( IllegalArgumentException e ) {
-		  return null;
-	  }
-	  
-	  return session;
-  }
-  
+          
  @POST
  @Path("/fetch")
  @Produces(MediaType.APPLICATION_JSON)
@@ -588,11 +738,10 @@ public class Services {
 		  @FormParam("limit") @DefaultValue("0") int limit,
 		  @FormParam("delay") @DefaultValue("0") int delay,
 		  @FormParam("undersea") @DefaultValue("false") boolean undersea,
-		  @CookieParam("server_cookie") String sessionCookie) {
+		  @CookieParam("server_cookie") String session) {
 	 
 	/* check session key and find out if the request comes from an authorized user */
-	UUID session = getSessionUUID( sessionCookie );
-	String user = signedIn( session ); /* returns null if user is not logged in */
+	User user = signedIn( session ); /* returns null if user is not logged in */
 	 				
 	/* create lists for general and user specific earthquake entries */
 	ArrayList<DBObject> mlist = new ArrayList<DBObject>();
@@ -605,20 +754,23 @@ public class Services {
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 	sdf.setTimeZone( TimeZone.getTimeZone("UTC") );
 			
-	/* select database and collection which contain the earthquake entries */
-	DB db = mongoClient.getDB( "easywave" );
+	/* select collection which contain the earthquake entries */
 	DBCollection coll = db.getCollection("eqs");
 		
-	String users[] = { "gfz", user };
+	ArrayList<User> users = new ArrayList<User>( institutions.values() );
+	users.add( user );
 	
 	/* return only entries that are older than 'delay' minutes */
 	Date upperTimeLimit = new Date( System.currentTimeMillis() - delay * 60 * 1000 );
 	
 	/* get earthquakes for each of the given users */
-	for( int i = 0; i < users.length; i++ ) {
+	for( User curUser : users ) {
 	
+		if( curUser == null )
+			continue;
+		
 		/* create DB query */
-		BasicDBObject inQuery = new BasicDBObject( "user", users[i] );
+		BasicDBObject inQuery = new BasicDBObject( "user", curUser.objId );
 		
 		if( undersea )
 			inQuery.append( "prop.sea_area", new BasicDBObject( "$ne", null ) );
@@ -626,6 +778,8 @@ public class Services {
 		if( delay > 0 )
 			inQuery.append( "prop.date", new BasicDBObject( "$lt", upperTimeLimit ) );
 				
+		inQuery.append( "depr", new BasicDBObject( "$ne", true ) );
+		
 		/* query DB, sort the results by date and limit the number of returned entries */
 		DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("prop.date", -1) );
 		
@@ -636,10 +790,10 @@ public class Services {
 		for( DBObject obj: cursor ) {
 			
 			/* check if entry belongs to general or user specific list */
-			if( obj.get("user").equals("gfz") ) {
-				mlist.add( obj );
-			} else {
+			if( obj.get("user").equals( user.objId ) ) {
 				ulist.add( obj );
+			} else {
+				mlist.add( obj );
 			}
 			
 			/* update timestamp */
@@ -652,13 +806,32 @@ public class Services {
 		/* clean up query */
 		cursor.close();
 	}
-	
+		
 	/* create new JSON object that can be used directly within JavaScript */
 	JsonObject jsonObj = new JsonObject();	
-	jsonObj.addProperty("ts", sdf.format( maxTimestamp ) );
 	jsonObj.add( "main", gson.toJsonTree( mlist ) );	
 	jsonObj.add( "user", gson.toJsonTree( ulist ) );
-					
+	
+	if( user != null ) {
+		
+		List<DBObject> msglist = msg( limit, user );
+		
+		if( ! msglist.isEmpty() ) {
+			Date timestamp = (Date) msglist.get(0).get("CreatedTime");
+			if( timestamp.after( maxTimestamp ) ) {
+				maxTimestamp = timestamp;
+			}
+		}
+		
+		jsonObj.add( "msg", gson.toJsonTree( msglist ) );
+		
+	} else {
+		
+		jsonObj.add( "msg", gson.toJsonTree( new ArrayList<DBObject>() ) );
+	}
+		
+	jsonObj.addProperty("ts", sdf.format( maxTimestamp ) );
+						
 	return jsonObj.toString();
  }
  	
@@ -669,11 +842,10 @@ public class Services {
 		 @Context HttpServletRequest request,
 		 @FormParam("ts") String ts,
 		 @FormParam("delay") @DefaultValue("0") int delay,
-		 @CookieParam("server_cookie") String sessionCookie ) {
+		 @CookieParam("server_cookie") String session ) {
 			 
 	/* check session key and find out if the request comes from an authorized user */
-	UUID session = getSessionUUID( sessionCookie );
-	String user = signedIn( session );
+	User user = signedIn( session );
 	 
 	/* create lists for general and user specific earthquake entries */
 	ArrayList<DBObject> mlist = new ArrayList<DBObject>();
@@ -693,16 +865,17 @@ public class Services {
 		return null;
 	}
 		 
-	/* select database and collection which contain the events */
-	DB db = mongoClient.getDB( "easywave" );
+	/* select collection which contain the events */
 	DBCollection coll = db.getCollection("events");
 			
 	/* create list of DB objects that contains all desired users */
 	BasicDBList users = new BasicDBList();
-	users.add( new BasicDBObject( "user", "gfz" ) );
+	
+	for( User curUser: institutions.values() )
+		users.add( new BasicDBObject( "user", curUser.objId ) );
 	
 	if( user != null )
-		users.add( new BasicDBObject( "user", user ) );
+		users.add( new BasicDBObject( "user", user.objId ) );
 	
 	/* return only entries that are older than 'delay' minutes */
 	Date upperTimeLimit = new Date( System.currentTimeMillis() - delay * 60 * 1000 );
@@ -723,13 +896,29 @@ public class Services {
 		/* get corresponding entry from earthquake collection */
 		String id = (String) obj.get("id");
 		
-		BasicDBObject objQuery = new BasicDBObject( "_id", id );
+		BasicDBObject objQuery = new BasicDBObject();
 		
 		if( delay > 0 )
 			objQuery.put( "prop.date", new BasicDBObject( "$lt", upperTimeLimit ) );
 		
-		DBCursor cursor2 = db.getCollection("eqs").find( objQuery );
-		
+		DBCursor cursor2;
+				
+		if( obj.get("event").equals( "msg_sent" ) ) {
+			
+			objQuery.put( "Message-ID", id );
+			cursor2 = db.getCollection("messages_sent").find( objQuery );
+			
+		} else if( obj.get("event").equals( "msg_recv" ) ) {
+			
+			objQuery.put( "Message-ID", id );
+			cursor2 = db.getCollection("messages_received").find( objQuery );
+			
+		} else {
+			
+			objQuery.put( "_id", id );
+			cursor2 = db.getCollection("eqs").find( objQuery );
+		}
+			
 		/*  */
 		if( cursor2.hasNext() ) {
 			
@@ -737,12 +926,18 @@ public class Services {
 			DBObject obj2 = cursor2.next();
 			String event = (String) obj.get("event");
 			obj2.put( "event", event );
-
+			
+			if( obj.get("event").equals( "msg_recv" ) ) {
+				
+				obj2.put("Dir", "in");
+				obj.put( "To", user.name );
+			}
+			
 			/* check if entry belongs to general or user specific list */
-			if( obj.get("user").toString().equals("gfz") ) {
-				mlist.add( obj2 );
-			} else {
+			if( obj.get("user").equals( user.objId ) ) {
 				ulist.add( obj2 );
+			} else {
+				mlist.add( obj2 );
 			}
 			
 			/* update timestamp */
@@ -778,10 +973,7 @@ public class Services {
 		 @Context HttpServletRequest request,
 		 @QueryParam("id") String id, 
 		 @QueryParam("arrT") int arrT ) {
-	 
-	 ArrayList<DBObject> entries = new ArrayList<DBObject>();
-	 
-	 DB db = mongoClient.getDB( "easywave" );
+	 	 	 
 	 DBCollection coll = db.getCollection("results");
 	 
 	 BasicDBObject inQuery = new BasicDBObject();
@@ -791,15 +983,7 @@ public class Services {
 	 	 
 	 DBCursor cursor = coll.find( inQuery );
 	 
-	 for( DBObject obj: cursor ) {
-		entries.add( obj );
-	 }
-		
-	 cursor.close();
-	 
-	 String ret = new Gson().toJson( entries );
-	 
-	 return ret;
+	 return cursor.toArray().toString();
  }
  
  @GET
@@ -811,7 +995,6 @@ public class Services {
 	 
 	 ArrayList<DBObject> entries = new ArrayList<DBObject>();
 	 
-	 DB db = mongoClient.getDB( "easywave" );
 	 DBCollection coll = db.getCollection("results2");
 	 
 	 BasicDBObject inQuery = new BasicDBObject();
@@ -840,7 +1023,6 @@ public class Services {
 		 @Context HttpServletRequest request,
 		 @QueryParam("id") String id ) {
 	 
-	 DB db = mongoClient.getDB( "easywave" );
 	 DBCollection coll = db.getCollection("pois_results");
 	 
 	 BasicDBObject inQuery = new BasicDBObject("id", id);
@@ -848,6 +1030,261 @@ public class Services {
 	 DBCursor cursor = coll.find( inQuery, filter );
 	 	 
 	 return cursor.toArray().toString();
+ }
+ 
+ @GET
+ @Path("/search")
+ @Produces(MediaType.APPLICATION_JSON)
+ public String search(
+		 @Context HttpServletRequest request,
+		 @QueryParam("text") String text ) {
+ 
+	 DBCollection coll = db.getCollection("eqs");
+	 DBCollection msgColl = db.getCollection("messages_sent");
+	 	 
+	 List<DBObject> refinements = coll.find( new BasicDBObject( "id", text ) ).toArray();
+	 
+	 BasicDBList list = new BasicDBList(); 
+	 list.add( new BasicDBObject( "_id", text ) );
+	 list.add( new BasicDBObject( "id", text ) );
+	 list.add( new BasicDBObject( "root", text ) );
+	 list.add( new BasicDBObject( "parent", text ) );
+	 
+	 for( DBObject obj: refinements ) {
+		 String compId = (String) obj.get("_id");
+		 list.add( new BasicDBObject( "root", compId ) );
+		 list.add( new BasicDBObject( "parent", compId ) );
+	 }
+	 
+	 BasicDBObject inQuery = new BasicDBObject( "$or", list );
+	 
+	 BasicDBObject sort = new BasicDBObject("prop.date", -1);
+	 sort.put("timestamp", -1);
+	 DBCursor cursor = coll.find( inQuery ).sort( sort );
+	 	 
+	 List<DBObject> results = new ArrayList<DBObject>();
+	 results.addAll( cursor.toArray() );
+	 
+	 cursor.close();
+	 
+	 /* TODO: generalize field names */
+	 list = new BasicDBList();
+	 list.add( new BasicDBObject( "EventID", text ) );
+	 list.add( new BasicDBObject( "ParentId", text ) );
+	 
+	 for( DBObject obj: refinements ) {
+		 String compId = (String) obj.get("_id");
+		 list.add( new BasicDBObject( "EventID", compId ) );
+		 list.add( new BasicDBObject( "ParentId", compId ) );
+	 }
+	 	 
+	 inQuery = new BasicDBObject( "$or", list );
+	 
+	 cursor = msgColl.find( inQuery ).sort( new BasicDBObject("CreatedTime", -1) );
+	 
+	 for( DBObject obj: cursor ) {
+
+		 obj.put( "kind", "msg" );
+		 results.add( obj );
+	 }
+	 
+	 /* returning only cursor.toArray().toString() makes problems with the date fields */
+	 return gson.toJsonTree( results ).toString();
+ }
+ 
+ @POST
+ @Path("/data_update")
+ @Produces(MediaType.APPLICATION_JSON)
+ public String data_update(
+		  @Context HttpServletRequest request,
+		  @FormParam("inst") String inst,
+		  @FormParam("secret") String secret,
+		  @FormParam("id") String id,
+		  @FormParam("refineId") Long refineId,
+		  @FormParam("name") @DefaultValue("Custom") String name,
+		  @FormParam("lon") Double lon, 
+		  @FormParam("lat") Double lat,
+		  @FormParam("mag") Double mag,
+		  @FormParam("depth") Double depth,
+		  @FormParam("dip") Double dip,
+		  @FormParam("strike") Double strike,
+		  @FormParam("rake") Double rake,
+		  @FormParam("date") String dateStr,
+		  @FormParam("sea_area") String sea_area ) {
+	
+	  Object[] required = { inst, secret, id, name, lon, lat, mag, depth,
+							dip, strike, rake, dateStr };
+
+	  if( ! checkParams( request, required ) )
+		  return jsfailure();
+		
+	  /* check if we got a valid institution and the correct secret */
+	  Inst instObj = institutions.get( inst );
+	  if( instObj == null || ! instObj.secret.equals( secret ) )
+		  return jsdenied();
+	 	  
+	  /* get Date object from date string */
+	  Date date = parseIsoDate( dateStr );
+	  if( date == null )
+		  return jsfailure();
+		  
+	  /* get earthquake collection */
+	  DBCollection coll = db.getCollection("eqs");
+	
+	  /* TODO: check if given id was already refined - if so, return failure */
+	  
+	  /* search for given id */
+	  BasicDBObject inQuery = new BasicDBObject( "id", id );	  
+	  DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("refineId", -1) );
+	
+	  /* return if id not found */
+	  if( cursor.count() < 1 )
+		  return jsfailure();
+	
+	  /* get properties of returned entry */
+	  BasicDBObject entry = (BasicDBObject) cursor.next();
+	
+	  /* clean up query */
+	  cursor.close();
+	  
+	  if( refineId == null ) {
+	  
+	  	refineId = (Long) entry.get( "refineId" );
+	  
+	  	if( refineId == null ) {
+	  		refineId = new Long(0);
+	  	}
+	  
+	  	refineId++;
+ 	  }
+	  
+	  /* update entry ID in database by appending deprecated field */
+	  BasicDBObject depr = new BasicDBObject( "depr", true );
+	  coll.update( entry, new BasicDBObject( "$set", depr ) );
+	  	  	  
+	  /* get current timestamp */
+	  Date timestamp = new Date();
+	  	  	  
+	  BasicDBObject sub = new BasicDBObject();
+	  sub.put( "date", date );
+	  sub.put( "region", name );
+	  sub.put( "latitude", lat );
+	  sub.put( "longitude", lon );
+	  sub.put( "magnitude", mag );
+	  sub.put( "depth", depth );
+	  sub.put( "dip", dip );
+	  sub.put( "strike", strike );
+	  sub.put( "rake", rake );
+	  sub.put( "sea_area", sea_area );
+
+	  CompId compId = new CompId( inst, id, refineId );
+	  
+	  String root = entry.get("root") == null ? (String) entry.get("_id") : (String) entry.get("root");
+	  
+	  /* create new DB object that should be added to the earthquake collection */
+	  BasicDBObject obj = new BasicDBObject();
+	  obj.put( "_id", compId.toString() );
+	  obj.put( "id", id );
+	  obj.put( "refineId", refineId );
+	  obj.put( "user", instObj.objId );
+	  obj.put( "timestamp", timestamp );
+	  obj.put( "prop", sub );
+	  obj.put( "root", root );
+	  obj.put( "parent", entry.get("_id") );
+	  			  	   
+	  /* create a new event */
+	  BasicDBObject event = new BasicDBObject();
+	  event.put( "id", compId.toString() );
+	  event.put( "user", instObj.objId );
+	  event.put( "timestamp", timestamp );
+	  event.put( "event", "update" );
+	  
+	  /* insert object into collection */
+	  coll.insert( obj );
+	  
+	  /* insert new event into 'events'-collection */
+	  db.getCollection("events").insert( event );
+
+	 return jssuccess( new BasicDBObject( "refineId", refineId ) );
+ }
+ 
+ private List<DBObject> msg( int limit, User user ) {
+ 	 
+	 if( user == null )
+		 return null;
+	 
+	 DBCollection coll = db.getCollection("messages_sent");
+	 	 	 
+	 BasicDBObject inQuery = new BasicDBObject( "SenderID", user.objId );
+	 
+	 /* query DB, sort the results by date and limit the number of returned entries */
+	 DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("CreatedTime", -1) );
+	
+	 if( limit > 0 )
+		cursor = cursor.limit( limit );
+	 
+	 List<DBObject> result = cursor.toArray();
+	 cursor.close();
+	 	 
+	 inQuery = new BasicDBObject( "ReceiverID", user.objId );
+	 coll = db.getCollection("messages_received");
+	 cursor = coll.find( inQuery ).sort( new BasicDBObject("CreatedTime", -1) );
+	 
+	 if( limit > 0 )
+		cursor = cursor.limit( limit );
+	 
+	 for( DBObject obj: cursor ) {
+		 
+		 DBCursor csrUser = db.getCollection("users").find( new BasicDBObject("_id", obj.get("SenderID")) );
+		 		 
+		 if( csrUser.hasNext() )
+			 obj.put( "From", (String) csrUser.next().get("username") );
+		 
+		 obj.put( "To", new String[] { user.name } );
+		 obj.put( "Dir", "in" );
+		 
+		 result.add( obj );
+	 }
+	 	 
+	 cursor.close();
+	 	 
+	 Collections.sort( result, new DateComparator( "CreatedTime", -1 ) );
+	 
+	 return result;
+ }
+ 
+ private Date parseIsoDate( String dateStr ) {
+	
+	 /* used to convert to desired time format used by MongoDB */
+	 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+	 sdf.setTimeZone( TimeZone.getTimeZone("UTC") );
+	 
+	 Date date;
+	 try {
+		  date = sdf.parse( dateStr );
+	 } catch (ParseException e) {
+		  e.printStackTrace();
+		  return null;
+	 }
+ 
+	 return date;
+ }
+ 
+ private String jssuccess( DBObject obj ) {
+	 obj.put( "status", "success" );
+	 return obj.toString();
+ }
+ 
+ private String jssuccess() {
+	 return "{ \"status\": \"success\" }";
+ }
+ 
+ private String jsfailure() {
+	 return "{ \"status\": \"failure\" }";
+ }
+ 
+ private String jsdenied() {
+	 return "{ \"status\": \"denied\" }";
  }
  
 }
