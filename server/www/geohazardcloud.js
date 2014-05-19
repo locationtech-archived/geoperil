@@ -25,22 +25,96 @@ function CustomList( widget ) {
 	   entry['show_grid'] = false;
 	   entry['pois'] = null;
 	   entry['heights'] = {};
+	   	   	   
+	   var date2 = new Date( entry.prop.date );
 	   	   
+	   for( var i = 0; i < this.list.length; i++ ) {
+		   
+		   var date1 = new Date( this.list[i].prop.date );
+		   
+		   if( date1.getTime() > date2.getTime() ) {
+			   
+			   this.list.splice( i, 0, entry );
+			   return;
+		   }
+		   
+	   }
+	   
 	   this.list.push( entry );
+   };
+   
+   this.find = function( baseId ) {
+	   
+	   for( var i = 0; i < this.list.length; i++ ) {
+		   
+		   if( this.list[i]['id'] == baseId ) {
+			   return this.list[i];
+          }
+	   }
+	   
+	   return null;
+   };
+   
+   this.remove = function( baseId ) {
+	   	   
+	   for( var i = 0; i < this.list.length; i++ ) {
+		   
+		   if( this.list[i]['id'] == baseId ) {
+			   this.list.splice(i, 1);
+			   break;
+          }
+	   }
    };
 }
 
-var eqlist = new CustomList( '#sidebar' );
+function EntryMap() {
+	
+	this.map = {};
+	
+	this.reset = function() {
+		this.map = {};
+	};
+	
+	this.add = function( entry ) {
+		
+		if( this.map[ entry['_id'] ] )
+			console.log("Warning: entry with id " + entry['_id'] + " already in map.");
+		
+		this.map[ entry['_id'] ] = entry;
+	};
+	
+	this.get = function( id ) {
+		return this.map[ id ];
+	};
+	
+	this.getOrInsert = function( entry ) {
+		
+		var result = this.map[ entry['_id'] ];
+				
+		if( ! result ) {
+			this.map[ entry['_id'] ] = entry;
+			result = entry;
+		}
+		
+		return result;
+	};
+}
 
-var entries = {};
+var eqlist = new CustomList( '#sidebar' );
+var timeline = new CustomList( '#timeline-data' );
+var messages = new CustomList( '#messages' );
+
+var entries = new EntryMap();
 
 var active = null;
+var searchId = null;
 
 var curlist = eqlist;
 var curtab = "#tabRecent";
 
 var loggedIn = false;
-var username = "";
+
+var curuser = null;
 
 var default_delay = 24*60;
 var delay = default_delay;
@@ -81,11 +155,13 @@ function initialize() {
 	map = new google.maps.Map( document.getElementById('mapview'), mapOptions );
     		
 	google.maps.event.addListener( map, 'click', clickMap );
+	google.maps.event.addListener( map, 'zoom_changed', mapZoomed );
 	
 	checkSession();
 	
 	$( "#btnSignIn" ).click( drpSignIn );
 	$( "#btnSignOut" ).click( signOut );
+	$( "#btnProp" ).click( showProp );
 	$( "#btnStart" ).click( compute );
 	$( "#btnClear" ).click( clearForm );
 	//$( document ).click( { show: false }, context );
@@ -94,6 +170,8 @@ function initialize() {
 	$( "#tabRecent" ).click( { tab: "recent" }, tabChanged );
 	$( "#tabSaved" ).click( { tab: "saved" }, tabChanged );
 	$( "#tabCustom" ).click( { tab: "custom" }, tabChanged );
+	$( "#tabTimeline" ).click( { tab: "timeline" }, tabChanged );
+	$( "#tabMessages" ).click( { tab: "messages" }, tabChanged );
 	
 	$( "#diaSignIn" ).click( diaSignIn );
 	
@@ -119,7 +197,41 @@ function initialize() {
 	
 	$( '#sidebar' ).scroll( scrollList );
 	$( '#saved' ).scroll( scrollList );
+	
+	$( '#mailBtnSend' ).click( sendEmail );
+	
+	$( '#btnSearch' ).click( searchEvents );
+	$( '#inSearch' ).keyup( function(e) { if( e.keyCode == 13 ) searchEvents(); } );
+	
+	$( '#btnDelRoot' ).click( function() { $('#inRootId').html(""); } );
+	$( '#btnDelParent' ).click( function() { $('#inParentId').html(""); } );
 		
+	$( '.lnkGroup' ).click( groupOnClick );
+	
+	// set default behavior of mail dialog
+	$( '#msgEvents' ).find( '.lnkGroup' ).click();
+	$( '#msgFax' ).find( '.lnkGroup' ).click();
+	$( '#msgSMS' ).find( '.lnkGroup' ).click();
+	
+	$('#EmailDia').on('shown.bs.modal', function() {
+		var h = $( "#mailText" )[0].scrollHeight;
+	    $( "#mailText" ).outerHeight( h );
+	    
+	    /* we must make the textarea visible first before the height can be read */
+	    var hidden = $( '#msgSMS .grpContent' ).css( "display" ) == "none";
+	    if( hidden )
+	    	$( '#msgSMS .lnkGroup' ).click();
+	    
+	    h = $( "#smsText" )[0].scrollHeight;
+	    $( "#smsText" ).outerHeight( h );
+	    
+	    if( hidden )
+	    	$( '#msgSMS .lnkGroup' ).click();
+	});
+		
+	$('#smsText').bind('input propertychange', function() {
+		$( '#smsChars' ).html( $(this).val().length );
+	});
 }
 
 function getEvents( callback ) {
@@ -140,25 +252,40 @@ function getEvents( callback ) {
 			var timestamp = data['ts'];
 			var mlist = data['main'];
 			var ulist = data['user'];
+			var msglist = data['msg'];
 			
 			for ( var i = mlist.length -1; i >= 0; i-- ) {
-				eqlist.push( mlist[i] );
-				entries[ mlist[i]._id ] = mlist[i];
+				
+				var entry = entries.getOrInsert( mlist[i] );
+				eqlist.push( entry );
 			}
 			
 			for ( var i = ulist.length -1; i >= 0; i-- ) {
-				global.saved.push( ulist[i] );
-				entries[ ulist[i]._id ] = ulist[i];
+				var entry = entries.getOrInsert( ulist[i] );
+				global.saved.push( entry );
 			}
-		
-                        eqlist.endIdx = Math.min( eqlist.endIdx, eqlist.list.length - 1 );
-                        global.saved.endIdx = Math.min( global.saved.endIdx, global.saved.list.length - 1 );
-
-			showEntries( eqlist, $('#sidebar') );
 			
-                        if( global.saved.list.length > 0 ) {
-				showEntries( global.saved, $('#saved') );
-                                }
+			for ( var i = msglist.length -1; i >= 0; i-- ) {
+				
+				msglist[i]._id = msglist[i]['Message-ID'];
+				
+				if( msglist[i]['Dir'] == "in" )
+					msglist[i]._id += "_in";
+												
+				var entry = entries.getOrInsert( msglist[i] );
+				entry.kind = "msg";
+				entry.prop = { date: msglist[i]['CreatedTime'] };
+				messages.push( entry );
+			}
+		            
+			showEntries( eqlist );
+			
+            if( global.saved.list.length > 0 ) {
+				showEntries( global.saved );
+            }
+            
+            if( messages.list.length > 0 )
+            	showEntries( messages );
 			
 			$( curtab ).click();
 			
@@ -185,82 +312,126 @@ function getUpdates( timestamp ) {
 				    		
 			var madd = false;
 			var uadd = false;
-                        var show = false;
+			var sadd = false;
+			var msgadd = false;
+            var show = false;
 			
 			for ( var i = mlist.length -1; i >= 0; i-- ) {
 					    
 				var obj = mlist[i];
+				var id = obj['_id'];
 				
 				if( obj['event'] == 'new' ) {
 					
-					eqlist.push( obj );
-					entries[ obj['_id'] ] = obj;
+					var entry = entries.getOrInsert( obj );
+					eqlist.push( entry );
 					madd = true;
+					
+					if( searched( entry ) ) {
+						timeline.push( entry );
+						sadd = true;
+					}
 					
 				} else if( obj['event'] == 'progress' ) {
 		
-					var id = obj['_id'];
-
-                                        if( id == active )
-                                            show = true;
+                    if( id == active )
+                        show = true;
 
 					var process = obj['process'][0];
 					
 					/* TODO: just a workaround to omit duplicated progress events caused by delay concept */
-					if( ! events[id] )
+					//if( ! events[id] ) {
 						updateProgress( id, process, eqlist.list );
+					//}
 					
 					events[id] = true;
+					
+				} else if( obj['event'] == 'update' ) {
+										
+					// insert obj sorted again
+					eqlist.remove( obj['id'] );
+					eqlist.push( obj );
+					
+					entries.add( obj );
+					madd = true;
+					
+					if( searched( obj ) ) {
+						timeline.push( obj );
+						sadd = true;
+					}
 				}
 			}
 			
 			for ( var i = ulist.length -1; i >= 0; i-- ) {
 			    
 				var obj = ulist[i];
+				var id = obj['_id'];
 								
 				if( obj['event'] == 'new' ) {
 					
-					global.saved.push( obj );
-					entries[ obj['_id'] ] = obj;
+					var entry = entries.getOrInsert( obj );
+					global.saved.push( entry );
 					uadd = true;
+					
+					if( searched( entry ) ) {
+						timeline.push( entry );
+						sadd = true;
+					}
 					
 				} else if( obj['event'] == 'progress' ) {
 		
-					var id = obj['_id'];i
-
-                                        if( id == active )
-                                            show = true;
+                    if( id == active )
+                        show = true;
 
 					var process = obj['process'][0];
 					updateProgress( id, process, global.saved.list );
+					
+				} else if( obj['event'] == 'msg_sent' || obj['event'] == 'msg_recv' ) {
+					
+					obj._id = obj['Message-ID'];
+										
+					var entry = entries.getOrInsert( obj );
+					entry.kind = "msg";
+					entry.prop = { date: obj['CreatedTime'] };
+					
+					messages.push( entry );
+					msgadd = true;
 				}
 			}
 			
 			if( madd ) {
-				showEntries( eqlist, $('#sidebar') );
+				showEntries( eqlist );
 			}
 			
 			if( uadd ) {
-				showEntries( global.saved, $('#saved') );
+				showEntries( global.saved );
+			}
+			
+			if( sadd ) {
+				showEntries( timeline );
+			}
+			
+			if( msgadd ) {
+				showEntries( messages );
 			}
 			
 			if( madd || uadd )
 				$( curtab ).click();
 
-                        if( show ) {
-                            
-                            var filled = entries[ active ]['process'][0]['progress'];
-                            if( filled == 100 ) {
-                                getPois( entries[ active ] );
-                                //getWaveHeights( entries[ active ] );
-                            }
+            if( show ) {
+                
+                var filled = entries.get( active )['process'][0]['progress'];
+                if( filled == 100 ) {
+                    getPois( entries.get( active ), null );
+                    getWaveHeights( entries.get( active ) );
+                }
 
-                            getIsos( entries[ active ], function() { getUpdates( timestamp ); } );
+                getIsos( entries.get( active ), function() { getUpdates( timestamp ); } );
 
-                        } else {
+            } else {
 
-                            timerId = setTimeout( function() { getUpdates( timestamp ); }, 1000);
-                        }
+                timerId = setTimeout( function() { getUpdates( timestamp ); }, 1000);
+            }
 
 		},
 		error: function() {
@@ -273,19 +444,32 @@ function getUpdates( timestamp ) {
 function removeMarker( widget ) {
 	
 	widget.children().each( function() {
-		$(this).data( "entry" ).marker.setMap( null );
+		
+		if( $(this).data( "entry" ).marker )
+			$(this).data( "entry" ).marker.setMap( null );
 	});
 }
 
-function showEntries( list, widget ) {
+function showEntries( list ) {
+	
+	var widget = $( list.widget );
 	
 	removeMarker( widget );
 	widget.empty();
 		
-        var start = Math.min( list.list.length - 1, list.endIdx );
-        for( var i = start; i >= list.startIdx; i-- ) {
+    var start = Math.min( list.list.length - 1, list.endIdx );
+    for( var i = start; i >= list.startIdx; i-- ) {
 
-                addEntry( widget, list.getElem(i), i );
+    	var elem = list.getElem(i);
+    	
+    	if( elem.kind == "msg" ) {
+    		
+    		addMsg( widget, elem, i );
+    		
+    	} else {
+    		
+    		addEntry( widget, elem, i );
+    	}
 	}
 	
 }
@@ -304,7 +488,9 @@ function updateProgress( id, process, list ) {
 			
 			var filled = process['progress'];
 			
-			if( list[i].div ) {
+			for( var widget in list[i].div ) {			
+								
+				var div = list[i].div[widget];
 				
 				var grid = process['grid_dim'];
 				var latMin = grid['latMin'].toFixed(2);
@@ -312,36 +498,42 @@ function updateProgress( id, process, list ) {
 				var latMax = grid['latMax'].toFixed(2);
 				var lonMax = grid['lonMax'].toFixed(2);
 				
-				list[i].div.find( '.chk_grid' ).css( 'display', 'inline' );
-				list[i].div.find( '.status' ).css( 'display', 'none' );
-		    	list[i].div.find( '.progress-bar' ).css( 'width', filled + "%" );
-		    	list[i].div.find( '.progress' ).css( 'display', 'block' );
-		    	list[i].div.find( '.progress-bar' ).css( 'width', filled + "%" );
-		    	list[i].div.find( '.resource' ).html( process['resources'] );
-		    	list[i].div.find( '.calc' ).html( 'Runtime ' + process['calcTime'] / 1000 + ' sec &#183; SimDuration ' + process['simTime'] + " min" );
-		    	list[i].div.find( '.grid' ).html( 'Grid ' + process['resolution'] + '&prime; &#183; BBox (' + latMin + ', ' + lonMin + '), (' + latMax + ', ' + lonMax + ')' ); 
+				div.find( '.chk_grid' ).css( 'display', 'inline' );
+				div.find( '.status' ).css( 'display', 'none' );
+		    	div.find( '.progress-bar' ).css( 'width', filled + "%" );
+		    	div.find( '.progress' ).css( 'display', 'block' );
+		    	div.find( '.progress-bar' ).css( 'width', filled + "%" );
+		    	div.find( '.resource' ).html( process['resources'] );
+		    	div.find( '.calc' ).html( 'Runtime ' + process['calcTime'] / 1000 + ' sec &#183; SimDuration ' + process['simTime'] + " min" );
+		    	div.find( '.grid' ).html( 'Grid ' + process['resolution'] + '&prime; &#183; BBox (' + latMin + ', ' + lonMin + '), (' + latMax + ', ' + lonMax + ')' ); 
 		    	
 		    	if( filled == 100 ) {
-		    		list[i].div.find( '.progress' ).css( 'display', 'none' );
-		    		list[i].div.find( '.status' ).html( simText['done'] );
-		    		list[i].div.find( '.status' ).css( 'display', 'inline' );
-		    	}
+		    		div.find( '.progress' ).css( 'display', 'none' );
+		    		div.find( '.status' ).html( simText['done'] );
+		    		div.find( '.status' ).css( 'display', 'inline' );
+		    	}	
+		    	
 			}
-	    	
 		}
 	}
 }
 	    
 function zeroPad( num, count ) {
 	
+	return charPad( num, count, "0" );
+}
+
+function charPad( num, count, char ) {
+
 	var str = "";
 	
 	for( var i = 0; i < count; i++ )
-		str += "0";
+		str += char;
 	
 	str += num;
 	return str.slice( str.length - count );
 }
+
     
 function addEntry( widget, data, i ) {
 		    	
@@ -351,28 +543,41 @@ function addEntry( widget, data, i ) {
 	$div.css('display', 'block' );
 	
 	$div.data( "entry", data );
-	data['div'] = $div;
+	
+	if( ! data['div'] )
+		data['div'] = {};
+	
+	data['div'][ '#' + widget.attr('id') ] = $div;
 	
 	var prop = data['prop'];
-	
+		
 	var date = new Date( prop['date'] );
 	var year = date.getUTCFullYear();
 	var month = date.getUTCMonth() + 1;
 	var day = date.getUTCDate();
 	var hour = date.getUTCHours();
 	var minutes = date.getUTCMinutes();
-	var seconds = date.getUTCSeconds();
+	//var seconds = date.getUTCSeconds();
 	
 	var datestr = year + "/" + zeroPad( month, 2 ) + "/" + zeroPad( day, 2 );
 	var timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 ); // + ":" + zeroPad( seconds, 2 );
-		    		    		    	
+		    		
+	var txtId = data['_id'];
+	
+	if( data['refineId'] && data['refineId'] > 0 ) {
+		$div.find( '.lnkId' ).html( txtId );
+		$div.find( '.lnkId' ).bind( 'click', lnkIdOnClick );
+		
+		txtId = "";
+	}
+	
 	$div.find( '.region' ).text( prop['region'] );
 	$div.find( '.mag').text( prop['magnitude'] );
-	$div.find( '.datetime' ).html( datestr + " &#183; " + timestr + " UTC" + " &#183; " + data['_id'] );
+	$div.find( '.datetime' ).html( datestr + " &#183; " + timestr + " UTC" + " &#183; " + txtId );
 	$div.find( '.lonlat' ).html( 'Lat ' + prop['latitude'] + '&deg; &#183;  Lon ' + prop['longitude'] + '&deg; &#183;  Depth ' + prop['depth'] + ' km' );
 	$div.find( '.dip' ).html( 'Dip ' + prop['dip'] + '&deg; &#183; Strike ' + prop['strike'] + '&deg; &#183; Rake ' + prop['rake'] + '&deg;' );
 	
-	if( widget[0] != $('#saved')[0] ) {
+	if( widget.attr('id') == 'sidebar' ) {
 		var yearstr = data['_id'].substring(3,7);
 		$div.find( '.beach' ).attr( "src", "http://geofon.gfz-potsdam.de/data/alerts/" + yearstr + "/" + data['_id'] + "/bb32.png" );
 		$div.find( '.geofon' ).attr( "href", "http://geofon.gfz-potsdam.de/eqinfo/event.php?id=" + data['_id'] );
@@ -417,6 +622,9 @@ function addEntry( widget, data, i ) {
 	options.title = 'Learn more';
 	$div.find( '.lnkLearn' ).tooltip( options );
 	
+	options.title = 'Send message';
+	$div.find( '.lnkSend' ).tooltip( options );
+	
 	var color = getMarkerColor( prop['magnitude'] );
 	
 	if( widget[0] == $('#saved')[0] )
@@ -432,6 +640,7 @@ function addEntry( widget, data, i ) {
 	$div.bind( 'contextmenu', { show: true }, context );
 	$div.find( '.chk_grid' ).bind( 'click', { entry: data }, enableGrid );
 	$div.find( '.lnkEdit' ).bind( 'click', fillCustomForm );
+	$div.find( '.lnkSend' ).bind( 'click', mailOnClick );
 	
 	if( data['marker'] )
 		data['marker'].setMap( null );
@@ -443,6 +652,102 @@ function addEntry( widget, data, i ) {
 	widget.prepend( $div );
 }
 
+function addMsg( widget, data, i ) {
+	
+	var $div = $('#msg').clone();
+	var id = $div.attr('id') + widget.attr('id') + i;
+	$div.attr('id', id );
+	$div.css('display', 'block' );
+	
+	$div.data( "entry", data );
+	
+	if( ! data['div'] )
+		data['div'] = {};
+	
+	data['div'][ '#' + widget.attr('id') ] = $div;
+			
+	var date = new Date( data['CreatedTime'] );
+	var year = date.getUTCFullYear();
+	var month = date.getUTCMonth() + 1;
+	var day = date.getUTCDate();
+	var hour = date.getUTCHours();
+	var minutes = date.getUTCMinutes();
+	
+	var datestr = year + "/" + zeroPad( month, 2 ) + "/" + zeroPad( day, 2 );
+	var timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 );
+		    		    		    	
+	var dir = data.Dir == "in" ? "Received" : "Sent";
+	var cls = "glyphicon msgIcon ";
+	
+	var color = "gray";
+	
+	if( data.errors && ! $.isEmptyObject( data.errors ) ) {
+		color = "red";
+		for( var prop in data.errors )
+			console.log( prop );
+	}
+	
+	if( data.Type == "MAIL" ) {
+		cls += "glyphicon-envelope";
+	} else if( data.Type == "FTP" ) {
+		cls += "glyphicon-link";
+	} else if( data.Type == "FAX" ) {
+		cls += "glyphicon-phone-alt";
+	} else if( data.Type == "SMS" ) {
+		cls += "glyphicon-phone";
+	} else if( data.Type == "INTERNAL" ) {
+		
+		if( data.Dir == "in" ){
+			cls += "glyphicon-bell";
+			color = "#428bca";
+		} else {
+			cls += "glyphicon-share";
+		}
+	}
+	
+	$div.find( '.msgIcon').css( "color", color );
+	$div.find( '.msgIcon').attr( "class", cls );
+	$div.find( '.type').text( data['Type'] );
+	$div.find( '.subject' ).text( data['Subject'] );
+	$div.find( '.datetime' ).html( datestr + " &#183; " + timestr + " UTC &#183; " + dir );
+		
+	if( data.ReadTime ) {
+		
+		date = new Date( data.ReadTime );
+		year = date.getUTCFullYear();
+		month = date.getUTCMonth() + 1;
+		day = date.getUTCDate();
+		hour = date.getUTCHours();
+		minutes = date.getUTCMinutes();
+		
+		datestr = year + "/" + zeroPad( month, 2 ) + "/" + zeroPad( day, 2 );
+		timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 );
+		
+		$div.find( '.readtime' ).html( datestr + " &#183; " + timestr );
+		
+	} else {
+		
+		$div.find( '.readtime' ).html( "-" );
+	}
+
+	$div.find( '.to' ).html( "" );
+	
+	for( var k = 0; k < data.To.length; k++ ) {
+		$div.find( '.to' ).append( data.To[k] + "<br>" );
+	}
+	
+	if( data.Dir == "in" )
+		$div.find( '.from' ).html( data['From'] );
+	else
+		$div.find( '.from' ).html( curuser.username );
+	
+	$div.bind( 'mouseover', { turnOn: true }, highlight );
+	$div.bind( 'mouseout', { turnOn: false }, highlight );
+	$div.find( '.subject' ).bind( 'click', msgOnClick );
+	
+	widget.prepend( $div );
+}
+	
 function getMarkerColor( mag ) {
 	
 	var color = 'gray';
@@ -479,7 +784,7 @@ function getMarkerColor( mag ) {
 function entryOnClick() {
 			
 	var id = $(this).parents( ".entry" ).data( "entry" )['_id'];
-		
+			
 	if( !loggedIn ) {
 		
 		signTarget = visualize.bind( this, id );
@@ -492,21 +797,21 @@ function entryOnClick() {
 
 function visualize( id ) {
 	
-	var entry = entries[id];		
+	var entry = entries.get( id );		
 		
         if( active != id ) {
 
-            //showWaveHeights( active, false );
+            showWaveHeights( active, false );
             showPolygons( active, false );
             showGrid( active, false );
             showPois( active, false );
 
             active = id;
-	    //getWaveHeights( entry );
-	    getIsos( entry, null );
-	    getPois( entry );
-	
-	    showGrid( active, entry['show_grid'] );
+		    getWaveHeights( entry );
+		    getIsos( entry, null );
+		    getPois( entry, null );
+		
+		    showGrid( active, entry['show_grid'] );
         }
 
 	if( entry['marker'] )
@@ -522,11 +827,18 @@ function highlight( event ) {
 		return;
 		    	
 	if( turnOn ) {
+		
 		color = '#c3d3e1'; //#99b3cc';
-		entry['marker'].setAnimation( google.maps.Animation.BOUNCE );
+		
+		if( entry['marker'] )
+			entry['marker'].setAnimation( google.maps.Animation.BOUNCE );
+		
 	} else {
+		
 		color = '#fafafa';
-		entry['marker'].setAnimation( null );
+		
+		if( entry['marker'] )
+			entry['marker'].setAnimation( null );
 	}
 	
 	$(this).css('background-color', color);
@@ -578,9 +890,10 @@ function getIsos( entry, callback ) {
     				polyline = new google.maps.Polyline({
     				    path: coords,
     				    geodesic: true,
-    				    strokeColor: '#FF0000',
+    				    strokeColor: '#BF0000',
     				    strokeOpacity: 1.0,
-    				    strokeWeight: 1
+    				    strokeWeight: 1,
+    				    zIndex: 100
 				  	});
     				
     				polyline.setMap( null );
@@ -591,11 +904,11 @@ function getIsos( entry, callback ) {
 				entry['polygons'][ resultObj['arrT'] ] = sub;
 			}
 			
-                        if( active == id )
-                            showPolygons( id, true );
+            if( active == id )
+                showPolygons( id, true );
 
-                        if( callback != null )
-                            callback();
+            if( callback != null )
+                callback();
                         
 		}
 	});
@@ -658,14 +971,14 @@ function getWaveHeights( entry ) {
 		    	
 }
 
-function getPois( entry ) {
+function getPois( entry, callback ) {
 	
 	var id = entry._id;
-	
+
 	if( entry.pois != null ) {
-                showPois( id, true );
-		return;
-        }
+		showPois( id, true );
+        return "done";
+    }
 				
 	$.ajax({
 		url: "srv/getPois",
@@ -673,11 +986,11 @@ function getPois( entry ) {
 		dataType: 'json',
 		success: function( result ) {
 			
-			if( result.length == 0 )
-				return;
-			
 			entry.pois = new Array();
 			
+			if( result.length == 0 )
+				return;
+						
 			for( var i = 0; i < result.length; i++ ) {
 				
 				var poi = result[i];
@@ -686,7 +999,8 @@ function getPois( entry ) {
 				
 				var point = { marker: null,
 						  	  info: null,
-						  	  isOpen: false
+						  	  isOpen: false,
+						  	  data: poi
 							};
 							
 				var color = getPoiColor( poi );
@@ -701,7 +1015,7 @@ function getPois( entry ) {
 					    strokeOpacity: 1.0,
 					    strokeColor: color,
 					    strokeWeight: 2.0,
-					    scale: 5 //pixels
+					    scale: 4 //pixels
 						}
 					});
 				
@@ -741,11 +1055,17 @@ function getPois( entry ) {
 				}
 			}
 
-                        if( active == id )
-                            showPois( id, true );
-		}	
+            if( active == id )
+                showPois( id, true );
+		},
+		complete: function() {
+			
+			if( callback != null )
+                callback();
+		}
 	});	
 	
+	return "pending";
 }
 
 function getPoiColor( poi ) {
@@ -767,6 +1087,25 @@ function getPoiColor( poi ) {
 	return color;
 }
 
+function getPoiLevel( poi ) {
+	
+	var level = "WATCH";
+	
+	if( poi.eta == -1 ) {
+		level = "";
+	} else if( poi.ewh < 0.75 ) {
+		level = "INFORMATION";
+	} else if( poi.ewh < 1.5 ) {
+		level = "ADVISORY";
+	} else if( poi.ewh < 3 ) {
+		level = "WATCH";
+	} else {
+		level = "WATCH";
+	}
+	
+	return level;
+}
+
 function showPolygons( pointer, visible ) {
 		    	
 	if( pointer == null )
@@ -777,7 +1116,7 @@ function showPolygons( pointer, visible ) {
 	if( visible )
 		tmap = map;
 		
-	var entry = entries[ pointer ];
+	var entry = entries.get( pointer );
 
 	for( var arrT in entry['polygons'] ) {
 		
@@ -799,7 +1138,7 @@ function showWaveHeights( pointer, visible ) {
 	if( visible )
 		tmap = map;
 		
-	var entry = entries[ pointer ];
+	var entry = entries.get( pointer );
 	
 	for( var ewh in entry['heights'] ) {
 		
@@ -817,7 +1156,7 @@ function showGrid( pointer, visible ) {
 	if( pointer == null )
 		return;
 	
-	var entry = entries[ pointer ];
+	var entry = entries.get( pointer );
 	
 	if( ! visible ) {
 		if( entry['rectangle'] != null ) {
@@ -863,10 +1202,14 @@ function showPois( pointer, visible ) {
 	
 	var tmap = null;
 	
-	if( visible )
+	if( visible ) {
 		tmap = map;
+		
+		if( map.getZoom() < 5 )
+			return;
+	}
 	
-	var entry = entries[ pointer ];
+	var entry = entries.get( pointer );
 	
 	for( var i in entry.pois ) {
 		
@@ -876,7 +1219,7 @@ function showPois( pointer, visible ) {
 
 function deselect() {
 	
-	//showWaveHeights(active, false);
+	showWaveHeights(active, false);
 	showPolygons(active, false);
 	showGrid(active, false);
 	showPois(active, false);
@@ -896,7 +1239,7 @@ function checkSession() {
 			status = result.status;
 			
 			if( status == 'success' ) {
-				username = result.username;
+				curuser = result.user;
 				logIn( null );
 			} else {
 				getEvents( null );
@@ -911,7 +1254,7 @@ function checkSession() {
 
 function signIn( user, password ) {
 	
-	var status = null;
+	var resObj = null;
 	
 	$.ajax({
 		type: 'POST',
@@ -920,13 +1263,15 @@ function signIn( user, password ) {
 		dataType: 'json',
 		success: function( result ) {
 			
-			status = result['status'];
+			resObj = result;
+			
+			console.log( resObj.status );
 		},
 		error: function() {
 		},
 		complete: function() {
 			
-			if( status == "success" ) {
+			if( resObj.status == "success" ) {
 				
 				/* reset all password and status fields of sign-in widgets */
 				$( "#SignInDialog" ).modal("hide");
@@ -934,6 +1279,7 @@ function signIn( user, password ) {
 				$('#diaPass').val("");
 				$('#inPassword').val("");
 				
+				curuser = resObj.user;
 				logIn( signTarget );
 								
 			} else {
@@ -962,29 +1308,30 @@ function drpSignIn( e ) {
 
 function diaSignIn() {
 	
-	username = $('#diaUser').val();
+	var user = $('#diaUser').val();
 	var password = $('#diaPass').val();
 
-	signIn( username, password );
+	signIn( user, password );
 }
 
 function logIn( callback ) {
 	
 	loggedIn = true;
 	
+	$( '.tab-pane' ).css( "top", "6em" );
+	
 	simText = userText;
 	
 	delay = 0;
 	eqlist.list.length = 0;
 	global.saved.reset();
-	entries = {};
+	entries.reset();
 	getEvents( callback );
-	
+		
 	$( "#btnSignIn" ).css( "display", "none" );
-	$( "#btnSignOut" ).css( "display", "block" );
+	$( "#grpSignOut" ).css( "display", "block" );
 	
-	$( '#tabSaved').css( "display", "block" );
-	$( '#tabCustom').css( "display", "block" );
+	$( '.tab-private' ).css( "display", "block" );
 }
 
 function signOut() {
@@ -994,7 +1341,7 @@ function signOut() {
 	$.ajax({
 		type: 'POST',
 		url: "srv/signout",
-		data: { username: username },
+		data: { username: curuser.username },
 		dataType: 'json',
 		success: function( result ) {
 			
@@ -1015,13 +1362,14 @@ function logOut() {
 	
 	loggedIn = false;
 	
+	$( '.tab-pane' ).css( "top", "3em" );
+	
 	simText = defaultText;
 		
 	$( "#btnSignIn" ).css( "display", "block" );
-	$( "#btnSignOut" ).css( "display", "none" );
+	$( "#grpSignOut" ).css( "display", "none" );
 	
-	$( '#tabSaved').css( "display", "none" );
-	$( '#tabCustom').css( "display", "none" );
+	$( '.tab-private' ).css( "display", "none" );
 	
 	$( '#tabRecent' ).find('a').trigger('click');
 	
@@ -1029,14 +1377,15 @@ function logOut() {
 	delay = default_delay;
 	eqlist.reset();
 	global.saved.reset();
-	entries = {};
+	timeline.reset();
+	messages.reset();
+	entries.reset();	
 	getEvents( null );
 }
 
 function compute() {
   
 	var params = getParams();
-	var status;
 		    	
 	$( "#hrefSaved" ).click();
 	
@@ -1049,7 +1398,6 @@ function compute() {
 		data: params,
 		dataType: 'json',
 		success: function( result ) {
-			status = result['status'];
 			active = result['id'];
 		},
 		error: function() {
@@ -1073,11 +1421,20 @@ function getParams() {
 	params['strike'] = $('#inStrike').val();
 	params['rake'] = $('#inRake').val();
 	params['dur'] = $('#inDuration').val();
+	params['root'] =  $('#inRootId').html();
+	params['parent'] =  $('#inParentId').html();
 	
 	return params;
 }
 
 function fillForm( entry ) {
+	
+	if( !loggedIn ) {
+		
+		signTarget = fillForm.bind( this, entry );
+		$( "#SignInDialog" ).modal("show");
+		return;
+	}
 	
 	var prop = entry['prop'];
 	
@@ -1090,12 +1447,24 @@ function fillForm( entry ) {
 	$('#inStrike').val( prop['strike'] );
 	$('#inRake').val( prop['rake'] );
 	$('#inDuration').val( 180 );
+	
+	$( '#inParentId' ).html( entry['_id'] );
+	
+	if( entry['root'] ) {
+		$( '#inRootId' ).html( entry['root'] );
+	} else {
+		$( '#inRootId' ).html( entry['_id'] );
+	}
 		
 	checkInput();
+	
+	$( '#tabCustom' ).find('a').trigger('click');
 }
 
 function clearForm() {
 	$('#custom :input').val('');
+	$('#inRootId').html('');
+	$('#inParentId').html('');
 	checkInput();
 }
 
@@ -1128,18 +1497,302 @@ function context( e ) {
 }
 
 function fillCustomForm( e ) {
+		
+	var entry = $(this).parents('.entry').data('entry');
+	fillForm( entry );
+}
+
+function mailOnClick( e ) {
+		
+	var id = $(this).parents( ".entry" ).data( "entry" )['_id'];
+	var entry = entries.get( id );
 	
+	showEmailDialog( entry );
+}
+
+function showEmailDialog( entry ) {
+			
 	if( !loggedIn ) {
 		
-		e.stopPropagation();
-		signTarget = fillCustomForm.bind(this, e);
+		signTarget = showEmailDialog.bind( this, entry );
 		$( "#SignInDialog" ).modal("show");
 		return;
 	}
 	
-	var entry = $(this).parents('.entry').data('entry');
-	fillForm(entry );
-	$( '#tabCustom' ).find('a').trigger('click');
+	if( getPois( entry, showEmailDialog.bind( this, entry ) ) != "done" )
+		return;
+		
+	var prop = entry.prop;
+		
+	$( "#mailFrom" ).html( curuser.username );
+	$( "#mailTo" ).val( "" );
+	$( "#mailCC" ).val( "" );
+	$( "#mailSubject" ).val( "Tsunami warning message!" );
+	
+	var root = entry.root ? entry.root : entry._id;
+		
+	$( "#mailEvent" ).html( root );
+	$( "#mailParent" ).html( entry._id );
+	
+	$( "#mailDate" ).html( new Date().toISOString() );
+	$( "#mailOriginTime" ).html( prop.date );
+	$( "#mailCoordinates" ).html( Math.abs( prop.latitude ).toFixed(2) + ( prop.latitude < 0 ? " South" : " North" ) + " ");
+	$( "#mailCoordinates" ).append( Math.abs( prop.longitude ).toFixed(2) + ( prop.longitude < 0 ? " West" : " East" ) );
+	$( "#mailDepth" ).html( prop.depth );
+	$( "#mailLocation" ).html( prop.region );
+	$( "#mailMag" ).html( prop.magnitude );
+		
+	var uprop = curuser.properties;
+	var perm = curuser.permissions;
+			
+	$( "#faxGrp" ).css( "display", (perm && perm.fax) ? "table" : "none" );
+	$( "#ftpGrp" ).css( "display", (perm && perm.ftp) ? "table" : "none" );
+	
+	$( "#faxTo" ).prop( "disabled", ! (uprop && uprop.InterfaxUsername != "" && uprop.InterfaxPassword != "" ) );
+	$( "#ftpChk" ).prop( "disabled", ! (uprop && uprop.FtpUser != "" && uprop.FtpPassword ) );
+	//$( "#ftpChk" ).prop( "disabled", false );
+	
+	$( "#ftpTo" ).html( uprop.FtpHost + uprop.FtpPath );
+	
+	if( entry.pois != null ) {
+			
+		/* previously iterate once to get maximum length of location names */
+		var heads = new Array(
+			"LOCATION-FORECAST POINT",
+		    "COORDINATES   ",
+		    "EAT   ",
+		    "EWH  ",
+		    "LEVEL       "
+		);
+		
+		var minlen = heads[0].length;
+		for( var i = 0; i < entry.pois.length; i++ ) {
+			
+			var poi = entry.pois[i].data;
+		
+			if( poi.eta == -1 )
+				continue;
+			
+			minlen = Math.max( minlen, poi.station.length );
+		}
+				
+		var txt = "";
+		
+		for( var i = 0; i < entry.pois.length; i++ ) {
+			
+			var poi = entry.pois[i].data;
+			
+			if( poi.eta == -1 )
+				continue;
+					
+			var pretty_station = poi.station + new Array( minlen - poi.station.length + 1 ).join(" ");
+			var pretty_lat = charPad( Math.abs( poi.lat ).toFixed(2), 5, ' ' );
+			var pretty_lon = charPad( Math.abs( poi.lon ).toFixed(2), 6, ' ' );
+			var pretty_eta = charPad( poi.eta.toFixed(2), 6, ' ' );
+			var pretty_ewh = charPad( poi.ewh.toFixed(2), 5, ' ' );
+			
+			txt += pretty_station + " ";
+			txt += pretty_lat + (poi.lat < 0 ? "S" : "N") + " ";
+			txt += pretty_lon + (poi.lon < 0 ? "W" : "E") + " ";
+			txt += pretty_eta + " ";
+			txt += pretty_ewh + " ";
+			txt += getPoiLevel( poi ) + "\n<br>";
+		}
+		
+		if( txt != "" ) {
+			
+			$( "#mailFCPs" ).html( "" );
+			for( var k = 0; k < heads.length; k++ )
+				$( "#mailFCPs" ).append( heads[k] + " " );
+			
+			$( "#mailFCPs" ).append( "\n<br>" );
+			for( var k = 0; k < heads.length; k++ ) {
+				/* generates as many '-' as there are letters in the head string */
+				$( "#mailFCPs" ).append( new Array( heads[k].length + 1 ).join("-") + " " );
+			}
+							
+			$( "#mailFCPs" ).append( "\n<br>" + txt );
+		}
+		
+	}
+	
+	/* SMS text */
+	var short_region = prop.region.length < 27 ? prop.region : prop.region.substring( 0, 24 ) + "...";
+	var smstext = "...THIS IS AN EXERCISE...\n\n" +
+				  "AN EARTHQUAKE HAS OCCURRED:\n\n  " +
+				  short_region + "\n  " +
+				  prop.date + "\n  " +
+				  Math.abs( prop.latitude ).toFixed(2) + ( prop.latitude < 0 ? "S" : "N" ) + " " +
+				  Math.abs( prop.longitude ).toFixed(2) + ( prop.longitude < 0 ? "W" : "E" ) + " " + 
+				  prop.depth + "KM\n  " +
+				  prop.magnitude + " Mw\n\n" +
+				  "...EXERCISE...";
+	
+	if( smstext.length > 160 )
+		smstext = smstext.substring( 0, 160 );
+	
+	$( '#smsChars' ).html( smstext.length );
+	$( "#smsText" ).val( smstext );
+	
+	$( "#mailText" ).val( getPlainText( $( "#mailTemplate" ) ) );	
+		
+	$( "#EmailDia" ).modal("show");
+}
+
+function sendEmail() {
+	
+	var to = $( "#mailTo" ).val();
+	var cc = $( "#mailCC" ).val();
+	var intTo = $( "#intTo" ).val();
+	var subject = $( "#mailSubject" ).val();
+	var faxTo = $( "#faxTo" ).val();
+	var smsTo = $( "#smsTo" ).val();
+	var smsText = $( "#smsText" ).val();
+	
+	var parent = $( "#mailParent" ).html();
+	var root = $( "#mailEvent" ).html();
+	
+	var text = getPlainText( $( "#mailTemplate" ) );
+		
+	// internal message
+	$.ajax({
+		type: 'POST',
+		url: "msgsrv/intmsg",
+		data: { apiver: 1, to: intTo, subject: subject, text: text, evid: root, parentid: parent }, 
+		dataType: 'json',
+		success: function( result ) {
+			status = result.status;
+			
+			console.log( status );
+		},
+		error: function() {
+			console.log( "#error" );
+		},
+		complete: function() {
+		}
+	});
+	
+	// email
+	$.ajax({
+		type: 'POST',
+		url: "msgsrv/mail",
+		data: { apiver: 1, to: to, cc: cc, subject: subject, text: text, evid: root, parentid: parent }, 
+		dataType: 'json',
+		success: function( result ) {
+			status = result.status;
+			
+			console.log( status );
+		},
+		error: function() {
+			console.log( "#error" );
+		},
+		complete: function() {
+		}
+	});
+	
+	// fax
+	$.ajax({
+		type: 'POST',
+		url: "msgsrv/fax",
+		data: { apiver: 1, to: faxTo, text: text, evid: root, parentid: parent }, 
+		dataType: 'json',
+		success: function( result ) {
+			status = result.status;
+			
+			console.log( status );
+		},
+		error: function() {
+			console.log( "#error" );
+		},
+		complete: function() {
+		}
+	});
+	
+	// ftp
+	$.ajax({
+		type: 'POST',
+		url: "msgsrv/ftp",
+		data: { apiver: 1, text: text, evid: root, parentid: parent }, 
+		dataType: 'json',
+		success: function( result ) {
+			status = result.status;
+			
+			console.log( status );
+		},
+		error: function() {
+			console.log( "#error" );
+		},
+		complete: function() {
+		}
+	});
+	
+	// sms
+	$.ajax({
+		type: 'POST',
+		url: "msgsrv/sms",
+		data: { apiver: 1, to: smsTo, text: smsText, evid: root, parentid: parent },
+		dataType: 'json',
+		success: function( result ) {
+			status = result.status;
+			
+			console.log( status );
+		},
+		error: function() {
+			console.log( "#error" );
+		},
+		complete: function() {
+		}
+	});
+	
+}
+
+function getPlainText( span ) {
+	
+	var lines = span.text().split("\n");
+	var text = "";
+	
+	for( var i = 0; i < lines.length; i++ )
+		text += $.trim( lines[i] ) + "\n";
+	
+	return text;
+}
+
+function msgOnClick() {
+	
+	var id = $(this).parents( ".entry" ).data( "entry" )['_id'];
+	var msg = entries.get( id );
+			
+	visualize( msg.ParentId );
+		
+	markMsgAsRead( msg );
+	
+	return;
+}
+
+function markMsgAsRead( msg ) {
+	
+	$.ajax({
+		type: 'POST',
+		url: "msgsrv/readmsg",
+		data: { apiver: 1, msgid: msg['Message-ID'] },
+		dataType: 'json',
+		success: function( result ) {
+			status = result.status;
+			
+			console.log( status + ": " + result.ReadTime );
+			
+			if( ! msg.ReadTime )
+				msg.ReadTime = result.ReadTime;
+			
+			showEntries( messages );
+		},
+		error: function() {
+			console.log( "#error" );
+		},
+		complete: function() {
+		}
+	});
+	
 }
 
 function clickMap( event ) {
@@ -1170,12 +1823,13 @@ function tabChanged( args ) {
 	var tab = args.data.tab;
 			
 	curtab = "#" + $(this).attr('id');
-	
+		
 	if( tab == "recent" ) {
 		
 		curlist = eqlist;
 		
-		for( var i = eqlist.endIdx; i >= eqlist.startIdx; i-- )
+		var start = Math.min( eqlist.list.length - 1, eqlist.endIdx );
+		for( var i = start; i >= eqlist.startIdx; i-- )
 			eqlist.getElem(i).marker.setMap( map );
 				
 	} else {
@@ -1187,7 +1841,7 @@ function tabChanged( args ) {
 		
 		curlist = global.saved;
 	
-                var start = Math.min( global.saved.list.length - 1, global.saved.endIdx );
+        var start = Math.min( global.saved.list.length - 1, global.saved.endIdx );
 		for( var i = start; i >= global.saved.startIdx; i-- ) {
 			global.saved.getElem(i).marker.setMap( map );
 		}
@@ -1209,6 +1863,22 @@ function tabChanged( args ) {
 		if( global.marker )
 			global.marker.setMap( null );
 	}
+	
+	if( tab == "timeline" ) {
+		
+		curlist = timeline;
+		
+		var start = Math.min( timeline.list.length - 1, timeline.endIdx );
+		for( var i = start; i >= timeline.startIdx; i-- ) {
+			if( timeline.getElem(i).marker )
+				timeline.getElem(i).marker.setMap( map );
+		}
+		
+	} else {
+		
+		removeMarker( $('#timeline-data') );
+	}
+
 }
 
 function enableGrid( args ) {
@@ -1216,7 +1886,7 @@ function enableGrid( args ) {
 	var entry = args.data.entry;
 	
 	entry['show_grid'] = $(this).is(':checked');
-	
+		
 	if( active == entry['_id'] )
 		showGrid( active, entry['show_grid'] );
 }
@@ -1310,11 +1980,14 @@ function loadPreset() {
 
 function nextEntries() {
 
+	if( curlist.list.length - 1 <= curlist.endIdx )
+		return;
+	
 	var step = Math.min( curlist.endIdx + 10, curlist.list.length - 1 ) - curlist.endIdx;
 	curlist.startIdx += step;
 	curlist.endIdx += step;
 
-	showEntries( curlist, $( curlist.widget ) );
+	showEntries( curlist );
 	
 	$( curtab ).click();
 }
@@ -1325,7 +1998,7 @@ function prevEntries() {
 	curlist.startIdx -= step;
 	curlist.endIdx -= step;
 	
-	showEntries( curlist, $( curlist.widget ) );
+	showEntries( curlist );
 	
 	$( curtab ).click();
 }
@@ -1343,7 +2016,7 @@ function scrollList() {
 		
 		nextEntries();
 		
-		elem = entries[ id ]['div'];
+		elem = entries.get( id )['div'][ curlist.widget ];
 		$( curlist.widget ).scrollTop( 0 );
 		$( curlist.widget ).scrollTop( elem.offset().top - top );
 	}
@@ -1356,9 +2029,98 @@ function scrollList() {
 		
 		prevEntries();
 		
-		elem = entries[ id ]['div'];
+		elem = entries.get( id )['div'][ curlist.widget ];
 		$( curlist.widget ).scrollTop( 0 );
 		$( curlist.widget ).scrollTop( elem.offset().top - top );
 	}
 	
+}
+
+function mapZoomed() {
+	
+	var zoom = map.getZoom();
+	
+	if( zoom < 5 )
+		showPois( active, false );
+	
+	if( zoom >= 5 )
+		showPois( active, true );
+}
+
+function searchEvents() {
+	
+	searchId = $( '#inSearch' ).val();
+	
+	timeline.reset();
+	
+	$.ajax({
+		type: 'GET',
+		url: "srv/search",
+		data: { text: searchId },
+		dataType: 'json',
+		success: function( result ) {
+								
+			for ( var i = result.length -1; i >= 0; i-- ) {
+				
+				if( result[i].kind == "msg" )
+					result[i]._id = result[i]['Message-ID'];
+					
+				var entry = entries.getOrInsert( result[i] );
+				timeline.push( entry );
+			}
+					            
+			showEntries( timeline );
+			
+			$( curtab ).click();
+		},
+		error: function() {
+		},
+		complete: function() {
+		}
+	});
+	
+}
+
+function searched( obj ) {
+	
+	if( obj.id == searchId || obj.root == searchId || obj.parent == searchId )
+		return true;
+	
+	return false;
+}
+
+function lnkIdOnClick() {
+		
+	var entry = $(this).parents( ".entry" ).data( "entry" );
+	
+	$( '#inSearch' ).val( entry['id'] );
+	$( '#btnSearch' ).click();
+	$( "#hrefTimeline" ).click();
+}
+
+function showProp() {
+	
+	var prop = curuser.properties;
+	
+	$( '#propUser' ).html( curuser.username );
+	$( '#propMail' ).html( curuser.username );
+	$( '#propFaxUser' ).val( prop.InterfaxUsername );
+	$( '#propFaxPwd' ).val( prop.InterfaxPassword );
+	$( '#propFTPUser' ).val( prop.FtpUser );
+	$( '#propFTPPwd' ).val( prop.FtpPassword );
+	$( '#propFTPHost' ).val( prop.FtpHost );
+	$( '#propFTPPath' ).val( prop.FtpPath );
+	
+	$( '#PropDia' ).modal('show');
+}
+
+function groupOnClick() {
+	
+	var content = $(this).parents('.group').children('.grpContent');
+	var arrow =  $(this).children('.grpArrow');
+			
+	content.css( "display", arrow.hasClass( 'glyphicon-chevron-up' ) ? "none" : "inline" );
+	
+	arrow.toggleClass( 'glyphicon-chevron-up' );
+	arrow.toggleClass( 'glyphicon-chevron-down' );
 }
