@@ -20,6 +20,12 @@ class MsgSrv(Base):
         return "Hello World!" + str(self.getUser())
 
     @cherrypy.expose
+    def json(self, json):
+        print(json)
+        return
+
+
+    @cherrypy.expose
     def readmsg(self, apiver, msgid ):
         user = self.getUser()
         if user is not None:
@@ -27,7 +33,21 @@ class MsgSrv(Base):
                 self._db["messages_received"].update({"Message-ID": msgid, "ReadTime": None, "ReceiverID": user["_id"]}, \
                                                      {"$set":{"ReadTime": datetime.datetime.utcnow()}})
                 msg = self._db["messages_received"].find_one({"Message-ID": msgid, "ReceiverID": user["_id"]})
-                return jssuccess(readtime = None if msg is None else msg["ReadTime"])
+                return jssuccess(readtime = None if msg is None else str(msg["ReadTime"]))
+            else:
+                return jsfail(errors = ["API version not supported."])
+        else:
+            return jsdeny()
+
+    @cherrypy.expose
+    def displaymapmsg(self, apiver, msgid ):
+        user = self.getUser()
+        if user is not None:
+            if apiver == "1":
+                self._db["messages_received"].update({"Message-ID": msgid, "MapDisplayTime": None, "ReceiverID": user["_id"]}, \
+                                                     {"$set":{"MapDisplayTime": datetime.datetime.utcnow()}})
+                msg = self._db["messages_received"].find_one({"Message-ID": msgid, "ReceiverID": user["_id"]})
+                return jssuccess(mapdisplaytime = None if msg is None else str(msg["MapDisplayTime"]))
             else:
                 return jsfail(errors = ["API version not supported."])
         else:
@@ -37,7 +57,7 @@ class MsgSrv(Base):
     @cherrypy.tools.allow(methods=['POST'])
     def intmsg(self, apiver, to, subject, text, evid = None, parentid = None, groupID = None ):
         user = self.getUser()
-        if user is not None:
+        if user is not None and user["permissions"].get("intmsg",False):
             if apiver == "1":
                 dbmsg = {
                     "Type": "INTERNAL",
@@ -61,6 +81,7 @@ class MsgSrv(Base):
                         rmsg = copy.deepcopy(dbmsg)
                         rmsg["ReceiverID"] = ruser["_id"]
                         rmsg["ReadTime"] = None
+                        rmsg["MapDisplayTime"] = None
                         self._db["messages_received"].insert(rmsg)
                         msgevt2 = {
                             "id": rmsg["Message-ID"],

@@ -72,11 +72,30 @@ class WebGuiSrv(Base):
                     "session": None,
                     "inst": inst,
                     "permissions": {
-                        "admin": False,
-                        "fax": True,
-                        "mail": True,
+                        "admin": False,         # can change permission, create users, change users
+                        "intmsg": False,        # can send internal cloud messages
+                        "fax": False,           # can send fax messages
+                        "mail": False,          # can send mails
+                        "sms": False,           # can send sms messages
+                        "ftp": False,           # can send messages to ftp/gts
+                        "share": False,         # can create share links
+                        "compute": False,       # can compute simulations
+                        "manage": False,        # can manage their institution
                     },
-                    "properties": {},
+                    "properties": {
+                        "InterfaxUsername":"",
+                        "InterfaxPassword":"",
+
+                        "TwilioSID":"",
+                        "TwilioToken":"",
+                        "TwilioFrom":"",
+
+                        "FtpHost":"",
+                        "FtpPort":21,
+                        "FtpPath":"",
+                        "FtpUser":"anonymous",
+                        "FtpPassword":"anonymous",
+                    },
                 }
                 if inst is not None and self._db["institutions"].find_one({"id":inst}) is None:
                     self._db["institutions"].insert({"id":inst, "name":inst, "secret":None})
