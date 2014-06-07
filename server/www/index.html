@@ -11,6 +11,7 @@
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>
     <script src="geohazardcloud.js"></script>
     <link href="geohazardcloud.css" rel="stylesheet">
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
 	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
 	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
@@ -56,12 +57,13 @@
 	  	<div class="row mainview">
 	  		<div class="col-md-4 left-col" id="side">
 	  			<div class="row tabs">
-					<ul class="nav nav-tabs">
+					<ul class="nav nav-tabs main-tabs">
 						<li id="tabRecent" class="active"><a href="#sidebar" data-toggle="tab">Recent</a></li>
 					 	<li id="tabSaved" class="tab-private"><a href="#saved" id="hrefSaved" data-toggle="tab">My List</a></li>
 					  	<li id="tabCustom" class="tab-private"><a href="#custom" data-toggle="tab">Compose</a></li>
 					  	<li id="tabTimeline" class="tab-private"><a href="#timeline" id="hrefTimeline" data-toggle="tab">My Timeline</a></li>
 					  	<li id="tabMessages" class="tab-private"><a href="#messages" data-toggle="tab">Messages</a></li>
+					  	<li id="tabStatic"><a href="#static" data-toggle="tab">Shared</a></li>
 					  	<li id="tabDeselect">
 						  	<button id="btnDeselect" type="button" class="btn btn-primary btn-sm">
 						  		<span class="glyphicon glyphicon-globe"></span>
@@ -180,6 +182,7 @@
   						</div>
 	  				</div>
 		  			<div class="col-md-12 tab-pane" id="messages"></div>
+		  			<div class="col-md-12 tab-pane" id="static"></div>
 	  			</div>
 	  		</div>
 	  		
@@ -210,20 +213,20 @@
 				<h4 class="mag"></h4>
 			</div>
 		</div>
-		<div class="col-md-10 off">
-			<div class="row off">
+		<div class="col-md-10 entry-right">
+			<div class="row">
 				<a href="#" class="big region"></a>
 			</div>
 			<div class="row">
 				<div class="col-md-10">
-					<div class="row off">
+					<div class="row">
 						<span class="small datetime"></span>
 						<a class="small lnkId" href="#"></a>
 					</div>
-					<div class="row off">
+					<div class="row">
 						<span class="small lonlat"></span>
 					</div>
-					<div class="row off">
+					<div class="row">
 						<span class="small dip"></span>
 					</div>
 				</div>
@@ -233,7 +236,7 @@
 					</div>
 				</div>
 			</div>
-			<div class="row off process">
+			<div class="row process">
 				<div class="progress">
 					<div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
 				</div>
@@ -241,16 +244,18 @@
 				<a class="lnkLearn" href="#"><span class="glyphicon glyphicon-info-sign"></span></a>
 				<a class="lnkEdit" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
 				<a class="lnkSend" href="#"><span class="glyphicon glyphicon-send"></span></a>
+				<a class="lnkStatic" href="#"><span class="glyphicon glyphicon-share-alt"></span></a>
+				<a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
 				<!-- <button class="lnkEdit btn btn-primary btn-sm"><span class="glyphicon glyphicon-repeat"></span></button> -->
 			</div>
 			<div class="calc_data">
-				<div class="row off">
+				<div class="row">
 					<span class="small resource"></span>
 				</div>
-				<div class="row off">
+				<div class="row">
 					<span class="small calc"></span>
 				</div>
-				<div>
+				<div class="row">
 					<input class="chk_grid" type="checkbox">
 					<span class="small grid"></span>
 				</div>
@@ -263,25 +268,26 @@
 		<div class="col-md-2 entry-left">
 			<div class="row row-msgIcon">
 				<span class="glyphicon glyphicon-arrow-right msgIcon"></span>
+				<span class="msgType"></span>
 			</div>
 		</div>
-		<div class="col-md-10 off">
-			<div class="row off">
+		<div class="col-md-10 entry-right">
+			<div class="row">
 				<a href="#" class="big subject"></a>
 			</div>
-			<div class="row off">
+			<div class="row">
 				<span class="small datetime"></span>
+				<a href="#" class="small lnkEvtId"></a>
 			</div>
-			<div class="row off">
+			<div class="row">
 				<div class="col-md-2 no-pad">
 					<span class="small">To:</span>
 				</div>
 				<div class="col-md-10 no-pad">
 					<span class="small to"></span>
 				</div>
-				<!-- <span class="small to"></span> -->
 			</div>
-			<div class="row off">
+			<div class="row">
 				<div class="col-md-2 no-pad">
 					<span class="small">From:</span>
 				</div>
@@ -289,11 +295,14 @@
 					<span class="small from"></span>
 				</div>
 			</div>
-			<div class="row off">
-				<span class="small">Read by: </span>
-				<span class="small readtime"></span>
+			<div class="row">
+				<span class="medium stat-disp">Map not displayed</span>
 			</div>
-			
+			<div class="row">
+				<span class="medium stat-read">Message not read</span>
+				<a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
+				<a class="lnkMsg pull-right" href="#"><span class="glyphicon glyphicon-align-justify"></span></a>
+			</div>			
 		</div>
 	</div>
 	
@@ -306,7 +315,7 @@
 	        <h4 class="modal-title">Please sign in to continue</h4>
 	      </div>
 	      <div class="modal-body">
-	      	<input id="diaUser" type="text" class="form-control" placeholder="E-Mail" required autofocus>
+	      	<input id="diaUser" type="text" class="form-control" placeholder="E-Mail" required>
 		  	<input id="diaPass" type="password" class="form-control" placeholder="Password" required>
 		  	<p id="diaStatus" class="form-control-static"></p>
 	      </div>
@@ -407,27 +416,24 @@
 	      </div>
 	      <div class="modal-body mail-body">
 	      	<form class="form-horizontal" role="form">
-	      		<div id="msgEvents" class="group">
+	      		<div id="msgCloud" class="group">
 	      			<div class="grpHeader">
-	      				<span class="grpHeadline">Related events</span>
+	      				<span class="grpHeadline">Cloud addresses</span>
 	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
 	      			</div>
 	      			<div class="grpContent">
-	      				<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Event-ID</span>
-							<span id="mailEvent" class="form-control"></span>
-							<span class="input-group-addon glyphicon glyphicon-map-marker mail-right"></span>
-				  		</div>
-				  		<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Parent-ID</span>
-							<span id="mailParent" class="form-control"></span>
-							<span class="input-group-addon glyphicon glyphicon-map-marker mail-right"></span>
-				  		</div>
-	      			</div>
-		  		</div>
+		      			<div class="input-group input-group-sm mail-label">
+							<span class="input-group-addon">Int-To:</span>
+							<input id="intTo" type="text" class="form-control">
+							<span class="input-group-addon mail-right">
+								<span class="glyphicon glyphicon-share"></span>
+							</span>
+					  	</div>
+				  	</div>
+	      		</div>
 	      		<div id="msgMail" class="group">
 	      			<div class="grpHeader">
-	      				<span class="grpHeadline">E-Mail / Internal message</span>
+	      				<span class="grpHeadline">E-mail addresses</span>
 	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
 	      			</div>
 	      			<div class="grpContent">
@@ -438,63 +444,55 @@
 				  		<div class="input-group input-group-sm mail-label">
 							<span class="input-group-addon">To:</span>
 							<input id="mailTo" type="text" class="form-control">
-							<span class="input-group-addon glyphicon glyphicon-envelope mail-right"></span>
+							<span class="input-group-addon mail-right">
+								<span class="glyphicon glyphicon-envelope"></span>
+							</span>
 				  		</div>
 				  		<div class="input-group input-group-sm mail-label">
 							<span class="input-group-addon">Cc:</span>
 							<input id="mailCC" type="text" class="form-control">
-							<span class="input-group-addon glyphicon glyphicon-envelope mail-right"></span>
-				  		</div>
-				  		<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Int-To:</span>
-							<input id="intTo" type="text" class="form-control">
-							<span class="input-group-addon glyphicon glyphicon-share mail-right"></span>
-				  		</div>
-				  		<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Subject:</span>
-							<input id="mailSubject" type="text" class="form-control">
+							<span class="input-group-addon mail-right">
+								<span class="glyphicon glyphicon-envelope"></span>
+							</span>
 				  		</div>
 			  		</div>
 		  		</div>		  		
 		  		<div id="msgFax" class="group">
 	      			<div class="grpHeader">
-	      				<span class="grpHeadline">Fax / FTP</span>
+	      				<span class="grpHeadline">Fax addresses</span>
 	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
 	      			</div>
 	      			<div class="grpContent">
 				  		<div id="faxGrp" class="input-group input-group-sm mail-label">
 							<span class="input-group-addon">Fax numbers:</span>
 							<input id="faxTo" type="text" class="form-control">
-							<span class="input-group-addon glyphicon glyphicon-phone-alt mail-right"></span>
+							<span class="input-group-addon mail-right">
+								<span class="glyphicon glyphicon-phone-alt"></span>
+							</span>
 				  		</div>
+				  	</div>
+				</div>
+				<div id="msgFtp" class="group">
+	      			<div class="grpHeader">
+	      				<span class="grpHeadline">FTP / GTS address</span>
+	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+	      			</div>
+	      			<div class="grpContent">
 				  		<div id="ftpGrp" class="input-group input-group-sm mail-label">
 							<span class="input-group-addon">Publish on FTP:</span>
 							<span id="ftpChkSpan" class="form-control">
 								<input id="ftpChk" type="checkbox">
 							</span>
 							<span id="ftpTo" class="form-control">Test</span>
-							<span class="input-group-addon glyphicon glyphicon-link mail-right"></span>
+							<span class="input-group-addon mail-right">
+								<span class="glyphicon glyphicon-link"></span>
+							</span>
 				  		</div>
-				  	</div>
-				</div>
-				<div id="msgSMS" class="group">
-	      			<div class="grpHeader">
-	      				<span class="grpHeadline">SMS</span>
-	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-	      			</div>
-	      			<div class="grpContent">
-				  		<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Mobile numbers:</span>
-							<input id="smsTo" type="text" class="form-control">
-							<span class="input-group-addon glyphicon glyphicon-phone mail-right"></span>
-				  		</div>
-				  		<span class="smsHeadline">SMS-Text (<span id="smsChars"></span> / 160 characters):</span>
-				  		<textarea id="smsText" class="form-control inArea" rows="5" maxlength="160"></textarea>
 				  	</div>
 				</div>
 				<div id="msgText" class="group">
 	      			<div class="grpHeader">
-	      				<span class="grpHeadline">Mail-Text</span>
+	      				<span class="grpHeadline">Message</span>
 	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
 	      			</div>
 	      			<div class="grpContent">
@@ -523,9 +521,52 @@
 		
 							END OF TSUNAMI EXERCISE MESSAGE<br><br>
 						</span>
+						<div class="input-group input-group-sm mail-label">
+							<span class="input-group-addon">Subject:</span>
+							<input id="mailSubject" type="text" class="form-control">
+				  		</div>
 				  		<textarea id="mailText" class="form-control inArea" rows="10" spellcheck="false"></textarea>
 				  	</div>
-				 </div>
+				</div>
+				<div id="msgSMS" class="group">
+	      			<div class="grpHeader">
+	      				<span class="grpHeadline">SMS</span>
+	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+	      			</div>
+	      			<div class="grpContent">
+				  		<div class="input-group input-group-sm mail-label">
+							<span class="input-group-addon">Mobile numbers:</span>
+							<input id="smsTo" type="text" class="form-control">
+							<span class="input-group-addon mail-right">
+								<span class="glyphicon glyphicon-phone "></span>
+							</span>
+				  		</div>
+				  		<span class="smsHeadline">SMS-Text (<span id="smsChars"></span> / 160 characters):</span>
+				  		<textarea id="smsText" class="form-control inArea" rows="5" maxlength="160"></textarea>
+				  	</div>
+				</div>
+				<div id="msgEvents" class="group">
+		   			<div class="grpHeader">
+		   				<span class="grpHeadline">Related events</span>
+		   				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+		   			</div>
+		   			<div class="grpContent">
+		   				<div class="input-group input-group-sm mail-label">
+							<span class="input-group-addon">Event-ID</span>
+							<span id="mailEvent" class="form-control"></span>
+							<span class="input-group-addon mail-right">
+								<span class="glyphicon glyphicon-map-marker"></span>
+							</span>
+		  				</div>
+				  		<div class="input-group input-group-sm mail-label">
+							<span class="input-group-addon">Parent-ID</span>
+							<span id="mailParent" class="form-control"></span>
+							<span class="input-group-addon mail-right">
+								<span class="glyphicon glyphicon-map-marker"></span>
+							</span>
+				  		</div>
+		   			</div>
+				</div>
 	      </div>
 	      <div class="modal-footer mail-footer">
 	      	<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
@@ -536,7 +577,7 @@
 	</div><!-- /.modal -->
 	
 	<!-- modal prop dialog -->
-	<div class="modal fade" id="PropDia" tabindex="-1" role="dialog" aria-labelledby="Properties" aria-hidden="true">
+	<div class="modal fade" id="PropDia" data-keyboard="false" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="Properties" aria-hidden="true">
 	  <div class="modal-dialog modal-sm">
 	    <div class="modal-content">
 	      <div class="modal-header propHeader">
@@ -554,42 +595,154 @@
 						<span class="input-group-addon">Username:</span>
 						<span class="form-control" id="propUser"></span>
 		  			</div>
+		  			<div class="input-group input-group-sm prop-label pad-top">
+						<span class="input-group-addon">Current password:</span>
+						<input id="propCurPwd" type="password" class="form-control">
+		  			</div>
+		  			<div class="input-group input-group-sm prop-label">
+						<span class="input-group-addon">New password:</span>
+						<input id="propNewPwd" type="password" class="form-control">
+		  			</div>
+		  			<div class="input-group input-group-sm prop-label">
+						<span class="input-group-addon">Confirm password:</span>
+						<input id="propConfPwd" type="password" class="form-control">
+		  			</div>
 		  		</div>
 		  		<div class="tab-pane active" id="propMsgs">
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">E-Mail:</span>
-						<span class="form-control" id="propMail"></span>
-		  			</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">Fax-Username:</span>
-						<input id="propFaxUser" type="text" class="form-control">
-		  			</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">Fax-Password:</span>
-						<input id="propFaxPwd" type="password" class="form-control">
-		  			</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">FTP-Username:</span>
-						<input id="propFTPUser" type="text" class="form-control">
-		  			</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">FTP-Password:</span>
-						<input id="propFTPPwd" type="password" class="form-control">
-		  			</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">FTP-Host:</span>
-						<input id="propFTPHost" type="text" class="form-control">
-		  			</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">FTP-Path:</span>
-						<input id="propFTPPath" type="text" class="form-control">
-		  			</div>
-		  		</div>
+		  			<div id="propGrpFax" class="group">
+		      			<div class="grpHeader">
+		      				<span class="grpHeadline">Fax</span>
+		      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+		      			</div>
+		      			<div class="grpContent">
+		      				<div class="input-group input-group-sm prop-label">
+								<span class="input-group-addon">Fax-Username:</span>
+								<input id="propFaxUser" type="text" class="form-control">
+								<span class="input-group-addon prop-right">
+									<span class="glyphicon glyphicon-phone-alt"></span>
+								</span>
+				  			</div>
+				  			<div class="input-group input-group-sm prop-label">
+								<span class="input-group-addon">Fax-Password:</span>
+								<input id="propFaxPwd" type="password" class="form-control">
+								<span class="input-group-addon prop-right">
+									<span class="glyphicon glyphicon-phone-alt"></span>
+								</span>
+				  			</div>
+		      			</div>
+		      		</div>
+		  			<div id="propGrpFtp" class="group">
+		      			<div class="grpHeader">
+		      				<span class="grpHeadline">FTP / GTS</span>
+		      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+		      			</div>
+		      			<div class="grpContent">
+				  			<div class="input-group input-group-sm prop-label">
+								<span class="input-group-addon">FTP-Username:</span>
+								<input id="propFTPUser" type="text" class="form-control">
+								<span class="input-group-addon prop-right">
+									<span class="glyphicon glyphicon-link"></span>
+								</span>
+				  			</div>
+				  			<div class="input-group input-group-sm prop-label">
+								<span class="input-group-addon">FTP-Password:</span>
+								<input id="propFTPPwd" type="password" class="form-control">
+								<span class="input-group-addon prop-right">
+									<span class="glyphicon glyphicon-link"></span>
+								</span>
+				  			</div>
+				  			<div class="input-group input-group-sm prop-label">
+								<span class="input-group-addon">FTP-Host:</span>
+								<input id="propFTPHost" type="text" class="form-control">
+								<span class="input-group-addon prop-right">
+									<span class="glyphicon glyphicon-link"></span>
+								</span>
+				  			</div>
+				  			<div class="input-group input-group-sm prop-label">
+								<span class="input-group-addon">FTP-Path:</span>
+								<input id="propFTPPath" type="text" class="form-control">
+								<span class="input-group-addon prop-right">
+									<span class="glyphicon glyphicon-link"></span>
+								</span>
+				  			</div>
+				  		</div>
+				  	</div>
+				  	<div id="propGrpSms" class="group">
+					  	<div class="grpHeader">
+		      				<span class="grpHeadline">SMS</span>
+		      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+		      			</div>
+		      			<div class="grpContent">
+		      				<div class="input-group input-group-sm prop-label">
+								<span class="input-group-addon">Twilio-SID</span>
+								<input id="propSmsSID" type="text" class="form-control">
+								<span class="input-group-addon prop-right">
+									<span class="glyphicon glyphicon-phone"></span>
+								</span>
+				  			</div>
+				  			<div class="input-group input-group-sm prop-label">
+								<span class="input-group-addon">Twilio-Token</span>
+								<input id="propSmsToken" type="text" class="form-control">
+								<span class="input-group-addon prop-right">
+									<span class="glyphicon glyphicon-phone"></span>
+								</span>
+				  			</div>
+				  			<div class="input-group input-group-sm prop-label">
+								<span class="input-group-addon">Twilio-Number</span>
+								<input id="propSmsFrom" type="text" class="form-control">
+								<span class="input-group-addon prop-right">
+									<span class="glyphicon glyphicon-phone"></span>
+								</span>
+				  			</div>
+			      		</div>
+			      	</div>
+		      	</div>
 		  	</div>
+		  	<p id="propStatus" class="form-control-static"></p>
 	      </div>
 	      <div class="modal-footer">
 	      	<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-	        <button type="button" id="propBtnSubmit" class="btn btn-primary" data-dismiss="modal">Submit</button>
+	        <button type="button" id="propBtnSubmit" class="btn btn-primary">Save</button>
+	      </div>
+	    </div><!-- /.modal-content -->
+	  </div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+		
+	<!-- modal showText dialog -->
+	<div class="modal fade" id="showTextDia" tabindex="-1" role="dialog" aria-labelledby="showText" aria-hidden="true">
+	  <div class="modal-dialog modal-sm">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <h4 class="modal-title">Message</h4>
+	      </div>
+	      <div class="modal-body">
+	        <pre id="msgDiaText"></pre>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+	      </div>
+	    </div><!-- /.modal-content -->
+	  </div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+	
+	<!-- modal showText dialog -->
+	<div class="modal fade" id="shareDia" tabindex="-1" role="dialog" aria-labelledby="share" aria-hidden="true">
+	  <div class="modal-dialog modal-sm">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <h4 class="modal-title">Share map</h4>
+	      </div>
+	      <div class="modal-body">
+	        <pre id="sharedLnk"></pre>
+	      </div>
+	      <div class="modal-footer">
+	      	<!-- <button type="button" class="btn btn-default pull-left">Copy</button> -->
+	      	<a id="lnkTwitter" class="btn btn-info pull-left" href="#" target="_blank"><i class="fa fa-lg fa-twitter"></i></a>
+	      	<a id="lnkGplus" class="btn btn-danger pull-left" href="#" target="_blank"><i class="fa fa-lg fa-google-plus"></i></a>
+	      	<a id="lnkFace" class="btn btn-primary pull-left" href="#" target="_blank"><i class="fa fa-lg fa-facebook"></i></a>
+	        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
 	      </div>
 	    </div><!-- /.modal-content -->
 	  </div><!-- /.modal-dialog -->

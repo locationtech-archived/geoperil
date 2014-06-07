@@ -15,17 +15,12 @@ function CustomList( widget ) {
 	   this.list.length = 0;
 	   this.startIdx = 0;
 	   this.endIdx = 19;
+	   
+	   $(this.widget).empty();
    };
    
    this.push = function( entry ) {
-	   	   							
-	   entry['arrT'] = 0;
-	   entry['polygons'] = {};
-	   entry['rectangle'] = null;
-	   entry['show_grid'] = false;
-	   entry['pois'] = null;
-	   entry['heights'] = {};
-	   	   	   
+	   	   								   	   	   
 	   var date2 = new Date( entry.prop.date );
 	   	   
 	   for( var i = 0; i < this.list.length; i++ ) {
@@ -55,7 +50,18 @@ function CustomList( widget ) {
 	   return null;
    };
    
-   this.remove = function( baseId ) {
+   this.remove = function( id, field ) {
+	   
+	   for( var i = 0; i < this.list.length; i++ ) {
+		   
+		   if( this.list[i][field] == id ) {
+			   this.list.splice(i, 1);
+			   break;
+          }
+	   }
+   };
+   
+   this.removeById = function( baseId ) {
 	   	   
 	   for( var i = 0; i < this.list.length; i++ ) {
 		   
@@ -94,6 +100,13 @@ function EntryMap() {
 		if( ! result ) {
 			this.map[ entry['_id'] ] = entry;
 			result = entry;
+			
+			entry['arrT'] = 0;
+			entry['polygons'] = {};
+			entry['rectangle'] = null;
+			entry['show_grid'] = false;
+			entry['pois'] = null;
+			entry['heights'] = {};
 		}
 		
 		return result;
@@ -101,8 +114,10 @@ function EntryMap() {
 }
 
 var eqlist = new CustomList( '#sidebar' );
+var saved = new CustomList( '#saved' );
 var timeline = new CustomList( '#timeline-data' );
 var messages = new CustomList( '#messages' );
+var shared = new CustomList( '#static' );
 
 var entries = new EntryMap();
 
@@ -137,10 +152,11 @@ var simText = defaultText;
 
 var signTarget = null;
 
-var global = {	context: -1,
-				marker: null,
-			  	saved: new CustomList( '#saved' )
-				};
+var global = { context: -1 };
+
+var markers = { compose: null,
+				active: null
+			  };
 
 google.maps.event.addDomListener(window, 'load', initialize);
     
@@ -157,6 +173,12 @@ function initialize() {
 	google.maps.event.addListener( map, 'click', clickMap );
 	google.maps.event.addListener( map, 'zoom_changed', mapZoomed );
 	
+	/* create default marker used in the "Compose" tab, make it invisible first */
+	markers.compose = createDefaultMarker( $('#inLat').val(), $('#inLon').val(), "#E4E7EB" );
+	markers.compose.setMap( null );
+	markers.active = createDefaultMarker( $('#inLat').val(), $('#inLon').val(), "#5cb85c" );
+	markers.active.setMap( null );
+		
 	checkSession();
 	
 	$( "#btnSignIn" ).click( drpSignIn );
@@ -174,6 +196,7 @@ function initialize() {
 	$( "#tabMessages" ).click( { tab: "messages" }, tabChanged );
 	
 	$( "#diaSignIn" ).click( diaSignIn );
+	$( "#propBtnSubmit" ).click( propSubmit );
 	
 	$( "#custom" ).find( "input" ).blur( checkInput );
 	
@@ -206,13 +229,6 @@ function initialize() {
 	$( '#btnDelRoot' ).click( function() { $('#inRootId').html(""); } );
 	$( '#btnDelParent' ).click( function() { $('#inParentId').html(""); } );
 		
-	$( '.lnkGroup' ).click( groupOnClick );
-	
-	// set default behavior of mail dialog
-	$( '#msgEvents' ).find( '.lnkGroup' ).click();
-	$( '#msgFax' ).find( '.lnkGroup' ).click();
-	$( '#msgSMS' ).find( '.lnkGroup' ).click();
-	
 	$('#EmailDia').on('shown.bs.modal', function() {
 		var h = $( "#mailText" )[0].scrollHeight;
 	    $( "#mailText" ).outerHeight( h );
@@ -232,6 +248,21 @@ function initialize() {
 	$('#smsText').bind('input propertychange', function() {
 		$( '#smsChars' ).html( $(this).val().length );
 	});
+	
+	$('#SignInDialog').on('shown.bs.modal', function () {
+		
+		if( $.cookie('username') ) {
+			$('#diaPass').focus();
+		} else {
+			$('#diaUser').focus();
+		}
+	});
+	
+	$('#diaUser').val( $.cookie('username') );
+	
+	$( window ).resize( onResize );
+	
+	checkStaticLink();
 }
 
 function getEvents( callback ) {
@@ -262,7 +293,7 @@ function getEvents( callback ) {
 			
 			for ( var i = ulist.length -1; i >= 0; i-- ) {
 				var entry = entries.getOrInsert( ulist[i] );
-				global.saved.push( entry );
+				saved.push( entry );
 			}
 			
 			for ( var i = msglist.length -1; i >= 0; i-- ) {
@@ -271,17 +302,21 @@ function getEvents( callback ) {
 				
 				if( msglist[i]['Dir'] == "in" )
 					msglist[i]._id += "_in";
-												
+																
 				var entry = entries.getOrInsert( msglist[i] );
 				entry.kind = "msg";
 				entry.prop = { date: msglist[i]['CreatedTime'] };
 				messages.push( entry );
+				
+				var event = entry.event;
+				if( event )
+					entries.getOrInsert( event );
 			}
 		            
 			showEntries( eqlist );
 			
-            if( global.saved.list.length > 0 ) {
-				showEntries( global.saved );
+            if( saved.list.length > 0 ) {
+				showEntries( saved );
             }
             
             if( messages.list.length > 0 )
@@ -349,7 +384,7 @@ function getUpdates( timestamp ) {
 				} else if( obj['event'] == 'update' ) {
 										
 					// insert obj sorted again
-					eqlist.remove( obj['id'] );
+					eqlist.removeById( obj['id'] );
 					eqlist.push( obj );
 					
 					entries.add( obj );
@@ -370,7 +405,7 @@ function getUpdates( timestamp ) {
 				if( obj['event'] == 'new' ) {
 					
 					var entry = entries.getOrInsert( obj );
-					global.saved.push( entry );
+					saved.push( entry );
 					uadd = true;
 					
 					if( searched( entry ) ) {
@@ -384,12 +419,15 @@ function getUpdates( timestamp ) {
                         show = true;
 
 					var process = obj['process'][0];
-					updateProgress( id, process, global.saved.list );
+					updateProgress( id, process, saved.list );
 					
 				} else if( obj['event'] == 'msg_sent' || obj['event'] == 'msg_recv' ) {
 					
 					obj._id = obj['Message-ID'];
-										
+					
+					if( obj['Dir'] == "in" )
+						obj._id += "_in";
+															
 					var entry = entries.getOrInsert( obj );
 					entry.kind = "msg";
 					entry.prop = { date: obj['CreatedTime'] };
@@ -404,7 +442,7 @@ function getUpdates( timestamp ) {
 			}
 			
 			if( uadd ) {
-				showEntries( global.saved );
+				showEntries( saved );
 			}
 			
 			if( sadd ) {
@@ -441,12 +479,22 @@ function getUpdates( timestamp ) {
 	});
 }
 
+function showMarker( widget ) {
+	
+	widget.children().each( function() {
+		
+		if( $(this).data( "marker" ) )
+			$(this).data( "marker" ).setMap( map );
+	});
+	
+}
+
 function removeMarker( widget ) {
 	
 	widget.children().each( function() {
 		
-		if( $(this).data( "entry" ).marker )
-			$(this).data( "entry" ).marker.setMap( null );
+		if( $(this).data( "marker" ) )
+			$(this).data( "marker" ).setMap( null );
 	});
 }
 
@@ -550,7 +598,7 @@ function addEntry( widget, data, i ) {
 	data['div'][ '#' + widget.attr('id') ] = $div;
 	
 	var prop = data['prop'];
-		
+			
 	var date = new Date( prop['date'] );
 	var year = date.getUTCFullYear();
 	var month = date.getUTCMonth() + 1;
@@ -564,9 +612,9 @@ function addEntry( widget, data, i ) {
 		    		
 	var txtId = data['_id'];
 	
-	if( data['refineId'] && data['refineId'] > 0 ) {
+	if( curuser && data['refineId'] && data['refineId'] > 0 ) {
 		$div.find( '.lnkId' ).html( txtId );
-		$div.find( '.lnkId' ).bind( 'click', lnkIdOnClick );
+		$div.find( '.lnkId' ).bind( 'click', {id: data.id}, lnkIdOnClick );
 		
 		txtId = "";
 	}
@@ -579,8 +627,8 @@ function addEntry( widget, data, i ) {
 	
 	if( widget.attr('id') == 'sidebar' ) {
 		var yearstr = data['_id'].substring(3,7);
-		$div.find( '.beach' ).attr( "src", "http://geofon.gfz-potsdam.de/data/alerts/" + yearstr + "/" + data['_id'] + "/bb32.png" );
-		$div.find( '.geofon' ).attr( "href", "http://geofon.gfz-potsdam.de/eqinfo/event.php?id=" + data['_id'] );
+		$div.find( '.beach' ).attr( "src", "http://geofon.gfz-potsdam.de/data/alerts/" + yearstr + "/" + data['id'] + "/bb32.png" );
+		$div.find( '.geofon' ).attr( "href", "http://geofon.gfz-potsdam.de/eqinfo/event.php?id=" + data['id'] );
 	} else {
 		$div.find( '.geofon' ).css( 'display', 'none' );
 	}
@@ -625,13 +673,22 @@ function addEntry( widget, data, i ) {
 	options.title = 'Send message';
 	$div.find( '.lnkSend' ).tooltip( options );
 	
-	var color = getMarkerColor( prop['magnitude'] );
+	options.title = 'Share map';
+	$div.find( '.lnkStatic' ).tooltip( options );
 	
-	if( widget[0] == $('#saved')[0] )
+	var color = getMarkerColor( prop['magnitude'] );
+			
+	if( curuser != null && id_equals( curuser._id, data.user ) ) {
 		color = '#E4E7EB';
+		$div.find( '.lnkDelete' ).css( "display", "inline" );
+		$div.find( '.lnkDelete' ).bind( 'click', deleteEntry );
+		
+		options.title = 'Delete entry';
+		$div.find( '.lnkDelete' ).tooltip( options );
+	}
 	
 	var link = getMarkerIconLink( i + 1, color );
-		
+			
 	$div.find( '.marker' ).attr( 'src', link );
 		    	
 	$div.bind( 'mouseover', { turnOn: true }, highlight );
@@ -641,15 +698,28 @@ function addEntry( widget, data, i ) {
 	$div.find( '.chk_grid' ).bind( 'click', { entry: data }, enableGrid );
 	$div.find( '.lnkEdit' ).bind( 'click', fillCustomForm );
 	$div.find( '.lnkSend' ).bind( 'click', mailOnClick );
+	$div.find( '.lnkStatic' ).bind( 'click', shareOnClick );
 	
-	if( data['marker'] )
-		data['marker'].setMap( null );
+	if( $div.data( "marker" ) )
+		$div.data( "marker" ).setMap( null );
 		
-	data['marker'] = addMarker( prop['latitude'], prop['longitude'], new google.maps.MarkerImage( link ) );
-	data['marker'].setAnimation( null );
-	data['marker'].setMap( null );
+	$div.data( "marker", addMarker( prop['latitude'], prop['longitude'], new google.maps.MarkerImage( link ) ) ); 
+	$div.data( "marker" ).setAnimation( null );
+	$div.data( "marker" ).setMap( null );
 		    			    			    	
 	widget.prepend( $div );
+}
+
+function id_equals( id1, id2 ) {
+		
+	var fields = [ "_time", "_machine", "_inc", "_new" ];
+	
+	for( i in fields )
+		if( id1[ fields[i] ] != id2[ fields[i] ] )
+			return false;
+			
+	//return ( id1.toSource() == id2.toSource() );
+	return true;
 }
 
 function addMsg( widget, data, i ) {
@@ -679,61 +749,74 @@ function addMsg( widget, data, i ) {
 	var dir = data.Dir == "in" ? "Received" : "Sent";
 	var cls = "glyphicon msgIcon ";
 	
-	var color = "gray";
+	var color = "#5cb85c";
+	var type = "";
+	var info = "Message sent successfully";
 	
 	if( data.errors && ! $.isEmptyObject( data.errors ) ) {
-		color = "red";
+		color = "#d9534f";
+		info = "Errors occured while sending";
 		for( var prop in data.errors )
 			console.log( prop );
 	}
 	
 	if( data.Type == "MAIL" ) {
 		cls += "glyphicon-envelope";
+		type = "Mail";
 	} else if( data.Type == "FTP" ) {
 		cls += "glyphicon-link";
+		type = "FTP";
 	} else if( data.Type == "FAX" ) {
 		cls += "glyphicon-phone-alt";
+		type = "Fax";
 	} else if( data.Type == "SMS" ) {
 		cls += "glyphicon-phone";
+		type = "SMS";
 	} else if( data.Type == "INTERNAL" ) {
 		
 		if( data.Dir == "in" ){
 			cls += "glyphicon-bell";
-			color = "#428bca";
+			if( ! data.ReadTime || ! data.MapDisplayTime )
+				//color = "#428bca";
+				color = "#FF8000"; 
 		} else {
 			cls += "glyphicon-share";
 		}
+		type = "Cloud";
+	}
+	
+	if( data.Dir == "in" ) {
+		
+		if( data.ReadTime ) {
+			
+			var str = getDateString( new Date( data.ReadTime ) );
+			$div.find( '.stat-read' ).html( "Message read on " + str );
+			$div.find( '.stat-read' ).css( "display", "inline" );
+		}
+		
+		if( data.MapDisplayTime ) {
+			
+			var str = getDateString( new Date( data.MapDisplayTime ) );
+			$div.find( '.stat-disp' ).html( "Message displayed on " + str );
+			$div.find( '.stat-disp' ).css( "display", "inline" );
+		}
+	
+	} else {
+		
+		$div.find( '.stat-read' ).html( info );
+		$div.find( '.stat-disp' ).css( "display", "none" );
 	}
 	
 	$div.find( '.msgIcon').css( "color", color );
 	$div.find( '.msgIcon').attr( "class", cls );
-	$div.find( '.type').text( data['Type'] );
+	$div.find( '.msgType').text( type );
 	$div.find( '.subject' ).text( data['Subject'] );
-	$div.find( '.datetime' ).html( datestr + " &#183; " + timestr + " UTC &#183; " + dir );
-		
-	if( data.ReadTime ) {
-		
-		date = new Date( data.ReadTime );
-		year = date.getUTCFullYear();
-		month = date.getUTCMonth() + 1;
-		day = date.getUTCDate();
-		hour = date.getUTCHours();
-		minutes = date.getUTCMinutes();
-		
-		datestr = year + "/" + zeroPad( month, 2 ) + "/" + zeroPad( day, 2 );
-		timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 );
-		
-		$div.find( '.readtime' ).html( datestr + " &#183; " + timestr );
-		
-	} else {
-		
-		$div.find( '.readtime' ).html( "-" );
-	}
-
-	$div.find( '.to' ).html( "" );
+	$div.find( '.datetime' ).html( dir + " &#183; " + datestr + " &#183; " + timestr + " UTC &#183; ");
+	$div.find( '.lnkEvtId' ).html( data['ParentId'] );
+	$div.find( '.to' ).html( data.To[0] );
 	
-	for( var k = 0; k < data.To.length; k++ ) {
-		$div.find( '.to' ).append( data.To[k] + "<br>" );
+	for( var k = 1; k < data.To.length; k++ ) {
+		$div.find( '.to' ).append( ", " + data.To[k] );
 	}
 	
 	if( data.Dir == "in" )
@@ -744,6 +827,25 @@ function addMsg( widget, data, i ) {
 	$div.bind( 'mouseover', { turnOn: true }, highlight );
 	$div.bind( 'mouseout', { turnOn: false }, highlight );
 	$div.find( '.subject' ).bind( 'click', msgOnClick );
+	
+	options = { placement:'top',
+				title:'Show message',
+				container: $div,
+				animation: false
+	   	   	  };
+
+	$div.find( '.lnkMsg' ).tooltip( options );
+
+	options.title = 'Delete message';
+	$div.find( '.lnkDelete' ).tooltip( options );
+	
+	$div.find( '.lnkMsg' ).bind( 'click', showMsg );
+	$div.find( '.lnkDelete' ).bind( 'click', deleteEntry );
+	$div.find( '.lnkDelete' ).css( "display", "inline" );
+	
+	var entry = entries.get( data['ParentId'] );
+	if( entry )
+		$div.find( '.lnkEvtId' ).bind( 'click', { id: entry.id }, lnkIdOnClick );
 	
 	widget.prepend( $div );
 }
@@ -782,10 +884,12 @@ function getMarkerColor( mag ) {
 } 
 
 function entryOnClick() {
-			
-	var id = $(this).parents( ".entry" ).data( "entry" )['_id'];
-			
-	if( !loggedIn ) {
+	
+	var entry = $(this).parents( ".entry" ).data( "entry" );
+	var id = entry['_id'];
+		
+	/* allow external events (e.g. a shared link) to be displayed without the need to sign in */
+	if( !entry.extern && !loggedIn ) {
 		
 		signTarget = visualize.bind( this, id );
 		$( "#SignInDialog" ).modal("show");
@@ -796,33 +900,35 @@ function entryOnClick() {
 }
 
 function visualize( id ) {
+		
+	var entry = entries.get( id );
 	
-	var entry = entries.get( id );		
-		
-        if( active != id ) {
+	setMarkerPos( markers.active, entry.prop.latitude, entry.prop.longitude );
+	markers.active.setMap( map );
+	
+    if( active != id ) {
 
-            showWaveHeights( active, false );
-            showPolygons( active, false );
-            showGrid( active, false );
-            showPois( active, false );
+        showWaveHeights( active, false );
+        showPolygons( active, false );
+        showGrid( active, false );
+        showPois( active, false );
 
-            active = id;
-		    getWaveHeights( entry );
-		    getIsos( entry, null );
-		    getPois( entry, null );
-		
-		    showGrid( active, entry['show_grid'] );
-        }
+        active = id;
+	    getWaveHeights( entry );
+	    getIsos( entry, null );
+	    getPois( entry, null );
+	
+	    showGrid( active, entry['show_grid'] );
+    }
 
-	if( entry['marker'] )
-		map.panTo( entry['marker'].position );
+	map.panTo( markers.active.getPosition() );
 }
 
 function highlight( event ) {
 		   	
 	var turnOn = event.data["turnOn"];
-	var entry = $(this).data( "entry" );
-	
+	var marker = $(this).data( "marker" );
+		
 	if( jQuery.contains( event.currentTarget, event.relatedTarget ) )
 		return;
 		    	
@@ -830,15 +936,15 @@ function highlight( event ) {
 		
 		color = '#c3d3e1'; //#99b3cc';
 		
-		if( entry['marker'] )
-			entry['marker'].setAnimation( google.maps.Animation.BOUNCE );
+		if( marker )
+			marker.setAnimation( google.maps.Animation.BOUNCE );
 		
 	} else {
 		
 		color = '#fafafa';
 		
-		if( entry['marker'] )
-			entry['marker'].setAnimation( null );
+		if( marker )
+			marker.setAnimation( null );
 	}
 	
 	$(this).css('background-color', color);
@@ -847,7 +953,7 @@ function highlight( event ) {
 function addMarker( lat, lon, icon ) {
 		
     // create new marker on selected position
-    return new google.maps.Marker( { position: new google.maps.LatLng( lat, lon ), map: map, icon: icon} );
+    return new google.maps.Marker( { position: new google.maps.LatLng( lat, lon ), map: map, icon: icon, zIndex: 1} );
 }
 
 function getMarkerIconLink( text, color ) {
@@ -964,8 +1070,8 @@ function getWaveHeights( entry ) {
 				entry['heights'][ resultObj['ewh'] ] = sub;
 			}
                         
-                        if( active == id )
-    			    showWaveHeights( id, true );
+            if( active == id )
+            	showWaveHeights( id, true );
 		}
 	});
 		    	
@@ -1013,9 +1119,9 @@ function getPois( entry, callback ) {
 					    fillOpacity: 0.7,
 					    fillColor: color,
 					    strokeOpacity: 1.0,
-					    strokeColor: color,
-					    strokeWeight: 2.0,
-					    scale: 4 //pixels
+					    strokeColor: "white",
+					    strokeWeight: 1.5,
+					    scale: 5 //pixels
 						}
 					});
 				
@@ -1218,11 +1324,13 @@ function showPois( pointer, visible ) {
 }
 
 function deselect() {
-	
+		
 	showWaveHeights(active, false);
 	showPolygons(active, false);
 	showGrid(active, false);
 	showPois(active, false);
+	
+	if( markers.active ) markers.active.setMap( null );
 	
 	active = null;
 }
@@ -1311,20 +1419,20 @@ function diaSignIn() {
 	var user = $('#diaUser').val();
 	var password = $('#diaPass').val();
 
+	$.cookie( 'username', user );
+	
 	signIn( user, password );
 }
 
 function logIn( callback ) {
 	
 	loggedIn = true;
-	
-	$( '.tab-pane' ).css( "top", "6em" );
-	
+		
 	simText = userText;
 	
 	delay = 0;
 	eqlist.list.length = 0;
-	global.saved.reset();
+	saved.reset();
 	entries.reset();
 	getEvents( callback );
 		
@@ -1332,6 +1440,11 @@ function logIn( callback ) {
 	$( "#grpSignOut" ).css( "display", "block" );
 	
 	$( '.tab-private' ).css( "display", "block" );
+	
+	var h = $( '.main-tabs' ).css( "height" );
+	$( '.tab-pane' ).css( "top", h );
+	
+	configMailDialog();
 }
 
 function signOut() {
@@ -1362,21 +1475,20 @@ function logOut() {
 	
 	loggedIn = false;
 	
-	$( '.tab-pane' ).css( "top", "3em" );
-	
 	simText = defaultText;
 		
 	$( "#btnSignIn" ).css( "display", "block" );
 	$( "#grpSignOut" ).css( "display", "none" );
 	
 	$( '.tab-private' ).css( "display", "none" );
+	$( '.tab-pane' ).css( "top", $( '.main-tabs' ).css( "height" ) );
 	
 	$( '#tabRecent' ).find('a').trigger('click');
 	
 	deselect();	
 	delay = default_delay;
 	eqlist.reset();
-	global.saved.reset();
+	saved.reset();
 	timeline.reset();
 	messages.reset();
 	entries.reset();	
@@ -1390,7 +1502,6 @@ function compute() {
 	$( "#hrefSaved" ).click();
 	
 	deselect();
-	active = null;
 	
 	$.ajax({
 		type: 'POST',
@@ -1398,7 +1509,7 @@ function compute() {
 		data: params,
 		dataType: 'json',
 		success: function( result ) {
-			active = result['id'];
+			active = result['_id'];
 		},
 		error: function() {
 		},
@@ -1541,19 +1652,7 @@ function showEmailDialog( entry ) {
 	$( "#mailDepth" ).html( prop.depth );
 	$( "#mailLocation" ).html( prop.region );
 	$( "#mailMag" ).html( prop.magnitude );
-		
-	var uprop = curuser.properties;
-	var perm = curuser.permissions;
 			
-	$( "#faxGrp" ).css( "display", (perm && perm.fax) ? "table" : "none" );
-	$( "#ftpGrp" ).css( "display", (perm && perm.ftp) ? "table" : "none" );
-	
-	$( "#faxTo" ).prop( "disabled", ! (uprop && uprop.InterfaxUsername != "" && uprop.InterfaxPassword != "" ) );
-	$( "#ftpChk" ).prop( "disabled", ! (uprop && uprop.FtpUser != "" && uprop.FtpPassword ) );
-	//$( "#ftpChk" ).prop( "disabled", false );
-	
-	$( "#ftpTo" ).html( uprop.FtpHost + uprop.FtpPath );
-	
 	if( entry.pois != null ) {
 			
 		/* previously iterate once to get maximum length of location names */
@@ -1646,6 +1745,7 @@ function sendEmail() {
 	var intTo = $( "#intTo" ).val();
 	var subject = $( "#mailSubject" ).val();
 	var faxTo = $( "#faxTo" ).val();
+	var ftpChk = $( "#ftChk" ).val();
 	var smsTo = $( "#smsTo" ).val();
 	var smsText = $( "#smsText" ).val();
 	
@@ -1654,96 +1754,117 @@ function sendEmail() {
 	
 	var text = getPlainText( $( "#mailTemplate" ) );
 		
-	// internal message
-	$.ajax({
-		type: 'POST',
-		url: "msgsrv/intmsg",
-		data: { apiver: 1, to: intTo, subject: subject, text: text, evid: root, parentid: parent }, 
-		dataType: 'json',
-		success: function( result ) {
-			status = result.status;
-			
-			console.log( status );
-		},
-		error: function() {
-			console.log( "#error" );
-		},
-		complete: function() {
-		}
-	});
+	if( intTo != "" ) {
+		// internal message
+		console.log( "Sent internal message!" );
+		
+		$.ajax({
+			type: 'POST',
+			url: "msgsrv/intmsg",
+			data: { apiver: 1, to: intTo, subject: subject, text: text, evid: root, parentid: parent }, 
+			dataType: 'json',
+			success: function( result ) {
+				status = result.status;
+				
+				console.log( status );
+			},
+			error: function() {
+				console.log( "#error" );
+			},
+			complete: function() {
+			}
+		});
+	}
 	
-	// email
-	$.ajax({
-		type: 'POST',
-		url: "msgsrv/mail",
-		data: { apiver: 1, to: to, cc: cc, subject: subject, text: text, evid: root, parentid: parent }, 
-		dataType: 'json',
-		success: function( result ) {
-			status = result.status;
-			
-			console.log( status );
-		},
-		error: function() {
-			console.log( "#error" );
-		},
-		complete: function() {
-		}
-	});
+	if( to != "" ) {
+		// email
+		console.log( "Sent email!" );
+		
+		$.ajax({
+			type: 'POST',
+			url: "msgsrv/mail",
+			data: { apiver: 1, to: to, cc: cc, subject: subject, text: text, evid: root, parentid: parent }, 
+			dataType: 'json',
+			success: function( result ) {
+				status = result.status;
+				
+				console.log( status );
+			},
+			error: function() {
+				console.log( "#error" );
+			},
+			complete: function() {
+			}
+		});
+	}
 	
-	// fax
-	$.ajax({
-		type: 'POST',
-		url: "msgsrv/fax",
-		data: { apiver: 1, to: faxTo, text: text, evid: root, parentid: parent }, 
-		dataType: 'json',
-		success: function( result ) {
-			status = result.status;
-			
-			console.log( status );
-		},
-		error: function() {
-			console.log( "#error" );
-		},
-		complete: function() {
-		}
-	});
+	if( faxTo != "" ) {
+		// fax
+		console.log( "Sent fax!" );
+		
+		$.ajax({
+			type: 'POST',
+			url: "msgsrv/fax",
+			data: { apiver: 1, to: faxTo, text: text, evid: root, parentid: parent }, 
+			dataType: 'json',
+			success: function( result ) {
+				status = result.status;
+				
+				console.log( status );
+			},
+			error: function() {
+				console.log( "#error" );
+			},
+			complete: function() {
+			}
+		});
+	}
 	
-	// ftp
-	$.ajax({
-		type: 'POST',
-		url: "msgsrv/ftp",
-		data: { apiver: 1, text: text, evid: root, parentid: parent }, 
-		dataType: 'json',
-		success: function( result ) {
-			status = result.status;
-			
-			console.log( status );
-		},
-		error: function() {
-			console.log( "#error" );
-		},
-		complete: function() {
-		}
-	});
+	if( ftpChk == true ) {
+		// ftp
+		console.log( "Published on FTP-Server!" );
+		
+		$.ajax({
+			type: 'POST',
+			url: "msgsrv/ftp",
+			data: { apiver: 1, text: text, evid: root, parentid: parent }, 
+			dataType: 'json',
+			success: function( result ) {
+				status = result.status;
+				
+				console.log( status );
+			},
+			error: function() {
+				console.log( "#error" );
+			},
+			complete: function() {
+			}
+		});
+	}
 	
-	// sms
-	$.ajax({
-		type: 'POST',
-		url: "msgsrv/sms",
-		data: { apiver: 1, to: smsTo, text: smsText, evid: root, parentid: parent },
-		dataType: 'json',
-		success: function( result ) {
-			status = result.status;
-			
-			console.log( status );
-		},
-		error: function() {
-			console.log( "#error" );
-		},
-		complete: function() {
-		}
-	});
+	if( smsTo != "" ) {
+		// sms
+		console.log( "Sent sms!" );
+		
+		$.ajax({
+			type: 'POST',
+			url: "msgsrv/sms",
+			data: { apiver: 1, to: smsTo, text: smsText, evid: root, parentid: parent },
+			dataType: 'json',
+			success: function( result ) {
+				status = result.status;
+				
+				console.log( status );
+			},
+			error: function() {
+				console.log( "#error" );
+			},
+			complete: function() {
+			}
+		});
+	}
 	
+	$( "#tabMessages a" ).click();
 }
 
 function getPlainText( span ) {
@@ -1764,13 +1885,13 @@ function msgOnClick() {
 			
 	visualize( msg.ParentId );
 		
-	markMsgAsRead( msg );
+	markMsgAsDisplayed( msg );
 	
 	return;
 }
 
 function markMsgAsRead( msg ) {
-	
+		
 	$.ajax({
 		type: 'POST',
 		url: "msgsrv/readmsg",
@@ -1778,11 +1899,33 @@ function markMsgAsRead( msg ) {
 		dataType: 'json',
 		success: function( result ) {
 			status = result.status;
-			
-			console.log( status + ": " + result.ReadTime );
-			
+						
 			if( ! msg.ReadTime )
-				msg.ReadTime = result.ReadTime;
+				msg.ReadTime = result.readtime;
+			
+			showEntries( messages );
+		},
+		error: function() {
+			console.log( "#error" );
+		},
+		complete: function() {
+		}
+	});
+	
+}
+
+function markMsgAsDisplayed( msg ) {
+	
+	$.ajax({
+		type: 'POST',
+		url: "msgsrv/displaymapmsg",
+		data: { apiver: 1, msgid: msg['Message-ID'] },
+		dataType: 'json',
+		success: function( result ) {
+			status = result.status;
+						
+			if( ! msg.MapDisplayTime )
+				msg.MapDisplayTime = result.mapdisplaytime;
 			
 			showEntries( messages );
 		},
@@ -1804,18 +1947,22 @@ function clickMap( event ) {
 	
     	//checkAll();
     
-    	setMarker();
+	    setMarkerPos( markers.compose, $('#inLat').val(), $('#inLon').val() );
 	}
 }
 
-function setMarker() {
+function createDefaultMarker( lat, lon, color ) {
 	
-	// delete the old marker
-    if( global.marker ) { global.marker.setMap(null); }
+	var link = getMarkerIconLink( "%E2%80%A2", color );
+	marker = addMarker( lat, lon, new google.maps.MarkerImage( link ) );
+	marker.setZIndex( 100 );
+	
+	return marker;
+}
 
-    // create new marker on selected position
-    var link = getMarkerIconLink( "%E2%80%A2", "#E4E7EB" );
-    global.marker = addMarker( $('#inLat').val(), $('#inLon').val(), new google.maps.MarkerImage( link ) );
+function setMarkerPos( marker, lat, lon ) {
+	
+	marker.setPosition( {lat: Number(lat), lng: Number(lon) } );
 }
 
 function tabChanged( args ) {
@@ -1823,14 +1970,13 @@ function tabChanged( args ) {
 	var tab = args.data.tab;
 			
 	curtab = "#" + $(this).attr('id');
+	
+	console.log( curtab );
 		
 	if( tab == "recent" ) {
 		
 		curlist = eqlist;
-		
-		var start = Math.min( eqlist.list.length - 1, eqlist.endIdx );
-		for( var i = start; i >= eqlist.startIdx; i-- )
-			eqlist.getElem(i).marker.setMap( map );
+		showMarker( $('#sidebar') );
 				
 	} else {
 		
@@ -1839,12 +1985,8 @@ function tabChanged( args ) {
 	
 	if( tab == "saved" ) {
 		
-		curlist = global.saved;
-	
-        var start = Math.min( global.saved.list.length - 1, global.saved.endIdx );
-		for( var i = start; i >= global.saved.startIdx; i-- ) {
-			global.saved.getElem(i).marker.setMap( map );
-		}
+		curlist = saved;
+		showMarker( $('#saved') );
 		
 	} else {
 		
@@ -1853,30 +1995,28 @@ function tabChanged( args ) {
 	
 	if( tab == "custom" ) {
 		
-		curlist = global.saved;
+		curlist = saved;
 		
-		if( global.marker )
-			global.marker.setMap( map );
+		markers.compose.setMap( map );
 		
 	} else {
 		
-		if( global.marker )
-			global.marker.setMap( null );
+		markers.compose.setMap( null );
 	}
 	
 	if( tab == "timeline" ) {
 		
 		curlist = timeline;
-		
-		var start = Math.min( timeline.list.length - 1, timeline.endIdx );
-		for( var i = start; i >= timeline.startIdx; i-- ) {
-			if( timeline.getElem(i).marker )
-				timeline.getElem(i).marker.setMap( map );
-		}
+		showMarker( $('#timeline-data') );
 		
 	} else {
 		
 		removeMarker( $('#timeline-data') );
+	}
+	
+	if( tab == "messages" ) {
+		
+		curlist = messages;
 	}
 
 }
@@ -1908,9 +2048,9 @@ function checkInput() {
 	$('#btnStart').prop('disabled', !stat);
 	
 	if( validLon && validLat ) {
-		setMarker();
-	} else if( global.marker ) {
-		global.marker.setMap(null);
+		setMarkerPos( markers.compose, $('#inLat').val(), $('#inLon').val() );
+	} else {
+		markers.compose.setMap(null);
 	}
 	
 	return stat;
@@ -2054,7 +2194,7 @@ function searchEvents() {
 	timeline.reset();
 	
 	$.ajax({
-		type: 'GET',
+		type: 'POST',
 		url: "srv/search",
 		data: { text: searchId },
 		dataType: 'json',
@@ -2083,17 +2223,17 @@ function searchEvents() {
 
 function searched( obj ) {
 	
+	if( searchId == null )
+		return false;
+	
 	if( obj.id == searchId || obj.root == searchId || obj.parent == searchId )
 		return true;
 	
 	return false;
 }
 
-function lnkIdOnClick() {
-		
-	var entry = $(this).parents( ".entry" ).data( "entry" );
-	
-	$( '#inSearch' ).val( entry['id'] );
+function lnkIdOnClick( args ) {
+	$( '#inSearch' ).val( args.data.id );
 	$( '#btnSearch' ).click();
 	$( "#hrefTimeline" ).click();
 }
@@ -2101,21 +2241,42 @@ function lnkIdOnClick() {
 function showProp() {
 	
 	var prop = curuser.properties;
+	var fax = checkPerm( "fax" );
+	var ftp = checkPerm( "ftp" );
+	var sms = checkPerm( "sms" );
+		
+	/* clear all input fields to avoid displaying old data from another user! */
+	$( '#PropDia :input' ).val( "" );
 	
+	/* hide all groups first */
+	$( '#PropDia .group' ).css( "display", "none" );
+	
+	if( fax )
+		$( '#propGrpFax' ).css( "display", "block" );
+	
+	if( ftp )
+		$( '#propGrpFtp' ).css( "display", "block" );
+	
+	if( sms )
+		$( '#propGrpSms' ).css( "display", "block" );
+		
 	$( '#propUser' ).html( curuser.username );
 	$( '#propMail' ).html( curuser.username );
-	$( '#propFaxUser' ).val( prop.InterfaxUsername );
-	$( '#propFaxPwd' ).val( prop.InterfaxPassword );
-	$( '#propFTPUser' ).val( prop.FtpUser );
-	$( '#propFTPPwd' ).val( prop.FtpPassword );
-	$( '#propFTPHost' ).val( prop.FtpHost );
-	$( '#propFTPPath' ).val( prop.FtpPath );
+		
+	if( prop ) {
+		$( '#propFaxUser' ).val( prop.InterfaxUsername );
+		$( '#propFaxPwd' ).val( prop.InterfaxPassword );
+		$( '#propFTPUser' ).val( prop.FtpUser );
+		$( '#propFTPPwd' ).val( prop.FtpPassword );
+		$( '#propFTPHost' ).val( prop.FtpHost );
+		$( '#propFTPPath' ).val( prop.FtpPath );
+	}
 	
 	$( '#PropDia' ).modal('show');
 }
 
 function groupOnClick() {
-	
+		
 	var content = $(this).parents('.group').children('.grpContent');
 	var arrow =  $(this).children('.grpArrow');
 			
@@ -2123,4 +2284,284 @@ function groupOnClick() {
 	
 	arrow.toggleClass( 'glyphicon-chevron-up' );
 	arrow.toggleClass( 'glyphicon-chevron-down' );
+}
+
+function configMailDialog() {
+	
+	$( '.lnkGroup' ).click( groupOnClick );
+	
+	/* hide all groups first */
+	$( '#EmailDia .group' ).css( "display", "none" );
+	$( '#msgEvents' ).css( "display", "block" );
+	
+	var perm = curuser.permissions;
+	
+	if( ! perm )
+		return;
+	
+	//var fax = perm.fax && prop && prop.InterfaxUsername && prop.InterfaxPassword;
+	//var ftp = perm.ftp && prop && prop.FtpUser && prop.FtpHost && prop.FtpPath && prop.FtpPassword;
+	//var sms = perm.sms && prop && prop.TwilioSID && prop.TwilioToken && prop.TwilioFrom;
+	var fax = checkPerm( "fax" );
+	var ftp = checkPerm( "ftp" );
+	var sms = checkPerm( "sms" );
+	
+	if( perm.intmsg )
+		$( '#msgCloud' ).css( "display", "block" );
+	
+	if( perm.mail )
+		$( '#msgMail' ).css( "display", "block" );
+	
+	if( fax )
+		$( '#msgFax' ).css( "display", "block" );
+	
+	if( ftp )
+		$( '#msgFtp' ).css( "display", "block" );
+	
+	if( perm.intmsg || perm.mail || fax || ftp )
+		$( '#msgText' ).css( "display", "block" );
+	
+	if( sms )
+		$( '#msgSMS' ).css( "display", "block" );
+			
+	// set default behavior of mail dialog
+	$( '#EmailDia .lnkGroup' ).click();
+	$( '#msgText .lnkGroup' ).click();
+}
+
+function checkPerm( type ) {
+	
+	var perm = curuser.permissions;
+	var prop = curuser.properties;
+	
+	if( type == "fax" )
+		return perm.fax && prop
+						&& checkProp( prop.InterfaxUsername )
+						&& checkProp( prop.InterfaxPassword );
+	
+	if( type == "ftp" )
+		return perm.ftp && prop 
+						&& checkProp( prop.FtpUser )
+						&& checkProp( prop.FtpHost )
+						&& checkProp( prop.FtpPath )
+						&& checkProp( prop.FtpPassword );
+	
+	if( type == "sms" )
+		return perm.sms && prop
+						&& checkProp( prop.TwilioSID )
+						&& checkProp( prop.TwilioToken )
+						&& checkProp( prop.TwilioFrom );
+	
+	return false;
+}
+
+function checkProp( prop ) {
+	return prop && prop != "";
+}
+
+function propSubmit() {
+
+	var curpwd = $( '#propCurPwd' ).val();
+	var newpwd = $( '#propNewPwd' ).val();
+	var confpwd = $( '#propConfPwd' ).val();
+	var faxuser = $( '#propFaxUser' ).val();
+	var faxpass = $( '#propFaxPwd' ).val();
+	var ftpuser = $( '#propFTPUser' ).val();
+	var ftppass = $( '#propFTPPwd' ).val();
+	var ftphost = $( '#propFTPHost' ).val();
+	var ftppath = $( '#propFTPPath' ).val();
+		
+	$( '#propStatus' ).html("");
+	
+	if( newpwd != confpwd ) {
+		$( '#propStatus' ).html("Error: The given passwords differ.");
+		return;
+	}
+		
+	$( '#propBtnSubmit' ).html( '<i class="fa fa-spinner fa-spin fa-lg"></i><span class="pad-left">Save</span>' );
+	
+	$.ajax({
+		type: 'POST',
+		url: "srv/changeProp",
+		data: { curpwd: curpwd, newpwd: newpwd, faxuser: faxuser, faxpass: faxpass, ftpuser: ftpuser, ftppass: ftppass, ftphost: ftphost, ftppath: ftppath },
+		dataType: 'json',
+		success: function( result ) {
+
+			if( result.status == "success" ) {
+				curuser = result.user;
+				$( '#PropDia' ).modal("hide");
+			} else {
+				$( '#propStatus' ).html("Error: " + result.error);
+			}
+		},
+		error: function() {
+		},
+		complete: function() {
+		}
+	});
+	
+	$( '#propBtnSubmit' ).html( '<span>Save</span>' );
+}
+
+function deleteEntry() {
+	
+	var entry = $(this).parents( ".entry" ).data( "entry" );
+	
+	var id = entry._id;
+	var type = "";
+	
+	var eid = id;
+	
+	if( entry.kind == "msg" ) {
+				
+		if( entry.Dir == "in" ) {
+			id = id.slice( 0, -3 );
+			type = "msg_in";
+		} else {
+			type = "msg_out";
+		}
+		
+		eid = entry.ParentId;
+	}
+		
+	$.ajax({
+		type: 'POST',
+		url: "srv/delete",
+		data: { id: id, type: type },
+		dataType: 'json',
+		success: function( result ) {
+
+			if( result.status == "success" ) {
+				
+				if( eid == active )
+					deselect();
+				
+				curlist.remove( entry._id, '_id' );
+				showEntries( curlist );
+			}
+		},
+		error: function() {
+		},
+		complete: function() {
+		}
+	});
+	
+}
+
+function showMsg() {
+	
+	var msg = $(this).parents( ".entry" ).data( "entry" );
+	var text = msg.Text;
+	
+	markMsgAsRead( msg );
+	
+	$( '#msgDiaText' ).html( text );
+	$( '#showTextDia' ).modal('show');
+}
+
+function getDateString( date ) {
+	
+	year = date.getUTCFullYear();
+	month = date.getUTCMonth() + 1;
+	day = date.getUTCDate();
+	hour = date.getUTCHours();
+	minutes = date.getUTCMinutes();
+	
+	datestr = year + "/" + zeroPad( month, 2 ) + "/" + zeroPad( day, 2 );
+	timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 );
+	
+	return datestr + " &#183; " + timestr;
+}
+
+// from the MDN
+function getPageVar( sVar ) {
+	return unescape(window.location.search.replace(new RegExp("^(?:.*[&\\?]" + escape(sVar).replace(/[\.\+\*]/g, "\\$&") + "(?:\\=([^&]*))?)?.*$", "i"), "$1"));
+}
+
+function checkStaticLink() {
+	
+	var lnkId = getPageVar( "static" );
+	
+	if( ! lnkId || lnkId == "" )
+		return;
+		
+	$.ajax({
+		type: 'POST',
+		url: "srv/getShared",
+		data: { lnkid: lnkId },
+		dataType: 'json',
+		success: function( res ) {
+
+			if( res.status == "success" ) {
+				var entry = entries.getOrInsert( res.eq );
+				entry.extern = true;
+				shared.push( entry );
+				showEntries( shared );
+								
+				visualize( res.eq._id );
+				map.panTo( { lat: Number(res.pos.lat), lng: Number(res.pos.lon) } );
+				map.setZoom( res.pos.zoom );
+				
+				$( '#tabStatic' ).css( "display", "inline" );
+				$( '#tabStatic a' ).click();
+			}
+		},
+		error: function() {
+		},
+		complete: function() {
+		}
+	});
+}
+
+function shareOnClick() {
+	
+	var entry = $(this).parents( ".entry" ).data( "entry" );
+	
+	createStaticLink( entry );
+}
+
+function createStaticLink( entry ) {
+	
+	if( !loggedIn ) {
+		
+		signTarget = createStaticLink.bind( this, entry );
+		$( "#SignInDialog" ).modal("show");
+		return;
+	}
+
+	var id = entry._id;
+	
+	var pos = map.getCenter();
+	
+	$.ajax({
+		type: 'POST',
+		url: "srv/staticLnk",
+		data: { id: id, lon: pos.lng(), lat: pos.lat(), zoom: map.getZoom() },
+		dataType: 'json',
+		success: function( result ) {
+
+			if( result.status == "success" ) {
+				var lnkKey =  result.key;				
+				var link = window.location.origin + window.location.pathname + "?static=" + lnkKey;
+				var link_enc = encodeURIComponent( link );
+				$( '#sharedLnk' ).html( link );
+				$( "#lnkTwitter" ).attr("href", "http://twitter.com/home?status=" + link_enc );
+				$( "#lnkGplus" ).attr("href", "https://plus.google.com/share?url=" + link_enc );
+				$( "#lnkFace" ).attr("href", "http://www.facebook.com/share.php?u=" + link_enc );
+				$( '#shareDia' ).modal('show');
+			}
+		},
+		error: function() {
+			console.log( "error" );
+		},
+		complete: function() {
+		}
+	});
+}
+
+function onResize() {
+	
+	/* adjust anything that was dynamically sized */
+	var h = $( '.main-tabs' ).css( "height" );
+	$( '.tab-pane' ).css( "top", h );
 }

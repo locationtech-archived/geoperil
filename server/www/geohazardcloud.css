@@ -86,7 +86,7 @@ html, body {
 	padding-left: 1em;
 }
     
-#sidebar, #saved, #custom, #timeline, #messages {
+#sidebar, #saved, #custom, #timeline, #messages, #static {
 	position: absolute;
 	top: 3em;
 	left: 0px;
@@ -94,7 +94,7 @@ html, body {
 	right: 0px;
 }
 
-#sidebar, #saved, #custom, #timeline-data, #messages {
+#sidebar, #saved, #custom, #timeline-data, #messages, #static {
 	overflow-y: auto;
 }
 
@@ -116,7 +116,7 @@ html, body {
 	margin-bottom: 1em;
 }
     	
-#grpSignOut, #tabSaved, #tabCustom, #tabTimeline, #tabMessages {
+#grpSignOut, #tabSaved, #tabCustom, #tabTimeline, #tabMessages, #tabStatic {
 	display: none;
 }
   	
@@ -226,16 +226,30 @@ html, body {
 }
 
 .entry .lnkEdit {
-	margin-left: 0.2em;
+	padding-right: 0.1em;
 }
 
 .entry .lnkSend {
-	margin-left: 0.2em;
+	padding-right: 0.3em;
 }
 
 .entry .lnkLearn {
 	margin-left: 0.8em;
+	padding-right: 0.2em;
 	display: none;
+}
+
+.entry .lnkDelete {
+	padding-right: 0.4em;
+	display: none;
+}
+
+.entry .lnkMsg {
+	margin-right: 0.4em;
+}
+
+.entry .lnkStatic {
+	margin-right: 1em;
 }
 
 .entry .chk_grid {
@@ -243,11 +257,11 @@ html, body {
 	display: none;
 }
 
-.entry .status {
+.entry .status, .entry .stat-read, .entry .stat-disp {
 	color: #428bca; /* bootstrap ĺink blue */
 }
 
-#diaStatus {
+#diaStatus, #propStatus {
 	padding-top: 1em;
 	color: red;
 }
@@ -319,12 +333,45 @@ html, body {
 
 .row-msgIcon {
 	margin: 0px;
+	height: 100%;
 }
 
 .msgIcon {
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	margin: auto;
+	
+	font-size: 1.5em;
+	height: 1.5em;
+	/*top: 0px;
+	bottom: 0px;*/
+	margin-top: 1.5em;
+}
+
+.msgType {
+	position: absolute;
+	left: 0px;
+	right: 0px;	
+	font-size: 1em;
+	font-weight: bold;
 	text-align: center;
-	font-size: 2em;
-	margin-top: 1.1em;
+	margin-top: 5em;
+}
+
+.entry-left {
+	position: absolute;
+	top: 0px;
+	bottom: 0px;
+	width: 16.6667%;
+}
+
+.entry-right {
+	margin-left: 16.6667%;
+}
+
+.entry {
+	position: relative;
 }
 
 .propHeader {
@@ -334,10 +381,20 @@ html, body {
 .prop-label {
 	width: 100%;
 	padding-top: 0.5em;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
 }
 
 .prop-label .input-group-addon {
 	width: 20%;
+}
+
+#propGeneral .input-group-addon {
+	width: 25%;
+}
+
+.prop-label .prop-right {
+	width: 10%;
 }
 
 #inRootId, #inParentId {
@@ -431,3 +488,14 @@ html, body {
 	padding-top: 0.5em;
 }
 
+pre {	
+	word-break: keep-all;
+}
+
+.pad-left {
+	padding-left: 0.6em;
+}
+
+.pad-top {
+	margin-top: 1.5em;
+}

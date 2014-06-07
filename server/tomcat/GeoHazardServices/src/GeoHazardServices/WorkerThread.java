@@ -237,7 +237,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 								
 			} else {
 				
-				p = Runtime.getRuntime().exec( GlobalParameter.easyWave + cmdParams, null, workdir );
+				p = Runtime.getRuntime().exec( GlobalParameter.map.get("easywave") + cmdParams, null, workdir );
 				reader = new BufferedReader(new InputStreamReader( p.getInputStream() ) );
 		  
 			}
@@ -271,8 +271,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 						createVectorFile( totalMin, task.id );
 							
 					if( task.progress == 100.0f ) {
-						for( String ewh: GlobalParameter.ewhs.keySet() )
-							getWaveHeights( task.id, ewh );
+						for( Double ewh: GlobalParameter.jets.keySet() )
+							getWaveHeights( task.id, ewh.toString() );
 					
 						addPoiResults( task.id );
 					}

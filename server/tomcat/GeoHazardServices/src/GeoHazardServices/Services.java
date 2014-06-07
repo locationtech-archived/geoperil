@@ -35,6 +35,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 
+import org.bson.types.ObjectId;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mongodb.BasicDBList;
@@ -143,7 +145,7 @@ public class Services {
   private BlockingQueue<TaskParameter> queue;
   private PriorityBlockingQueue<WorkerThread> workerQueue;
   private final int capacity = 3000;
-  private WorkerThread[] worker;
+  private ArrayList<WorkerThread> worker;
   private final int numWorker = 6;
   
   private MongoClient mongoClient;
@@ -157,33 +159,8 @@ public class Services {
 	  System.out.println("Constructor");
 	  queue = new ArrayBlockingQueue<TaskParameter>(capacity);
 	  workerQueue = new PriorityBlockingQueue<WorkerThread>(100);
-	  
-	  worker = new WorkerThread[numWorker];
-	  for( int i = 0; i < numWorker; i++ ) {
-		  
-		  try {
-			worker[i] = new WorkerThread( workerQueue, GlobalParameter.workingDir + "/w" + i );
-		  } catch (IOException e) {
-			  System.err.println("Error: Could not create worker thread.");
-			  e.printStackTrace();
-			  continue;
-		  }
-		  
-		  if( i < 2 ) {
-			  worker[i].setRemote( "sysop", "139.17.3.159", "~/EasyWave/web/worker" + i );
-			  worker[i].setHardware("GeForce GTX TITAN GPU");
-			  worker[i].setPriority(100);
-		  } else {
-			  worker[i].setRemote( "worker", "139.17.3.234", "~/EasyWave/web/worker" + i );
-			  worker[i].setHardware("Tesla C1060 GPU");
-			  worker[i].setPriority(200);
-		  }
-		  
-		  worker[i].start();
-	  }
-	  
-	  new Thread( new WorkScheduler( queue, workerQueue ) ).start();
-	  
+	  worker = new ArrayList<WorkerThread>();
+	  	  	  
 	  try {
 		  
 		mongoClient = new MongoClient();
@@ -193,6 +170,10 @@ public class Services {
 		// TODO Auto-generated catch block
 		e.printStackTrace();
 	  }
+	  
+	  loadSettings();
+	  
+	  new Thread( new WorkScheduler( queue, workerQueue ) ).start();
 	  	  
 	  loadInstitutions();
 	  
@@ -206,8 +187,80 @@ public class Services {
  	 mongoClient.close();
  	
  	 for( int i = 0; i < numWorker; i++ ) {
- 		 worker[i].stop();
+ 		 worker.get(i).stop();
  	 }
+  }
+  
+  private void loadSettings() {
+	  
+	  System.out.println("Load settings...");
+	  
+	  DBCollection coll = db.getCollection("settings");
+	  
+	  DBCursor cursor = coll.find( new BasicDBObject("type", "parameter") );
+	  for( DBObject obj: cursor ) {
+		  String name = (String) obj.get("name");
+		  String value = (String) obj.get("value");
+		  
+		  GlobalParameter.map.put( name, value );
+		  System.out.println("Parameter " + name + ": " + value);
+	  }
+	  cursor.close();
+	  
+	  cursor = coll.find( new BasicDBObject("type", "jet_color") );
+	  for( DBObject obj: cursor ) {
+		  Double threshold = (Double) obj.get("threshold");
+		  String color = (String) obj.get("color");
+		  
+		  GlobalParameter.jets.put( threshold, color );
+		  System.out.println("Tsunami-Jet-Threshold " + threshold + ": " + color);
+	  }
+	  cursor.close();
+	  
+	  int j = 0;
+	  
+	  cursor = coll.find( new BasicDBObject("type", "worker") );
+	  for( DBObject obj: cursor ) {
+		  
+		  String hardware = (String) obj.get("hardware");
+		  String user = (String) obj.get("user");
+		  String host = (String) obj.get("host");
+		  String dir = (String) obj.get("dir");
+		  String args = (String) obj.get("args");
+		  /* MongoDB stores all integer values as Long (bug?), so convert back here */
+		  Integer count = ((Long) obj.get("count")).intValue();
+		  int priority = ((Long) obj.get("priority")).intValue();
+		  boolean remote = (boolean) obj.get("remote");
+		  		  
+		  if( count == null )
+			  count = 1;
+		  
+		  System.out.print("Worker " + count + "x " + hardware + " @ " + priority );
+		  if( remote )
+			  System.out.print(", Remote: " + user + "@" + host + ":" + dir );
+		  System.out.println(", Args: " + args);
+		  
+		  for( int i = 0; i < count; i++, j++ ) {
+			  
+			  WorkerThread thread;
+			  try {
+				  thread = new WorkerThread( workerQueue, GlobalParameter.map.get("localdir") + "/w" + j );
+			  } catch (IOException e) {
+				  System.err.println("Error: Could not create worker thread.");
+				  e.printStackTrace();
+				  continue;
+			  }
+			  
+			  thread.setRemote( user, host, dir + i );
+			  thread.setHardware(hardware);
+			  thread.setPriority(priority);
+			  
+			  worker.add( thread );
+			  thread.start();
+		  }
+		  
+	  }
+	  cursor.close();
   }
   
   private void loadInstitutions() {
@@ -312,7 +365,6 @@ public class Services {
 	  /* clean up query */
 	  cursor.close();
 	  	  	  
-	  /* TODO: do we have to set { "process": [] } here? */
 	  BasicDBObject process = new BasicDBObject( "process", new BasicDBList() );
 	  BasicDBObject set = new BasicDBObject( "$set", process );
 	  db.getCollection("eqs").update( entry, set );
@@ -341,7 +393,7 @@ public class Services {
 		  return jsfailure();
 	  }
 	  	  
-	  return jssuccess();
+	  return jssuccess( new BasicDBObject( "_id", id ) );
   }
       
   @POST
@@ -361,7 +413,7 @@ public class Services {
 		  @FormParam("root") String root,
 		  @FormParam("parent") String parent,
 		  @CookieParam("server_cookie") String session) {
-	  	  
+	  	  	  
 	  Object[] required = { name, lon, lat, mag, depth,
 							dip, strike, rake, dur };
 
@@ -378,8 +430,15 @@ public class Services {
 	  if( user == null )
 		  return jsdenied();
 	  
-	  /* upon here, we assume an authorized user */
+	  System.out.println( new Date() + ": User " + user.name + " requested a computation of " + dur + " minutes." );
 	  
+	  /* upon here, we assume an authorized user */
+	  if( root != null && root.equals("") )
+		  root = null;
+	  
+	  if( parent != null && parent.equals("") )
+		  parent = null;
+		  
 	  /* get collection that stores the earthquake entries */
 	  DBCollection coll = db.getCollection("eqs");
 	  
@@ -410,10 +469,11 @@ public class Services {
 	  sub.put( "dip", dip );
 	  sub.put( "strike", strike );
 	  sub.put( "rake", rake );
-	  
+	  	  
 	  /* create new DB object that should be added to the earthquake collection */
 	  BasicDBObject obj = new BasicDBObject();
 	  obj.put( "_id", id );
+	  obj.put( "id", id );
 	  obj.put( "user", user.objId );
 	  obj.put( "timestamp", timestamp );
 	  obj.put( "process", new ArrayList<>() );
@@ -564,6 +624,44 @@ public class Services {
 	  return "Ok";
   }
   
+  private String getHash( String password ) {
+	  
+	  MessageDigest sha256;
+	  
+	  try {
+		sha256 = MessageDigest.getInstance("SHA-256");
+	  } catch (NoSuchAlgorithmException e) {
+		return null;
+	  }
+	  
+	  Base64Codec base64Codec = new Base64Codec();
+	  		  
+	  return base64Codec.encode( sha256.digest( password.getBytes() ) );
+  }
+  
+  private boolean checkPassword( String username, String password ) {
+	  
+	  DBCollection coll = db.getCollection("users");
+  	  
+	  DBCursor cursor = coll.find( new BasicDBObject("username", username) );
+	  
+	  if( ! cursor.hasNext() )
+		  return false;
+		  		  
+	  DBObject obj = cursor.next();
+	  String hash1 = (String) obj.get( "password" );
+	  
+	  String hash2 = getHash( password );
+	  
+	  if( hash1 == null || hash2 == null )
+		  return false;
+	  	  		  
+	  if( hash1.equals( hash2 ) )
+		  return true;
+	  
+	  return false;
+  }
+  
   @POST
   @Path("/signin")
   @Produces(MediaType.APPLICATION_JSON)
@@ -698,9 +796,10 @@ public class Services {
 	  cursor.close();	  
 	  
 	  BasicDBObject userObj = new BasicDBObject( "username", obj.get("username") );
-	  userObj.put("permissions", obj.get("permissions"));
-	  userObj.put("properties", obj.get("properties"));
-	  
+	  userObj.put( "_id", obj.get("_id") );
+	  userObj.put("permissions", obj.get("permissions") );
+	  userObj.put("properties", obj.get("properties") );
+	  	  
 	  return userObj;
   }
   
@@ -790,7 +889,7 @@ public class Services {
 		for( DBObject obj: cursor ) {
 			
 			/* check if entry belongs to general or user specific list */
-			if( obj.get("user").equals( user.objId ) ) {
+			if( user != null && obj.get("user").equals( user.objId ) ) {
 				ulist.add( obj );
 			} else {
 				mlist.add( obj );
@@ -897,6 +996,7 @@ public class Services {
 		String id = (String) obj.get("id");
 		
 		BasicDBObject objQuery = new BasicDBObject();
+		objQuery.put( "olduser", new BasicDBObject( "$exists", false ) );
 		
 		if( delay > 0 )
 			objQuery.put( "prop.date", new BasicDBObject( "$lt", upperTimeLimit ) );
@@ -907,7 +1007,7 @@ public class Services {
 			
 			objQuery.put( "Message-ID", id );
 			cursor2 = db.getCollection("messages_sent").find( objQuery );
-			
+						
 		} else if( obj.get("event").equals( "msg_recv" ) ) {
 			
 			objQuery.put( "Message-ID", id );
@@ -926,15 +1026,19 @@ public class Services {
 			DBObject obj2 = cursor2.next();
 			String event = (String) obj.get("event");
 			obj2.put( "event", event );
-			
+						
 			if( obj.get("event").equals( "msg_recv" ) ) {
 				
 				obj2.put("Dir", "in");
-				obj.put( "To", user.name );
+				obj2.put( "To", new String[] { user.name } );
+				
+				DBCursor csrUser = db.getCollection("users").find( new BasicDBObject("_id", obj2.get("SenderID")) ); 
+				if( csrUser.hasNext() )
+					obj2.put( "From", (String) csrUser.next().get("username") );
 			}
 			
 			/* check if entry belongs to general or user specific list */
-			if( obj.get("user").equals( user.objId ) ) {
+			if( user != null && obj.get("user").equals( user.objId ) ) {
 				ulist.add( obj2 );
 			} else {
 				mlist.add( obj2 );
@@ -962,7 +1066,7 @@ public class Services {
 	jsonObj.addProperty( "ts", sdf.format( timestamp ) );
 	jsonObj.add( "main", gson.toJsonTree( mlist ) );
 	jsonObj.add( "user", gson.toJsonTree( ulist ) );
-		
+			
 	return jsonObj.toString();
  }
   
@@ -1004,8 +1108,8 @@ public class Services {
 	 DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject( "ewh", 1 ) );
 	 
 	 for( DBObject obj: cursor ) {
-		String ewh = (String) obj.get( "ewh" );
-		obj.put( "color", GlobalParameter.ewhs.get( ewh ) );
+		Double ewh = Double.valueOf( (String) obj.get( "ewh" ) );
+		obj.put( "color", GlobalParameter.jets.get( ewh ) );
 		entries.add( obj );
 	 }
 		
@@ -1032,13 +1136,26 @@ public class Services {
 	 return cursor.toArray().toString();
  }
  
- @GET
+ @POST
  @Path("/search")
  @Produces(MediaType.APPLICATION_JSON)
  public String search(
 		 @Context HttpServletRequest request,
-		 @QueryParam("text") String text ) {
+		 @FormParam("text") String text,
+		 @CookieParam("server_cookie") String session ) {
  
+	 /* check session key and find out if the request comes from an authorized user */
+	 User user = signedIn( session );
+	 
+	 /* create list of DB objects that contains all desired users */
+	 BasicDBList users = new BasicDBList();
+	
+	 for( User curUser: institutions.values() )
+		 users.add( new BasicDBObject( "user", curUser.objId ) );
+	
+	 if( user != null )
+		 users.add( new BasicDBObject( "user", user.objId ) );
+	 
 	 DBCollection coll = db.getCollection("eqs");
 	 DBCollection msgColl = db.getCollection("messages_sent");
 	 	 
@@ -1056,7 +1173,11 @@ public class Services {
 		 list.add( new BasicDBObject( "parent", compId ) );
 	 }
 	 
-	 BasicDBObject inQuery = new BasicDBObject( "$or", list );
+	 BasicDBList and = new BasicDBList();
+	 and.add( new BasicDBObject( "$or", list ) );
+	 and.add( new BasicDBObject( "$or", users ) );
+	 
+	 BasicDBObject inQuery = new BasicDBObject( "$and", and );
 	 
 	 BasicDBObject sort = new BasicDBObject("prop.date", -1);
 	 sort.put("timestamp", -1);
@@ -1078,7 +1199,11 @@ public class Services {
 		 list.add( new BasicDBObject( "ParentId", compId ) );
 	 }
 	 	 
-	 inQuery = new BasicDBObject( "$or", list );
+	 and = new BasicDBList();
+	 and.add( new BasicDBObject( "$or", list ) );
+	 and.add( new BasicDBObject( "$or", users ) );
+	 
+	 inQuery = new BasicDBObject( "$and", and );
 	 
 	 cursor = msgColl.find( inQuery ).sort( new BasicDBObject("CreatedTime", -1) );
 	 
@@ -1208,6 +1333,234 @@ public class Services {
 	 return jssuccess( new BasicDBObject( "refineId", refineId ) );
  }
  
+ @POST
+ @Path("/delete")
+ @Produces(MediaType.APPLICATION_JSON)
+ public String delete(
+		  @Context HttpServletRequest request,
+		  @FormParam("id") String id,
+		  @FormParam("type") String type,
+		  @CookieParam("server_cookie") String session ) {
+	 
+	 Object[] required = { id };
+
+	 if( ! checkParams( request, required ) )
+		 return jsfailure();
+	 
+	 /* check session key and find out if the request comes from an authorized user */
+	 User user = signedIn( session );
+	 
+	 if( user == null )
+		 return jsdenied();
+	 
+	 DBCollection coll;
+	 BasicDBObject inQuery = new BasicDBObject();
+	 BasicDBObject fields = new BasicDBObject();
+	 
+	 if( type != null && type.equals("msg_in") ) {
+		 
+		 coll = db.getCollection("messages_received");
+		 inQuery.put( "ReceiverID", user.objId );
+		 inQuery.put( "Message-ID", id );
+		 
+		 fields.put( "ReceiverID", null );
+		 
+	 } else if( type != null && type.equals("msg_out") ) {
+		 
+		 coll = db.getCollection("messages_sent");
+		 inQuery.put( "SenderID", user.objId );
+		 inQuery.put( "Message-ID", id );
+		 
+		 fields.put( "SenderID", null );
+		 
+	 } else {
+		 
+		 coll = db.getCollection("eqs");
+		 inQuery.put( "user", user.objId );
+		 inQuery.put( "_id", id );
+		 
+		 fields.put( "user", null );
+	 }
+	 
+	 fields.put( "olduser", user.objId );
+	 
+	 //int num = coll.remove( inQuery ).getN();
+	 BasicDBObject set = new BasicDBObject( "$set", fields );
+	 System.out.println( set );
+	 int num = coll.update( inQuery, set ).getN();
+	 
+	 if( num > 0 )
+		 return jssuccess();
+	 
+	 return jsfailure();
+ }
+ 
+ @POST
+ @Path("/changeProp")
+ @Produces(MediaType.APPLICATION_JSON)
+ public String changeProp(
+		  @Context HttpServletRequest request,
+		  @FormParam("curpwd") String curPass,
+		  @FormParam("newpwd") String newPass,
+		  @FormParam("faxuser") String faxuser,
+		  @FormParam("faxpass") String faxpass,
+		  @FormParam("ftpuser") String ftpuser,
+		  @FormParam("ftppass") String ftppass,
+		  @FormParam("ftphost") String ftphost,
+		  @FormParam("ftppath") String ftppath,
+		  @CookieParam("server_cookie") String session ) {
+	 	 	 
+	 System.out.println( curPass + "," + newPass );
+	 
+	 /* check session key and find out if the request comes from an authorized user */
+	 User user = signedIn( session );
+	 
+	 if( user == null )
+		 return jsdenied();
+	 
+	 DBCollection coll = db.getCollection("users");
+	 BasicDBObject inQuery = new BasicDBObject( "_id", user.objId );
+	 
+	 DBCursor cursor = coll.find( inQuery );
+	 
+	 if( ! cursor.hasNext() )
+		 return jsfailure();
+	 
+	 DBObject newObj = cursor.next();
+	 DBObject prop = (DBObject) newObj.get("properties");
+	 
+	 if( prop == null )
+		 prop = new BasicDBObject();
+	 
+	 HashMap<String, Object> props = new HashMap<String, Object>();
+	 
+	 props.put( "InterfaxUsername", faxuser );
+	 props.put( "InterfaxPassword", faxpass );
+	 props.put( "FtpUser", ftpuser );
+	 props.put( "FtpPassword", ftppass );
+	 props.put( "FtpPath", ftppath );
+	 props.put( "FtpHost", ftphost );
+	 
+	 for( Map.Entry<String, Object> entry : props.entrySet() ) {
+		 
+		 String key = entry.getKey();
+		 Object value = entry.getValue();
+		 
+		 if( value != null )
+			 prop.put( key, value );
+	 }
+	 
+	 newObj.put( "properties", props );
+	 
+	 if( newPass != null && ! newPass.equals("") ) {
+		 
+		 if( ! checkPassword( user.name, curPass ) )
+			 return jsdenied( new BasicDBObject( "error", "The current password does not match." ) );
+		 
+		 String newHash = getHash( newPass );
+		 
+		 if( newHash == null )
+			 return jsfailure();
+		 
+		 newObj.put( "password", newHash );
+		 System.out.println( curPass + "," + newPass + "," + newHash );
+	 }
+	 
+	 coll.update( inQuery, newObj );
+	 	 
+	 return jssuccess( new BasicDBObject( "user", getUserObj( user.name ) ) );
+ }
+ 
+ @POST
+ @Path("/staticLnk")
+ @Produces(MediaType.APPLICATION_JSON)
+ public String staticLnk(
+		  @Context HttpServletRequest request,
+		  @FormParam("id") String id,
+		  @FormParam("lon") Double lon,
+		  @FormParam("lat") Double lat,
+		  @FormParam("zoom") Double zoom,
+		  @CookieParam("server_cookie") String session ) {
+	 	 
+	 Object[] required = { id, lon, lat, zoom };
+
+	 if( ! checkParams( request, required ) )
+		 return jsfailure();
+	 
+	 /* check session key and find out if the request comes from an authorized user */
+	 User user = signedIn( session );
+	 
+	 if( user == null )
+		 return jsdenied();
+	 
+	 /* TODO: check if this id exists and their usage is authorized */
+	 
+	 DBCollection coll = db.getCollection("static");
+	 BasicDBObject inQuery = new BasicDBObject( "EventID", id );
+	 inQuery.put( "lon", lon );
+	 inQuery.put( "lat", lat );
+	 inQuery.put( "zoom", zoom );
+	 
+	 coll.insert( inQuery );
+	 ObjectId objId = (ObjectId) inQuery.get( "_id" );
+	 
+	 BasicDBObject result = new BasicDBObject( "key", objId.toString() );
+	 	 
+	 return jssuccess( result );
+ }
+ 
+ @POST
+ @Path("/getShared")
+ @Produces(MediaType.APPLICATION_JSON)
+ public String getShared(
+		  @Context HttpServletRequest request,
+		  @FormParam("lnkid") String lnkId ) {
+	 	 
+	 Object[] required = { lnkId };
+
+	 if( ! checkParams( request, required ) )
+		 return jsfailure();
+	 
+	 ObjectId objId;
+	 
+	 try {
+		 objId = new ObjectId(lnkId);
+	 } catch( IllegalArgumentException e ) {
+		 return jsfailure();
+	 }
+	 
+	 DBCollection coll = db.getCollection("static");
+	 BasicDBObject inQuery = new BasicDBObject( "_id", objId );
+	 
+	 DBCursor cursor = coll.find( inQuery );
+	 
+	 if( ! cursor.hasNext() )
+		 return jsfailure();
+	 
+	 DBObject lnkObj = cursor.next();
+	 Object evtId = lnkObj.get("EventID");
+	 
+	 cursor.close();
+	 	 	 
+	 BasicDBObject event = new BasicDBObject( "_id", evtId );
+	 
+	 cursor = db.getCollection("eqs").find( event );
+	 
+	 if( ! cursor.hasNext() )
+		 return jsfailure();
+	 
+	 /* needed to preserve the expected date format for JavaScript */
+	 /* TODO: dates are really difficult to parse between different languages
+	  *       --> we need some consistent way to handle these problems */
+	 JsonObject json = new JsonObject();
+	 json.add( "pos", gson.toJsonTree( lnkObj ) );
+	 json.add( "eq", gson.toJsonTree( cursor.next() ) );
+	 
+	 cursor.close();
+	 
+	 return jssuccess( json );
+ }
+ 
  private List<DBObject> msg( int limit, User user ) {
  	 
 	 if( user == null )
@@ -1250,6 +1603,15 @@ public class Services {
 	 	 
 	 Collections.sort( result, new DateComparator( "CreatedTime", -1 ) );
 	 
+	 /* add parent event as sub-object because we want to show it on click */
+	 for( DBObject msg: result ) {
+		 
+		 DBCursor csr = db.getCollection("eqs").find( new BasicDBObject( "_id", msg.get("ParentId") ) );
+		 
+		 if( csr.hasNext() )
+			 msg.put( "event", csr.next() );
+	 }
+	 
 	 return result;
  }
  
@@ -1285,6 +1647,18 @@ public class Services {
  
  private String jsdenied() {
 	 return "{ \"status\": \"denied\" }";
+ }
+ 
+ private String jsdenied( DBObject obj ) {
+	 obj.put( "status", "denied");
+	 return obj.toString();
+ }
+ 
+ /* this is nearly the same as 'jssuccess( DBObject obj )' but translates
+  * the date objects better for later use in JavaScript */
+ private String jssuccess( JsonObject js ) {
+	 js.add( "status", gson.toJsonTree("success") );
+	 return js.toString();
  }
  
 }
