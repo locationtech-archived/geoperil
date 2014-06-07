@@ -33,7 +33,7 @@ class MsgSrv(Base):
                 self._db["messages_received"].update({"Message-ID": msgid, "ReadTime": None, "ReceiverID": user["_id"]}, \
                                                      {"$set":{"ReadTime": datetime.datetime.utcnow()}})
                 msg = self._db["messages_received"].find_one({"Message-ID": msgid, "ReceiverID": user["_id"]})
-                return jssuccess(readtime = None if msg is None else str(msg["ReadTime"]))
+                return jssuccess(readtime = None if msg is None else msg["ReadTime"].strftime( "%b %w, %Y %I:%M:%S %p" ))
             else:
                 return jsfail(errors = ["API version not supported."])
         else:
@@ -47,7 +47,7 @@ class MsgSrv(Base):
                 self._db["messages_received"].update({"Message-ID": msgid, "MapDisplayTime": None, "ReceiverID": user["_id"]}, \
                                                      {"$set":{"MapDisplayTime": datetime.datetime.utcnow()}})
                 msg = self._db["messages_received"].find_one({"Message-ID": msgid, "ReceiverID": user["_id"]})
-                return jssuccess(mapdisplaytime = None if msg is None else str(msg["MapDisplayTime"]))
+                return jssuccess(mapdisplaytime = None if msg is None else msg["MapDisplayTime"].strftime( "%b %w, %Y %I:%M:%S %p" ))
             else:
                 return jsfail(errors = ["API version not supported."])
         else:
