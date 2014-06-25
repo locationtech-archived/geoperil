@@ -122,7 +122,20 @@ class WebGuiSrv(Base):
         user = self.getUser()
         if user is not None and user["permissions"].get("admin",False):
             userobj = json.loads(userobj)
-            print(userobj)
+            if "_id" in userobj:
+                userobj.pop("pwsalt",None)
+                userobj.pop("pwhash",None)
+                if "password" in userobj:
+                    if len(userobj["password"])>3:
+                        userobj["pwsalt"], userobj["pwhash"] = createsaltpwhash(userobj["password"])
+                        userobj["password"] = b64encode(hashlib.new("sha256",bytes(userobj["password"],"utf-8")).digest()).decode("ascii")
+                    else:
+                        userobj.pop("password",None)
+                self._db["users"].update({"_id":userobj["_id"]},{"$set":userobj})
+                userobj = self._db["users"].find_one({"_id":userobj["_id"]})
+                jssuccess(user = userobj)
+            else:
+                jsfail(errors = ["User not found."])
         return jsdeny()
 
 
