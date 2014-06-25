@@ -105,4 +105,25 @@ class WebGuiSrv(Base):
                 return jsfail(errors = ["User already exists."])
         return jsdeny()
 
+    @cherrypy.expose
+    def userlist(self):
+        user = self.getUser()
+        if user is not None and user["permissions"].get("admin",False):
+            users = self._db["users"].find()
+            for u in users:
+                u.pop("password",None)
+                u.pop("pwhash",None)
+                u.pop("pwsalt",None)
+            return jssuccess(users=users)
+        return jsdeny()
+
+    @cherrypy.expose
+    def saveuser(self, userobj):
+        user = self.getUser()
+        if user is not None and user["permissions"].get("admin",False):
+            userobj = json.loads(userobj)
+            print(userobj)
+        return jsdeny()
+
+
 application = startapp( WebGuiSrv )
