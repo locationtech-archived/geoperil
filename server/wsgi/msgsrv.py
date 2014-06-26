@@ -69,13 +69,13 @@ class MsgSrv(Base):
                     }
                 dbmsg["Text"] = text
                 dbmsg["Subject"] = subject
-                errors = {}
+                errors = []
                 success = False
                 send_to = to.replace(","," ").replace(";"," ").split()
                 for to in send_to:
                     ruser = self._db["users"].find_one({"username":to})
                     if ruser is None:
-                        errors[to] = "Unknown User %s" % to
+                        errors.append( (to, "Unknown User %s" % to) )
                     else:
                         success = True
                         rmsg = copy.deepcopy(dbmsg)
@@ -154,28 +154,27 @@ class MsgSrv(Base):
                         part = MIMEApplication(cnt)
                         part.add_header('Content-Disposition', 'attachment; filename="%s"' % a.filename)
                         msg.attach(part)
-                        dbmsg["attachments"][a.filename] = cnt
+                        dbmsg["Attachments"][a.filename] = cnt
 
                 smtp = smtplib.SMTP('cgp1.gfz-potsdam.de')
-                errors = {}
+                errors = []
                 success = False
                 try:
                     res = smtp.send_message(msg)
                     for k,v in res.items():
-                        res[k] = (v[0],v[1].decode('utf-8'))
+                        errors.append( (k, (v[0],v[1].decode('utf-8'))) )
                     success = True
-                    errors = res
                 except smtplib.SMTPRecipientsRefused as ex:
                     errors = {}
                     for k,v in ex.receipients.items():
-                        errors[k] = (v[0],v[1].decode('utf-8'))
+                        errors.append( (k, (v[0],v[1].decode('utf-8'))) )
                 except smtplib.SMTPSenderRefused as ex:
-                    errors = {ex.sender: (ex.smtp_code,str(ex.smtp_error))}
+                    errors = [ (ex.sender, (ex.smtp_code,str(ex.smtp_error))) ]
                     success = None
                 if len(errors) > 0 and success is not None:
                     errtext = "There were errors while sending your Message.\n"
-                    for k,v in errors.items():
-                        errtext+="\n%s:\t%d: %s" % (k,v[0],v[1])
+                    for v in errors:
+                        errtext+="\n%s:\t%d: %s" % (v[0],v[1][0],v[1][1])
                     errmsg = MIMEMultipart()
                     errmsg["From"] = user["username"]
                     errmsg["To"] = user["username"]
@@ -218,8 +217,8 @@ class MsgSrv(Base):
                 to = to.replace(",",";").split(";")
                 dbmsg["To"] = to
                 dbmsg["Text"] = text
-                errors = {}
-                success = {}
+                errors = []
+                success = []
                 for nr in to:
                     payload = {}
                     payload["Username"] = user["properties"].get("InterfaxUsername","")
@@ -230,9 +229,9 @@ class MsgSrv(Base):
                     r = requests.post("https://ws.interfax.net/dfs.asmx/SendCharFax", data=payload)
                     e = ElementTree.fromstring(r.text)
                     if int(e.text) >= 0:
-                        success[nr] = e.text
+                        success.append( (nr, e.text) )
                     else:
-                        errors[nr] = e.text
+                        errors.append( (nr, e.text) )
                 dbmsg["errors"] = errors
                 dbmsg["sentfaxids"] = success
                 self._db["messages_sent"].insert(dbmsg)
@@ -269,8 +268,8 @@ class MsgSrv(Base):
                 to = to.replace(",",";").split(";")
                 dbmsg["To"] = to
                 dbmsg["Text"] = text
-                errors = {}
-                success = {}
+                errors = []
+                success = []
                 twisid = user["properties"].get("TwilioSID","")
                 twitoken = user["properties"].get("TwilioToken","")
                 twifrom = user["properties"].get("TwilioFrom","")
@@ -285,10 +284,10 @@ class MsgSrv(Base):
                     ex = e.find("RestException")
                     if ex is None:
                         for side in e.iter("Sid"):
-                            success[nr] = side.text
+                            success.append( (nr, side.text) )
                             break
                     else:
-                        errors[nr] = ElementTree.tostring(ex,encoding='unicode')
+                        errors.append( (nr, ElementTree.tostring(ex,encoding='unicode')) )
                 dbmsg["sentsmsids"] = success
                 dbmsg["errors"] = errors
                 self._db["messages_sent"].insert(dbmsg)
