@@ -55,7 +55,7 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def intmsg(self, apiver, to, subject, text, evid = None, parentid = None, groupID = None ):
+    def intmsg(self, apiver, to, subject, text, evid = None, parentid = None, groupID = None, msgnr = None ):
         user = self.getUser()
         if user is not None and user["permissions"].get("intmsg",False):
             if apiver == "1":
@@ -67,6 +67,8 @@ class MsgSrv(Base):
                     "ParentId": parentid,
                     "Message-ID": make_msgid(),
                     }
+                if msgnr != None:
+                    dbmsg["NextMsgNr"] = int(msgnr)
                 dbmsg["Text"] = text
                 dbmsg["Subject"] = subject
                 errors = []
@@ -108,7 +110,7 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def mail(self, apiver, to, subject, text, cc = "", attachments = [], evid = None, parentid = None, groupID = None ):
+    def mail(self, apiver, to, subject, text, cc = "", attachments = [], evid = None, parentid = None, groupID = None, msgnr = None ):
         # TODO: propper attachment handling testing
         user = self.getUser()
         if user is not None and user["permissions"].get("mail",False):
@@ -120,6 +122,8 @@ class MsgSrv(Base):
                     "EventID": evid,
                     "ParentId": parentid,
                     }
+                if msgnr != None:
+                    dbmsg["NextMsgNr"] = int(msgnr)
                 warnings = []
                 send_from = user["username"]
                 send_to = to.replace(","," ").replace(";"," ").split()
@@ -166,7 +170,7 @@ class MsgSrv(Base):
                     success = True
                 except smtplib.SMTPRecipientsRefused as ex:
                     errors = {}
-                    for k,v in ex.receipients.items():
+                    for k,v in ex.recipients.items():
                         errors.append( (k, (v[0],v[1].decode('utf-8'))) )
                 except smtplib.SMTPSenderRefused as ex:
                     errors = [ (ex.sender, (ex.smtp_code,str(ex.smtp_error))) ]
@@ -202,7 +206,7 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def fax(self, apiver, to, text, evid = None, parentid = None, groupID = None ):
+    def fax(self, apiver, to, text, evid = None, parentid = None, groupID = None, msgnr = None ):
         user = self.getUser()
         if user is not None and user["permissions"].get("fax",False):
             if apiver == "1":
@@ -214,6 +218,8 @@ class MsgSrv(Base):
                     "ParentId": parentid,
                     "Message-ID": make_msgid(),
                     }
+                if msgnr != None:
+                    dbmsg["NextMsgNr"] = int(msgnr)
                 to = to.replace(",",";").split(";")
                 dbmsg["To"] = to
                 dbmsg["Text"] = text
@@ -309,7 +315,7 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def ftp(self, apiver, text, evid = None, parentid = None, groupID = None ):
+    def ftp(self, apiver, text, evid = None, parentid = None, groupID = None, msgnr = None ):
         user = self.getUser()
         if user is not None and user["permissions"].get("ftp",False):
             if apiver == "1":
@@ -321,6 +327,8 @@ class MsgSrv(Base):
                     "ParentId": parentid,
                     "Message-ID": make_msgid(),
                     }
+                if msgnr != None:
+                    dbmsg["NextMsgNr"] = int(msgnr)
                 host = user["properties"].get("FtpHost","")
                 port = user["properties"].get("FtpPort",21)
                 path = user["properties"].get("FtpPath","")
