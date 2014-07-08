@@ -148,7 +148,7 @@ class MsgSrv(Base):
                 dbmsg["Date"] = send_date
                 msg["Message-ID"] = send_msgid
                 dbmsg["Message-ID"] = send_msgid
-                msg.attach(MIMEText(send_text))
+                msg.attach(MIMEText(send_text,_charset='utf-8'))
                 dbmsg["Text"] = send_text
                 dbmsg["Attachments"] = {}
                 for a in attachments:
@@ -184,7 +184,7 @@ class MsgSrv(Base):
                     errmsg["To"] = user["username"]
                     errmsg["Date"] = formatdate()
                     errmsg["Subject"] = "Error in Tridec Cloud Mailing System"
-                    errmsg.attach(MIMEText(errtext))
+                    errmsg.attach(MIMEText(errtext,_charset='utf-8'))
                     smtp.send_message(errmsg)
                 smtp.quit()
 
