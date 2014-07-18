@@ -1,4 +1,7 @@
 from base import *
+import time
+import datetime
+import calendar
 
 logger = logging.getLogger("MsgSrv")
 
@@ -175,17 +178,17 @@ class WebGuiSrv(Base):
     
     @cherrypy.expose
     def getdata(self, station, start, end=None, inst=None):
-#        user = self.getUser()
-#        if user is not None and user["permissions"].get("chart",False):
-        if True:
+        user = self.getUser()
+        if user is not None and user["permissions"].get("chart",False):
             if inst is None:
                 inst = user["inst"]
-            start = time.mktime(datetime.datetime.strptime(start,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
+            start = calendar.timegm(datetime.datetime.strptime(start,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
             if end is not None:
-                end = time.mktime(datetime.datetime.strptime(start,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
+                end = calendar.timegm(datetime.datetime.strptime(end,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
             else:
                 end = time.mktime(datetime.datetime.now().timetuple())
             request = {"inst":inst, "station":station, "timestamp": {"$gt":start, "$lte":end}}
+            print(request)
             values = self._db["sealeveldata"].find(request)
             res = {"data":[],"last":None}
             for v in values:
