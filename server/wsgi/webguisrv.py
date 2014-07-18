@@ -175,8 +175,9 @@ class WebGuiSrv(Base):
     
     @cherrypy.expose
     def getdata(self, station, start, end=None, inst=None):
-        user = self.getUser()
-        if user is not None and user["permissions"].get("chart",False):
+#        user = self.getUser()
+#        if user is not None and user["permissions"].get("chart",False):
+        if True:
             if inst is None:
                 inst = user["inst"]
             start = time.mktime(datetime.datetime.strptime(start,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
@@ -186,7 +187,7 @@ class WebGuiSrv(Base):
                 end = time.mktime(datetime.datetime.now().timetuple())
             request = {"inst":inst, "station":station, "timestamp": {"$gt":start, "$lte":end}}
             values = self._db["sealeveldata"].find(request)
-            res = {"data":[],"last"=None}
+            res = {"data":[],"last":None}
             for v in values:
                 if res["last"] is None or res["last"] < v["timestamp"]:
                     res["last"] = v["timestamp"]
