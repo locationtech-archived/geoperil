@@ -51,8 +51,7 @@ class WebGuiSrv(Base):
             cookie['server_cookie']['max-age'] = 0
             cookie['server_cookie']['version'] = 1
             return jssuccess()
-        else:
-            return jsfail()
+        return jsfail()
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
@@ -81,6 +80,7 @@ class WebGuiSrv(Base):
                         "share": False,         # can create share links
                         "compute": False,       # can compute simulations
                         "manage": False,        # can manage their institution
+                        "chart" : False,        # can view charts with sealevel data
                     },
                     "properties": {
                         "InterfaxUsername":"",
@@ -97,12 +97,11 @@ class WebGuiSrv(Base):
                         "FtpPassword":"anonymous",
                     },
                 }
-                if inst is not None and self._db["institutions"].find_one({"id":inst}) is None:
-                    self._db["institutions"].insert({"id":inst, "name":inst, "secret":None})
+                if inst is not None and self._db["institutions"].find_one({"name":inst}) is None:
+                    self._db["institutions"].insert({"name":inst, "secret":None})
                 self._db["users"].insert(newuser)
                 return jssuccess()
-            else:
-                return jsfail(errors = ["User already exists."])
+            return jsfail(errors = ["User already exists."])
         return jsdeny()
 
     @cherrypy.expose
@@ -118,6 +117,7 @@ class WebGuiSrv(Base):
         return jsdeny()
 
     @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
     def saveuser(self, userobj):
         user = self.getUser()
         if user is not None and user["permissions"].get("admin",False):
@@ -133,10 +133,66 @@ class WebGuiSrv(Base):
                         userobj.pop("password",None)
                 self._db["users"].update({"_id":userobj["_id"]},{"$set":userobj})
                 userobj = self._db["users"].find_one({"_id":userobj["_id"]})
-                jssuccess(user = userobj)
-            else:
-                jsfail(errors = ["User not found."])
+                return jssuccess(user = userobj)
+            return jsfail(errors = ["User not found."])
         return jsdeny()
 
+    @cherrypy.expose
+    def stationlist(self, inst=None):
+        user = self.getUser()
+        if user is not None:
+            res = []
+            if inst is None:
+                stations = self._db["stations"].find()
+            else:
+                stations = self._db["stations"].find({"inst":inst})
+            for s in stations:
+                res.append(s)
+            return jssuccess(stations=res)
+        return jsdeny()
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def savestation(self, name=None, station=None):
+        user = self.getUser()
+        if user is not None and user["permissions"].get("manage",False):
+            if station is not None and "name" in station:
+                nostation = self._db["stations"].find_one({"inst":user["inst"], "name":station["name"]})
+                if nostation is None:
+                    station["inst"] = user["inst"]
+                    if name is None:
+                        self._db["stations"].insert(station)
+                    else:
+                        self._db["stations"].update({"inst":user["inst"], "name":name},{"$set":station})
+                    station = self._db["stations"].find_one({"inst":user["inst"], "name":station["name"]})
+                    return jssuccess(station = station)
+                return jsfail(errors = ["Station named %s already exists." % station["name"]])
+            elif station is None and name is not None:
+                self._db["stations"].remove({"inst":user["inst"], "name":name})
+                return jssuccess()
+            return jsfail(errors = ["Either station or name are required."])
+        return jsdeny()
+    
+    @cherrypy.expose
+    def getdata(self, station, start, end=None, inst=None):
+        user = self.getUser()
+        if user is not None and user["permissions"].get("chart",False):
+            if inst is None:
+                inst = user["inst"]
+            start = time.mktime(datetime.datetime.strptime(start,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
+            if end is not None:
+                end = time.mktime(datetime.datetime.strptime(start,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
+            else:
+                end = time.mktime(datetime.datetime.now().timetuple())
+            request = {"inst":inst, "station":station, "timestamp": {"$gt":start, "$lte":end}}
+            values = self._db["sealeveldata"].find(request)
+            res = {"data":[],"last"=None}
+            for v in values:
+                if res["last"] is None or res["last"] < v["timestamp"]:
+                    res["last"] = v["timestamp"]
+                res["data"].append(( datetime.datetime.utcfromtimestamp(v["timestamp"]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                                     v["value"] ))
+            return jssuccess(station = station, **res)
+        return jsdeny()
 
 application = startapp( WebGuiSrv )
