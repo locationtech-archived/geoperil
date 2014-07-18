@@ -26,7 +26,7 @@ class FeederSrv(Base):
         if inst is not None:
             s = self._db["stations"].find_one({"inst":inst["name"], "name":station})
             if s is not None:
-                data["timestamp"] = timestamp
+                data["timestamp"] = int(timestamp)
                 data["value"] = value
                 data["station"] = station
                 data["inst"] = inst["name"]
