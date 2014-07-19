@@ -173,9 +173,6 @@ def main( s ):
         
         matches = re.findall( "<a href='([^>]*?/mt.txt)'>", text )
         
-        if page == 2:
-            break
-        
         if len( matches ) == 0:
             break
             
@@ -239,7 +236,7 @@ def main( s ):
             
             #print( "New: ", entry  )
             data = urllib.parse.urlencode( entry ).encode('ascii')
-            req = urllib.request.Request('http://localhost/srv/data_insert', data)
+            req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/data_insert', data)
             res = urllib.request.urlopen( req ).read()
             #print( "Result: ", res )
             
@@ -248,7 +245,7 @@ def main( s ):
             
             #print( "Update", entry )
             data = urllib.parse.urlencode( entry ).encode('ascii')
-            req = urllib.request.Request('http://localhost/srv/data_update', data )
+            req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/data_update', data )
             res = urllib.request.urlopen( req ).read().decode("utf-8")
             js = json.loads( res )
             #print( "Result: ", js )
@@ -263,7 +260,7 @@ def main( s ):
             
             #print( "Compute: ", entry )
             data = urllib.parse.urlencode( entry ).encode('ascii')
-            req = urllib.request.Request('http://localhost/srv/computeById', data)
+            req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/computeById', data)
             res = urllib.request.urlopen( req )
             #print( "Result: ", res.read() )
                                                                
