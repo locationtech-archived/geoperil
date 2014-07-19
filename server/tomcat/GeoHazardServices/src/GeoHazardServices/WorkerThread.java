@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -11,6 +12,7 @@ import java.io.PrintStream;
 import java.io.Writer;
 import java.net.UnknownHostException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,6 +20,7 @@ import java.util.regex.Pattern;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
+import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.util.JSON;
@@ -38,6 +41,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	private Integer priority;
 	private Object lock;
 	private TaskParameter task;
+	
+	private HashMap<String, DBObject> tfps;
 	
 	public WorkerThread( PriorityBlockingQueue<WorkerThread> queue,
 						 String workdir ) throws IOException {
@@ -142,6 +147,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 		writeFault( task.eqparams );
 		
+		writeTFPs( task );
+		
 		if( startEasyWave( task ) != 0 ) {
 			task.status = TaskParameter.STATUS_ERROR;
 			return 0;
@@ -213,12 +220,46 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		return 0;
 	}
 	
+	private int writeTFPs( TaskParameter task ) {
+		
+		if( ! remote )
+			return 1;
+		
+		tfps = new HashMap<String, DBObject>();
+		
+		DBCursor cursor = dbclient.getDB( "easywave" ).getCollection("tfps").find();
+		
+		sshCon[0].out.println("rm ftps.inp");
+				
+		for( DBObject obj: cursor ) {
+			
+			String id = (String) obj.get( "_id" ).toString();
+			Double lat = (Double) obj.get( "lat_sea" );
+			Double lon = (Double) obj.get( "lon_sea" );
+			
+			DBObject init = new BasicDBObject();
+			init.put( "ewh", 0.0f );
+			init.put( "eta", -1.0f );
+			init.put( "tfp", id );
+			init.put( "EventID", task.id );
+			
+			tfps.put( id, init );
+			
+			String poi = id + "\t" + lon + "\t" + lat;
+			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
+		}
+		
+		sshCon[0].out.flush();
+		
+		return 0;
+	}
+	
 	private int startEasyWave( TaskParameter task ) {
 								
 		Process p = null;
 		int simTime = task.duration + 10;
 		
-		String cmdParams = " -grid ../gridtwo.grd -poi ../points-all.csv -poi_dt_out 0 -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
+		String cmdParams = " -grid ../gridtwo.grd -poi ftps.inp -poi_dt_out 0 -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
 			
 		System.out.println( "Thread " + this.thread.getId() + " processes the request." );
 		
@@ -518,9 +559,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	}
 	
 	private int addPoiResults( String id ) {
-				
-		String poi_parser = "python ../getPois.py eWave.poi.summary " + id;
-		
+						
 		try {
 				
 			/* copy remote POI file to local worker instance */
@@ -542,11 +581,30 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 				
 				poiFile.close();
 			}
-					
-			/* run python script that inserts the POIs into the database */
-			Runtime.getRuntime().exec( poi_parser, null, workdir ).waitFor();
+														
+			File f = new File( workdir + "/eWave.poi.summary" );
+			BufferedReader reader = new BufferedReader( new FileReader( f ) );
+						
+			/* skip headline */
+			reader.readLine();
 			
-		} catch (InterruptedException | IOException e) {
+		    String line;
+		    while( (line = reader.readLine()) != null ) {
+		    	String[] data = line.split( "\\s+" );
+		    	DBObject tfp = tfps.get( data[0] );
+		    	tfp.put( "eta", Double.valueOf( data[1] ) );
+		    	tfp.put( "ewh", Double.valueOf( data[2] ) );
+		    }
+		    
+		    reader.close();
+		    
+		    DBCollection coll = dbclient.getDB( "easywave" ).getCollection("tfp_comp");
+		    
+		    for( DBObject obj: tfps.values() ) {
+		    	coll.insert( obj );
+		    }
+			
+		} catch (IOException e) {
 			e.printStackTrace();
 			return 1;
 		}
