@@ -50,26 +50,42 @@
 	  						<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
 	  					</li>
 	  				</ul>
+	  				<!-- <ul class="nav navbar-nav navbar-form navbar-right nav_buttons">
+	  					<li>
+	  						<button type="button" class="btn btn-default" disabled>
+	  							<span class="glyphicon glyphicon-bell"></span>
+	  						</button>
+	  					</li>
+	  				</ul> -->
+	  				<!-- <ul class="nav navbar-nav navbar-right">
+	  					<li><a href="javascript: void(0);" id="lnkUser">Text</a></li>
+	  				</ul> -->
 	  			</div>
 	  		</nav>
 	  	</div> <!-- end of headline -->
 	  	
 	  	<div class="row mainview">
 	  		<div class="col-md-4 left-col" id="side">
-	  			<div class="row tabs">
-					<ul class="nav nav-tabs main-tabs">
-						<li id="tabRecent" class="active"><a href="#sidebar" data-toggle="tab">Recent</a></li>
-					 	<li id="tabSaved" class="tab-private"><a href="#saved" id="hrefSaved" data-toggle="tab">My List</a></li>
-					  	<li id="tabCustom" class="tab-private"><a href="#custom" data-toggle="tab">Compose</a></li>
-					  	<li id="tabTimeline" class="tab-private"><a href="#timeline" id="hrefTimeline" data-toggle="tab">My Timeline</a></li>
-					  	<li id="tabMessages" class="tab-private"><a href="#messages" data-toggle="tab">Messages</a></li>
-					  	<li id="tabStatic"><a href="#static" data-toggle="tab">Shared</a></li>
-					  	<li id="tabDeselect">
-						  	<button id="btnDeselect" type="button" class="btn btn-primary btn-sm">
-						  		<span class="glyphicon glyphicon-globe"></span>
-							</button>
-					  	</li>
-					</ul>
+	  			<div class="row tabs-head">
+	  				<div class="col-md-10">
+	  					<div class="row tabs">
+							<ul class="nav nav-tabs main-tabs">
+								<li id="tabRecent" class="active"><a href="#sidebar" data-toggle="tab">Recent</a></li>
+							 	<li id="tabSaved" class="tab-private"><a href="#saved" id="hrefSaved" data-toggle="tab">My List</a></li>
+							  	<li id="tabCustom" class="tab-private"><a href="#custom" data-toggle="tab">Compose</a></li>
+							  	<li id="tabTimeline" class="tab-private"><a href="#timeline" id="hrefTimeline" data-toggle="tab">Timeline</a></li>
+							  	<li id="tabMessages" class="tab-private"><a href="#messages" data-toggle="tab">Messages</a></li>
+							  	<li id="tabStatic"><a href="#static" data-toggle="tab">Shared</a></li>
+							</ul>
+						</div>
+	  				</div>
+	  			<div class="col-md-2">
+	  				<div class="row tabs-right">
+	  					<button id="btnDeselect" type="button" class="btn btn-primary btn-sm">
+					  		<span class="glyphicon glyphicon-globe"></span>
+						</button>
+						</div>
+					</div>
 	  			</div>
 	  			
 	  			<div class="tab-content">
@@ -82,7 +98,7 @@
 		  						<input id="inName" type="text" class="form-control" placeholder="Custom">
 		  						<!-- <span class="input-group-addon right-label"></span> -->
 		  					</div>
-		  					<div class="input-group input-group-sm rootId">
+		  					<div class="input-group input-group-sm">
 		  						<span class="input-group-addon left-label">Root-Id:</span>
 		  						<span id="inRootId" class="form-control"></span>
 		  						<span class="input-group-btn right-label">
@@ -91,7 +107,7 @@
 	  								</button>
 	  							</span>
 		  					</div>
-		  					<div class="input-group input-group-sm parentId">
+		  					<div class="input-group input-group-sm">
 		  						<span class="input-group-addon left-label">Parent-Id:</span>
 		  						<span id="inParentId" class="form-control"></span>
 		  						<span class="input-group-btn right-label">
@@ -100,7 +116,16 @@
 	  								</button>
 	  							</span>
 		  					</div>
-		  					<div class="input-group input-group-sm lat">
+		  					<div class="input-group input-group-sm">
+		  						<span class="input-group-addon left-label">Date:</span>
+		  						<span id="inDate" class="form-control"></span>
+		  						<span class="input-group-btn right-label">
+	  								<button id="btnDelDate" type="button" class="btn btn-default">
+	  									<span class="glyphicon glyphicon-remove"></span>
+	  								</button>
+	  							</span>
+		  					</div>
+		  					<div class="input-group input-group-sm">
 		  						<span class="input-group-addon left-label">Latitude:</span>
 		  						<input id="inLat" type="text" class="form-control" maxlength="10">
 		  						<span class="input-group-addon right-label">&deg;</span>
@@ -190,6 +215,26 @@
 	  		
 	  	</div> <!-- end of main view -->
 	  	
+	  	<div id="splash" class="row">
+	  		<div id="splash-content">
+		  		<div id="splash-video"></div>
+		  		<div id="splash-login">
+		  			<div id="splash-table">
+		  			<h3 class="splashForm">Welcome to <b>TRIDEC Cloud</b></h3>
+		  			<h4 class="splashForm">Sign in with your E-Mail address</h4>
+		  			<div id="splashIcon" class="splashForm">
+		  				<i class="fa fa-user"></i>
+		  			</div>
+		  			<p id="splashStatus" class="form-control-static splashForm"></p>
+			  		<input id="splashUser" type="text" class="form-control splashForm" placeholder="E-Mail" required>
+				  	<input id="splashPass" type="password" class="form-control splashForm" placeholder="Password" required>
+				  	<button id="splashSignIn" type="button" class="btn btn-primary splashForm">Sign In</button>
+				  	<a id="splash-lnkAcc" class="splashForm" href="mailto:martin.hammitzsch@gfz-potsdam.de,spazier@uni-potsdam.de?subject=Get%20account%20for%20TRIDEC%20Cloud&amp;body=Hello%20you%2C%0D%0A%0D%0AI%20am%20totally%20excited%20about%20the%20TRIDEC%20Cloud%20and%20would%20like%20to%20get%20an%20account%2E%0D%0A%0D%0ACheers">Get Account</a>
+				  	</div>
+			  	</div>
+		  	</div>
+	  	</div>
+	  	
 	</div> <!-- end of container -->
 	
 	<!-- the following content is not shown directly and only used
@@ -205,59 +250,70 @@
 
 	<!-- sidebar entry template -->
 	<div id="entry" class="row entry">
-		<div class="col-md-2 entry-left">
-			<div class="row row-marker">
-				<img class="marker" alt="" src="javascript:void(0);">
-			</div>
-			<div class="row">
-				<h4 class="mag"></h4>
-			</div>
-		</div>
-		<div class="col-md-10 entry-right">
-			<div class="row">
-				<a href="#" class="big region"></a>
-			</div>
-			<div class="row">
+		<div class="col-md-12" >
+			<div class="row row-region">
+				<div class="col-md-2"></div>
 				<div class="col-md-10">
 					<div class="row">
-						<span class="small datetime"></span>
-						<a class="small lnkId" href="#"></a>
-					</div>
-					<div class="row">
-						<span class="small lonlat"></span>
-					</div>
-					<div class="row">
-						<span class="small dip"></span>
+						<a href="#" class="big region"></a>
 					</div>
 				</div>
+			</div>
+			<div class="row">
 				<div class="col-md-2">
+					<div class="row row-marker">
+						<img class="marker" alt="" src="javascript:void(0);">
+					</div>
 					<div class="row">
-						<a class="geofon" href="#" target="_blank"><img class="beach" alt="" src="javascript:void(0);"></a>
+						<h4 class="mag"></h4>
 					</div>
 				</div>
-			</div>
-			<div class="row process">
-				<div class="progress">
-					<div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
-				</div>
-				<span class="medium status"></span>
-				<a class="lnkLearn" href="#"><span class="glyphicon glyphicon-info-sign"></span></a>
-				<a class="lnkEdit" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
-				<a class="lnkSend" href="#"><span class="glyphicon glyphicon-send"></span></a>
-				<a class="lnkStatic" href="#"><span class="glyphicon glyphicon-share-alt"></span></a>
-				<a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
-				<!-- <button class="lnkEdit btn btn-primary btn-sm"><span class="glyphicon glyphicon-repeat"></span></button> -->
-			</div>
-			<div class="calc_data">
-				<div class="row">
-					<span class="small resource"></span>
-				</div>
-				<div class="row">
-					<span class="small calc"></span>
-				</div>
-				<div class="row">
-					<input class="chk_grid" type="checkbox">
-					<span class="small grid"></span>
+				<div class="col-md-10">
+					<div class="row">
+						<div class="col-md-10">
+							<div class="row">
+								<span class="small datetime"></span>
+								<a class="small lnkId" href="#"></a>
+							</div>
+							<div class="row">
+								<span class="small lonlat"></span>
+							</div>
+							<div class="row">
+								<span class="small dip"></span>
+							</div>
+						</div>
+						<div class="col-md-2">
+							<div class="row">
+								<a class="geofon" href="#" target="_blank"><img class="beach" alt="" src="javascript:void(0);"></a>
+							</div>
+						</div>
+					</div>
+					<div class="row process">
+						<div class="progress">
+							<div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+						</div>
+						<span class="medium status"></span>
+						<span class="lnkLast"></span>
+						<a class="lnkTimeline pull-right" href="#"><span class="glyphicon glyphicon-sort-by-attributes"></span></a>
+						<a class="lnkStatic pull-right" href="#"><span class="glyphicon glyphicon-share-alt"></span></a>
+						<a class="lnkSend pull-right" href="#"><span class="glyphicon glyphicon-send"></span></a>
+						<a class="lnkEdit pull-right" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
+						<a class="lnkLearn pull-right" href="#"><span class="glyphicon glyphicon-info-sign"></span></a>
+						<a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
+						<!-- <button class="lnkEdit btn btn-primary btn-sm"><span class="glyphicon glyphicon-repeat"></span></button> -->
+					</div>
+					<div class="calc_data">
+						<div class="row">
+							<span class="small resource"></span>
+						</div>
+						<div class="row">
+							<span class="small calc"></span>
+						</div>
+						<div class="row">
+							<input class="chk_grid" type="checkbox">
+							<span class="small grid"></span>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -265,44 +321,63 @@
 	
 	<!-- sidebar message template -->
 	<div id="msg" class="row entry">
-		<div class="col-md-2 entry-left">
-			<div class="row row-msgIcon">
-				<span class="glyphicon glyphicon-arrow-right msgIcon"></span>
-				<span class="msgType"></span>
-			</div>
-		</div>
-		<div class="col-md-10 entry-right">
-			<div class="row">
-				<a href="#" class="big subject"></a>
-			</div>
-			<div class="row">
-				<span class="small datetime"></span>
-				<a href="#" class="small lnkEvtId"></a>
-			</div>
-			<div class="row">
-				<div class="col-md-2 no-pad">
-					<span class="small">To:</span>
-				</div>
-				<div class="col-md-10 no-pad">
-					<span class="small to"></span>
+		<div class="col-md-12" >
+			<div class="row row-subject">
+				<div class="col-md-2"></div>
+				<div class="col-md-10">
+					<div class="row">
+						<a href="#" class="big subject"></a>
+					</div>
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-md-2 no-pad">
-					<span class="small">From:</span>
+				<div class="col-md-2">
+					<div class="row row-msgIcon">
+						<span class="glyphicon glyphicon-arrow-right msgIcon"></span>
+						<span class="msgType"></span>
+					</div>
 				</div>
-				<div class="col-md-10 no-pad">
-					<span class="small from"></span>
+				<div class="col-md-10">
+					<div class="row">
+						<span class="small datetime"></span>
+						<!-- <a href="#" class="small lnkEvtId"></a> -->
+						<span class="small lnkEvtId"></span>
+					</div>
+					<div class="row">
+						<div class="col-md-2 no-pad msg-col-left">
+							<span class="small">From: &nbsp;</span>
+						</div>
+						<div class="col-md-10 no-pad msg-col-right">
+							<span class="small from"></span>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-2 no-pad msg-col-left">
+							<span class="small">To: &nbsp;</span>
+						</div>
+						<div class="col-md-10 no-pad msg-col-right">
+							<span class="small to"></span>
+						</div>
+					</div>
+					<div class="row cc-row">
+						<div class="col-md-2 no-pad msg-col-left">
+							<span class="small cc-lab">Cc:&nbsp;</span>
+						</div>
+						<div class="col-md-10 no-pad msg-col-right">
+							<span class="small cc"></span>
+						</div>
+					</div>
+					<div class="row">
+						<span class="medium stat-disp">Map not displayed</span>
+					</div>
+					<div class="row">
+						<span class="medium stat-read">Message not read</span>
+						<a class="lnkTimeline pull-right" href="#"><span class="glyphicon glyphicon-sort-by-attributes"></span></a>
+						<a class="lnkMsg pull-right" href="#"><span class="glyphicon glyphicon-align-justify"></span></a>
+						<a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
+					</div>			
 				</div>
 			</div>
-			<div class="row">
-				<span class="medium stat-disp">Map not displayed</span>
-			</div>
-			<div class="row">
-				<span class="medium stat-read">Message not read</span>
-				<a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
-				<a class="lnkMsg pull-right" href="#"><span class="glyphicon glyphicon-align-justify"></span></a>
-			</div>			
 		</div>
 	</div>
 	
@@ -423,10 +498,10 @@
 	      			</div>
 	      			<div class="grpContent">
 		      			<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Int-To:</span>
+							<span class="input-group-addon">Cloud users:</span>
 							<input id="intTo" type="text" class="form-control">
 							<span class="input-group-addon mail-right">
-								<span class="glyphicon glyphicon-share"></span>
+								<span class="glyphicon glyphicon-cloud"></span>
 							</span>
 					  	</div>
 				  	</div>
@@ -496,13 +571,39 @@
 	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
 	      			</div>
 	      			<div class="grpContent">
-				  		<span id="mailTemplate">TSUNAMI EXERCISE MESSAGE<br>
+				  		<span id="mailTemplate">
+				  			<span id="mailProlog">
+				  			TSUNAMI EXERCISE MESSAGE NUMBER <span class="mailNumber"></span><br>
+				  			<span class="mailProvider"></span><br>
 				  			CREATED AT <span id="mailDate"></span><br><br>
 				  			
 				  			... THIS IS AN EXERCISE ...<br><br>
+				  			</span>
 				  			
+				  			<span id="mailWatchSum">
+				  			... <span class="mailEndOf"></span>TSUNAMI WATCH<span class="mailOngoing"></span> ...
+				  			THIS ALERT APPLIES TO<span id="mailWatchList"></span>
+				  			</span>
+				  							  			
+				  			<span id="mailAdvisorySum">
+				  			... <span class="mailEndOf"></span>TSUNAMI ADVISORY<span class="mailOngoing"></span> ...
+				  			THIS ALERT APPLIES TO<span id="mailAdvisoryList"></span>
+				  			</span>
+				  			
+				  			<span id="mailInfoSum">
+				  			... <span class="mailEndOf"></span>TSUNAMI INFORMATION<span class="mailOngoing"></span> ...
+				  			THIS ALERT APPLIES TO<span id="mailInfoList"></span>
+				  			</span>
+				  			
+				  			<span id="mailApply">
+				  			THIS ALERT APPLIES TO ALL COUNTRIES SUBSCRIBED TO THE SERVICES OF THIS CTWP.
+				  			</span>
+				  			
+				  			<span id="mailAdvice">
 				  			THIS MESSAGE IS ISSUED AS ADVICE TO GOVERNMENT AGENCIES. ONLY NATIONAL AND LOCAL GOVERNMENT AGENCIES HAVE THE AUTHORITY TO MAKE DECISIONS REGARDING THE OFFICIAL STATE OF ALERT IN THEIR AREA AND ANY ACTIONS TO BE TAKEN IN RESPONSE.<br><br>
-		
+							</span>
+				
+							<span id="mailEqParams">
 							AN EARTHQUAKE HAS OCCURRED WITH THESE PRELIMINARY PARAMETERS<br>
 				  			
 				  			ORIGIN TIME - <span id="mailOriginTime"></span><br>
@@ -510,17 +611,61 @@
 							DEPTH       - <span id="mailDepth"></span> KM<br>
 							LOCATION    - <span id="mailLocation"></span><br>
 							MAGNITUDE   - <span id="mailMag"></span><br><br>
+							</span>
 							
+							<span id="mailWaveAct">
+							MEASUREMENTS OR REPORTS OF TSUNAMI WAVE ACTIVITY
+							?????
+							
+							LAT - LATITUDE (N-NORTH, S-SOUTH)
+							LON - LONGITUDE (E-EAST, W-WEST)
+							TIME - TIME OF THE MEASUREMENT (Z IS UTC TIME)
+							AMPL - TSUNAMI AMPLITUDE MEASURED RELATIVE TO NORMAL SEA LEVEL.
+							IT IS ...NOT... CREST-TO-TROUGH WAVE HEIGHT.
+							VALUES ARE GIVEN IN METERS (M).
+							PER - PERIOD OF TIME IN MINUTES (MIN) FROM ONE WAVE TO THE NEXT.
+							</span>
+							
+							<span id="mailWatchEval">
+							EVALUATION OF TSUNAMI WATCH
+							IT IS NOT KNOWN THAT A TSUNAMI WAS GENERATED. THIS MESSAGE IS BASED ONLY ON THE EARTHQUAKE EVALUATION. AN EARTHQUAKE OF THIS SIZE HAS THE POTENTIAL TO GENERATE A TSUNAMI THAT CAN STRIKE COASTLINES WITH A WAVE HEIGHT GREATER THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP GREATER THAN 1M. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY. THIS CENTER WILL MONITOR SEA LEVEL DATA FROM GAUGES NEAR THE EARTHQUAKE TO DETERMINE IF A TSUNAMI WAS GENERATED AND ESTIMATE THE SEVERITY OF THE THREAT. A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
+							</span>
+							
+							<span id="mailAdvisoryEval">
+							EVALUATION OF TSUNAMI ADVISORY
+							SEA LEVEL READINGS INDICATE A TSUNAMI WAS GENERATED.
+							THIS TSUNAMI CAN STRIKE COASTLINES WITH A WAVE HEIGHT LESS THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP LESS THAN 1M. THIS CENTER WILL CONTINUE TO MONITOR SEA LEVEL GAUGES NEAREST THE REGION AND REPORT IF ANY ADDITIONAL TSUNAMI WAVE ACTIVITY IS OBSERVED. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY.  A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
+							</span>
+							
+							<span id="mailInfoEval">
+							EVALUATION OF TSUNAMI INFORMATION
+							BASED ON HISTORICAL EARTHQUAKE AND TSUNAMI MODELLING THERE IS NO THREAT THAT A TSUNAMI HAS BEEN GENERATED THAT CAN CAUSE DAMAGE OR MAJOR EFFECT IN THE REGION. THIS MESSAGE IS FOR INFORMATION ONLY.
+							</span>
+							
+							<span id="mailTFPs">
 				  			ESTIMATED INITIAL TSUNAMI WAVE ARRIVAL TIMES AT FORECAST POINTS WITHIN THE WATCH AREA AND ADVISORY AREA GIVEN BELOW. ACTUAL ARRIVAL TIMES MAY DIFFER AND THE INITIAL WAVE MAY NOT BE THE LARGEST. A TSUNAMI IS A SERIES OF WAVES AND THE TIME BETWEEN SUCCESSIVE WAVES CAN BE FIVE MINUTES TO ONE HOUR.<br><br>
 				  			
 				  			<span id="mailFCPs"></span><br><br>
+				  			</span>
 				  			
-				  			SUPPLEMENT MESSAGES WILL BE ISSUED AS SOON AS NEW DATA AND EVALUATION ALLOWS. THE TSUNAMI ALERT WILL REMAIN IN EFFECT UNTIL AN END OF ALERT IS BROADCAST.<br><br>
+				  			<span id="mailSuppl">
+				  			SUPPLEMENT MESSAGES WILL BE ISSUED AS SOON AS NEW DATA AND EVALUATION ALLOWS. THE TSUNAMI ALERT WILL REMAIN IN EFFECT UNTIL AN END OF ALERT IS BROADCAST.
+				  			</span>
+				  			<span id="mailFinal">
+				  			THIS WILL BE THE FINAL MESSAGE ISSUED FOR THIS EVENT UNLESS ADDITIONAL INFORMATION BECOMES AVAILABLE.
+				  			</span><br><br>
 				  			
+				  			<span id="mailEpilog">
 				  			... THIS IS AN EXERCISE ...<br><br>
 		
-							END OF TSUNAMI EXERCISE MESSAGE<br><br>
+							END OF TSUNAMI EXERCISE MESSAGE NUMBER <span class="mailNumber"></span><br>
+							</span>
 						</span>
+						<div class="btn-group btn-group-justified" id="btnGrpText" data-toggle="buttons">
+						  <label class="btn btn-default active"><input name="options" id="btnTextInfo" type="radio">Information/Watch/Advisory</label>
+						  <label class="btn btn-default"><input name="options" id="btnTextEnd" type="radio">End</label>
+						  <label class="btn btn-default"><input name="options" id="btnTextCancel" type="radio">Cancelation</label>
+						</div>
 						<div class="input-group input-group-sm mail-label">
 							<span class="input-group-addon">Subject:</span>
 							<input id="mailSubject" type="text" class="form-control">
@@ -570,7 +715,7 @@
 	      </div>
 	      <div class="modal-footer mail-footer">
 	      	<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-	        <button type="button" id="mailBtnSend" class="btn btn-primary" data-dismiss="modal">Send</button>
+	        <button type="button" id="mailBtnSend" class="btn btn-primary" >Send</button>
 	      </div>
 	    </div><!-- /.modal-content -->
 	  </div><!-- /.modal-dialog -->
@@ -584,18 +729,20 @@
 	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
 	        <h4 class="modal-title">Properties</h4><br>
 	        <ul class="nav nav-tabs">
-				<li id="propTabGeneral"><a href="#propGeneral" data-toggle="tab">General</a></li>
-			 	<li id="propTabMsgs" class="active"><a href="#propMsgs" data-toggle="tab">Messages</a></li>
+				<li id="propTabGeneral" class="active"><a href="#propGeneral" data-toggle="tab">General</a></li>
+			 	<li id="propTabMsgs"><a href="#propMsgs" data-toggle="tab">Messages</a></li>
+			 	<li id="propTabInst"><a href="#propInst" data-toggle="tab">Institution</a></li>
 			</ul>
 	      </div>
 	      <div class="modal-body">
 		  	<div class="tab-content">
-		  		<div class="tab-pane" id="propGeneral">
+		  		<div class="tab-pane active" id="propGeneral">
 		  			<div class="input-group input-group-sm prop-label">
 						<span class="input-group-addon">Username:</span>
 						<span class="form-control" id="propUser"></span>
 		  			</div>
-		  			<div class="input-group input-group-sm prop-label pad-top">
+		  			<div class="prop-label pad-top">Change your password:</div>
+		  			<div class="input-group input-group-sm prop-label">
 						<span class="input-group-addon">Current password:</span>
 						<input id="propCurPwd" type="password" class="form-control">
 		  			</div>
@@ -608,7 +755,7 @@
 						<input id="propConfPwd" type="password" class="form-control">
 		  			</div>
 		  		</div>
-		  		<div class="tab-pane active" id="propMsgs">
+		  		<div class="tab-pane" id="propMsgs">
 		  			<div id="propGrpFax" class="group">
 		      			<div class="grpHeader">
 		      				<span class="grpHeadline">Fax</span>
@@ -697,8 +844,19 @@
 			      		</div>
 			      	</div>
 		      	</div>
+		      	<div class="tab-pane" id="propInst">
+		      		<div class="prop-label">View or edit institution related information</div>
+		  			<div class="input-group input-group-sm prop-label pad-top-1">
+						<span class="input-group-addon">Name:</span>
+						<input id="propInstName" class="form-control">
+		  			</div>
+		  			<div class="input-group input-group-sm prop-label">
+						<span class="input-group-addon">Sender message line:</span>
+						<input id="propInstMsgName" class="form-control">
+		  			</div>
+		      	</div>
 		  	</div>
-		  	<p id="propStatus" class="form-control-static"></p>
+		  	<p id="propStatus" class="form-control-static prop-label"></p>
 	      </div>
 	      <div class="modal-footer">
 	      	<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>

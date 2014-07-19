@@ -1,11 +1,13 @@
 var map;
 
-function CustomList( widget ) {
+function CustomList( widget, sort ) {
 	
    this.list = [];
    this.startIdx = 0;
    this.endIdx = 19;
    this.widget = widget;
+   
+   this.sort = (typeof sort === "undefined") ? "prop.date" : sort;
    
    this.getElem = function( i ) {
 	   return this.list[ this.list.length - i - 1 ];
@@ -19,13 +21,21 @@ function CustomList( widget ) {
 	   $(this.widget).empty();
    };
    
+   this.getProp = function( obj, prop ) {
+	   
+	   var arr = prop.split(".");
+	   while( arr.length && ( obj = obj[arr.shift()] ) );
+		    
+	   return obj;
+   };
+   
    this.push = function( entry ) {
 	   	   								   	   	   
-	   var date2 = new Date( entry.prop.date );
-	   	   
+	   var date2 = new Date( this.getProp( entry, this.sort ) );
+	   	   	   
 	   for( var i = 0; i < this.list.length; i++ ) {
 		   
-		   var date1 = new Date( this.list[i].prop.date );
+		   var date1 = new Date( this.getProp( this.list[i], this.sort ) );
 		   
 		   if( date1.getTime() > date2.getTime() ) {
 			   
@@ -71,6 +81,11 @@ function CustomList( widget ) {
           }
 	   }
    };
+   
+   this.setSort = function( field ) {
+	   
+	   this.sort = field;
+   };
 }
 
 function EntryMap() {
@@ -115,7 +130,7 @@ function EntryMap() {
 
 var eqlist = new CustomList( '#sidebar' );
 var saved = new CustomList( '#saved' );
-var timeline = new CustomList( '#timeline-data' );
+var timeline = new CustomList( '#timeline-data', 'timestamp' );
 var messages = new CustomList( '#messages' );
 var shared = new CustomList( '#static' );
 
@@ -135,6 +150,8 @@ var default_delay = 24*60;
 var delay = default_delay;
 var events = {};
 var timerId = null;
+
+var share = false;
 
 var defaultText = { no: "No simulation",
 					inland: "No simulation",
@@ -178,9 +195,7 @@ function initialize() {
 	markers.compose.setMap( null );
 	markers.active = createDefaultMarker( $('#inLat').val(), $('#inLon').val(), "#5cb85c" );
 	markers.active.setMap( null );
-		
-	checkSession();
-	
+			
 	$( "#btnSignIn" ).click( drpSignIn );
 	$( "#btnSignOut" ).click( signOut );
 	$( "#btnProp" ).click( showProp );
@@ -196,6 +211,7 @@ function initialize() {
 	$( "#tabMessages" ).click( { tab: "messages" }, tabChanged );
 	
 	$( "#diaSignIn" ).click( diaSignIn );
+	$( "#splashSignIn" ).click( diaSignIn );
 	$( "#propBtnSubmit" ).click( propSubmit );
 	
 	$( "#custom" ).find( "input" ).blur( checkInput );
@@ -226,43 +242,32 @@ function initialize() {
 	$( '#btnSearch' ).click( searchEvents );
 	$( '#inSearch' ).keyup( function(e) { if( e.keyCode == 13 ) searchEvents(); } );
 	
-	$( '#btnDelRoot' ).click( function() { $('#inRootId').html(""); } );
-	$( '#btnDelParent' ).click( function() { $('#inParentId').html(""); } );
+	$( '#btnDelRoot' ).click( function() { $('#inRootId').html(""); $('#inParentId').html(""); } );
+	$( '#btnDelParent' ).click( function() { $('#inRootId').html(""); $('#inParentId').html(""); } );
+	$( '#btnDelDate' ).click( function() { $('#inDate').html(""); } );
 		
-	$('#EmailDia').on('shown.bs.modal', function() {
-		var h = $( "#mailText" )[0].scrollHeight;
-	    $( "#mailText" ).outerHeight( h );
-	    
-	    /* we must make the textarea visible first before the height can be read */
-	    var hidden = $( '#msgSMS .grpContent' ).css( "display" ) == "none";
-	    if( hidden )
-	    	$( '#msgSMS .lnkGroup' ).click();
-	    
-	    h = $( "#smsText" )[0].scrollHeight;
-	    $( "#smsText" ).outerHeight( h );
-	    
-	    if( hidden )
-	    	$( '#msgSMS .lnkGroup' ).click();
-	});
+	$( '#EmailDia' ).on('shown.bs.modal', dialogOnDisplay );
+	$( '#EmailDia :input' ).val( "" );
+	$( '#btnGrpText .btn' ).change( changeMsgText );
 		
-	$('#smsText').bind('input propertychange', function() {
+	$( '#smsText' ).bind('input propertychange', function() {
 		$( '#smsChars' ).html( $(this).val().length );
 	});
 	
-	$('#SignInDialog').on('shown.bs.modal', function () {
+	$( '#SignInDialog' ).on('shown.bs.modal', function () {
 		
 		if( $.cookie('username') ) {
-			$('#diaPass').focus();
+			$( '#diaPass' ).focus();
 		} else {
-			$('#diaUser').focus();
+			$( '#diaUser' ).focus();
 		}
 	});
 	
-	$('#diaUser').val( $.cookie('username') );
+	$( '#diaUser' ).val( $.cookie('username') );
 	
 	$( window ).resize( onResize );
 	
-	checkStaticLink();
+	checkSession();
 }
 
 function getEvents( callback ) {
@@ -415,7 +420,8 @@ function getUpdates( timestamp ) {
 					
 				} else if( obj['event'] == 'progress' ) {
 		
-                    if( id == active )
+					/* don't show polygons again if we already display the event with 100% progress */
+                    if( id == active /*&& entries.get(id).process[0].progress < 100*/ )
                         show = true;
 
 					var process = obj['process'][0];
@@ -470,7 +476,7 @@ function getUpdates( timestamp ) {
 
                 timerId = setTimeout( function() { getUpdates( timestamp ); }, 1000);
             }
-
+            
 		},
 		error: function() {
 		},
@@ -519,7 +525,8 @@ function showEntries( list ) {
     		addEntry( widget, elem, i );
     	}
 	}
-	
+    
+    select( active );
 }
 
 function updateProgress( id, process, list ) {
@@ -612,12 +619,18 @@ function addEntry( widget, data, i ) {
 		    		
 	var txtId = data['_id'];
 	
-	if( curuser && data['refineId'] && data['refineId'] > 0 ) {
-		$div.find( '.lnkId' ).html( txtId );
-		$div.find( '.lnkId' ).bind( 'click', {id: data.id}, lnkIdOnClick );
-		
-		txtId = "";
-	}
+//	if( curuser && data['refineId'] && data['refineId'] > 0 ) {
+//		$div.find( '.lnkId' ).html( txtId );
+//		$div.find( '.lnkId' ).bind( 'click', {id: data.id}, lnkIdOnClick );
+//		
+//		txtId = "";
+//	}
+	
+	var tid = data._id;
+	if( data.root )
+		tid = data.root;
+	
+	$div.find( '.lnkTimeline' ).bind( 'click', { id: tid }, lnkIdOnClick );
 	
 	$div.find( '.region' ).text( prop['region'] );
 	$div.find( '.mag').text( prop['magnitude'] );
@@ -635,22 +648,24 @@ function addEntry( widget, data, i ) {
 		
 	$div.find( '.progress' ).css( 'display', 'none' );
 	
+	$div.find( '.lnkLearn' ).css( "display", "inline" );
+	
+	var options = { placement:'bottom',
+					title:'Info',
+					html: true,
+					container: $div,
+					animation: false
+				   };
+	
+	options.content = "<span style='font-size: 0.8em;'>Currently, we use a rough and simple threshold mechanism to identify the tsunami potential of an earthquake. If the location of the earthquake is inland, deeper than 100km, or has a magnitude less than 5.5 then we don't consider the earthquake for any wave propagation computation. However, if you think the earthquake is relevant for computation then you can do so by using 'Modify and reprocess'. <br><br>Anyhow, in the near future we plan to use an improved mechanism by adopting region dependent decision matrices defined by the UNESCO-IOC ICGs, that is ICG/NEAMTWS, ICG/IOTWS, ICG/PTWS, and ICG/CARIBE EWS.</span>";
+	$div.find( '.lnkLearn' ).popover( options );
+	
 	if( ! data['process'] ) {
 		
 		if( ! prop['sea_area'] ) {
 			$div.find( '.status' ).html( simText['inland'] );
 		} else {
 			$div.find( '.status' ).html( simText['no'] );
-			$div.find( '.lnkLearn' ).css( "display", "inline" );
-			
-			var options = { placement:'bottom',
-							title:'Info',
-							html: true,
-							container: $div,
-							animation: false
-						   };
-			options.content = "<span style='font-size: 0.8em;'>Currently, we use a rough and simple threshold mechanism to identify the tsunami potential of an earthquake. If the location of the earthquake is inland, deeper than 100km, or has a magnitude less than 5.5 then we don't consider the earthquake for any wave propagation computation. However, if you think the earthquake is relevant for computation then you can do so by using 'Modify and reprocess'. <br><br>Anyhow, in the near future we plan to use an improved mechanism by adopting region dependent decision matrices defined by the UNESCO-IOC ICGs, that is ICG/NEAMTWS, ICG/IOTWS, ICG/PTWS, and ICG/CARIBE EWS.</span>";
-			$div.find( '.lnkLearn' ).popover( options );
 		}
 		
 	} else if( data['process'].length == 0 ) {
@@ -676,15 +691,34 @@ function addEntry( widget, data, i ) {
 	options.title = 'Share map';
 	$div.find( '.lnkStatic' ).tooltip( options );
 	
+	options.title = 'Show timeline';
+	$div.find( '.lnkTimeline' ).tooltip( options );
+	
 	var color = getMarkerColor( prop['magnitude'] );
 			
+	if( checkPerm( "share" ) )
+		$div.find( '.lnkStatic' ).css( "display", "inline" );
+	
+	if( checkPerm( "comp" ) )
+		$div.find( '.lnkEdit' ).css( "display", "inline" );
+	
+	if( checkPermsAny( "intmsg", "mail", "fax", "ftp", "sms" ) )
+		$div.find( '.lnkSend' ).css( "display", "inline" );
+	
+	if( checkPerm( "timeline" ) )
+		$div.find( '.lnkTimeline' ).css( "display", "inline" );
+	
 	if( curuser != null && id_equals( curuser._id, data.user ) ) {
-		color = '#E4E7EB';
-		$div.find( '.lnkDelete' ).css( "display", "inline" );
-		$div.find( '.lnkDelete' ).bind( 'click', deleteEntry );
 		
-		options.title = 'Delete entry';
-		$div.find( '.lnkDelete' ).tooltip( options );
+		color = '#E4E7EB';
+		
+		if( widget.attr('id') != 'static' ) {
+			$div.find( '.lnkDelete' ).css( "display", "inline" );
+			$div.find( '.lnkDelete' ).bind( 'click', deleteEntry );
+			
+			options.title = 'Delete entry';
+			$div.find( '.lnkDelete' ).tooltip( options );
+		}
 	}
 	
 	var link = getMarkerIconLink( i + 1, color );
@@ -706,7 +740,7 @@ function addEntry( widget, data, i ) {
 	$div.data( "marker", addMarker( prop['latitude'], prop['longitude'], new google.maps.MarkerImage( link ) ) ); 
 	$div.data( "marker" ).setAnimation( null );
 	$div.data( "marker" ).setMap( null );
-		    			    			    	
+			    			    			    	
 	widget.prepend( $div );
 }
 
@@ -756,8 +790,8 @@ function addMsg( widget, data, i ) {
 	if( data.errors && ! $.isEmptyObject( data.errors ) ) {
 		color = "#d9534f";
 		info = "Errors occured while sending";
-		for( var prop in data.errors )
-			console.log( prop );
+//		for( var prop in data.errors )
+//			console.log( prop );
 	}
 	
 	if( data.Type == "MAIL" ) {
@@ -780,7 +814,7 @@ function addMsg( widget, data, i ) {
 				//color = "#428bca";
 				color = "#FF8000"; 
 		} else {
-			cls += "glyphicon-share";
+			cls += "glyphicon-cloud";
 		}
 		type = "Cloud";
 	}
@@ -797,7 +831,7 @@ function addMsg( widget, data, i ) {
 		if( data.MapDisplayTime ) {
 			
 			var str = getDateString( new Date( data.MapDisplayTime ) );
-			$div.find( '.stat-disp' ).html( "Message displayed on " + str );
+			$div.find( '.stat-disp' ).html( "Map displayed on " + str );
 			$div.find( '.stat-disp' ).css( "display", "inline" );
 		}
 	
@@ -817,6 +851,20 @@ function addMsg( widget, data, i ) {
 	
 	for( var k = 1; k < data.To.length; k++ ) {
 		$div.find( '.to' ).append( ", " + data.To[k] );
+	}
+	
+	if( data.Cc ) {
+		
+	
+		$div.find( '.cc' ).html( data.Cc[0] );
+	
+		for( var k = 1; k < data.Cc.length; k++ ) {
+			$div.find( '.c' ).append( ", " + data.Cc[k] );
+		}
+		
+	} else {
+		
+		$div.find( '.cc-row' ).css( "display", "none" );
 	}
 	
 	if( data.Dir == "in" )
@@ -839,13 +887,37 @@ function addMsg( widget, data, i ) {
 	options.title = 'Delete message';
 	$div.find( '.lnkDelete' ).tooltip( options );
 	
+	options.title = 'Show timeline';
+	$div.find( '.lnkTimeline' ).tooltip( options );
+	
+//	options.title = '<span style="font-size: 0.9em;">Delete entry?</span>';
+//	options.container = 'body';
+//	options.placement = 'bottom';
+//	options.html = true;
+//	options.content =
+//		'<button type="button" class="btn btn-sm btn-primary pull-right">Yes</button>' +
+//		'<button type="button" class="btn btn-sm btn-default pull-left">No</button>';
+//	$div.find( '.lnkDelete' ).popover( options );
+	
 	$div.find( '.lnkMsg' ).bind( 'click', showMsg );
 	$div.find( '.lnkDelete' ).bind( 'click', deleteEntry );
+	
 	$div.find( '.lnkDelete' ).css( "display", "inline" );
 	
 	var entry = entries.get( data['ParentId'] );
-	if( entry )
-		$div.find( '.lnkEvtId' ).bind( 'click', { id: entry.id }, lnkIdOnClick );
+	if( entry ) {
+		
+		var tid = entry.id;
+		
+		if( entry.root )
+			tid = entry.root;
+		
+		//$div.find( '.lnkEvtId' ).bind( 'click', { id: entry.id }, lnkIdOnClick );
+		$div.find( '.lnkTimeline' ).bind( 'click', { id: tid }, lnkIdOnClick );
+	}
+	
+	if( checkPerm( "timeline" ) )
+		$div.find( '.lnkTimeline' ).css( "display", "inline" );
 	
 	widget.prepend( $div );
 }
@@ -895,7 +967,7 @@ function entryOnClick() {
 		$( "#SignInDialog" ).modal("show");
 		return;
 	}
-	
+		
 	visualize( id );
 }
 
@@ -913,7 +985,9 @@ function visualize( id ) {
         showGrid( active, false );
         showPois( active, false );
 
-        active = id;
+        deselect( active );
+        select( id );
+        
 	    getWaveHeights( entry );
 	    getIsos( entry, null );
 	    getPois( entry, null );
@@ -931,7 +1005,7 @@ function highlight( event ) {
 		
 	if( jQuery.contains( event.currentTarget, event.relatedTarget ) )
 		return;
-		    	
+			    	
 	if( turnOn ) {
 		
 		color = '#c3d3e1'; //#99b3cc';
@@ -946,6 +1020,9 @@ function highlight( event ) {
 		if( marker )
 			marker.setAnimation( null );
 	}
+	
+	if( $(this).data( "entry" )._id == active )
+		return;
 	
 	$(this).css('background-color', color);
 }
@@ -1026,9 +1103,9 @@ function getWaveHeights( entry ) {
 	var id = entry['_id'];
 				
 	if( ! $.isEmptyObject( entry['heights'] ) ) {
-                showWaveHeights( id, true );
+        showWaveHeights( id, true );
 		return;
-        }
+    }
 	
 	$.ajax({
 		url: "srv/getWaveHeights",
@@ -1077,6 +1154,37 @@ function getWaveHeights( entry ) {
 		    	
 }
 
+function getNextMsgNr( entry, callback ) {
+	
+	var id = entry.root ? entry.root : entry._id;
+	
+	var msgnr = 1;
+	
+	$.ajax({
+		type: 'POST',
+		url: "srv/getNextMsgNr",
+		data: { "rootid": id },
+		dataType: 'json',
+		success: function( result ) {
+						
+			if( result.status == "success" ) {
+				
+				msgnr = result.NextMsgNr;
+				
+			} else {
+				console.log( "Error: Unable to get next message number." );
+			}
+		},
+		complete: function() {
+			
+			if( callback != null )
+	            callback( msgnr );
+		}
+	});
+	
+	return 0;
+}
+
 function getPois( entry, callback ) {
 	
 	var id = entry._id;
@@ -1101,7 +1209,7 @@ function getPois( entry, callback ) {
 				
 				var poi = result[i];
 				
-				var center = new google.maps.LatLng( poi.lat, poi.lon );
+				var center = new google.maps.LatLng( poi.lat_real, poi.lon_real );
 				
 				var point = { marker: null,
 						  	  info: null,
@@ -1125,7 +1233,7 @@ function getPois( entry, callback ) {
 						}
 					});
 				
-				var txt = "<b>" + poi.station + "</b><br>";
+				var txt = "<b>" + poi.code + "</b><br>";
 				
 				var min = Math.floor( poi.eta );
 				var sec = Math.floor( (poi.eta % 1) * 60.0 );
@@ -1323,6 +1431,22 @@ function showPois( pointer, visible ) {
 	}
 }
 
+function select( id ) {
+	
+	if( id == null )
+		return;
+	
+	active = id;
+	
+	var entry = entries.get( active );
+	
+	if( entry )
+		for( var key in entry.div ) {
+			entry.div[key].css( "border-left", "8px solid #C60000" );
+			entry.div[key].css( "background-color", "#c3d3e1" );
+		}
+}
+
 function deselect() {
 		
 	showWaveHeights(active, false);
@@ -1331,6 +1455,14 @@ function deselect() {
 	showPois(active, false);
 	
 	if( markers.active ) markers.active.setMap( null );
+	
+	var entry = entries.get( active );
+	
+	if( entry )
+		for( var key in entry.div ) {
+			entry.div[key].css( "background-color", "#fafafa" );
+			entry.div[key].css( "border-left", "0px" );
+		}
 	
 	active = null;
 }
@@ -1350,7 +1482,9 @@ function checkSession() {
 				curuser = result.user;
 				logIn( null );
 			} else {
+				showSplash( true );
 				getEvents( null );
+				checkStaticLink();
 			}
 		},
 		error: function() {
@@ -1384,8 +1518,7 @@ function signIn( user, password ) {
 				/* reset all password and status fields of sign-in widgets */
 				$( "#SignInDialog" ).modal("hide");
 				$('#diaStatus').html("");
-				$('#diaPass').val("");
-				$('#inPassword').val("");
+				$('#splashStatus').html("");
 				
 				curuser = resObj.user;
 				logIn( signTarget );
@@ -1394,10 +1527,12 @@ function signIn( user, password ) {
 
 				/* set status to error and clear password fields */
 				$('#diaStatus').html("Login failed!");
+				$('#splashStatus').html("Login failed!");
 				$('#drpStatus').html("Login failed!");
-				$('#diaPass').val("");
-				$('#inPassword').val("");
 			}
+			
+			$('#diaPass').val("");
+			$('#splashPass').val("");
 		}
 	});
 }
@@ -1415,10 +1550,23 @@ function drpSignIn( e ) {
 }
 
 function diaSignIn() {
+		
+	var parentId = $( this ).attr('id');
 	
-	var user = $('#diaUser').val();
-	var password = $('#diaPass').val();
-
+	var user = "";
+	var password = "";
+	
+	if( parentId == "diaSignIn" ) {
+	
+		user = $('#diaUser').val();
+		password = $('#diaPass').val();
+		
+	} else if( parentId == "splashSignIn" ) {
+		
+		user = $('#splashUser' ).val();
+		password = $('#splashPass' ).val();
+	}
+	
 	$.cookie( 'username', user );
 	
 	signIn( user, password );
@@ -1427,8 +1575,12 @@ function diaSignIn() {
 function logIn( callback ) {
 	
 	loggedIn = true;
+	
+	showSplash( false );
 		
 	simText = userText;
+		
+	deselect();
 	
 	delay = 0;
 	eqlist.list.length = 0;
@@ -1441,10 +1593,28 @@ function logIn( callback ) {
 	
 	$( '.tab-private' ).css( "display", "block" );
 	
-	var h = $( '.main-tabs' ).css( "height" );
-	$( '.tab-pane' ).css( "top", h );
+	if( ! checkPerm("comp") ) {
+		$( '#tabCustom' ).css( "display", "none" );
+		$( '#tabSaved' ).css( "display", "none" );
+	}
+	
+	if( ! checkPermsAny( "intmsg", "mail", "fax", "ftp", "sms" ) ) {
+		$( '#tabMessages' ).css( "display", "none" );
+	}
+	
+	if( ! checkPerm("timeline") ) {
+		$( '#tabTimeline' ).css( "display", "none" );
+	}
+	
+	onResize();
+		
+	shared.reset();
+	checkStaticLink();
 	
 	configMailDialog();
+	
+	$( '#lnkUser' ).html( curuser.username );
+	$( '#lnkUser' ).css( "display", "block" );
 }
 
 function signOut() {
@@ -1475,17 +1645,19 @@ function logOut() {
 	
 	loggedIn = false;
 	
+	showSplash( true );
+	
 	simText = defaultText;
 		
 	$( "#btnSignIn" ).css( "display", "block" );
 	$( "#grpSignOut" ).css( "display", "none" );
 	
 	$( '.tab-private' ).css( "display", "none" );
-	$( '.tab-pane' ).css( "top", $( '.main-tabs' ).css( "height" ) );
+	onResize();
 	
 	$( '#tabRecent' ).find('a').trigger('click');
-	
-	deselect();	
+		
+	deselect();
 	delay = default_delay;
 	eqlist.reset();
 	saved.reset();
@@ -1493,12 +1665,19 @@ function logOut() {
 	messages.reset();
 	entries.reset();	
 	getEvents( null );
+	
+	shared.reset();
+	checkStaticLink();
+	
+	$( '#lnkUser' ).html( "" );
+	$( '#lnkUser' ).css( "display", "none" );
 }
 
 function compute() {
   
 	var params = getParams();
 		    	
+	$( "#tabSaved" ).css( "display", "block" );
 	$( "#hrefSaved" ).click();
 	
 	deselect();
@@ -1509,7 +1688,8 @@ function compute() {
 		data: params,
 		dataType: 'json',
 		success: function( result ) {
-			active = result['_id'];
+			select( result['_id'] );
+			map.panTo( new google.maps.LatLng( params.lat, params.lon ) );
 		},
 		error: function() {
 		},
@@ -1534,6 +1714,9 @@ function getParams() {
 	params['dur'] = $('#inDuration').val();
 	params['root'] =  $('#inRootId').html();
 	params['parent'] =  $('#inParentId').html();
+	
+	if( $('#inDate').html() != "" )
+		params['date'] =  $('#inDate').data( "dateObj" ).toISOString();
 	
 	return params;
 }
@@ -1566,9 +1749,14 @@ function fillForm( entry ) {
 	} else {
 		$( '#inRootId' ).html( entry['_id'] );
 	}
+	
+	var date = new Date( prop['date'] );
+	$( '#inDate' ).html( getDateString( date ) );
+	$( '#inDate' ).data( "dateObj", date );
 		
 	checkInput();
 	
+	$( '#tabCustom' ).css( "display", "block" );
 	$( '#tabCustom' ).find('a').trigger('click');
 }
 
@@ -1576,6 +1764,7 @@ function clearForm() {
 	$('#custom :input').val('');
 	$('#inRootId').html('');
 	$('#inParentId').html('');
+	$('#inDate').html('');
 	checkInput();
 }
 
@@ -1621,17 +1810,24 @@ function mailOnClick( e ) {
 	showEmailDialog( entry );
 }
 
-function showEmailDialog( entry ) {
-			
+function showEmailDialog( entry, msgnr ) {
+				
 	if( !loggedIn ) {
 		
 		signTarget = showEmailDialog.bind( this, entry );
 		$( "#SignInDialog" ).modal("show");
 		return;
 	}
-	
+		
 	if( getPois( entry, showEmailDialog.bind( this, entry ) ) != "done" )
 		return;
+	
+	if( ! msgnr ) {
+		getNextMsgNr( entry, showEmailDialog.bind( this, entry ) );
+		return
+	}
+	
+	$( ".mailNumber" ).html( zeroPad( msgnr, 3 ) );
 		
 	var prop = entry.prop;
 		
@@ -1645,10 +1841,12 @@ function showEmailDialog( entry ) {
 	$( "#mailEvent" ).html( root );
 	$( "#mailParent" ).html( entry._id );
 	
-	$( "#mailDate" ).html( new Date().toISOString() );
-	$( "#mailOriginTime" ).html( prop.date );
-	$( "#mailCoordinates" ).html( Math.abs( prop.latitude ).toFixed(2) + ( prop.latitude < 0 ? " South" : " North" ) + " ");
-	$( "#mailCoordinates" ).append( Math.abs( prop.longitude ).toFixed(2) + ( prop.longitude < 0 ? " West" : " East" ) );
+	var originTime = new Date( prop.date );
+	
+	$( "#mailDate" ).html( toMsgDateFormat( new Date() ) );
+	$( "#mailOriginTime" ).html( toMsgDateFormat( originTime ) );
+	$( "#mailCoordinates" ).html( Math.abs( prop.latitude ).toFixed(2) + ( prop.latitude < 0 ? " SOUTH" : " NORTH" ) + " ");
+	$( "#mailCoordinates" ).append( Math.abs( prop.longitude ).toFixed(2) + ( prop.longitude < 0 ? " WEST" : " EAST" ) );
 	$( "#mailDepth" ).html( prop.depth );
 	$( "#mailLocation" ).html( prop.region );
 	$( "#mailMag" ).html( prop.magnitude );
@@ -1659,11 +1857,15 @@ function showEmailDialog( entry ) {
 		var heads = new Array(
 			"LOCATION-FORECAST POINT",
 		    "COORDINATES   ",
-		    "EAT   ",
-		    "EWH  ",
+		    "ARRIVAL TIME",
+		    //"EWH  ",
 		    "LEVEL       "
 		);
 		
+		var headlens = new Array( heads.length );
+		for( var i = 0; i < heads.length; i++ )
+			headlens[i] = heads[i].length;
+				
 		var minlen = heads[0].length;
 		for( var i = 0; i < entry.pois.length; i++ ) {
 			
@@ -1672,49 +1874,87 @@ function showEmailDialog( entry ) {
 			if( poi.eta == -1 )
 				continue;
 			
-			minlen = Math.max( minlen, poi.station.length );
+			var poi_name = poi.country + "-" + poi.name;
+			
+			minlen = Math.max( minlen, poi_name.length );
 		}
+		
+		headlens[0] = minlen;
 				
-		var txt = "";
+		var TFPs = { "INFORMATION": new Array(),
+					 "WATCH": new Array(),
+					 "ADVISORY": new Array()
+				   };
+		
+		var region_map = { "INFORMATION": new Array(),
+						   "WATCH": new Array(),
+						   "ADVISORY": new Array(),
+						   "ALL": new Array()
+						  };
 		
 		for( var i = 0; i < entry.pois.length; i++ ) {
 			
 			var poi = entry.pois[i].data;
-			
+						
 			if( poi.eta == -1 )
 				continue;
-					
-			var pretty_station = poi.station + new Array( minlen - poi.station.length + 1 ).join(" ");
-			var pretty_lat = charPad( Math.abs( poi.lat ).toFixed(2), 5, ' ' );
-			var pretty_lon = charPad( Math.abs( poi.lon ).toFixed(2), 6, ' ' );
-			var pretty_eta = charPad( poi.eta.toFixed(2), 6, ' ' );
-			var pretty_ewh = charPad( poi.ewh.toFixed(2), 5, ' ' );
 			
+			var poi_name = poi.country + "-" + poi.name;
+					
+			var pretty_station = poi_name + new Array( minlen - poi_name.length + 1 ).join(" ");
+			var pretty_lat = charPad( Math.abs( poi.lat_real ).toFixed(2), 5, ' ' );
+			var pretty_lon = charPad( Math.abs( poi.lon_real ).toFixed(2), 6, ' ' );
+			//var pretty_ewh = charPad( poi.ewh.toFixed(2), 5, ' ' );
+			var level = getPoiLevel( poi );
+			
+			var min = Math.floor( poi.eta );
+			var sec = Math.floor( (poi.eta % 1) * 60.0 );
+			
+			var eta_ms = (min * 60 + sec) * 1000;
+			var pretty_eta = toMsgDateFormat( new Date( originTime.getTime() + eta_ms ) );
+			pretty_eta = pretty_eta.split(' ', 3).join(' ');
+						
+			var txt = "";
 			txt += pretty_station + " ";
-			txt += pretty_lat + (poi.lat < 0 ? "S" : "N") + " ";
-			txt += pretty_lon + (poi.lon < 0 ? "W" : "E") + " ";
-			txt += pretty_eta + " ";
-			txt += pretty_ewh + " ";
-			txt += getPoiLevel( poi ) + "\n<br>";
+			txt += pretty_lat + (poi.lat_real < 0 ? "S" : "N") + " ";
+			txt += pretty_lon + (poi.lon_real < 0 ? "W" : "E") + " ";
+			txt += withPadding( pretty_eta, headlens[2], " " ) + " ";
+			//txt += pretty_ewh + " ";
+			txt += level + "\n<br>";
+			
+			TFPs[ level ].push( txt );
+									
+			region_map[ level ].push( poi.country );
+			region_map[ "ALL" ].push( poi.country );
 		}
 		
-		if( txt != "" ) {
+		TFPs["WATCH"].sort();
+		TFPs["ADVISORY"].sort();
+		
+		subtract( region_map[ "INFORMATION" ], region_map[ "WATCH" ] );
+		subtract( region_map[ "INFORMATION" ], region_map[ "ADVISORY" ] );
+										
+		if( TFPs["WATCH"].length > 0 ||  TFPs["ADVISORY"].length > 0 ) {
 			
 			$( "#mailFCPs" ).html( "" );
 			for( var k = 0; k < heads.length; k++ )
-				$( "#mailFCPs" ).append( heads[k] + " " );
+				$( "#mailFCPs" ).append( withPadding( heads[k], headlens[k], " " ) + " " );
 			
 			$( "#mailFCPs" ).append( "\n<br>" );
 			for( var k = 0; k < heads.length; k++ ) {
 				/* generates as many '-' as there are letters in the head string */
-				$( "#mailFCPs" ).append( new Array( heads[k].length + 1 ).join("-") + " " );
+				$( "#mailFCPs" ).append( withPadding( "", headlens[k], "-" ) + " " );
 			}
-							
-			$( "#mailFCPs" ).append( "\n<br>" + txt );
+						
+			$( "#mailFCPs" ).append( "\n<br>" + TFPs["WATCH"].join("") );
+			$( "#mailFCPs" ).append( "\n<br>" + TFPs["ADVISORY"].join("") );
 		}
-		
+
+		printRegionList( getUniqueList( region_map[ "INFORMATION" ] ), $("#mailInfoList") );
+		printRegionList( getUniqueList( region_map[ "WATCH" ] ), $("#mailWatchList") );
+		printRegionList( getUniqueList( region_map[ "ADVISORY" ] ), $("#mailAdvisoryList") );
 	}
-	
+		
 	/* SMS text */
 	var short_region = prop.region.length < 27 ? prop.region : prop.region.substring( 0, 24 ) + "...";
 	var smstext = "...THIS IS AN EXERCISE...\n\n" +
@@ -1733,9 +1973,167 @@ function showEmailDialog( entry ) {
 	$( '#smsChars' ).html( smstext.length );
 	$( "#smsText" ).val( smstext );
 	
-	$( "#mailText" ).val( getPlainText( $( "#mailTemplate" ) ) );	
-		
+	changeMsgText();
+	
 	$( "#EmailDia" ).modal("show");
+}
+
+function changeMsgText() {
+	
+	var kind = "info";
+	kind = $('#btnTextInfo').is(':checked') ? "info" : kind;
+	kind = $('#btnTextEnd').is(':checked') ? "end" : kind;
+	kind = $('#btnTextCancel').is(':checked') ? "cancel" : kind;
+	
+	var subject = { "info": "Tsunami Information/Watch/Advisory",
+					"end": "Tsunami End",
+					"cancel": "Tsunami Cancelation"	
+				   };
+		
+	var number = parseInt( $( ".mailNumber" ).html(), 10 );
+	
+	var inst = "";
+	
+	if( curuser.inst )
+		inst = curuser.inst.msg_name;
+	
+	$( "#mailSubject" ).val( subject[ kind ] );
+	$( ".mailProvider" ).html( inst );
+		
+	$( ".mailOngoing" ).html( "" );
+	$( ".mailEndOf" ).html( "" );
+	
+	var msgText = "";
+			
+	if( kind == "info" ) {
+		
+		if( number > 1 )
+			$( ".mailOngoing" ).html( " ONGOING" );
+				
+		msgText += getPlainText( $( "#mailProlog" ) );
+				
+		if( ! $("#mailWatchList").is(':empty') )
+			msgText += getPlainText( $( "#mailWatchSum" ) );
+		
+		if( ! $("#mailAdvisoryList").is(':empty') )
+			msgText += getPlainText( $( "#mailAdvisorySum" ) );
+		
+		if( ! $("#mailInfoList").is(':empty') && number == 1 )
+			msgText += getPlainText( $( "#mailInfoSum" ) );
+		
+		msgText += getPlainText( $( "#mailAdvice" ) );
+		msgText += getPlainText( $( "#mailEqParams" ) );
+				
+		if( ! $("#mailWatchList").is(':empty') )
+			msgText += getPlainText( $( "#mailWatchEval" ) );
+		
+		if( ! $("#mailAdvisoryList").is(':empty') )
+			msgText += getPlainText( $( "#mailAdvisoryEval" ) );
+		
+		if( ! $("#mailInfoList").is(':empty') && number == 1 )
+			msgText += getPlainText( $( "#mailInfoEval" ) );
+		
+		if( ! $("#mailFCPs").is(':empty') )
+			msgText += getPlainText( $( "#mailTFPs" ) );
+		
+		msgText += getPlainText( $( "#mailSuppl" ) );
+		msgText += getPlainText( $( "#mailEpilog" ) );
+	
+	} else if( kind == "end" ) {
+		
+		$( ".mailEndOf" ).html( "END OF " );
+		
+		msgText += getPlainText( $( "#mailProlog" ) );
+		
+		if( ! $("#mailWatchList").is(':empty') )
+			msgText += getPlainText( $( "#mailWatchSum" ) );
+		
+		if( ! $("#mailAdvisoryList").is(':empty') )
+			msgText += getPlainText( $( "#mailAdvisorySum" ) );
+		
+		msgText += getPlainText( $( "#mailAdvice" ) );
+		msgText += getPlainText( $( "#mailEqParams" ) );
+		
+		if( ! $("#mailWatchList").is(':empty') )
+			msgText += getPlainText( $( "#mailWatchEval" ) );
+		
+		if( ! $("#mailAdvisoryList").is(':empty') )
+			msgText += getPlainText( $( "#mailAdvisoryEval" ) );
+		
+		msgText += getPlainText( $( "#mailFinal" ) );
+		msgText += getPlainText( $( "#mailEpilog" ) );
+		
+	} else if( kind == "cancel" ) {
+		
+		$( ".mailOngoing" ).html( " CANCELLATION" );
+		
+		msgText += getPlainText( $( "#mailProlog" ) );
+		
+		if( ! $("#mailWatchList").is(':empty') )
+			msgText += getPlainText( $( "#mailWatchSum" ) );
+		
+		if( ! $("#mailAdvisoryList").is(':empty') )
+			msgText += getPlainText( $( "#mailAdvisorySum" ) );
+		
+		if( ! $("#mailInfoList").is(':empty') )
+			msgText += getPlainText( $( "#mailInfoSum" ) );
+		
+		msgText += getPlainText( $( "#mailAdvice" ) );
+		msgText += getPlainText( $( "#mailEqParams" ) );
+		
+		if( ! $("#mailWatchList").is(':empty') )
+			msgText += getPlainText( $( "#mailWatchEval" ) );
+		
+		if( ! $("#mailAdvisoryList").is(':empty') )
+			msgText += getPlainText( $( "#mailAdvisoryEval" ) );
+		
+		if( ! $("#mailInfoList").is(':empty') )
+			msgText += getPlainText( $( "#mailInfoEval" ) );
+		
+		msgText += getPlainText( $( "#mailFinal" ) );
+		msgText += getPlainText( $( "#mailEpilog" ) );
+	}
+		
+	/* reset height to 0 and make text-area resize with content */
+	$( "#mailText" ).outerHeight( 0 );
+	$( "#mailText" ).val( msgText );
+	
+	/* set height of text area according to content height */
+	dialogOnDisplay();
+}
+
+function withPadding( text, len, char ) {
+	
+	if( len - text.length < 0 )
+		return text;
+		
+	return text + new Array( len - text.length + 1 ).join( char );
+}
+
+function printRegionList( list, span ) {
+			
+	span.html("");
+	
+	for( var i = 0; i < list.length; i++ ) {
+		span.append( " " + list[i] );
+		if( i < list.length - 1 )
+			span.append( " ..." );
+	}
+	
+}
+
+/* modifies list in place */
+function subtract( list, sub ) {
+	
+	var i = list.length - 1;
+	
+	while( i-- >= 0 ) {
+		for( var j in sub ) {
+		
+			if( list[i] == sub[j] )
+				list.splice( i, 1 );
+		}		
+	}
 }
 
 function sendEmail() {
@@ -1752,16 +2150,27 @@ function sendEmail() {
 	var parent = $( "#mailParent" ).html();
 	var root = $( "#mailEvent" ).html();
 	
-	var text = getPlainText( $( "#mailTemplate" ) );
+	var msgnr = parseInt( $( ".mailNumber" ).html(), 10 ) + 1;
+	
+	var endmsg = $('#btnTextEnd').is(':checked');
+	var cancelmsg = $('#btnTextCancel').is(':checked');
+	
+	if( endmsg || cancelmsg )
+		msgnr = 1;
+		
+	var text = $( "#mailText" ).val();
+	
+	var sent = false;
 		
 	if( intTo != "" ) {
 		// internal message
 		console.log( "Sent internal message!" );
+		sent = true;
 		
 		$.ajax({
 			type: 'POST',
 			url: "msgsrv/intmsg",
-			data: { apiver: 1, to: intTo, subject: subject, text: text, evid: root, parentid: parent }, 
+			data: { apiver: 1, to: intTo, subject: subject, text: text, evid: root, parentid: parent, msgnr: msgnr }, 
 			dataType: 'json',
 			success: function( result ) {
 				status = result.status;
@@ -1776,14 +2185,15 @@ function sendEmail() {
 		});
 	}
 	
-	if( to != "" ) {
+	if( to != "" || cc != "" ) {
 		// email
 		console.log( "Sent email!" );
+		sent = true;
 		
 		$.ajax({
 			type: 'POST',
 			url: "msgsrv/mail",
-			data: { apiver: 1, to: to, cc: cc, subject: subject, text: text, evid: root, parentid: parent }, 
+			data: { apiver: 1, to: to, cc: cc, subject: subject, text: text, evid: root, parentid: parent, msgnr: msgnr }, 
 			dataType: 'json',
 			success: function( result ) {
 				status = result.status;
@@ -1801,11 +2211,12 @@ function sendEmail() {
 	if( faxTo != "" ) {
 		// fax
 		console.log( "Sent fax!" );
+		sent = true;
 		
 		$.ajax({
 			type: 'POST',
 			url: "msgsrv/fax",
-			data: { apiver: 1, to: faxTo, text: text, evid: root, parentid: parent }, 
+			data: { apiver: 1, to: faxTo, text: text, evid: root, parentid: parent, msgnr: msgnr }, 
 			dataType: 'json',
 			success: function( result ) {
 				status = result.status;
@@ -1823,11 +2234,12 @@ function sendEmail() {
 	if( ftpChk == true ) {
 		// ftp
 		console.log( "Published on FTP-Server!" );
+		sent = true;
 		
 		$.ajax({
 			type: 'POST',
 			url: "msgsrv/ftp",
-			data: { apiver: 1, text: text, evid: root, parentid: parent }, 
+			data: { apiver: 1, text: text, evid: root, parentid: parent, msgnr: msgnr }, 
 			dataType: 'json',
 			success: function( result ) {
 				status = result.status;
@@ -1845,6 +2257,7 @@ function sendEmail() {
 	if( smsTo != "" ) {
 		// sms
 		console.log( "Sent sms!" );
+		sent = true;
 		
 		$.ajax({
 			type: 'POST',
@@ -1864,18 +2277,33 @@ function sendEmail() {
 		});
 	}
 	
-	$( "#tabMessages a" ).click();
+	if( sent == true ) {
+		
+		$( "#tabMessages a" ).click();
+		$( '#EmailDia' ).modal('hide');
+		
+	} else {
+		
+		options = { content: "Please specify at least one receiver and click again!", title:"Info", trigger: 'manual', placement: 'top' }; 
+		$( "#mailBtnSend" ).popover(options);
+		$( "#mailBtnSend" ).popover('show');
+		//$( ".popover-title" ).append('<button type="button" class="close" aria-hidden="true">&times;</button>');
+		setTimeout( function() { $( "#mailBtnSend" ).popover('hide'); }, 3000);
+	}
 }
 
 function getPlainText( span ) {
 	
-	var lines = span.text().split("\n");
+	/* get plain text without html markups - remove leading and trailing newlines */
+	var plain = span.text().replace(/^\s+|\s+$/g, '');
+	var lines = plain.split("\n");
 	var text = "";
 	
+	/* remove leading and trailing spaces */
 	for( var i = 0; i < lines.length; i++ )
 		text += $.trim( lines[i] ) + "\n";
 	
-	return text;
+	return text + "\n";
 }
 
 function msgOnClick() {
@@ -1904,6 +2332,7 @@ function markMsgAsRead( msg ) {
 				msg.ReadTime = result.readtime;
 			
 			showEntries( messages );
+			showEntries( timeline );
 		},
 		error: function() {
 			console.log( "#error" );
@@ -1928,6 +2357,7 @@ function markMsgAsDisplayed( msg ) {
 				msg.MapDisplayTime = result.mapdisplaytime;
 			
 			showEntries( messages );
+			showEntries( timeline );
 		},
 		error: function() {
 			console.log( "#error" );
@@ -1970,9 +2400,7 @@ function tabChanged( args ) {
 	var tab = args.data.tab;
 			
 	curtab = "#" + $(this).attr('id');
-	
-	console.log( curtab );
-		
+			
 	if( tab == "recent" ) {
 		
 		curlist = eqlist;
@@ -2191,6 +2619,8 @@ function searchEvents() {
 	
 	searchId = $( '#inSearch' ).val();
 	
+	deselect();
+	removeMarker( $('#timeline-data') );
 	timeline.reset();
 	
 	$.ajax({
@@ -2201,9 +2631,12 @@ function searchEvents() {
 		success: function( result ) {
 								
 			for ( var i = result.length -1; i >= 0; i-- ) {
-				
+								
 				if( result[i].kind == "msg" )
 					result[i]._id = result[i]['Message-ID'];
+				
+				if( result[i]['Dir'] == "in" )
+					result[i]._id += "_in";
 					
 				var entry = entries.getOrInsert( result[i] );
 				timeline.push( entry );
@@ -2241,35 +2674,59 @@ function lnkIdOnClick( args ) {
 function showProp() {
 	
 	var prop = curuser.properties;
-	var fax = checkPerm( "fax" );
-	var ftp = checkPerm( "ftp" );
-	var sms = checkPerm( "sms" );
+	var perm = curuser.permissions;
 		
 	/* clear all input fields to avoid displaying old data from another user! */
 	$( '#PropDia :input' ).val( "" );
 	
-	/* hide all groups first */
-	$( '#PropDia .group' ).css( "display", "none" );
-	
-	if( fax )
-		$( '#propGrpFax' ).css( "display", "block" );
-	
-	if( ftp )
-		$( '#propGrpFtp' ).css( "display", "block" );
-	
-	if( sms )
-		$( '#propGrpSms' ).css( "display", "block" );
-		
 	$( '#propUser' ).html( curuser.username );
-	$( '#propMail' ).html( curuser.username );
+	
+	if( checkPermsAny( "fax", "ftp", "sms" ) ) {
+	
+		/* hide all groups first */
+		$( '#PropDia .group' ).css( "display", "none" );
 		
-	if( prop ) {
-		$( '#propFaxUser' ).val( prop.InterfaxUsername );
-		$( '#propFaxPwd' ).val( prop.InterfaxPassword );
-		$( '#propFTPUser' ).val( prop.FtpUser );
-		$( '#propFTPPwd' ).val( prop.FtpPassword );
-		$( '#propFTPHost' ).val( prop.FtpHost );
-		$( '#propFTPPath' ).val( prop.FtpPath );
+		if( perm.fax && perm.fax == true )
+			$( '#propGrpFax' ).css( "display", "block" );
+		
+		if( perm.ftp && perm.ftp == true )
+			$( '#propGrpFtp' ).css( "display", "block" );
+		
+		if( perm.sms && perm.sms == true )
+			$( '#propGrpSms' ).css( "display", "block" );
+			
+		if( prop ) {
+			$( '#propFaxUser' ).val( prop.InterfaxUsername );
+			$( '#propFaxPwd' ).val( prop.InterfaxPassword );
+			$( '#propFTPUser' ).val( prop.FtpUser );
+			$( '#propFTPPwd' ).val( prop.FtpPassword );
+			$( '#propFTPHost' ).val( prop.FtpHost );
+			$( '#propFTPPath' ).val( prop.FtpPath );
+			$( '#propSmsSID' ).val( prop.TwilioSID );
+			$( '#propSmsToken' ).val( prop.TwilioToken );
+			$( '#propSmsFrom' ).val( prop.TwilioFrom );
+		}
+	
+		$( '#propTabMsgs' ).css( "display", "block" );
+		
+	} else {
+		
+		$( '#propTabMsgs' ).css( "display", "none" );
+	}
+	
+	if( checkPerm("manage") ) {
+		
+		var inst = curuser.inst;
+		
+		if( inst ) {
+			$( '#propInstName' ).val( inst.descr );
+			$( '#propInstMsgName' ).val(  inst.msg_name);
+		}
+		
+		$( '#propTabInst' ).css( "display", "block" );
+		
+	} else {
+		$( '#propTabInst' ).css( "display", "none" );
 	}
 	
 	$( '#PropDia' ).modal('show');
@@ -2325,14 +2782,33 @@ function configMailDialog() {
 		$( '#msgSMS' ).css( "display", "block" );
 			
 	// set default behavior of mail dialog
-	$( '#EmailDia .lnkGroup' ).click();
+	$( '.lnkGroup' ).click();
+	$( '#msgMail .lnkGroup' ).click();
 	$( '#msgText .lnkGroup' ).click();
 }
 
+/* this functions takes a variable number of arguments */
+function checkPermsAny() {
+	
+	var result = false;
+	
+	for( var i = 0; i < arguments.length; i++ ) {
+		result = result || checkPerm( arguments[i] );
+	}
+	
+	return result;
+}
+
 function checkPerm( type ) {
+		
+	if( ! curuser )
+		return false;
 	
 	var perm = curuser.permissions;
 	var prop = curuser.properties;
+	
+	if( ! perm )
+		return false;
 	
 	if( type == "fax" )
 		return perm.fax && prop
@@ -2352,7 +2828,7 @@ function checkPerm( type ) {
 						&& checkProp( prop.TwilioToken )
 						&& checkProp( prop.TwilioFrom );
 	
-	return false;
+	return perm[ type ];
 }
 
 function checkProp( prop ) {
@@ -2364,18 +2840,36 @@ function propSubmit() {
 	var curpwd = $( '#propCurPwd' ).val();
 	var newpwd = $( '#propNewPwd' ).val();
 	var confpwd = $( '#propConfPwd' ).val();
-	var faxuser = $( '#propFaxUser' ).val();
-	var faxpass = $( '#propFaxPwd' ).val();
-	var ftpuser = $( '#propFTPUser' ).val();
-	var ftppass = $( '#propFTPPwd' ).val();
-	var ftphost = $( '#propFTPHost' ).val();
-	var ftppath = $( '#propFTPPath' ).val();
-		
+	
+	var prop = { "InterfaxUsername": $( '#propFaxUser' ).val(),
+				 "InterfaxPassword": $( '#propFaxPwd' ).val(),
+				 "FtpUser": $( '#propFTPUser' ).val(),
+				 "FtpPassword": $( '#propFTPPwd' ).val(),
+				 "FtpHost": $( '#propFTPHost' ).val(),
+				 "FtpPath": $( '#propFTPPath' ).val(),
+				 "TwilioSID": $( '#propSmsSID' ).val(),
+				 "TwilioToken": $( '#propSmsToken' ).val(),
+				 "TwilioFrom": $( '#propSmsFrom' ).val()
+				};
+
+	var inst = { "descr": $( '#propInstName' ).val(),
+			 	 "msg_name": $( '#propInstMsgName' ).val(),
+		       };
+				
 	$( '#propStatus' ).html("");
 	
 	if( newpwd != confpwd ) {
 		$( '#propStatus' ).html("Error: The given passwords differ.");
 		return;
+	}
+	
+	var data = { prop: JSON.stringify( prop ),
+				 inst: JSON.stringify( inst )
+	   			};
+	
+	if( newpwd != "" || curpwd != "" ) {
+		data.curpwd = curpwd;
+		data.newpwd = newpwd;
 	}
 		
 	$( '#propBtnSubmit' ).html( '<i class="fa fa-spinner fa-spin fa-lg"></i><span class="pad-left">Save</span>' );
@@ -2383,7 +2877,7 @@ function propSubmit() {
 	$.ajax({
 		type: 'POST',
 		url: "srv/changeProp",
-		data: { curpwd: curpwd, newpwd: newpwd, faxuser: faxuser, faxpass: faxpass, ftpuser: ftpuser, ftppass: ftppass, ftphost: ftphost, ftppath: ftppath },
+		data: data,
 		dataType: 'json',
 		success: function( result ) {
 
@@ -2461,16 +2955,30 @@ function showMsg() {
 
 function getDateString( date ) {
 	
-	year = date.getUTCFullYear();
-	month = date.getUTCMonth() + 1;
-	day = date.getUTCDate();
-	hour = date.getUTCHours();
-	minutes = date.getUTCMinutes();
+	var year = date.getUTCFullYear();
+	var month = date.getUTCMonth() + 1;
+	var day = date.getUTCDate();
+	var hour = date.getUTCHours();
+	var minutes = date.getUTCMinutes();
 	
-	datestr = year + "/" + zeroPad( month, 2 ) + "/" + zeroPad( day, 2 );
-	timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 );
+	var datestr = year + "/" + zeroPad( month, 2 ) + "/" + zeroPad( day, 2 );
+	var timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 );
 	
 	return datestr + " &#183; " + timestr;
+}
+
+function toMsgDateFormat( date ) {
+	
+	var months = [ "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC" ];
+	var HH = zeroPad( date.getUTCHours(), 2);
+	var mm = zeroPad( date.getUTCMinutes(), 2);
+	var dd = zeroPad( date.getUTCDate(), 2 );
+	var MMM = months[ date.getUTCMonth() ];
+	var yyyy = date.getUTCFullYear();
+	
+	var datestr = HH + "" + mm + "Z" + " " + dd + " " + MMM + " " + yyyy;
+	
+	return datestr;
 }
 
 // from the MDN
@@ -2480,10 +2988,24 @@ function getPageVar( sVar ) {
 
 function checkStaticLink() {
 	
-	var lnkId = getPageVar( "static" );
+	var lnkId = getPageVar( "share" );
 	
 	if( ! lnkId || lnkId == "" )
 		return;
+	
+	toggleCloudButton();
+	
+	share = true;
+	
+	showSplash( false );
+	
+	$( '.tab-private' ).css( "display", "none" );
+	$( '#tabRecent' ).css( "display", "none" );
+	
+	$( '#tabStatic' ).css( "display", "inline" );
+	$( '#tabStatic a' ).click();
+	
+	onResize();
 		
 	$.ajax({
 		type: 'POST',
@@ -2493,17 +3015,15 @@ function checkStaticLink() {
 		success: function( res ) {
 
 			if( res.status == "success" ) {
+				deselect();
 				var entry = entries.getOrInsert( res.eq );
 				entry.extern = true;
 				shared.push( entry );
 				showEntries( shared );
 								
 				visualize( res.eq._id );
-				map.panTo( { lat: Number(res.pos.lat), lng: Number(res.pos.lon) } );
-				map.setZoom( res.pos.zoom );
-				
-				$( '#tabStatic' ).css( "display", "inline" );
-				$( '#tabStatic a' ).click();
+				//map.panTo( { lat: Number(res.pos.lat), lng: Number(res.pos.lon) } );
+				//map.setZoom( res.pos.zoom );
 			}
 		},
 		error: function() {
@@ -2542,7 +3062,8 @@ function createStaticLink( entry ) {
 
 			if( result.status == "success" ) {
 				var lnkKey =  result.key;				
-				var link = window.location.origin + window.location.pathname + "?static=" + lnkKey;
+				//var link = window.location.origin + window.location.pathname + "?share=" + lnkKey;
+				var link = getURL() + "?share=" + lnkKey;
 				var link_enc = encodeURIComponent( link );
 				$( '#sharedLnk' ).html( link );
 				$( "#lnkTwitter" ).attr("href", "http://twitter.com/home?status=" + link_enc );
@@ -2552,16 +3073,141 @@ function createStaticLink( entry ) {
 			}
 		},
 		error: function() {
-			console.log( "error" );
+			console.log( "#error" );
 		},
 		complete: function() {
 		}
 	});
 }
 
+function toggleCloudButton() {
+	
+	if( loggedIn ) {
+		
+		$( '#btnDeselect span' ).removeClass( 'glyphicon-globe' );
+		$( '#btnDeselect span' ).addClass( 'glyphicon-cloud-upload' );
+		
+		$( '#btnDeselect' ).unbind('click');
+		$( '#btnDeselect' ).click( reload );
+		$( '#btnDeselect' ).data('bs.tooltip').options.title = "Back to Cloud";
+		
+	} else {
+		
+		$( '#btnDeselect span' ).addClass( 'glyphicon-globe' );
+		$( '#btnDeselect span' ).removeClass( 'glyphicon-cloud-upload' );
+		
+		$( '#btnDeselect' ).unbind('click');
+		$( '#btnDeselect' ).click( deselect );
+		$( '#btnDeselect' ).data('bs.tooltip').options.title = "Deselect and show map only";
+	}
+}
+
+function dialogOnDisplay() {
+	
+	/* we must make the textarea visible first before the height can be read */
+	var display = $( '#msgText .grpContent' ).css( "display" );
+	$( '#msgText .grpContent' ).css( "display", "inline" );
+	
+	var h = $( "#mailText" )[0].scrollHeight;
+    $( "#mailText" ).outerHeight( h );
+    
+    $( '#msgText .grpContent' ).css( "display", display );
+    
+    /* we must make the textarea visible first before the height can be read */
+    var hidden = $( '#msgSMS .grpContent' ).css( "display" ) == "none";
+    if( hidden )
+    	$( '#msgSMS .lnkGroup' ).click();
+    
+    h = $( "#smsText" )[0].scrollHeight;
+    $( "#smsText" ).outerHeight( h );
+    
+    if( hidden )
+    	$( '#msgSMS .lnkGroup' ).click();
+	
+}
+
 function onResize() {
 	
+	/* check if fullscreen */
+	if( window.screenTop == 0 && window.screenY == 0 )
+		return;
+	
 	/* adjust anything that was dynamically sized */
-	var h = $( '.main-tabs' ).css( "height" );
+	var h = $( '.tabs-head' ).css( "height" );
 	$( '.tab-pane' ).css( "top", h );
+	
+	var width = $( "#splash-video" ).width();
+	var height = width * 0.5625;
+	
+	//$( "#youtube" ).attr( "width", width );
+	//$( "#youtube" ).attr( "height", height );
+	
+	/* force a reload of the iframe that displays the youtube video */
+	//$( "#youtube" )[0].src = $( "#youtube" )[0].src;
+	
+	$( "#splash-login" ).height( height );
+	$( "#splash" ).css( "min-height", height );
+	
+	var iframe = '<iframe id="youtube" width="' + width + '" height="' + height + '" src="//www.youtube.com/embed/6xFJZzWNi7o?rel=0" frameborder="0" allowfullscreen></iframe>';
+	
+	$( "#splash-video" ).html( iframe );
+	
+	google.maps.event.trigger( map, 'resize' );
+}
+
+function getURL() {
+	
+	var url;
+	
+	// remove trailing '#' first
+	url = window.location.href.replace(/\#$/, "");
+	url = url.replace(/\?.*/, "");
+	
+	return url;
+}
+
+function reload() {
+	window.location.href = getURL();
+}
+
+/* list must be sorted */
+function getUniqueList( list ) {
+	
+	if( list.length == 0 )
+		return list;
+	
+	var sort = list.sort();
+	var unique = [sort[0]];
+	
+    for( var i = 1; i < sort.length; i++ ) {
+        if( sort[i-1] !== sort[i] ) {
+        	unique.push( sort[i] );
+        }
+    }
+    	
+    return unique;
+}
+
+function showSplash( show ) {
+		
+	$( "#splash" ).css( "display", show ? "block" : "none" );
+	$( ".mainview" ).css( "display", show ? "none" : "block" );
+	
+	if( show == true ) {
+		
+		if( $.cookie('username') ) {
+			
+			$('#splashUser').val( $.cookie('username') );
+			$('#splashPass').focus();
+			
+		} else {
+			
+			$('#splashUser').focus();
+		}
+		
+	}
+	
+	onResize();
+	
+	map.setCenter( new google.maps.LatLng(0,0) );
 }

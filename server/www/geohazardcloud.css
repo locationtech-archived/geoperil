@@ -9,14 +9,20 @@ html, body {
 
 .mainview {
 	height: 90%;
+	display: none;
 }
 
 .mainview .tabs {
 	background-color: #fafafa;
 }
 
+.mainview .tabs-head {
+	border-bottom: 1px solid #dddddd;
+}
+	
 .mainview .nav-tabs {
 	position: relative;
+	border-bottom: 0px;
 }
 
 .mainview .form-horizontal {
@@ -125,10 +131,10 @@ html, body {
 	display: none;
 }
 
-#tabDeselect {
-	position: absolute;
-	right: 0.5em;
-	bottom: 0.5em;
+#btnDeselect {
+	float: right;
+	margin-right: 0.5em;
+	margin-top: 0.5em;
 }
 
 #custom {
@@ -194,14 +200,15 @@ html, body {
 	margin-right: auto;
 }
 
-.entry .row-marker {
-	padding-top: 2em;
+.entry .row-marker  {
+	padding-top: 0.5em;
 }
 
 .entry .beach {
 	display: block;
 	margin-left: auto;
 	margin-right: auto;
+	padding-top: 0.1em;
 }
 
 .entry .mag {
@@ -211,14 +218,10 @@ html, body {
 
 .entry .progress {
 	float: left;
-	height:0.9em;
-	margin-top:0.2em;
-	margin-bottom:0em;
-	width: 80%;
-}
-
-.entry .progress-bar {
-	width: 60%;
+	height: 0.9em;
+	margin-top: 0.2em;
+	margin-bottom: 0em;
+	width: 75%;
 }
 
 .entry .process {
@@ -226,30 +229,37 @@ html, body {
 }
 
 .entry .lnkEdit {
-	padding-right: 0.1em;
-}
-
-.entry .lnkSend {
-	padding-right: 0.3em;
-}
-
-.entry .lnkLearn {
-	margin-left: 0.8em;
 	padding-right: 0.2em;
 	display: none;
 }
 
-.entry .lnkDelete {
+.entry .lnkSend {
 	padding-right: 0.4em;
 	display: none;
 }
 
+.entry .lnkLearn {
+	padding-right: 0.3em;
+	display: none;
+}
+
+.entry .lnkDelete {
+	margin-right: 0.7em;
+	display: none;
+}
+
 .entry .lnkMsg {
-	margin-right: 0.4em;
+	margin-right: 0.3em;
 }
 
 .entry .lnkStatic {
-	margin-right: 1em;
+	margin-right: 0.2em;
+	display: none;
+}
+
+.entry .lnkTimeline {
+	margin-right: 0.4em;
+	display: none;
 }
 
 .entry .chk_grid {
@@ -327,10 +337,6 @@ html, body {
 	/*color: red;*/
 }
 
-.parentId, .rootId {
-	/*display: none;*/
-}
-
 .row-msgIcon {
 	margin: 0px;
 	height: 100%;
@@ -341,12 +347,9 @@ html, body {
 	left: 0px;
 	right: 0px;
 	margin: auto;
-	
 	font-size: 1.5em;
 	height: 1.5em;
-	/*top: 0px;
-	bottom: 0px;*/
-	margin-top: 1.5em;
+	margin-top: 0em;
 }
 
 .msgType {
@@ -356,18 +359,7 @@ html, body {
 	font-size: 1em;
 	font-weight: bold;
 	text-align: center;
-	margin-top: 5em;
-}
-
-.entry-left {
-	position: absolute;
-	top: 0px;
-	bottom: 0px;
-	width: 16.6667%;
-}
-
-.entry-right {
-	margin-left: 16.6667%;
+	margin-top: 2em;
 }
 
 .entry {
@@ -397,11 +389,12 @@ html, body {
 	width: 10%;
 }
 
-#inRootId, #inParentId {
+#inRootId, #inParentId, #inDate {
 	width: 50%;
+	background-color: #f8f8f8;
 }
 
-#btnDelRoot, #btnDelParent {
+#btnDelRoot, #btnDelParent, #btnDelDate {
 	width: 100%;
 }
 
@@ -415,7 +408,7 @@ html, body {
 
 .mail-dialog {
 	height: 90%;
-	width: 50%;
+	width: 55%;
 }
 
 .mail-content {
@@ -497,5 +490,124 @@ pre {
 }
 
 .pad-top {
-	margin-top: 1.5em;
+	padding-top: 1.5em;
+}
+
+.pad-top-1 {
+	padding-top: 1em;
+}
+
+.msg-col-left {
+	width: auto;
+}
+
+.msg-col-right {
+	width: auto;
+}
+
+#mailFrom, #mailEvent, #mailParent {
+	background-color: #f8f8f8;	
+}
+
+#btnGrpText {
+	width: 100%;
+	padding: 1em 0.5em 0em 0.5em;
+}
+
+#btnGrpText .btn {
+	width: 33.33%;
+}
+
+#splash {
+	position: relative;
+	height: 90%;
+	background-image: linear-gradient(#00579b 0%, #428bca 100%);
+	display: none;
+}
+
+#splash-content {
+	position: absolute;
+	top: 5%;
+	left: 5%;
+	width: 90%;
+	height: 90%;
+}
+
+#splash-video {
+	position: absolute;
+	left: 0%;
+	width: 66%;
+	height: 100%;
+}
+
+#splash-login {
+	position: absolute;
+	left: 68%;
+	width: 32%;
+	background-color: #f8f8f8;
+	top: 0px;
+	bottom: 0px;
+	margin: auto;
+    overflow-y: auto;
+	box-shadow: 0px 0px 5px 5px black;
+}
+
+#youtube {
+	position: absolute;
+	top: 0px;
+	bottom: 0px;
+	margin: auto;
+	box-shadow: 0px 0px 5px 5px black;
+}
+
+.splashForm {
+	/* position: relative; */
+	margin-left: 10%;
+	margin-right: 10%;
+	width: 80%;
+}
+
+#splashIcon i {
+	width: 100%;
+	text-align: center;
+	font-size: 500%;
+	padding-top: 5%;
+	padding-bottom: 5%;
+}
+
+#splashSignIn {
+	margin-top: 1em;
+}
+
+#splash-login h4 {
+	text-align: center;
+	padding-top: 0.5em;
+}
+
+#splash-login h3 {
+	text-align: center;
+}
+
+#splashStatus {
+	color: red;
+	padding-bottom: 0.5em;
+	text-align: center;
+}
+
+#splash-table {
+	height: 100%;
+	width: 100%;
+	display: table;
+}
+
+#splash-lnkAcc {
+	width: 100%;
+	text-align: center;	
+    vertical-align : bottom;
+    height : 1px;
+    display : table-row;
+}
+
+#lnkUser {
+	display: none;
 }
