@@ -151,7 +151,8 @@ class WebGuiSrv(Base):
                 stations = self._db["stations"].find({"inst":inst})
             for s in stations:
                 res.append(s)
-            return jssuccess(stations=res)
+            isotime = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            return jssuccess(stations=res, serverTime=isotime)
         return jsdeny()
 
     @cherrypy.expose
