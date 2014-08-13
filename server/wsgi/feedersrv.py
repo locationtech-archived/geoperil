@@ -30,7 +30,10 @@ class FeederSrv(Base):
                 data["value"] = value
                 data["station"] = station
                 data["inst"] = inst["name"]
-                self._db["sealeveldata"].insert(data)
+                if "evid" in data:
+                    self._db["simsealeveldata"].insert(data)
+                else:
+                    self._db["sealeveldata"].insert(data)
                 return jssuccess()
             return jsfail(errors = ["There is no stations named %s." % station])
         return jsdeny()
@@ -48,7 +51,6 @@ class FeederSrv(Base):
         return jsdeny()
         
     def feedsealevel_api2_json(self, inst, json):
-        
         pass
 
     def feedsealevel_api2_xml(self, inst, xml):

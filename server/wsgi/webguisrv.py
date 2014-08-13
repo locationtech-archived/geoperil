@@ -182,15 +182,36 @@ class WebGuiSrv(Base):
         user = self.getUser()
         if user is not None and user["permissions"].get("chart",False):
             if inst is None:
-                inst = user["inst"]
+                inst = self._db["institutions"].find_one({"_id":user["inst"]})["name"]
             start = calendar.timegm(datetime.datetime.strptime(start,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
             if end is not None:
                 end = calendar.timegm(datetime.datetime.strptime(end,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
             else:
                 end = time.mktime(datetime.datetime.now().timetuple())
             request = {"inst":inst, "station":station, "timestamp": {"$gt":start, "$lte":end}}
-            print(request)
+#            print(request)
             values = self._db["sealeveldata"].find(request)
+            res = {"data":[],"last":None}
+            for v in values:
+                if res["last"] is None or res["last"] < v["timestamp"]:
+                    res["last"] = v["timestamp"]
+                res["data"].append(( datetime.datetime.utcfromtimestamp(v["timestamp"]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                                     v["value"] ))
+            return jssuccess(station = station, **res)
+        return jsdeny()
+
+    @cherrypy.expose
+    def getsimdata(self, evid, station, start, end=None):
+        user = self.getUser()
+        if user is not None and user["permissions"].get("chart",False):
+            start = calendar.timegm(datetime.datetime.strptime(start,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
+            if end is not None:
+                end = calendar.timegm(datetime.datetime.strptime(end,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
+            else:
+                end = time.mktime(datetime.datetime.now().timetuple())
+            request = {"evid":evid, "station":station, "timestamp": {"$gt":start, "$lte":end}}
+#            print(request)
+            values = self._db["simsealeveldata"].find(request)
             res = {"data":[],"last":None}
             for v in values:
                 if res["last"] is None or res["last"] < v["timestamp"]:
