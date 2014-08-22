@@ -201,9 +201,10 @@ class WebGuiSrv(Base):
         return jsdeny()
 
     @cherrypy.expose
-    def getsimdata(self, evid, station, start, end=None):
+    def getsimdata(self, evid, station, start, end=None, ff=1):
         user = self.getUser()
         if user is not None and user["permissions"].get("chart",False):
+            ff = max(int(ff),1)
             start = calendar.timegm(datetime.datetime.strptime(start,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
             if end is not None:
                 end = calendar.timegm(datetime.datetime.strptime(end,"%Y-%m-%dT%H:%M:%S.%fZ").timetuple())
@@ -214,6 +215,10 @@ class WebGuiSrv(Base):
             values = self._db["simsealeveldata"].find(request)
             res = {"data":[],"last":None}
             for v in values:
+                if ff>1 and "reltime" in v:
+                    newreltime = v["reltime"] // ff
+                    v["timestamp"] = v["timestamp"] - v["reltime"] + newreltime
+                    v["reltime"] = newreltime
                 if res["last"] is None or res["last"] < v["timestamp"]:
                     res["last"] = v["timestamp"]
                 res["data"].append(( datetime.datetime.utcfromtimestamp(v["timestamp"]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
