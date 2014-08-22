@@ -9,6 +9,24 @@ class FeederSrv(Base):
         return "Hello World!" + str(self.getUser())
 
     @cherrypy.expose
+    def feedstation(self, apiver, inst, secret, station):
+        if apiver == "1":
+            inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
+            if inst is not None:
+                station = json.loads(station)
+                if station is not None and "name" in station:
+                    s = self._db["stations"].find_one({"inst":inst["name"], "name":station["name"]})
+                    station["inst"] = inst["name"]
+                    if s is None:
+                        self._db["stations"].insert(station)
+                    else:
+                        self._db["stations"].update({"inst":inst["name"], "name":station["name"]},{"$set":station})
+                    return jssuccess()
+                return jsfail(errors = ["The station needs a name."])
+            return jsdeny()
+        return jsfail(errors = ["API version not supported."])
+
+    @cherrypy.expose
     def feedsealevel(self, apiver, **data):
         if apiver == "1":
             params = ["inst", "secret", "timestamp","value","station"]

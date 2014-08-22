@@ -159,20 +159,22 @@ class WebGuiSrv(Base):
     @cherrypy.tools.allow(methods=['POST'])
     def savestation(self, name=None, station=None):
         user = self.getUser()
+        inst = self._db["institutions"].find_one({"_id":user["inst"]})["name"]
         if user is not None and user["permissions"].get("manage",False):
             if station is not None and "name" in station:
-                nostation = self._db["stations"].find_one({"inst":user["inst"], "name":station["name"]})
-                if nostation is None:
-                    station["inst"] = user["inst"]
-                    if name is None:
+                station["inst"] = inst
+                if name is None:
+                    nostation = self._db["stations"].find_one({"inst":inst, "name":station["name"]})
+                    if nostation is None:
                         self._db["stations"].insert(station)
                     else:
-                        self._db["stations"].update({"inst":user["inst"], "name":name},{"$set":station})
-                    station = self._db["stations"].find_one({"inst":user["inst"], "name":station["name"]})
-                    return jssuccess(station = station)
-                return jsfail(errors = ["Station named %s already exists." % station["name"]])
+                        return jsfail(errors = ["Station named %s already exists." % station["name"]])
+                else:
+                    self._db["stations"].update({"inst":inst, "name":name},{"$set":station})
+                station = self._db["stations"].find_one({"inst":inst, "name":station["name"]})
+                return jssuccess(station = station)
             elif station is None and name is not None:
-                self._db["stations"].remove({"inst":user["inst"], "name":name})
+                self._db["stations"].remove({"inst":inst, "name":name})
                 return jssuccess()
             return jsfail(errors = ["Either station or name are required."])
         return jsdeny()
@@ -215,12 +217,12 @@ class WebGuiSrv(Base):
             values = self._db["simsealeveldata"].find(request)
             res = {"data":[],"last":None}
             for v in values:
+                if res["last"] is None or res["last"] < v["timestamp"]:
+                    res["last"] = v["timestamp"]
                 if ff>1 and "reltime" in v:
                     newreltime = v["reltime"] // ff
                     v["timestamp"] = v["timestamp"] - v["reltime"] + newreltime
                     v["reltime"] = newreltime
-                if res["last"] is None or res["last"] < v["timestamp"]:
-                    res["last"] = v["timestamp"]
                 res["data"].append(( datetime.datetime.utcfromtimestamp(v["timestamp"]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                                      v["value"] ))
             return jssuccess(station = station, **res)
