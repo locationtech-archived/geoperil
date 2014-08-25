@@ -1,4 +1,5 @@
 from base import *
+jsonlib = json
 
 logger = logging.getLogger("MsgSrv")
 
@@ -56,25 +57,44 @@ class FeederSrv(Base):
             return jsfail(errors = ["There is no stations named %s." % station])
         return jsdeny()
 
-    def feedsealevel_api2(self, inst, secret, json=None, xml=None, text=None):
+    def feedsealevel_api2(self, inst, secret, json=None, xml=None, text=None, **data):
         inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
         if inst is not None:
             if json is not None:
-                return self.feedsealevel_api2_json(inst, json)
+                return self.feedsealevel_api2_json(inst, json, **data)
             elif xml is not None:
-                return self.feedsealevel_api2_xml(inst, xml)
+                return self.feedsealevel_api2_xml(inst, xml, **data)
             elif text is not None:
-                return self.feedsealevel_api2_text(inst, text)
+                return self.feedsealevel_api2_text(inst, text, **data)
             return jsfail(errors = ["One of the following Parameters is mandatory: json, xml, text"])
         return jsdeny()
         
-    def feedsealevel_api2_json(self, inst, json):
-        pass
+    def feedsealevel_api2_json(self, inst, json, dataformat="simple", station=None):
+        if dataformat == "simple":
+            if station is not None
+                json = jsonlib.loads(json)
+                vnr = 0
+                verr = 0
+                for v in json:
+                    if "value" in v and "timestamp" in v:
+                        v["value"] = str(v["value"])
+                        v["timestamp"] = int(v["timestamp"])
+                        v["inst"] = inst["name"]
+                        v["station"] = station
+                        self._db["sealeveldata"].insert(v)
+                        vnr += 1
+                    else:
+                        verr += 1
+                return jssuccess(values = vnr, errors = verr)
+            else:
+                return jsfail(errors = ["Parameter station is missing."])
+        return jsfail(errors = ["Dataformat %s not known." % dataformat])
+
 
     def feedsealevel_api2_xml(self, inst, xml):
-        pass
+        return jsfail(errors = ["Not yet implemented."])
 
     def feedsealevel_api2_text(self, inst, text):
-        pass
+        return jsfail(errors = ["Not yet implemented."])
 
 application = startapp( FeederSrv )
