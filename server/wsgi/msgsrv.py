@@ -229,9 +229,10 @@ class MsgSrv(Base):
                     payload = {}
                     payload["Username"] = user["properties"].get("InterfaxUsername","")
                     payload["Password"] = user["properties"].get("InterfaxPassword","")
-                    payload["FileType"] = "TXT"
+                    payload["FileType"] = "HTML"
                     payload["FaxNumber"] = nr
-                    payload["Data"] = text
+                    #payload["Data"] = '<html><body><span style="font-family: monospace; white-space: pre;">' + text + '</span></body></html>'
+                    payload["Data"] = '<html><body><pre style="font-family: monospace; white-space: pre-wrap; word-wrap: break-word;">' + text + '</pre></body></html>'
                     r = requests.post("https://ws.interfax.net/dfs.asmx/SendCharFax", data=payload)
                     e = ElementTree.fromstring(r.text)
                     if int(e.text) >= 0:

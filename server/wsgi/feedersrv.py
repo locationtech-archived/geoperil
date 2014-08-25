@@ -16,12 +16,10 @@ class FeederSrv(Base):
             if inst is not None and inst.get("feedstations",False):
                 station = json.loads(station)
                 if station is not None and "name" in station:
-                    s = self._db["stations"].find_one({"inst":inst["name"], "name":station["name"]})
                     station["inst"] = inst["name"]
-                    if s is None:
+                    res = self._db["stations"].update({"inst":inst["name"], "name":station["name"]},{"$set":station})
+                    if not res["updatedExisting"]:
                         self._db["stations"].insert(station)
-                    else:
-                        print(self._db["stations"].update({"inst":inst["name"], "name":station["name"]},{"$set":station}))
                     return jssuccess()
                 return jsfail(errors = ["The station needs a name."])
             return jsdeny()
@@ -49,10 +47,19 @@ class FeederSrv(Base):
                 data["value"] = value
                 data["station"] = station
                 data["inst"] = inst["name"]
+                update = {
+                    "inst":inst["name"], 
+                    "station":station, 
+                    "timestamp":int(timestamp),
+                    }
                 if "evid" in data:
-                    self._db["simsealeveldata"].insert(data)
+                    res = self._db["simsealeveldata"].update(update,{"$set":data})
+                    if not res["updatedExisting"]:
+                        self._db["simsealeveldata"].insert(data)
                 else:
-                    self._db["sealeveldata"].insert(data)
+                    res = self._db["sealeveldata"].update(update,{"$set":data})
+                    if not res["updatedExisting"]:
+                        self._db["sealeveldata"].insert(data)
                 return jssuccess()
             return jsfail(errors = ["There is no stations named %s." % station])
         return jsdeny()
@@ -71,7 +78,7 @@ class FeederSrv(Base):
         
     def feedsealevel_api2_json(self, inst, json, dataformat="simple", station=None):
         if dataformat == "simple":
-            if station is not None
+            if station is not None:
                 json = jsonlib.loads(json)
                 vnr = 0
                 verr = 0
@@ -81,7 +88,14 @@ class FeederSrv(Base):
                         v["timestamp"] = int(v["timestamp"])
                         v["inst"] = inst["name"]
                         v["station"] = station
-                        self._db["sealeveldata"].insert(v)
+                        update = {
+                            "inst":inst["name"], 
+                            "station":station, 
+                            "timestamp":int(v["timestamp"]),
+                            }
+                        res = self._db["sealeveldata"].update(update,{"$set":data})
+                        if not res["updatedExisting"]:
+                            self._db["sealeveldata"].insert(v)
                         vnr += 1
                     else:
                         verr += 1
