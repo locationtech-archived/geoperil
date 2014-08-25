@@ -13,7 +13,7 @@ class FeederSrv(Base):
     def feedstation(self, apiver, inst, secret, station):
         if apiver == "1":
             inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
-            if inst is not None:
+            if inst is not None and inst.get("feedstations",False):
                 station = json.loads(station)
                 if station is not None and "name" in station:
                     s = self._db["stations"].find_one({"inst":inst["name"], "name":station["name"]})
@@ -21,7 +21,7 @@ class FeederSrv(Base):
                     if s is None:
                         self._db["stations"].insert(station)
                     else:
-                        self._db["stations"].update({"inst":inst["name"], "name":station["name"]},{"$set":station})
+                        print(self._db["stations"].update({"inst":inst["name"], "name":station["name"]},{"$set":station}))
                     return jssuccess()
                 return jsfail(errors = ["The station needs a name."])
             return jsdeny()
