@@ -88,6 +88,57 @@ function CustomList( widget, sort ) {
    };
 }
 
+function Earthquake( meta ) {
+	
+	this.stations = null;
+	
+	/* add all attributes of the passed meta object to this object - be careful to not override existing fields */
+	$.extend( this, meta );
+	
+	this.loadStations = function() {
+				
+		/* nothing to do if stations were already loaded */
+		if( this.stations != null ) {
+			this.showStations();
+			return;
+		}
+				
+		/* get list of stations from server - could be restricted to effected stations */
+		getStationList( this.loadStationData.bind( this ) );
+	};
+	
+	/* will be called asynchronously as soon as the server request, that returns the station list, has completed */
+	this.loadStationData = function( result ) {
+		
+		if( ! result )
+			return;
+		
+		var lat = this.prop.latitude;
+		var lon = this.prop.longitude;
+		
+		/* create new container that holds all the stations */
+		this.stations = new Container( 'name', sort_dist.bind( this, lat, lon ) );
+		
+		/* instantiate each station accordingly and add it to the data container */
+		var list = result.stations;
+		for( var i = 0; i < list.length; i++ ) {
+											
+			var stat = new Station( list[i], this );
+			stat.load();
+			this.stations.insert( stat );
+		}
+
+		this.showStations();
+	};
+	
+	this.showStations = function() {
+		/* TODO: this is really not the right place here, but how to make it cleaner? */
+		stationView.setData( this.stations );
+		stationView.enableLines( $( '#stat-chk' ).is(':checked') );
+		stationSymbols.setData( this.stations );
+	};
+}
+
 function EntryMap() {
 	
 	this.map = {};
@@ -101,7 +152,7 @@ function EntryMap() {
 		if( this.map[ entry['_id'] ] )
 			console.log("Warning: entry with id " + entry['_id'] + " already in map.");
 		
-		this.map[ entry['_id'] ] = entry;
+		this.map[ entry['_id'] ] = new Earthquake( entry );
 	};
 	
 	this.get = function( id ) {
@@ -113,19 +164,1148 @@ function EntryMap() {
 		var result = this.map[ entry['_id'] ];
 				
 		if( ! result ) {
-			this.map[ entry['_id'] ] = entry;
-			result = entry;
+			result = this.map[ entry['_id'] ] = new Earthquake( entry );
 			
-			entry['arrT'] = 0;
-			entry['polygons'] = {};
-			entry['rectangle'] = null;
-			entry['show_grid'] = false;
-			entry['pois'] = null;
-			entry['heights'] = {};
+			result['arrT'] = 0;
+			result['polygons'] = {};
+			result['rectangle'] = null;
+			result['show_grid'] = false;
+			result['pois'] = null;
+			result['heights'] = {};
 		}
 		
 		return result;
 	};
+}
+
+function Container( key, sortFun ) {
+	
+	this.map = {};
+	this.list = [];
+	this.sortFun = sortFun;
+	
+	this.length = function() {
+		return this.list.length;
+	};
+	
+	this.get = function( i ) {
+		return this.list[i];
+	};
+	
+	this.insert = function( item ) {
+		
+		this.map[ item[ key ] ] = item;
+		
+		for( var i = 0; i < this.list.length; i++ ) {
+		   
+		   if( this.sortFun( item, this.list[i] ) == -1 ) {
+			   
+			   this.list.splice( i, 0, item );
+			   return;
+		   }
+	   }
+	   
+	   this.list.push( item );
+	};
+	
+	this.sort = function() {
+		
+		this.list.sort( this.sortFun );
+	};
+	
+	this.setSortFun = function( sortFun ) {
+		
+		this.sortFun = sortFun;
+	};
+	
+	this.print = function() {
+		
+		for( var i = 0; i < this.list.length; i++ ) {
+			
+			console.log( this.list[i] );
+		}
+	};
+}
+
+function Station( meta, eq ) {
+		
+	/* these are constant fields that should not change during the lifetime of this object */
+	this.eq = eq;
+	this.range = 0; 
+	this.startTime = null;
+	this.endTime = null;
+		
+	/* one table that holds the live data */
+	this.table1 = new google.visualization.DataTable();
+	this.table1.addColumn('datetime', 'Date');
+	this.table1.addColumn('number', 'Live-Data');
+	
+	/* another table to hold the simulation data */
+	this.table2 = new google.visualization.DataTable();
+	this.table2.addColumn('datetime', 'Date');
+	this.table2.addColumn('number', 'Sim-Data');
+	
+	/* and the final table that is either just a reference to the first table or arises from joining both upper tables */
+	this.table = this.table1;
+	
+	this.updateHandler = [];
+	
+	this.profile1 = { stime: 0, etime: 0 };
+	this.profile2 = { stime: 0, etime: 0 };
+	
+	/* add all attributes of the passed meta object to this object - be careful to not override existing fields */
+	$.extend( this, meta );
+		
+	/* start fetching the data */
+	this.load = function() {
+		
+		if( ! this.eq ) {
+			
+			/* no event selected */
+			
+			/* set start time 180 minutes prior to the current server time */
+			this.range = 180 * 60 * 1000;
+			this.startTime = new Date( serverTime.getTime() - this.range );
+			this.endTime = null;
+						
+		} else {
+			
+			/* there is a selected event */
+						
+			/* set range to 375 minutes - 15m prior to the origin time and 360m afterwards  */
+			this.range = 375 * 60 * 1000;
+			this.startTime = new Date( new Date( this.eq.prop.date ).getTime() - 15 * 60 * 1000 );
+			this.endTime = new Date( this.startTime.getTime() + this.range );
+			
+			this.fetchSimData( this.startTime, 1 );
+		}
+				
+		this.update( this.startTime, 15 );	
+	};
+	
+	/* most of the time this method will be called asynchronously via setTimeout */
+	this.update = function( start, interval ) {
+		
+		var data = { station: this.name,
+					 start: start.toISOString(),
+				    };
+		
+		/* append the end time only if it is explicitly given */
+		if( this.endTime != null )
+			data.end = this.endTime.toISOString();
+		
+		this.profile1.stime = Date.now();
+		$.ajax({
+			type: 'POST',
+			url: "webguisrv/getdata",
+			dataType: 'json',
+			data: data,
+			success: (function( result ) {
+				
+				//console.log( this.name, ": Fetched", result.data.length, "live values in", Date.now() -  this.profile1.stime, "ms");
+				
+				/* remove all elements that are out of range now - only relevant if no event selected */
+				if( ! this.eq ) {
+					var lbound = new Date( serverTime.getTime() - this.range );
+					var outs = this.table1.getFilteredRows( [{column: 0, maxValue: lbound}] );
+					this.table1.removeRows( 0, outs.length );
+				}
+				
+				if( result.data.length > 0 ) {
+									
+					/* add new data to the live data table */
+					for( var i = 0; i < result.data.length; i++ ) {
+						this.table1.addRow( [ new Date( result.data[i][0] ), Number( result.data[i][1] ) ] );
+					}
+					
+					/* if an event is selected, join with the simulation data to create the final table */
+					if( this.eq ) {
+						this.profile1.stime = Date.now();
+						this.table = google.visualization.data.join( this.table1, this.table2, 'full', [[0,0]], [1], [1] );
+						console.log( this.name, ": Joined", result.data.length, "live values in", Date.now() -  this.profile1.stime, "ms");
+					}
+					
+					/* update private start time for next call */
+					if( result.last )
+						start = new Date( result.last * 1000 );
+					
+					/* if the data has changed, notify everyone who is interested */
+					this.notifyUpdate();
+				}
+				
+				/* call update again after 'interval' seconds */
+				setTimeout( this.update.bind(this, start, interval), interval * 1000 );
+				
+			}).bind(this)
+		});
+	};
+	
+	this.fetchSimData = function( start, interval ) {
+						
+		var data = { station: this.name,
+					 start: start.toISOString(),
+					 end: this.endTime.toISOString(),
+					 evid: this.eq._id,
+					 /* TODO: remove dependency to vsdbPlayer */
+					 ff: vsdbPlayer.accel,
+				    };
+		
+		/* is there still anything to fetch */
+		if( start >= this.endTime ) {
+			return;
+		}
+		
+		this.profile2.stime = Date.now();
+		$.ajax({
+			type: 'POST',
+			url: "webguisrv/getsimdata",
+			dataType: 'json',
+			data: data,
+			success: (function( result ) {
+				
+				//console.log( this.name, ": Fetched", result.data.length, "sim values in", Date.now() -  this.profile2.stime, "ms");
+				
+				//console.log( result );
+				
+				if( result.data.length > 0 ) {
+										
+					/* add new data to the simulation data table */
+					for( var i = 0; i < result.data.length; i++ ) {
+						this.table2.addRow( [ new Date( result.data[i][0] ), Number( result.data[i][1] ) ] );
+					}
+					
+					/* join the simulation with the live data to create the final table */
+					this.profile2.stime = Date.now();
+					this.table = google.visualization.data.join( this.table1, this.table2, 'full', [[0,0]], [1], [1] );
+					console.log( this.name, ": Joined", result.data.length, "sim values in", Date.now() -  this.profile2.stime, "ms");
+					
+					/* update start time for next call */
+					if( result.last )
+						start = new Date( result.last * 1000 );
+					
+					/* notify everyone who is interested */
+					this.notifyUpdate();
+				}
+								
+				/* call update again after 'interval' seconds */
+				setTimeout( this.fetchSimData.bind(this, start, interval), interval * 1000 );
+				
+			}).bind(this)
+		});
+	};
+
+	/* register handler and return the index into the array */
+	this.setOnUpdateListener = function( handler ) {
+		for( var i = 0; i < this.updateHandler.length; i++ )
+			if( ! this.updateHandler[i] ) {
+				this.updateHandler[i] = handler;
+				return i;
+			}
+				
+		return this.updateHandler.push( handler ) - 1;
+	};
+	
+	/* remove a registered handler specified by the corresponding index */
+	this.removeOnUpdateListener = function( idx ) {
+		this.updateHandler[idx] = null;
+	};
+	
+	this.notifyUpdate = function() {
+		
+		for( var i = 0; i < this.updateHandler.length; i++ )
+			if( this.updateHandler[i] )
+				this.updateHandler[i]();
+	};
+}
+
+function Chart( data, width, height ) {
+	
+	this.data = data;
+	this.div = $( '#chart-div' ).clone().removeAttr( "id" );
+	this.dia = new google.visualization.LineChart( this.div[0] );
+	
+	this.profile = { stime: 0 };
+	
+	google.visualization.events.addListener( this.dia, 'ready', (function() {
+		console.log("Chart", this.data.name, "drawn in", Date.now() - this.profile.stime, "ms");
+	}).bind(this));
+	
+	this.options = {
+		curveType: 'function',
+		width: width,
+		height: height,
+		interpolateNulls: true,
+		legend: { position: 'none' }
+	};
+	
+	this.listenerID = null;
+	this.line_on = false;
+	
+	this.init = function( data ) {
+		
+		/* make sure that a chart has never more than one listener registered */
+		this.dispose();
+		
+		this.data = data;
+		
+		/* register handler that will be called if the underlying station data changes */
+		this.listenerID =
+			this.data.setOnUpdateListener( (function(_this) {
+				return function() {
+					_this.refresh();
+				};
+			} )(this) );
+				
+		this.options.title = data.name;
+		this.refresh();
+	};
+	
+	this.refresh = function() {	
+		
+		this.profile.stime = Date.now();
+		this.dia.draw( this.data.table, this.options );
+	};
+	
+	this.dispose = function() {
+				
+		if( this.listenerID != null )
+			this.data.removeOnUpdateListener( this.listenerID );
+		
+		this.listenerID = null;
+	};
+	
+	this.drawLine = function( box, idx ) {
+		
+		var p1 = box.offset();
+		p1.left += box.width() / 2;
+			
+		var item = stations.get(idx);
+		var pixel = LatLonToPixel( item.lat, item.lon );
+		var p2 = $( '#mapview' ).offset();
+		
+		p2.left += pixel.x;
+		p2.top += pixel.y;
+		
+		canvas.drawLine( p1, p2 );
+	};
+	
+	this.chartOnEnter = function() {
+		
+		$( this ).css( "outline", "2px solid #428bca" );
+		
+		var idx = $( this ).index();	
+		stationSymbols.highlight( idx, true );
+		
+		/* 'this' does not point to the object of this class but to the div at which the event occur */
+		var _this = stationView.box_list[idx];
+		
+		if( _this.line_on )
+			_this.drawLine( $(this), idx );
+	};
+	
+	this.chartOnLeave = function() {
+		
+		$( this ).css( "outline", "1px solid #acaaa7" );
+		
+		var idx = $( this ).index();
+		stationSymbols.highlight( idx, false );
+		canvas.clearCanvas();
+	};
+	
+	this.chartOnClick = function() {
+		
+		var idx = $( this ).index();
+		var _this = stationView.box_list[idx];
+		
+		if( _this.line_on ) {
+			
+			map.panTo( stationSymbols.symbols[idx].marker.getPosition() );
+			_this.drawLine( $(this), idx );
+		}
+		
+		dialogs.chart.show( _this.data );
+	};
+	
+	this.enableLine = function( on ) {
+		this.line_on = on;
+	};
+	
+	this.div.hover( this.chartOnEnter, this.chartOnLeave );
+	this.div.click( this.chartOnClick );
+	
+	this.init( this.data );
+}
+
+function MainChartDialog( widget ) {
+	
+	this.dialog = widget;
+	this.chart = new MainChart( $( '#mainchart-div' ), 500, 400 );
+	this.data = null;
+	
+	this.multi = 0;
+	
+	this.show = function( data ) {
+		this.data = data;
+		this.dialog.modal( 'show' );		
+	};
+	
+	this.hide = function() {
+		this.dialog.modal( 'hide' );
+	};
+	
+	/* this method will be called if the dialog is ready */
+	this.ready = function() {
+		this.chart.init( this.data );
+		this.chart.setOnSlideListener( 0, this.onAmplSliderChange.bind(this) );
+		this.chart.setOnSlideListener( 1, this.onFreqSliderChange.bind(this) );
+		this.chart.setOnSlideListener( 2, this.onFreqSliderChange.bind(this) );
+	};
+	
+	this.onAmplSliderChange = function( val ) {
+		$('#pickerAmpl').val( val.toFixed(2) );
+	};
+	
+	this.onFreqSliderChange = function( val ) {
+		var freq = Math.abs( this.chart.getSliderValue(1) - this.chart.getSliderValue(2) );
+		freq = freq / 1000.0 / 60.0;
+		$('#pickerFreq').val( freq.toFixed(2) );
+	};
+	
+	this.onAmplInputChange = function( val ) {
+		this.chart.setSliderValue(0, $('#pickerAmpl').val());
+	};
+	
+	this.onMultiplierChange = function( e ) {
+		var elem = $(e.delegateTarget);
+		$('#pickerDropDown button span').first().text( elem.text() );
+	};
+		
+	/* register all handlers used within this dialog */
+	this.dialog.on('shown.bs.modal', this.ready.bind(this) );
+	$('#pickerAmpl').change( this.onAmplInputChange.bind(this) );
+	$('#pickerDropDown li a').click( this.onMultiplierChange.bind(this) );
+}
+
+function Slider( vertical, off, len, middle, min, max, widget ) {
+	
+	this.widget = widget;
+	this.canvas_slider = $('<canvas class="canvas-gen" />').appendTo( widget );
+	this.canvas_line   = $('<canvas class="canvas-gen" />').appendTo( widget );
+	
+	this.vertical = vertical;
+	this.pos = { off: off, len: len, middle: 0 };
+	this.range = { min: min, max: max };
+		
+	this.down = null;
+	this.handler = null;
+	
+	this.setValue = function( val ) {
+		/* set value and adjust if outside the range */
+		this.pos.middle = Math.max( Math.min( val, this.range.max ), this.range.min );
+		this.draw();
+	};
+	
+	this.onMouseDown = function( e ) {
+
+		/* other elements should not react on this event */
+		e.preventDefault();
+		
+		this.widget.on( 'mousemove', this.onMouseMove.bind(this) );
+		this.widget.on( 'mouseup', this.onMouseUp.bind(this) );
+	
+		this.down = { x: e.pageX, y: e.pageY };
+	};
+	
+	this.onMouseMove = function( e ) {
+				
+		/* other elements should not react on this event */
+		e.preventDefault();
+		
+		var diff = 0;
+		
+		if( this.vertical == false ) {
+			diff = e.pageY - this.down.y;
+		} else {
+			diff = e.pageX - this.down.x;
+		}
+		
+		this.pos.middle += diff;
+		
+		if( this.pos.middle < this.range.min ) {
+			this.pos.middle = this.range.min;
+		} else if( this.pos.middle > this.range.max ) {
+			this.pos.middle = this.range.max;
+		} else {
+			this.down.y += diff;
+			this.down.x += diff;
+		}
+		
+		this.draw();
+						
+		if( this.handler )
+			this.handler( this.pos.middle );
+	};
+	
+	this.onMouseUp = function( e ) {
+
+		/* other elements should not react on this event */
+		e.preventDefault();
+		
+		this.widget.off( 'mousemove' );
+		this.down = null;
+	};
+		
+	this.setOnChangeListener = function( handler ) {
+		
+		this.handler = handler;
+	};
+	
+	this.dispose = function() {
+		this.canvas_slider.remove();
+		this.canvas_line.remove();
+	};
+		
+	this.draw = function() {
+		
+		var size = 15;	
+		var left, top;		
+		
+		this.canvas_slider.width( size );
+		this.canvas_slider.height( size );
+		
+		if( this.vertical == false ) {
+			left = this.pos.off;
+			top = this.pos.middle - size / 2;
+		} else {
+			left = this.pos.middle - size / 2;
+			top = this.pos.off + this.pos.len - size;
+		}
+		
+		this.canvas_slider.css( "left", left + "px" );
+		this.canvas_slider.css( "top", top + "px" );
+		this.canvas_slider.css( "display", "block" );
+		
+		var canvas = this.canvas_slider[0];
+		canvas.width  = this.canvas_slider.width();
+		canvas.height = this.canvas_slider.height();
+		
+		var ctx = canvas.getContext('2d');
+		
+		ctx.fillStyle = 'black';
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		
+		if( this.vertical == false ) {
+			ctx.moveTo( 0, 0 );
+			ctx.lineTo( size, size / 2.0 );
+			ctx.lineTo( 0, size );
+		} else {
+			ctx.moveTo( 0, size );
+			ctx.lineTo( size / 2.0, 0 );
+			ctx.lineTo( size, size );
+		}
+		ctx.closePath();
+		ctx.fill();
+		
+		/* draw line */
+		var thick = 1;
+		
+		if( this.vertical == false ) {
+			this.canvas_line.width( this.pos.len - size + 1 );
+			this.canvas_line.height( thick );
+			
+			left = left + size - 1;
+			top = this.pos.middle - thick / 2.0;
+		} else {
+			this.canvas_line.width( thick );
+			this.canvas_line.height( this.pos.len - size + 1 );
+			
+			left = this.pos.middle - thick / 2.0;
+			top = this.pos.off;
+		}
+		
+		this.canvas_line.css( "left", left + "px" );
+		this.canvas_line.css( "top", top + "px" );
+		this.canvas_line.css( "display", "block" );
+		
+		canvas = this.canvas_line[0];
+		canvas.width  = this.canvas_line.width();
+		canvas.height = this.canvas_line.height();
+		
+		ctx = canvas.getContext('2d');
+		ctx.strokeStyle = 'black';
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		
+		if( this.vertical == false ) {
+			ctx.moveTo( 0, thick / 2.0 );
+			ctx.lineTo( canvas.width, thick / 2.0 );
+		} else {
+			ctx.moveTo( thick / 2.0, 0 );
+			ctx.lineTo( thick / 2.0, canvas.height );
+		}
+		
+		ctx.closePath();
+		ctx.stroke();
+	};
+	
+	this.canvas_slider.on( 'mousedown', this.onMouseDown.bind(this) );
+	
+	this.setValue( middle );
+}
+
+function MainChart( widget, width, height ) {
+	
+	this.data = null;
+	this.div = widget;
+	this.dia = new google.visualization.LineChart( this.div[0] );
+	
+	this.slider = [];
+	this.handler = [];
+	this.listenerID = null;
+		
+	this.options = {
+			curveType: 'function',
+			width: width,
+			height: height,
+			interpolateNulls: true
+		};
+	
+	this.init = function( data ) {
+		
+		this.dispose();
+		
+		this.data = data;
+		this.options.title = data.name;
+					
+		/* register handler that will be called if the underlying station data changes */
+		this.listenerID =
+			this.data.setOnUpdateListener( (function(_this) {
+				return function() {
+					_this.refresh();
+				};
+			} )(this) );
+		
+		this.refresh();
+		
+		var cli = this.dia.getChartLayoutInterface();
+		var box = cli.getChartAreaBoundingBox();
+		var ampl = cli.getYLocation( 0 );
+				
+		this.slider.push( new Slider( false, box.left - 15, box.width + 15, ampl, box.top, box.top + box.height, widget ) );
+		this.slider.push( new Slider( true, box.top, box.height + 15, box.left, box.left, box.left + box.width, widget ) );
+		this.slider.push( new Slider( true, box.top, box.height + 15, box.left + box.width, box.left, box.left + box.width, widget ) );
+		
+		for( var i = 0; i < this.slider.length; i++ ) {
+			this.handler.push( null );
+			this.slider[i].setOnChangeListener( this.onControlChange.bind(this,i) );
+		}
+	};
+	
+	this.dispose = function() {
+		for( var i = 0; i < this.slider.length; i++ )
+			this.slider[i].dispose();
+		
+		this.slider = [];
+	};
+	
+	this.refresh = function() {
+		this.dia.draw( this.data.table, this.options );
+	};
+	
+	this.setOnSlideListener = function( idx, handler ) {
+		
+		if( idx >= this.slider.length )
+			return;
+		
+		this.handler[idx] = handler;
+	};
+	
+	this.onControlChange = function( idx, val ) {
+		
+		if( this.handler[idx] )
+			this.handler[idx]( this.getSliderValue( idx ) );
+	};
+	
+	this.getSliderValue = function( idx ) {
+		
+		var trans;
+		var val = this.slider[idx].pos.middle;
+		
+		if( idx == 0 )
+			trans = this.dia.getChartLayoutInterface().getVAxisValue( val );
+		else
+			trans = this.dia.getChartLayoutInterface().getHAxisValue( val );
+		
+		return trans;
+	};
+	
+	this.setSliderValue = function( idx, val ) {
+		
+		var trans;
+		
+		if( idx == 0 )
+			trans = this.dia.getChartLayoutInterface().getYLocation( val );
+		else
+			trans = this.dia.getChartLayoutInterface().getXLocation( val );
+		
+		this.slider[idx].setValue( trans );
+	};
+}
+
+function StationView( widget, data ) {
+	
+	this.widget = widget;
+	this.data = data;
+	this.box_list = [];
+			
+	/* should be called after stations were added to the data container */   
+	this.reload = function() {
+				
+		this.dispose();
+		
+		this.widget.empty();
+				
+		var width = 200;
+		var height = this.widget[0].clientHeight - 30;
+		
+		for( var i = 0; i < this.data.length(); i++ ) {
+			
+			var item = this.data.get(i);
+			
+			if( this.box_list.length - 1 < i )
+				this.box_list.push( new Chart( item, width, height ) );
+			else
+				this.box_list[i].init( item );
+
+			this.widget.append( this.box_list[i].div );
+		}
+	};
+	
+	this.dispose = function() {
+		
+		for( var i = 0; i < this.box_list.length; i++ )
+			this.box_list[i].dispose();
+		
+		this.box_list = [];
+	};
+	
+	/* should be called after sorting stations in the data container */
+	this.update = function() {
+				
+		for( var i = 0; i < this.data.length(); i++ )
+			this.box_list[i].init( this.data.get(i) );
+	};
+	
+	this.enableLines = function( on ) {
+		
+		for( var i = 0; i < this.data.length(); i++ )
+			this.box_list[i].enableLine( on );
+	};
+	
+	this.scrollTo = function( idx, step_fun, done_fun ) {
+		
+		var box = this.box_list[idx].div;
+		var ref = this.widget.scrollLeft();
+		
+		var val = ref + box.position().left - (this.widget.width() - box.width() ) / 2;
+		    val = Math.max( 0, val );
+		    	
+		this.widget.animate({
+			scrollLeft: val
+        }, { duration: 750, step: step_fun, done: done_fun });
+		    
+		//this.widget.scrollLeft( val );
+	};
+	
+	this.setData = function( data ) {
+		this.data = data;
+		this.reload();
+	};
+}
+
+function Symbol( marker, idx, list ) {
+	
+	this.marker = marker;
+	this.idx = idx;
+	this.list = list; /* StationSymbols */
+	
+	this.mouseIn = false;
+	
+	with( { _this: this } ) {
+		google.maps.event.addListener( this.marker, 'click', function() {
+			
+			_this.list.symbolOnClick( _this );
+		});
+	}
+	
+	with( { _this: this } ) {
+		google.maps.event.addListener( this.marker, 'mouseover', function() {
+			
+			_this.mouseIn = true;
+			_this.highlight( true );
+			_this.list.symbolOnMouseEnter( _this );
+		});
+	}
+
+	with( { _this: this } ) {
+		google.maps.event.addListener( this.marker, 'mouseout', function() {
+			
+			_this.mouseIn = false;
+			_this.highlight( false );
+			_this.list.symbolOnMouseLeave( _this );
+		});
+	}
+	
+	this.highlight = function( yes ) {
+		
+		var weight = yes ? 1.5 : 1.0;
+		
+		var icon = this.marker.getIcon();
+		icon.strokeWeight = weight;
+		this.marker.setIcon( icon );
+	};
+	
+	this.show = function( yes ) {
+		
+		this.marker.setMap( yes ? map : null );
+	};
+	
+	this.destroy = function() {
+		
+		this.show( false );
+		this.marker = null;
+	};
+}
+
+function StationSymbols( data, show ) {
+	
+	this.data = data;
+	this.symbols = [];
+	this.showLines = false;
+	
+	this.info = new google.maps.InfoWindow();
+		
+	this.create = function() {
+				
+		for( var i = 0; i < this.data.length(); i++ ) {
+			
+			var item = this.data.get(i);
+			var pos = new google.maps.LatLng( item.lat, item.lon );
+						
+			var marker = new google.maps.Marker ({
+				position: pos,
+				map: map,
+				icon: {
+					anchor: new google.maps.Point( 0, 2 ),
+					path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+				    fillOpacity: 0.7,
+				    fillColor: 'green',
+				    strokeOpacity: 1.0,
+				    strokeColor: "white",
+				    strokeWeight: 1.0,
+				    scale: 3.5 //pixels
+				}
+			});
+						
+			this.symbols.push( new Symbol( marker, i, this ) );
+		}
+	};
+	
+	this.setData = function( data ) {
+		this.data = data;
+		this.recreate();
+	};
+	
+	this.removeAll = function() {
+		
+		for( var i = 0; i < this.symbols.length; i++ )
+			this.symbols[i].destroy();
+		
+		this.symbols.length = 0;
+	};
+	
+	this.recreate = function() {
+		
+		this.removeAll();
+		this.create();
+	};
+	
+	this.drawLine = function( idx, marker ) {
+				
+		var box = stationView.box_list[idx].div;
+		var p1 = box.offset();
+		p1.left += box.width() / 2;
+			
+		var latlng = marker.getPosition();
+		var pixel = LatLonToPixel( latlng.lat(), latlng.lng() );
+		
+		var p2 = $( '#mapview' ).offset();
+		p2.left += pixel.x;
+		p2.top += pixel.y;
+								
+		canvas.drawLine( p1, p2 );
+	};
+	
+	this.removeLine = function() {
+		
+		canvas.clearCanvas();
+	};
+	
+	this.symbolOnClick = function( symbol ) {
+				
+		var item = this.data.get( symbol.idx );
+		
+		/* scroll to diagram and redraw the line */
+		with( { _this: this } ) {
+			stationView.scrollTo( symbol.idx, function() {
+				_this.removeLine();
+				if( _this.showLines )
+					_this.drawLine( symbol.idx, symbol.marker );
+			}, function() {
+				if( ! symbol.mouseIn )
+					_this.removeLine();
+			});
+		}
+	
+		this.info.setContent( item.name );
+		this.info.open( map, symbol.marker );
+	};
+	
+	this.symbolOnMouseEnter = function( symbol ) {
+				
+		if( this.showLines )
+			this.drawLine( symbol.idx, symbol.marker );
+	};
+	
+	this.symbolOnMouseLeave = function( symbol ) {
+		
+		this.removeLine();
+	};
+		
+	this.show = function( yes ) {
+		
+		for( var i = 0; i < this.symbols.length; i++ )
+			this.symbols[i].show( yes );
+	};
+	
+	this.highlight = function( idx, yes ) {
+				
+		this.symbols[idx].highlight( yes );
+	};
+	
+	this.enableLines = function( enable ) {
+		
+		this.showLines = enable;
+	};
+	
+	this.create();
+	this.show( show );
+}
+
+function sort_string( field, a, b ) {
+		
+	if( a[ field ] < b[ field ] )
+		return -1;
+	
+	if( a[ field ] > b[ field ] )
+		return 1;
+	
+	return 0;
+}
+
+function sort_dist( lat, lon, a, b ) {
+	
+	var dist_a = Math.sqrt( Math.pow( a.lat - lat, 2 ) + Math.pow( a.lon - lon, 2 ) );
+	var dist_b = Math.sqrt( Math.pow( b.lat - lat, 2 ) + Math.pow( b.lon - lon, 2 ) );
+	
+	if( dist_a < dist_b )
+		return -1;
+	
+	if( dist_a > dist_b )
+		return 1;
+	
+	return 0;
+}
+
+function VsdbPlayer( div ) {
+	
+	/* jquery objects */
+	this.div = div;
+	this.btnPlay = this.div.find('.btnPlay');
+	this.drpNames = this.div.find('.drpNames');
+	this.drpAccel = this.div.find('.drpAccel');
+	this.progess = this.div.find('.progress-bar');
+	
+	this.running = false;
+	this.scenarios;
+	this.scenario;
+	this.accel;
+	
+	this.init = function() {
+		
+		function success( obj ) {
+						
+			this.scenarios = obj.result.list;
+						
+			console.log( this.scenarios );
+			
+			for( var i = 0; i < this.scenarios.length; i++ ) {
+				var name = this.scenarios[i].name;
+				var id = this.scenarios[i].id;
+				this.drpNames.find('ul').append('<li class="id_' + id +'"><a href="#">' + name + '</a></li>');
+				
+				var sensors = [];
+				for( var j = 0; j < this.scenarios[i].sensors.length; j++ ) {
+					if( this.scenarios[i].sensors[j].type != "UshahidiSensor" )
+						sensors.push( this.scenarios[i].sensors[j].urn );
+				}
+				this.scenarios[i].sensors = sensors;
+			}
+			
+			console.log( this.scenarios );
+						
+			this.drpNames.find('a').click( this.onDrpChange.bind(this) );
+			this.update();
+		}
+		
+		for( var i = 1; i <= 10; i++ )
+			this.drpAccel.find('ul').append('<li><a href="#">' + i + '</a></li>');
+		this.drpAccel.find('ul').append('<li><a href="#">' + 16 + '</a></li>');
+		
+		this.drpAccel.find('a').click( this.onDrpChange.bind(this) );
+		
+		this.request( 'simlist', [], success.bind(this) );
+	};
+	
+	this.start = function() {
+			
+		function success( result ) {
+			console.log( 'start' );
+			console.log( result );
+		};
+				
+		var params;
+		params = [this.scenario.id, null, this.accel, this.scenario.sensors];
+		
+		this.request( 'startsim', params, success.bind(this) );
+	};
+	
+	this.stop = function() {
+				
+		function success( result ) {
+			console.log( 'stop' );
+			console.log( result );
+		}
+		
+		this.request( 'stopsim', [], success.bind(this) );
+	};
+	
+	this.update = function() {
+		
+		function success( obj ) {
+			
+			var status = obj.result;
+					
+			/* toggle buttons	 if the state changes */
+			if( status.running != this.running ) {
+				this.running = status.running;
+				this.btnPlay.find('span').toggleClass('glyphicon-play');
+				this.btnPlay.find('span').toggleClass('glyphicon-stop');
+				this.drpNames.find('button').prop('disabled', this.running);
+				this.drpAccel.find('button').prop('disabled', this.running);
+			}
+			
+			/* set acceleration factor if player was already running */
+			if( status.ff && status.ff != this.accel ) {
+				this.drpAccel.find('button').html(status.ff + ' <span class="caret"></span>');
+				this.accel = status.ff;
+			}
+			
+			/* set scenario if player was already running */
+			if( status.simname && ! this.scenario ) {
+				var idx = this.drpNames.find('.id_' + status.simid).index();
+				this.scenario = this.scenarios[idx];
+				this.drpNames.find('button').html(status.simname + ' <span class="caret"></span>');
+			}
+			
+			/* update progress */
+			if( status.starttime ) {
+				var text;
+				var progress = 0;
+				
+				if( status.pos < 0 ) {
+					text = "Starting in " + status.pos / 1000 + " seconds...";
+				} else {
+					progress = (status.pos / status.end) * 100;
+					text = progress.toFixed(1) + " %";
+				}
+								
+				this.progess.css('width', progress + '%');
+				this.progess.html( text );
+			}
+			
+			setTimeout( this.update.bind(this), 1000 );
+		}
+		
+		this.request( 'status', [], success.bind(this) );
+	};
+	
+	this.request = function( method, params, callback ) {
+		
+		var data = { jsonrpc: '2.0',
+				 	 method: method,
+				 	 params: params,
+				 	 id: "id"
+			    	};
+		
+		$.ajax({
+	        type: 'POST',
+	        contentType: 'application/json; charset=utf-8',
+	        url: 'vsdbplayer/services/',
+	        data: JSON.stringify( data ),
+	        dataType:"json", 
+	        success: function( result ) {
+	        	if( callback )
+	        		callback(result);
+	        },
+	        error: function() {
+	        	console.log( 'Error while sending a request to the VSDB-Player.' );
+	        }
+	    });
+	};
+	
+	/* will be called if the play/stop button is pressed */
+	this.onClick = function() {
+		
+		/* everything must be specified */
+		if( ! this.scenario || ! this.accel )
+			return;
+		
+		if( this.running == false ) {
+			this.start();
+		} else {
+			this.stop();
+		}
+	};
+	
+	this.onDrpChange = function( e ) {
+		var item = $(e.delegateTarget);
+		var dropdown = item.closest('.dropdown');
+		dropdown.find('button').html( item.html() + " " );
+		dropdown.find('button').append('<span class="caret"></span>');
+		
+		if( dropdown.is( this.drpNames ) ) {
+			this.scenario = this.scenarios[ item.closest('li').index() ];
+		} else if( dropdown.is( this.drpAccel ) ) {
+			this.accel = item.html();
+		}
+	};
+	
+	/* register event handlers */
+	this.btnPlay.click( this.onClick.bind(this) );
+	
+	this.init();
 }
 
 var eqlist = new CustomList( '#sidebar' );
@@ -175,10 +1355,49 @@ var markers = { compose: null,
 				active: null
 			  };
 
-google.maps.event.addDomListener(window, 'load', initialize);
-    
-function initialize() {
+var stations;
+var stationView;
+var stationSymbols;
+var canvas;
+var vsdbPlayer;
 
+var loaded = 0;
+
+var serverTime = null;
+
+var dialogs;
+
+google.load("visualization", "1", {packages:["corechart"]});
+google.maps.event.addDomListener(window, 'load', init_maps );
+google.setOnLoadCallback( init_charts );
+
+function init_maps() {
+
+	loaded++;
+	initialize();
+}
+
+function init_charts() {
+	
+	loaded++;
+	initialize();
+}
+
+function initialize() {
+	
+	if( loaded < 2 )
+		return;
+		
+	dialogs = { chart: new MainChartDialog( $('#chartDia') ) };
+	
+	stations = new Container( 'name', sort_string.bind( this, 'name' ) );
+	stationView = new StationView( $('#stat-dias'), stations, $( '#stat-chk' ).is(':checked') );
+	canvas = new Canvas( $('#canvas-line'), null );
+	stationSymbols = new StationSymbols( stations, $( '#stat-chk' ).is(':checked') );
+	stationSymbols.enableLines( $('#stat-dias').css( "display" ) != "None" );
+	
+	vsdbPlayer = new VsdbPlayer( $('#vsdbPlayer') );
+	
 	var mapOptions = {
 			zoom: 2,
 			center: new google.maps.LatLng(0,0),
@@ -189,13 +1408,16 @@ function initialize() {
     		
 	google.maps.event.addListener( map, 'click', clickMap );
 	google.maps.event.addListener( map, 'zoom_changed', mapZoomed );
+	google.maps.event.addListener( map, 'resize', mapResized );
+	
+	google.maps.event.addListener( map, 'projection_changed', projection_changed );
 	
 	/* create default marker used in the "Compose" tab, make it invisible first */
 	markers.compose = createDefaultMarker( $('#inLat').val(), $('#inLon').val(), "#E4E7EB" );
 	markers.compose.setMap( null );
 	markers.active = createDefaultMarker( $('#inLat').val(), $('#inLon').val(), "#5cb85c" );
 	markers.active.setMap( null );
-			
+					
 	$( "#btnSignIn" ).click( drpSignIn );
 	$( "#btnSignOut" ).click( signOut );
 	$( "#btnProp" ).click( showProp );
@@ -249,6 +1471,7 @@ function initialize() {
 	$( '#EmailDia' ).on('shown.bs.modal', dialogOnDisplay );
 	$( '#EmailDia :input' ).val( "" );
 	$( '#btnGrpText .btn' ).change( changeMsgText );
+	$( '.lnkGroup' ).click( groupOnClick );
 		
 	$( '#smsText' ).bind('input propertychange', function() {
 		$( '#smsChars' ).html( $(this).val().length );
@@ -264,6 +1487,9 @@ function initialize() {
 	});
 	
 	$( '#diaUser' ).val( $.cookie('username') );
+	
+	$( '#stat-toggle-lnk' ).click( toggleStationView );
+	$( '#stat-chk' ).change( toggleStations );
 	
 	$( window ).resize( onResize );
 	
@@ -338,7 +1564,7 @@ function getEvents( callback ) {
 }
 
 function getUpdates( timestamp ) {
-		
+			
 	$.ajax({
 		url: "srv/update",
 		type: 'POST',
@@ -349,6 +1575,10 @@ function getUpdates( timestamp ) {
 			timestamp = result['ts'];
 			var mlist = result['main'];
 			var ulist = result['user'];
+			
+			/* TODO */
+			serverTime = new Date( result['serverTime'] );
+//			console.log( new Date( d.getTime() - 30 * 1000 ).toISOString() );
 				    		
 			var madd = false;
 			var uadd = false;
@@ -841,10 +2071,12 @@ function addMsg( widget, data, i ) {
 		$div.find( '.stat-disp' ).css( "display", "none" );
 	}
 	
+	var subject = data['Subject'] ? data['Subject'] : "No subject";
+	
 	$div.find( '.msgIcon').css( "color", color );
 	$div.find( '.msgIcon').attr( "class", cls );
 	$div.find( '.msgType').text( type );
-	$div.find( '.subject' ).text( data['Subject'] );
+	$div.find( '.subject' ).text( subject );
 	$div.find( '.datetime' ).html( dir + " &#183; " + datestr + " &#183; " + timestr + " UTC &#183; ");
 	$div.find( '.lnkEvtId' ).html( data['ParentId'] );
 	$div.find( '.to' ).html( data.To[0] );
@@ -1440,15 +2672,22 @@ function select( id ) {
 	
 	var entry = entries.get( active );
 	
-	if( entry )
-		for( var key in entry.div ) {
-			entry.div[key].css( "border-left", "8px solid #C60000" );
-			entry.div[key].css( "background-color", "#c3d3e1" );
-		}
+	if( ! entry )
+		return;
+	
+	for( var key in entry.div ) {
+		entry.div[key].css( "border-left", "8px solid #C60000" );
+		entry.div[key].css( "background-color", "#c3d3e1" );
+	}	
+	
+	entry.loadStations();
 }
 
 function deselect() {
 		
+	if( active == null )
+		return;
+	
 	showWaveHeights(active, false);
 	showPolygons(active, false);
 	showGrid(active, false);
@@ -1463,6 +2702,9 @@ function deselect() {
 			entry.div[key].css( "background-color", "#fafafa" );
 			entry.div[key].css( "border-left", "0px" );
 		}
+	
+	stationView.setData( stations );
+	stationSymbols.setData( stations );
 	
 	active = null;
 }
@@ -1575,6 +2817,8 @@ function diaSignIn() {
 function logIn( callback ) {
 	
 	loggedIn = true;
+	
+	getStations();
 	
 	showSplash( false );
 		
@@ -1716,7 +2960,7 @@ function getParams() {
 	params['parent'] =  $('#inParentId').html();
 	
 	if( $('#inDate').html() != "" )
-		params['date'] =  $('#inDate').data( "dateObj" ).toISOString();
+		params['date'] = $('#inDate').data( "dateObj" ).toISOString();
 	
 	return params;
 }
@@ -1750,9 +2994,13 @@ function fillForm( entry ) {
 		$( '#inRootId' ).html( entry['_id'] );
 	}
 	
-	var date = new Date( prop['date'] );
-	$( '#inDate' ).html( getDateString( date ) );
-	$( '#inDate' ).data( "dateObj", date );
+	if( prop['date'] ) {
+		var date = new Date( prop['date'] );
+		$( '#inDate' ).html( getDateString( date ) + " UTC" );
+		$( '#inDate' ).data( "dateObj", date );
+	} else {
+		$( '#inDate' ).html( "" );
+	}
 		
 	checkInput();
 	
@@ -2681,7 +3929,7 @@ function showProp() {
 	
 	$( '#propUser' ).html( curuser.username );
 	
-	if( checkPermsAny( "fax", "ftp", "sms" ) ) {
+	if( perm && ( perm.fax || perm.ftp || perm.sms ) ) {
 	
 		/* hide all groups first */
 		$( '#PropDia .group' ).css( "display", "none" );
@@ -2733,7 +3981,7 @@ function showProp() {
 }
 
 function groupOnClick() {
-		
+			
 	var content = $(this).parents('.group').children('.grpContent');
 	var arrow =  $(this).children('.grpArrow');
 			
@@ -2744,9 +3992,7 @@ function groupOnClick() {
 }
 
 function configMailDialog() {
-	
-	$( '.lnkGroup' ).click( groupOnClick );
-	
+		
 	/* hide all groups first */
 	$( '#EmailDia .group' ).css( "display", "none" );
 	$( '#msgEvents' ).css( "display", "block" );
@@ -2883,6 +4129,7 @@ function propSubmit() {
 
 			if( result.status == "success" ) {
 				curuser = result.user;
+				configMailDialog();
 				$( '#PropDia' ).modal("hide");
 			} else {
 				$( '#propStatus' ).html("Error: " + result.error);
@@ -3133,7 +4380,7 @@ function onResize() {
 		return;
 	
 	/* adjust anything that was dynamically sized */
-	var h = $( '.tabs-head' ).css( "height" );
+	var h = $('.tabs-head').height() + $('#vsdbPlayer').outerHeight();
 	$( '.tab-pane' ).css( "top", h );
 	
 	var width = $( "#splash-video" ).width();
@@ -3153,6 +4400,17 @@ function onResize() {
 	$( "#splash-video" ).html( iframe );
 	
 	google.maps.event.trigger( map, 'resize' );
+}
+
+function mapResized() {
+		
+	/* get size and position used for canvas */
+	var pad_top = $( "#stat-dias" ).innerHeight() - $( "#stat-dias" ).height();
+	var rect = $( "#mapview" ).offset();
+	rect.width = $( "#mapview" ).width();
+	rect.height = $( "#mapview" ).height() + pad_top;
+	
+	canvas.resize( rect );
 }
 
 function getURL() {
@@ -3211,3 +4469,192 @@ function showSplash( show ) {
 	
 	map.setCenter( new google.maps.LatLng(0,0) );
 }
+
+function toggleStationView() {
+	
+	var lnk = $( '#stat-toggle-lnk span' );
+	var visible = lnk.hasClass( 'glyphicon-chevron-down' );
+		
+	if( visible ) {
+		
+		$( '#stat-dias' ).css( "display", "none" );
+		$( '#mapview' ).css( "height", "100%" );
+		
+	} else {
+		
+		$( '#stat-dias' ).css( "display", "block" );		
+		$( '#mapview' ).css( "height", "calc( 100% - " + $( '#stat-dias' ).css("height") + " )" );
+	}
+	
+	lnk.toggleClass( 'glyphicon-chevron-up' );
+	lnk.toggleClass( 'glyphicon-chevron-down' );
+	
+	stationSymbols.enableLines( ! visible );
+	
+	google.maps.event.trigger( map, 'resize' );
+}
+
+function toggleStations() {
+	
+	var enabled = $(this).is(":checked");
+	
+	stationSymbols.show( enabled );
+	stationView.enableLines( enabled );
+}
+
+function getStationList( handler ) {
+		
+	$.ajax({
+		type: 'POST',
+		url: "webguisrv/stationlist",
+		dataType: 'json',
+		success: function( result ) {
+			serverTime = new Date( result.serverTime );
+			handler( result );
+		}, 
+		error: function() {
+			handler( null );
+		}
+	});
+}
+
+function getStations() {
+	
+	$.ajax({
+		type: 'POST',
+		url: "webguisrv/stationlist",
+		dataType: 'json',
+		success: function( result ) {
+										
+			var list = result.stations;
+			
+			serverTime = new Date( result.serverTime );
+			
+			for( var i = 0; i < list.length; i++ ) {
+												
+				var stat = new Station( list[i] );
+				stat.load();
+				stations.insert( stat );
+			}
+
+			stationView.reload();
+			stationView.enableLines( $( '#stat-chk' ).is(':checked') );
+			stationSymbols.recreate();
+		},
+		error: function() {
+		},
+		complete: function() {
+		}
+	});
+		
+}
+
+var overlay;
+
+function projection_changed() {
+			
+	overlay = new google.maps.OverlayView();
+	overlay.draw = function() {};
+	overlay.setMap( map );
+}
+
+function Canvas( widget, rect ) {
+
+	this.widget = widget;
+	
+	this.resize = function( rect ) {
+		
+		this.rect = rect;
+	};
+	
+	/* adjusts p1 according to the line created between p1 and p2 */
+	this.adjust_point = function( p1, p2 ) {
+		
+		var p = this.rect;
+		var left_adj, right_adj, top_adj, bottom_adj;
+		
+		var mx = (p2.top - p1.top) / (p2.left - p1.left);
+		var my = (p2.left - p1.left) / (p2.top - p1.top);
+		
+		/* adjust point to the left */
+		left_adj = Math.max( p1.left, p.left );
+		p1.top = mx * (left_adj - p1.left) + p1.top;
+		p1.left = left_adj;
+		
+		/* adjust point to the right */
+		right_adj = Math.min( p1.left, p.left + p.width );
+		p1.top = mx * (right_adj - p1.left) + p1.top;
+		p1.left = right_adj;
+		
+		/* adjust point at top */
+		top_adj = Math.max( p1.top, p.top );
+		p1.left = my * (top_adj - p1.top) + p1.left;
+		p1.top = top_adj;
+		
+		/* adjust point at bottom */
+		bottom_adj = Math.min( p1.top, p.top + p.height );
+		p1.left = my * (bottom_adj - p1.top) + p1.left;
+		p1.top = bottom_adj;
+		
+		return p1;
+	};
+	
+	this.drawLine = function( p1, p2 ) {
+						
+		if( this.rect != null ) {
+			p1 = this.adjust_point( p1, p2 );
+			p2 = this.adjust_point( p2, p1 );
+		}
+				
+		var width = Math.abs(p1.left - p2.left);
+		var height =  Math.abs(p1.top - p2.top);
+		
+		this.widget.width( width );
+		this.widget.height( height );
+		this.widget.css( "left", Math.min( p1.left, p2.left ) + "px" );
+		this.widget.css( "top", Math.min( p1.top, p2.top ) + "px" );
+		this.widget.css( "display", "block" );
+		
+		var canvas = this.widget[0];
+		
+		canvas.width  = width;
+		canvas.height = height;
+		
+		var ctx = canvas.getContext('2d');
+		
+		ctx.strokeStyle = 'black';
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		
+		if( p1.left < p2.left ) {
+			ctx.moveTo( 0.5, canvas.height );
+			ctx.lineTo( canvas.width, 0 );
+		} else {
+			ctx.moveTo( canvas.width, canvas.height );
+			ctx.lineTo( 0, 0 );
+		}
+	
+		ctx.closePath();
+		ctx.stroke();
+	};
+	
+	this.clearCanvas = function() {
+		
+		this.widget.css( "display", "none" );
+		
+		var canvas = this.widget[0];
+		
+		canvas.getContext('2d').clearRect( 0, 0, canvas.width, canvas.height );
+	};
+
+	this.resize( rect );
+}
+
+function LatLonToPixel( lat, lon ) {
+	
+	var latlon = new google.maps.LatLng( lat, lon );
+	var pixel = overlay.getProjection().fromLatLngToContainerPixel( latlon );
+	
+	return pixel;
+}
+

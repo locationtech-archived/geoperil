@@ -65,6 +65,7 @@ html, body {
 	height: 100%;
 	outline: 0.1em solid #acaaa7;
 	width: 72%;
+	overflow-x: auto;
 }
 
 .left-col { 
@@ -610,4 +611,71 @@ pre {
 
 #lnkUser {
 	display: none;
+}
+
+#mapview {
+	position: relative;
+	height: calc( 100% - 11em );
+}
+
+#statview {
+	position: relative;
+	height: 0em;
+}
+
+#stat-dias {
+	height: 10em;
+	background-color: #fafafa;
+	white-space: nowrap;
+	overflow-x: auto;
+	padding-top: 0.5em;
+	padding-left: 0.5em;
+}
+
+#stat-panel {
+	position: absolute;
+	right: 0px;
+	top: -3em;
+	background-color: white;
+	height: 2em;
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
+#stat-toggle-lnk {
+	padding-left: 1em;
+}
+
+#chart-div {
+	display: none;
+}
+
+.chart-div {
+	margin-right: 0.5em;
+	display: inline-block;
+	outline: 1px solid #acaaa7;
+	cursor: pointer;
+	cursor: hand;
+}
+
+#canvas-line, #canvas-chart, .canvas-gen {
+	position: absolute;
+	display: none;
+}
+
+.canvas-gen {
+	position: absolute;
+	display: none;
+	cursor: pointer;
+	cursor: hand;
+}
+
+#vsdbPlayer {
+	padding: 5px;
+	border-bottom: 0.1em solid #dddddd;
+}
+
+#vsdbPlayer .progress {
+	margin-top: 5px;
+	margin-bottom: 0px;
 }

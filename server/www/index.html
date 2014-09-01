@@ -9,6 +9,7 @@
 	<script src="js/bootstrap.js"></script>
 	<link href="css/bootstrap.css" rel="stylesheet">
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
     <script src="geohazardcloud.js"></script>
     <link href="geohazardcloud.css" rel="stylesheet">
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
@@ -66,6 +67,29 @@
 	  	
 	  	<div class="row mainview">
 	  		<div class="col-md-4 left-col" id="side">
+	  			<div id="vsdbPlayer" class="row">
+	  				<div class="dropdown pull-left drpNames">
+						<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+					    	Scenario
+					    	<span class="caret"></span>
+					  	</button>
+					  	<ul class="dropdown-menu"></ul>
+					</div>
+					<div class="dropdown pull-left drpAccel">
+						<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+					    	Accel
+					    	<span class="caret"></span>
+					  	</button>
+					  	<ul class="dropdown-menu"></ul>
+					</div>
+					<button type="button" class="btn btn-default btnPlay">
+						<span class="glyphicon glyphicon-play"></span>
+					</button>
+					<div class="progress">
+  						<div class="progress-bar progress-bar-danger"></div>
+					</div>
+	  			</div>
+	  			
 	  			<div class="row tabs-head">
 	  				<div class="col-md-10">
 	  					<div class="row tabs">
@@ -79,7 +103,7 @@
 							</ul>
 						</div>
 	  				</div>
-	  			<div class="col-md-2">
+	  				<div class="col-md-2">
 	  				<div class="row tabs-right">
 	  					<button id="btnDeselect" type="button" class="btn btn-primary btn-sm">
 					  		<span class="glyphicon glyphicon-globe"></span>
@@ -211,7 +235,17 @@
 	  			</div>
 	  		</div>
 	  		
-	  		<div class="col-md-8 right-col" id="mapview"></div>
+	  		<div class="col-md-8 right-col">
+	  			<div class="row" id="mapview"></div>
+	  			<div class="row" id="statview">
+	  				<div id="stat-panel">
+	  					<input id="stat-chk" type="checkbox" checked>
+	  					<span>Show stations</span>
+	  					<a href="#" id="stat-toggle-lnk"><span class="glyphicon glyphicon-chevron-down"></span></a>
+	  				</div>
+	  				<div id="stat-dias"></div>
+	  			</div>
+	  		</div>
 	  		
 	  	</div> <!-- end of main view -->
 	  	
@@ -829,7 +863,7 @@
 				  			</div>
 				  			<div class="input-group input-group-sm prop-label">
 								<span class="input-group-addon">Twilio-Token</span>
-								<input id="propSmsToken" type="text" class="form-control">
+								<input id="propSmsToken" type="password" class="form-control">
 								<span class="input-group-addon prop-right">
 									<span class="glyphicon glyphicon-phone"></span>
 								</span>
@@ -905,6 +939,57 @@
 	    </div><!-- /.modal-content -->
 	  </div><!-- /.modal-dialog -->
 	</div><!-- /.modal -->
+	
+	<!-- modal chart dialog -->
+	<div class="modal fade" id="chartDia" tabindex="-1" role="dialog" aria-labelledby="chart" aria-hidden="true">
+	  <div class="modal-dialog modal-sm">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <h4 class="modal-title">Sealevel data</h4>
+	      </div>
+	      <div class="modal-body">
+	        <div id="mainchart-div"></div>
+	        <div id="picker">
+	  			<div class="input-group input-group-sm">
+					<span class="input-group-addon">Frequency:</span>
+					<input id="pickerFreq" class="form-control">
+					<span class="input-group-addon">x</span>
+					<div class="input-group-btn" id="pickerDropDown">
+					  <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+					  	<span>4</span>
+					  	<span>&nbsp</span>
+					    <span class="caret"></span>
+					  </button>
+					  <ul class="dropdown-menu">
+					    <li><a href="#">1</a></li>
+					    <li><a href="#">2</a></li>
+					    <li><a href="#">4</a></li>
+					  </ul>
+					</div>
+					<span class="input-group-addon">=</span>
+					<input id="pickerFreqMulti" class="form-control">
+	  			</div>
+	  			<div class="input-group input-group-sm">
+					<span class="input-group-addon">Amplitude:</span>
+					<input id="pickerAmpl" class="form-control">
+					<span class="input-group-btn">
+						<button class="btn btn-default" type="button">Pick</button>
+					</span>
+	  			</div>
+	        </div>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+	      </div>
+	    </div><!-- /.modal-content -->
+	  </div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+	
+	<!-- chart div -->
+	<div id="chart-div" class="chart-div"></div>
+	
+	<canvas id="canvas-line"></canvas>
 		
 </body>
 </html>
