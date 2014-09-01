@@ -54,11 +54,19 @@ class User {
 	
 	public String name;
 	public Object objId;
+	public String inst;
 	
 	public User( DBObject obj ) {
+		this( obj, null );
+	}
+	
+	public User( DBObject obj, DBObject instObj ) {
 		
 		this.objId = (Object) obj.get( "_id" );
 		this.name = (String) obj.get( "username" );
+		
+		if( instObj != null )
+			inst = (String) instObj.get( "name" );
 	}
 	
 }
@@ -72,6 +80,7 @@ class Inst extends User {
 		super( obj );
 		this.name = (String) obj.get( "name" );
 		this.secret = (String) obj.get( "secret" );
+		this.inst = this.name;
 	}
 	
 }
@@ -379,15 +388,16 @@ public class Services {
 	  double strike = prop.getDouble("strike");
 	  double rake = prop.getDouble("rake");
 	  double depth = prop.getDouble("depth");
+	  Date date = prop.getDate("date");
 	
 	  /* prepare the simulation for execution */
-	  return request( lon, lat, mag, depth, dip, strike, rake, compId.toString(), instObj, dur );
+	  return request( lon, lat, mag, depth, dip, strike, rake, compId.toString(), instObj, dur, date );
   }
 
   private String request( double lon, double lat, double mag, double depth, double dip,
-		  				 double strike, double rake, String id, User user, int dur ) {
+		  				 double strike, double rake, String id, User user, int dur, Date date ) {
 	  	  
-	  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake);
+	  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
 	  TaskParameter task = new TaskParameter( eqp, id, user, dur );
 	  		  
 	  if( queue.offer( task ) == false ) {
@@ -513,7 +523,7 @@ public class Services {
 	  db.getCollection("events").insert( event );
 	  
 	  /* start request */
-	  return request( lon, lat, mag, depth, dip, strike, rake, id, user, dur );
+	  return request( lon, lat, mag, depth, dip, strike, rake, id, user, dur, date );
   }
     
   @POST
@@ -535,11 +545,14 @@ public class Services {
 		  @FormParam("date") String dateStr,
 		  @FormParam("sea_area") String sea_area,
 		  @FormParam("root") String root,
-		  @FormParam("parent") String parent ) {
+		  @FormParam("parent") String parent,
+		  @FormParam("comp") Integer comp ) {
 	  
 	  Object[] required = { inst, secret, id, name, lon, lat, mag, depth,
 			  				dip, strike, rake, dateStr };
 	  	  	  
+	  System.out.println( id + ", " + name );
+	  
 	  if( ! checkParams( request, required ) )
 		  return jsfailure();
 	  	  
@@ -593,8 +606,13 @@ public class Services {
 	  /* insert object into 'eqs' collection */
 	  db.getCollection("eqs").insert( obj );
 	  
+	  System.out.println(obj);
+	  
 	  /* insert new event into 'events'-collection */
 	  db.getCollection("events").insert( event );
+	  
+	  if( comp != null )
+		  computeById( request, inst, secret, id, refineId, comp );
 			 
 	  return jssuccess( new BasicDBObject( "refineId", refineId ) );
   }
@@ -841,16 +859,24 @@ public class Services {
 		  return null;
 	  
 	  DBCollection coll = db.getCollection("users");
+	  DBCollection insts = db.getCollection("institutions");
 	  
 	  DBCursor cursor = coll.find( new BasicDBObject("session", session) );
 	  DBObject obj;
+	  DBObject inst = null;
 	  
 	  if( cursor.hasNext() ) {
 		  
 		  /* we have found a valid session key */
 		  obj = cursor.next();
+		  cursor.close();
 		  
-		  return new User( obj );
+		  
+		  cursor = insts.find( new BasicDBObject("_id", obj.get("inst")) );
+		  if( cursor.hasNext() )
+			  inst = cursor.next();
+		  
+		  return new User( obj, inst );
 	  }
 	  
 	  return null;
@@ -1123,6 +1149,7 @@ public class Services {
 						
 	/* create new JSON object that can be used directly within JavaScript */
 	JsonObject jsonObj = new JsonObject();
+	jsonObj.addProperty( "serverTime", sdf.format( new Date() ) );
 	jsonObj.addProperty( "ts", sdf.format( timestamp ) );
 	jsonObj.add( "main", gson.toJsonTree( mlist ) );
 	jsonObj.add( "user", gson.toJsonTree( ulist ) );

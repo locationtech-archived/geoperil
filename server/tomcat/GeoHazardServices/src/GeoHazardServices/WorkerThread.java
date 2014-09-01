@@ -2,6 +2,7 @@ package GeoHazardServices;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -10,7 +11,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Writer;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -23,6 +27,7 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
+import com.mongodb.WriteConcern;
 import com.mongodb.util.JSON;
 
 public class WorkerThread implements Runnable, Comparable<WorkerThread> {
@@ -249,6 +254,18 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
 		}
 		
+		cursor = dbclient.getDB( "easywave" ).getCollection("stations").find();
+		
+		for( DBObject obj: cursor ) {
+			
+			String id = (String) obj.get( "name" );
+			Double lat = (Double) obj.get( "lat" );
+			Double lon = (Double) obj.get( "lon" );
+			
+			String poi = "s_" + id + "\t" + lon + "\t" + lat;
+			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
+		}
+		
 		sshCon[0].out.flush();
 		
 		return 0;
@@ -259,7 +276,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		Process p = null;
 		int simTime = task.duration + 10;
 		
-		String cmdParams = " -grid ../gridtwo.grd -poi ftps.inp -poi_dt_out 0 -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
+		String cmdParams = " -grid ../gridtwo.grd -poi ftps.inp -poi_dt_out 30 -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
 			
 		System.out.println( "Thread " + this.thread.getId() + " processes the request." );
 		
@@ -316,6 +333,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 							getWaveHeights( task.id, ewh.toString() );
 					
 						addPoiResults( task.id );
+						addStationResults( task );
 					}
 					
 					/* check if a new process entry was inserted previously - return otherwise */
@@ -591,6 +609,11 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		    String line;
 		    while( (line = reader.readLine()) != null ) {
 		    	String[] data = line.split( "\\s+" );
+		    	
+		    	/* ignore stations at this point */
+		    	if( data[0].startsWith("s_") )
+		    		continue;
+		    	
 		    	DBObject tfp = tfps.get( data[0] );
 		    	tfp.put( "eta", Double.valueOf( data[1] ) );
 		    	tfp.put( "ewh", Double.valueOf( data[2] ) );
@@ -610,6 +633,131 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		}
 		
 		return 0;
+	}
+	
+	private int addStationResults( TaskParameter task ) {
+		
+		try {
+		
+			/* copy remote POI file to local worker instance */
+			if( remote ) {
+				
+				BufferedReader reader = null;
+				PrintStream poiFile = new PrintStream( workdir + "/eWave.poi.ssh" );
+				
+				sshCon[1].out.println( "cat eWave.poi.ssh" );
+				sshCon[1].out.println( "echo '\004'" );
+				sshCon[1].out.flush();
+				reader = sshCon[1].in;
+				
+				String line = reader.readLine();
+				while (line != null && ! line.equals("\004")) {
+					poiFile.println( line );
+					line = reader.readLine();
+				}
+				
+				poiFile.close();
+			}
+			
+			File f = new File( workdir + "/eWave.poi.ssh" );
+			BufferedReader reader = new BufferedReader( new FileReader( f ) );
+		
+			String line;
+			ArrayList<Integer> statIds = new ArrayList<Integer>();
+			ArrayList<String> statNames = new ArrayList<String>();
+			
+			DBCollection simData = dbclient.getDB( "easywave" ).getCollection("simsealeveldata");
+			DBObject obj;
+			
+			/* translate date into time stamp */
+			long time = task.eqparams.date.getTime() / 1000;
+			
+		    while( (line = reader.readLine()) != null ) {
+		    	String[] data = line.trim().split( "\\s+" );
+		    	
+		    	/* search for stations in headline and store related index (station ids start with s_) */
+		    	if( statIds.size() == 0 ) {
+		    		
+		    		for( int i = 1; i < data.length; i++ )
+		    			if( data[i].startsWith("s_") ) {
+		    				statIds.add(i);
+		    				statNames.add( data[i].substring(2) );
+		    			}
+		    				
+		    		continue;
+		    	}
+		    	
+		    	long rel_time = (long)(Float.valueOf(data[0]) * 60);
+		    	long stamp = time + rel_time;
+		    	
+		    	if( rel_time > task.duration * 60 )
+		    		break;
+		    	
+		    	/* extract value of each station for the next timestamp */
+		    	for( int i = 0; i < statIds.size(); i++ ) {		    		
+		    		
+		    		/*String params = "apiver=1&inst=gfz&secret=_123abc_" + 
+		    						"&timestamp=" + stamp +
+		    						"&reltime=" + rel_time +
+									"&station=" + statNames.get(i) +
+									"&value=" + data[ statIds.get(i) ] +
+									"&evid=" + task.id;*/
+		    		
+		    		/* write the simulation data directly into the database because of performance reasons */
+		    		obj = new BasicDBObject();
+		    		obj.put("inst", task.user.inst );
+		    		obj.put("timestamp", stamp);
+		    		obj.put("reltime", rel_time);
+		    		obj.put("station", statNames.get(i));
+		    		obj.put("value", data[ statIds.get(i) ]);
+		    		obj.put("evid",task.id);
+		    		
+		    		simData.insert( obj, WriteConcern.UNACKNOWLEDGED );
+		    		
+		    		//sendPost( "http://localhost/feedersrv/feedsealevel", params );
+		    	}
+		    	
+		    }
+			
+			reader.close();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+			return 1;
+		}
+		
+		return 0;
+	}
+	
+	private void sendPost( String url, String params ) {
+		
+		HttpURLConnection con = null;
+		
+		try {
+			con = (HttpURLConnection) new URL( url ).openConnection();
+			con.setRequestMethod("POST");
+			con.setDoOutput(true);
+			DataOutputStream wr = new DataOutputStream( con.getOutputStream() );
+			wr.writeBytes(params);
+			wr.flush();
+			wr.close();
+			
+			BufferedReader in = new BufferedReader(
+			        new InputStreamReader(con.getInputStream()));
+			String inputLine;
+			StringBuffer response = new StringBuffer();
+	 
+			while ((inputLine = in.readLine()) != null) {
+				response.append(inputLine);
+			}
+			in.close();
+	 
+			//print result
+			//System.out.println(response.toString());
+			
+		} catch (IOException e) {
+			return;
+		}
 	}
 
 	@Override
