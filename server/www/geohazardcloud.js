@@ -127,7 +127,7 @@ function Earthquake( meta ) {
 			stat.load();
 			this.stations.insert( stat );
 		}
-
+		
 		this.showStations();
 	};
 	
@@ -234,6 +234,14 @@ function Station( meta, eq ) {
 	this.range = 0; 
 	this.startTime = null;
 	this.endTime = null;
+	
+	/* dynamic fields */
+	this.active = false;
+	this.curLiveTime = null;
+	this.curSimTime = null;
+	
+	this.noup = 0;
+	this.noupMax = 1;
 		
 	/* one table that holds the live data */
 	this.table1 = new google.visualization.DataTable();
@@ -258,7 +266,7 @@ function Station( meta, eq ) {
 		
 	/* start fetching the data */
 	this.load = function() {
-		
+				
 		if( ! this.eq ) {
 			
 			/* no event selected */
@@ -271,23 +279,52 @@ function Station( meta, eq ) {
 		} else {
 			
 			/* there is a selected event */
+			this.noupMax = 2;
 						
 			/* set range to 375 minutes - 15m prior to the origin time and 360m afterwards  */
 			this.range = 375 * 60 * 1000;
 			this.startTime = new Date( new Date( this.eq.prop.date ).getTime() - 15 * 60 * 1000 );
 			this.endTime = new Date( this.startTime.getTime() + this.range );
 			
-			this.fetchSimData( this.startTime, 1 );
+			this.curSimTime = this.startTime;
+			
+			//this.fetchSimData( 1, true );
 		}
 				
-		this.update( this.startTime, 15 );	
+		this.curLiveTime = this.startTime;
+		//this.update( 15, true );
+	};
+	
+	this.activate = function() {
+		
+		if( this.active )
+			return false;
+		
+		this.active = true;
+		
+		console.log( this.active );
+		
+		if( this.eq )
+			this.fetchSimData( 1, true );
+		
+		this.update( 15, true );
+		
+		return true;
+	};
+	
+	this.deactivate = function() {
+		this.active = false;
 	};
 	
 	/* most of the time this method will be called asynchronously via setTimeout */
-	this.update = function( start, interval ) {
+	this.update = function( interval, reactivated ) {
+				
+		/* check if the station is active; that is, we want to get updates */
+		if( ! this.active )
+			return;
 		
 		var data = { station: this.name,
-					 start: start.toISOString(),
+					 start: this.curLiveTime.toISOString(),
 				    };
 		
 		/* append the end time only if it is explicitly given */
@@ -302,7 +339,9 @@ function Station( meta, eq ) {
 			data: data,
 			success: (function( result ) {
 				
-				//console.log( this.name, ": Fetched", result.data.length, "live values in", Date.now() -  this.profile1.stime, "ms");
+				console.log( this.name, ": Fetched", result.data.length, "live values in", Date.now() -  this.profile1.stime, "ms");
+				
+				console.log( result );
 				
 				/* remove all elements that are out of range now - only relevant if no event selected */
 				if( ! this.eq ) {
@@ -327,31 +366,47 @@ function Station( meta, eq ) {
 					
 					/* update private start time for next call */
 					if( result.last )
-						start = new Date( result.last * 1000 );
+						this.curLiveTime = new Date( result.last * 1000 );
 					
 					/* if the data has changed, notify everyone who is interested */
 					this.notifyUpdate();
+					
+				} else if( reactivated ) {
+					
+					/* nothing has changed after re-activating, inform listeners about that */
+					this.notifyNoUpdate();
 				}
 				
 				/* call update again after 'interval' seconds */
-				setTimeout( this.update.bind(this, start, interval), interval * 1000 );
+				setTimeout( this.update.bind(this, interval), interval * 1000 );
 				
 			}).bind(this)
 		});
 	};
 	
-	this.fetchSimData = function( start, interval ) {
+	this.fetchSimData = function( interval, reactivated ) {
 						
+		console.log( this.active );
+		
+		/* check if the station is active; that is, we want to get updates */
+		if( ! this.active )
+			return;
+		
 		var data = { station: this.name,
-					 start: start.toISOString(),
+					 start: this.curSimTime.toISOString(),
 					 end: this.endTime.toISOString(),
 					 evid: this.eq._id,
 					 /* TODO: remove dependency to vsdbPlayer */
 					 ff: vsdbPlayer.accel,
 				    };
 		
-		/* is there still anything to fetch */
-		if( start >= this.endTime ) {
+		console.log( data );
+		
+		/* is there still anything to fetch? */
+		if( this.curSimTime >= this.endTime ) {
+			if( reactivated )
+				/* nothing has changed after re-activating, inform listeners about that */
+				this.notifyNoUpdate();
 			return;
 		}
 		
@@ -363,9 +418,9 @@ function Station( meta, eq ) {
 			data: data,
 			success: (function( result ) {
 				
-				//console.log( this.name, ": Fetched", result.data.length, "sim values in", Date.now() -  this.profile2.stime, "ms");
+				console.log( this.name, ": Fetched", result.data.length, "sim values in", Date.now() -  this.profile2.stime, "ms");
 				
-				//console.log( result );
+				console.log( result );
 				
 				if( result.data.length > 0 ) {
 										
@@ -381,14 +436,19 @@ function Station( meta, eq ) {
 					
 					/* update start time for next call */
 					if( result.last )
-						start = new Date( result.last * 1000 );
+						this.curSimTime = new Date( result.last * 1000 );
 					
 					/* notify everyone who is interested */
 					this.notifyUpdate();
+					
+				} else if( reactivated ) {
+					
+					/* nothing has changed after re-activating, inform listeners about that */
+					this.notifyNoUpdate();
 				}
 								
 				/* call update again after 'interval' seconds */
-				setTimeout( this.fetchSimData.bind(this, start, interval), interval * 1000 );
+				setTimeout( this.fetchSimData.bind(this, interval), interval * 1000 );
 				
 			}).bind(this)
 		});
@@ -416,18 +476,29 @@ function Station( meta, eq ) {
 			if( this.updateHandler[i] )
 				this.updateHandler[i]();
 	};
+	
+	/* this method is used to inform all listeners that the diagram did not change after activating and
+	 * thus the loading overlay can be removed */
+	this.notifyNoUpdate = function() {
+		
+		if( ++this.noup == this.noupMax ) {
+			this.notifyUpdate();
+			this.noup = 0;
+		}
+	};
 }
 
 function Chart( data, width, height ) {
 	
 	this.data = data;
 	this.div = $( '#chart-div' ).clone().removeAttr( "id" );
-	this.dia = new google.visualization.LineChart( this.div[0] );
-	
+	this.dia = new google.visualization.LineChart( this.div.find('.dia')[0] );
+		
 	this.profile = { stime: 0 };
-	
+		
 	google.visualization.events.addListener( this.dia, 'ready', (function() {
 		console.log("Chart", this.data.name, "drawn in", Date.now() - this.profile.stime, "ms");
+		this.div.find('.spanLoad').css('display','none');
 	}).bind(this));
 	
 	this.options = {
@@ -460,7 +531,7 @@ function Chart( data, width, height ) {
 		this.refresh();
 	};
 	
-	this.refresh = function() {	
+	this.refresh = function() {
 		
 		this.profile.stime = Date.now();
 		this.dia.draw( this.data.table, this.options );
@@ -528,6 +599,18 @@ function Chart( data, width, height ) {
 	
 	this.enableLine = function( on ) {
 		this.line_on = on;
+	};
+	
+	/* check if the chart is visible inside the scroll pane */
+	this.isVisible = function() {
+		var left = this.div.parent().offset().left;
+		var right = this.div.parent().offset().left + this.div.parent().width();
+		return this.div.offset().left + this.div.width() > left && this.div.offset().left < right;
+	};
+	
+	/* display loading overlay */
+	this.setLoading = function() {
+		this.div.find('.spanLoad').css('display','block');
 	};
 	
 	this.div.hover( this.chartOnEnter, this.chartOnLeave );
@@ -792,9 +875,9 @@ function MainChart( widget, width, height ) {
 		var box = cli.getChartAreaBoundingBox();
 		var ampl = cli.getYLocation( 0 );
 				
-		this.slider.push( new Slider( false, box.left - 15, box.width + 15, ampl, box.top, box.top + box.height, widget ) );
-		this.slider.push( new Slider( true, box.top, box.height + 15, box.left, box.left, box.left + box.width, widget ) );
-		this.slider.push( new Slider( true, box.top, box.height + 15, box.left + box.width, box.left, box.left + box.width, widget ) );
+		this.slider.push( new Slider( false, box.left - 50, box.width + 50, ampl, box.top, box.top + box.height, widget ) );
+		this.slider.push( new Slider( true, box.top, box.height + 70, box.left, box.left, box.left + box.width, widget ) );
+		this.slider.push( new Slider( true, box.top, box.height + 70, box.left + box.width, box.left, box.left + box.width, widget ) );
 		
 		for( var i = 0; i < this.slider.length; i++ ) {
 			this.handler.push( null );
@@ -858,6 +941,8 @@ function StationView( widget, data ) {
 	this.widget = widget;
 	this.data = data;
 	this.box_list = [];
+	
+	this.timer = null;
 			
 	/* should be called after stations were added to the data container */   
 	this.reload = function() {
@@ -880,6 +965,8 @@ function StationView( widget, data ) {
 
 			this.widget.append( this.box_list[i].div );
 		}
+		
+		this.activate();
 	};
 	
 	this.dispose = function() {
@@ -889,12 +976,14 @@ function StationView( widget, data ) {
 		
 		this.box_list = [];
 	};
-	
+		
 	/* should be called after sorting stations in the data container */
 	this.update = function() {
 				
 		for( var i = 0; i < this.data.length(); i++ )
 			this.box_list[i].init( this.data.get(i) );
+		
+		this.activate();
 	};
 	
 	this.enableLines = function( on ) {
@@ -922,6 +1011,54 @@ function StationView( widget, data ) {
 		this.data = data;
 		this.reload();
 	};
+	
+	/* return list of visible stations */
+	this.getVisible = function() {
+		var list = [];
+		for( var i = 0; i < this.data.length(); i++ )
+			if( this.box_list[i].isVisible() )
+				list.push( i );
+		return list;
+	};
+	
+	/* call function 'activate' 1 sec after a scroll action is finished */
+	this.onScroll = function() {
+		if( this.timer )
+			clearTimeout( this.timer );
+		
+		this.timer = setTimeout( this.activate.bind(this), 1000 );
+	};
+	
+	/* activate all visible stations */
+	this.activate = function() {
+		this.timer = null;		
+		var visibles = this.getVisible();
+		this.deactivateAll(visibles);
+		
+		for( var i = 0; i < visibles.length; i++ ) {
+			var idx = visibles[i];
+			if( this.data.get( idx ).activate() )
+				this.box_list[ idx ].setLoading();
+		}
+	};
+	
+	/* deactivate all stations except the given list */
+	this.deactivateAll = function( excepts ) {
+		var start = 0;
+		
+		for( var j = 0; j < excepts.length; j++ ) {
+			for( var i = start; i < excepts[j]; i++ ) {
+				this.data.get( i ).deactivate();
+			}
+			start = excepts[j] + 1;
+		}
+		
+		for( var i = start; i < this.data.length(); i++ ) {
+			this.data.get( i ).deactivate();
+		}
+	};
+	
+	this.widget.scroll( this.onScroll.bind( this ) );
 }
 
 function Symbol( marker, idx, list ) {
@@ -1030,7 +1167,7 @@ function StationSymbols( data, show ) {
 		this.removeAll();
 		this.create();
 	};
-	
+		
 	this.drawLine = function( idx, marker ) {
 				
 		var box = stationView.box_list[idx].div;
@@ -1397,7 +1534,7 @@ function initialize() {
 	stationSymbols.enableLines( $('#stat-dias').css( "display" ) != "None" );
 	
 	vsdbPlayer = new VsdbPlayer( $('#vsdbPlayer') );
-	
+		
 	var mapOptions = {
 			zoom: 2,
 			center: new google.maps.LatLng(0,0),
@@ -2684,7 +2821,7 @@ function select( id ) {
 }
 
 function deselect() {
-		
+			
 	if( active == null )
 		return;
 	
@@ -4504,9 +4641,15 @@ function toggleStations() {
 
 function getStationList( handler ) {
 		
+	var data = {};
+	
+	if( curuser.inst )
+		data['inst'] = curuser.inst.name;
+	
 	$.ajax({
 		type: 'POST',
 		url: "webguisrv/stationlist",
+		data: data,
 		dataType: 'json',
 		success: function( result ) {
 			serverTime = new Date( result.serverTime );
@@ -4520,9 +4663,15 @@ function getStationList( handler ) {
 
 function getStations() {
 	
+	var data = {};
+	
+	if( curuser.inst )
+		data['inst'] = curuser.inst.name;
+	
 	$.ajax({
 		type: 'POST',
 		url: "webguisrv/stationlist",
+		data: data,
 		dataType: 'json',
 		success: function( result ) {
 										

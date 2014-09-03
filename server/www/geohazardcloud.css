@@ -651,11 +651,32 @@ pre {
 }
 
 .chart-div {
+	position: relative;
 	margin-right: 0.5em;
 	display: inline-block;
 	outline: 1px solid #acaaa7;
 	cursor: pointer;
 	cursor: hand;
+}
+
+.chart-div .spanLoad {
+	position: absolute;
+	width: 100%;
+	height: 4.2em;
+	top: 0px;
+	bottom: 0px;
+	margin: auto;
+	text-align: center;
+}
+
+.chart-div .spanLoad .iconLoad {
+	font-size: 3em;
+	margin-bottom: 0.2em;
+	color: #428bca;
+}
+
+.chart-div .spanLoad .textLoad {
+	font-size: 1em;
 }
 
 #canvas-line, #canvas-chart, .canvas-gen {
