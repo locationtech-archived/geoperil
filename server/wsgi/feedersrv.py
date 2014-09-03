@@ -53,13 +53,11 @@ class FeederSrv(Base):
                     "timestamp":int(timestamp),
                     }
                 if "evid" in data:
-                    res = self._db["simsealeveldata"].update(update,{"$set":data})
-                    if not res["updatedExisting"]:
-                        self._db["simsealeveldata"].insert(data)
+                    data["_id"] = "{evid}_{station}_{timestamp!s}".format_map(data)
+                    self._db["simsealeveldata"].save(data)
                 else:
-                    res = self._db["sealeveldata"].update(update,{"$set":data})
-                    if not res["updatedExisting"]:
-                        self._db["sealeveldata"].insert(data)
+                    data["_id"] = "{inst}_{station}_{timestamp!s}".format_map(data)
+                    self._db["sealeveldata"].save(data)
                 return jssuccess()
             return jsfail(errors = ["There is no stations named %s." % station])
         return jsdeny()
@@ -82,23 +80,20 @@ class FeederSrv(Base):
                 json = jsonlib.loads(json)
                 vnr = 0
                 verr = 0
+                values = []
                 for v in json:
                     if "value" in v and "timestamp" in v:
                         v["value"] = str(v["value"])
                         v["timestamp"] = int(v["timestamp"])
                         v["inst"] = inst["name"]
                         v["station"] = station
-                        update = {
-                            "inst":inst["name"], 
-                            "station":station, 
-                            "timestamp":int(v["timestamp"]),
-                            }
-                        res = self._db["sealeveldata"].update(update,{"$set":v})
-                        if not res["updatedExisting"]:
-                            self._db["sealeveldata"].insert(v)
+                        v["_id"] = "{inst}_{station}_{timestamp!s}".format_map(v)
+                        self._db["sealeveldata"].remove(v["_id"])
+                        values.append(v)
                         vnr += 1
                     else:
                         verr += 1
+                self._db["sealeveldata"].insert(values)
                 return jssuccess(values = vnr, errors = verr)
             else:
                 return jsfail(errors = ["Parameter station is missing."])
