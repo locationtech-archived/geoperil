@@ -93,7 +93,7 @@ class FeederSrv(Base):
                             "station":station, 
                             "timestamp":int(v["timestamp"]),
                             }
-                        res = self._db["sealeveldata"].update(update,{"$set":data})
+                        res = self._db["sealeveldata"].update(update,{"$set":v})
                         if not res["updatedExisting"]:
                             self._db["sealeveldata"].insert(v)
                         vnr += 1

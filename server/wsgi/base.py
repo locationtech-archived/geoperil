@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 import hashlib
 from base64 import b64encode, b64decode
 from copy import copy, deepcopy
+from bson.objectid import ObjectId
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,6 +20,12 @@ cherrypy.config.update({
 if cherrypy.__version__.startswith('3.0') and cherrypy.engine.state == 0:
     cherrypy.engine.start(blocking=False)
     atexit.register(cherrypy.engine.stop)
+
+class JSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, ObjectId):
+            return str(o)
+        return json.JSONEncoder.default(self, o)
 
 def startapp(app):
     dbe = MongoClient()
@@ -36,17 +43,17 @@ def createsaltpwhash(password):
 def jssuccess(**d):
     cherrypy.response.headers['Content-Type'] = 'application/json'
     d["status"] = "success"
-    return bytes(json.dumps(d),"utf-8")
+    return bytes(json.dumps(d,cls=JSONEncoder),"utf-8")
 
 def jsfail(**d):
     cherrypy.response.headers['Content-Type'] = 'application/json'
     d["status"] = "failed"
-    return bytes(json.dumps(d),"utf-8")
+    return bytes(json.dumps(d,cls=JSONEncoder),"utf-8")
 
 def jsdeny(**d):
     cherrypy.response.headers['Content-Type'] = 'application/json'
     d["status"] = "denied"
-    return bytes(json.dumps(d),"utf-8")
+    return bytes(json.dumps(d,cls=JSONEncoder),"utf-8")
 
 class Base:
     def __init__(self,db):
