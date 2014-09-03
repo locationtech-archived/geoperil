@@ -93,7 +93,8 @@ class FeederSrv(Base):
                         vnr += 1
                     else:
                         verr += 1
-                self._db["sealeveldata"].insert(values)
+                if len(values)>0:
+                    self._db["sealeveldata"].insert(values)
                 return jssuccess(values = vnr, errors = verr)
             else:
                 return jsfail(errors = ["Parameter station is missing."])
