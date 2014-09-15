@@ -20,7 +20,8 @@ class FeederSrv(Base):
                     res = self._db["stations"].update({"inst":inst["name"], "name":station["name"]},{"$set":station})
                     if not res["updatedExisting"]:
                         self._db["stations"].insert(station)
-                    return jssuccess()
+                    station = self._db["stations"].find_one({"inst":inst["name"], "name":station["name"]})
+                    return jssuccess(station = station)
                 return jsfail(errors = ["The station needs a name."])
             return jsdeny()
         return jsfail(errors = ["API version not supported."])
@@ -80,6 +81,7 @@ class FeederSrv(Base):
                 json = jsonlib.loads(json)
                 vnr = 0
                 verr = 0
+                ids = []
                 values = []
                 for v in json:
                     if "value" in v and "timestamp" in v:
@@ -89,7 +91,9 @@ class FeederSrv(Base):
                         v["station"] = station
                         v["_id"] = "{inst}_{station}_{timestamp!s}".format_map(v)
                         self._db["sealeveldata"].remove(v["_id"])
-                        values.append(v)
+                        if v["_id"] not in ids:
+                            values.append(v)
+                            ids.append(v["_id"])
                         vnr += 1
                     else:
                         verr += 1
