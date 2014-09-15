@@ -135,7 +135,7 @@ elif cmd=="updatestations":
         if stationname in oldstations:
             oldstations.remove(stationname)
         elif stationname in config["stations"]:
-            print("Duplicate entry for %s." % stationname)
+            print("Duplicate entry for %s in SLM." % stationname)
         else:
             newstations.append(stationname)
             config["stations"][stationname] = {}
@@ -156,6 +156,10 @@ elif cmd=="updatestations":
         print("Old stations no longer provided by SLM (%d):" % len(oldstations))
         for s in oldstations:
             print("    %s" % s)
+        if len(sys.argv)>3 and sys.argv[3]=="remove":
+            for s in oldstations:
+                del config["stations"][s]
+            print("removed.")
     saveconfig(configfile,config)
 elif cmd=="genconfig":
     print("Creating configuration file %s..." % configfile)
