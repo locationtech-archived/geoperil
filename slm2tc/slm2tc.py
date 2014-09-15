@@ -50,8 +50,10 @@ def getdataforstation(args):
             print("%s: " % s["name"], sfeed)
         else:
             print("%s: No values to insert." % s["name"])
-    except simplejson.scanner.JSONDecodeError as jsex:
-        print("Error: ",jsex)
+    except Exception as ex:
+        print("Error %s: " % s["name"],ex)
+    sys.stdout.flush()
+    sys.stderr.flush()
 
 
 if os.path.exists(configfile):
