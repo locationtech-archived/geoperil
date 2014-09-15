@@ -163,6 +163,7 @@ class WebGuiSrv(Base):
         if user is not None and user["permissions"].get("manage",False):
             if station is not None and "name" in station:
                 station["inst"] = inst
+                station["lastmetadataupdate"] = int(time.time())
                 if name is None:
                     nostation = self._db["stations"].find_one({"inst":inst, "name":station["name"]})
                     if nostation is None:

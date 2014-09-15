@@ -1,4 +1,5 @@
 from base import *
+import time
 jsonlib = json
 
 logger = logging.getLogger("MsgSrv")
@@ -17,6 +18,7 @@ class FeederSrv(Base):
                 station = json.loads(station)
                 if station is not None and "name" in station:
                     station["inst"] = inst["name"]
+                    station["lastmetadataupdate"] = int(time.time())
                     res = self._db["stations"].update({"inst":inst["name"], "name":station["name"]},{"$set":station})
                     if not res["updatedExisting"]:
                         self._db["stations"].insert(station)
