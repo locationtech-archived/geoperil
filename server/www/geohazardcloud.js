@@ -1,13 +1,17 @@
 var map;
 
-function CustomList( widget, sort ) {
+function CustomList( widget, sortFun ) {
 	
    this.list = [];
    this.startIdx = 0;
    this.endIdx = 19;
    this.widget = widget;
    
-   this.sort = (typeof sort === "undefined") ? "prop.date" : sort;
+   this.sortFun = (typeof sortFun === "undefined") ? sort_date : sortFun;
+   
+   this.setSortFun = function( sortFun ) {
+		this.sortFun = sortFun;
+	};
    
    this.getElem = function( i ) {
 	   return this.list[ this.list.length - i - 1 ];
@@ -30,14 +34,10 @@ function CustomList( widget, sort ) {
    };
    
    this.push = function( entry ) {
-	   	   								   	   	   
-	   var date2 = new Date( this.getProp( entry, this.sort ) );
-	   	   	   
+	   	   								   	   	   	   	   	   
 	   for( var i = 0; i < this.list.length; i++ ) {
 		   
-		   var date1 = new Date( this.getProp( this.list[i], this.sort ) );
-		   
-		   if( date1.getTime() > date2.getTime() ) {
+		   if( this.sortFun( entry, this.list[i] ) == -1 ) {
 			   
 			   this.list.splice( i, 0, entry );
 			   return;
@@ -127,7 +127,7 @@ function Earthquake( meta ) {
 			stat.load();
 			this.stations.insert( stat );
 		}
-		
+				
 		this.showStations();
 	};
 	
@@ -136,6 +136,21 @@ function Earthquake( meta ) {
 		stationView.setData( this.stations );
 		stationView.enableLines( $( '#stat-chk' ).is(':checked') );
 		stationSymbols.setData( this.stations );
+	};
+	
+	this.hasCompParams = function() {
+		var p = this.prop;
+		var ret = p.latitude && p.longitude && p.depth && p.magnitude && p.dip && p.strike && p.rake;
+		return ret;
+	};
+	
+	this.getAccel = function() {
+		
+		var ret = 1;
+		if( this.process && this.process.length > 0 && this.process[0].accel )
+			ret = this.process[0].accel;
+		
+		return ret;
 	};
 }
 
@@ -152,7 +167,16 @@ function EntryMap() {
 		if( this.map[ entry['_id'] ] )
 			console.log("Warning: entry with id " + entry['_id'] + " already in map.");
 		
-		this.map[ entry['_id'] ] = new Earthquake( entry );
+		var result = this.map[ entry['_id'] ] = new Earthquake( entry );
+		
+		result['arrT'] = 0;
+		result['polygons'] = {};
+		result['rectangle'] = null;
+		result['show_grid'] = false;
+		result['pois'] = null;
+		result['heights'] = {};
+		
+		return result;
 	};
 	
 	this.get = function( id ) {
@@ -163,16 +187,8 @@ function EntryMap() {
 		
 		var result = this.map[ entry['_id'] ];
 				
-		if( ! result ) {
-			result = this.map[ entry['_id'] ] = new Earthquake( entry );
-			
-			result['arrT'] = 0;
-			result['polygons'] = {};
-			result['rectangle'] = null;
-			result['show_grid'] = false;
-			result['pois'] = null;
-			result['heights'] = {};
-		}
+		if( ! result )
+			return this.add( entry );
 		
 		return result;
 	};
@@ -206,6 +222,10 @@ function Container( key, sortFun ) {
 	   }
 	   
 	   this.list.push( item );
+	};
+	
+	this.clear = function() {
+		this.list.length = 0;
 	};
 	
 	this.sort = function() {
@@ -252,11 +272,16 @@ function Station( meta, eq ) {
 	this.table2 = new google.visualization.DataTable();
 	this.table2.addColumn('datetime', 'Date');
 	this.table2.addColumn('number', 'Sim-Data');
-	
+		
 	/* and the final table that is either just a reference to the first table or arises from joining both upper tables */
 	this.table = this.table1;
 	
+	/* treat data as UTC */
+	this.formatter = new google.visualization.DateFormat( { timeZone: 0 } );
+	
 	this.updateHandler = [];
+	
+	this.pickData = null;
 	
 	this.profile1 = { stime: 0, etime: 0 };
 	this.profile2 = { stime: 0, etime: 0 };
@@ -270,7 +295,7 @@ function Station( meta, eq ) {
 		if( ! this.eq ) {
 			
 			/* no event selected */
-			
+			 						
 			/* set start time 180 minutes prior to the current server time */
 			this.range = 180 * 60 * 1000;
 			this.startTime = new Date( serverTime.getTime() - this.range );
@@ -279,11 +304,12 @@ function Station( meta, eq ) {
 		} else {
 			
 			/* there is a selected event */
-			this.noupMax = 2;
-						
+			this.noupMax = 2;			
+									
 			/* set range to 375 minutes - 15m prior to the origin time and 360m afterwards  */
-			this.range = 375 * 60 * 1000;
-			this.startTime = new Date( new Date( this.eq.prop.date ).getTime() - 15 * 60 * 1000 );
+			this.prior = 15 * 60 * 1000;
+			this.range = this.prior + 360 * 60 * 1000;
+			this.startTime = new Date( new Date( this.eq.prop.date ).getTime() - this.prior );
 			this.endTime = new Date( this.startTime.getTime() + this.range );
 			
 			this.curSimTime = this.startTime;
@@ -295,15 +321,17 @@ function Station( meta, eq ) {
 		//this.update( 15, true );
 	};
 	
+	this.setPickData = function( pickData ) {
+		this.pickData = pickData;
+	};
+	
 	this.activate = function() {
 		
 		if( this.active )
 			return false;
 		
 		this.active = true;
-		
-		console.log( this.active );
-		
+				
 		if( this.eq )
 			this.fetchSimData( 1, true );
 		
@@ -323,8 +351,11 @@ function Station( meta, eq ) {
 		if( ! this.active )
 			return;
 		
+		console.log("update");
+		
 		var data = { station: this.name,
 					 start: this.curLiveTime.toISOString(),
+					 inst: !checkPerm("vsdb") ? "gfz_ex_test" : curuser.inst.name
 				    };
 		
 		/* append the end time only if it is explicitly given */
@@ -339,9 +370,9 @@ function Station( meta, eq ) {
 			data: data,
 			success: (function( result ) {
 				
-				console.log( this.name, ": Fetched", result.data.length, "live values in", Date.now() -  this.profile1.stime, "ms");
+				//console.log( this.name, ": Fetched", result.data.length, "live values in", Date.now() -  this.profile1.stime, "ms");
 				
-				console.log( result );
+				//console.log( result );
 				
 				/* remove all elements that are out of range now - only relevant if no event selected */
 				if( ! this.eq ) {
@@ -369,11 +400,13 @@ function Station( meta, eq ) {
 						this.curLiveTime = new Date( result.last * 1000 );
 					
 					/* if the data has changed, notify everyone who is interested */
+					console.log( this.name, "live notifyUpdate" );
 					this.notifyUpdate();
 					
 				} else if( reactivated ) {
 					
 					/* nothing has changed after re-activating, inform listeners about that */
+					console.log( this.name, "live notifyNoUpdate" );
 					this.notifyNoUpdate();
 				}
 				
@@ -385,9 +418,7 @@ function Station( meta, eq ) {
 	};
 	
 	this.fetchSimData = function( interval, reactivated ) {
-						
-		console.log( this.active );
-		
+								
 		/* check if the station is active; that is, we want to get updates */
 		if( ! this.active )
 			return;
@@ -395,17 +426,14 @@ function Station( meta, eq ) {
 		var data = { station: this.name,
 					 start: this.curSimTime.toISOString(),
 					 end: this.endTime.toISOString(),
-					 evid: this.eq._id,
-					 /* TODO: remove dependency to vsdbPlayer */
-					 ff: vsdbPlayer.accel,
+					 evid: this.eq._id
 				    };
-		
-		console.log( data );
 		
 		/* is there still anything to fetch? */
 		if( this.curSimTime >= this.endTime ) {
 			if( reactivated )
 				/* nothing has changed after re-activating, inform listeners about that */
+				console.log( this.name, "sim notifyNoUpdate" );
 				this.notifyNoUpdate();
 			return;
 		}
@@ -418,10 +446,8 @@ function Station( meta, eq ) {
 			data: data,
 			success: (function( result ) {
 				
-				console.log( this.name, ": Fetched", result.data.length, "sim values in", Date.now() -  this.profile2.stime, "ms");
-				
-				console.log( result );
-				
+				//console.log( this.name, ": Fetched", result.data.length, "sim values in", Date.now() -  this.profile2.stime, "ms");
+					
 				if( result.data.length > 0 ) {
 										
 					/* add new data to the simulation data table */
@@ -432,18 +458,20 @@ function Station( meta, eq ) {
 					/* join the simulation with the live data to create the final table */
 					this.profile2.stime = Date.now();
 					this.table = google.visualization.data.join( this.table1, this.table2, 'full', [[0,0]], [1], [1] );
-					console.log( this.name, ": Joined", result.data.length, "sim values in", Date.now() -  this.profile2.stime, "ms");
+					//console.log( this.name, ": Joined", result.data.length, "sim values in", Date.now() -  this.profile2.stime, "ms");
 					
 					/* update start time for next call */
 					if( result.last )
 						this.curSimTime = new Date( result.last * 1000 );
 					
 					/* notify everyone who is interested */
+					console.log( this.name, "sim notifyUpdate" );
 					this.notifyUpdate();
 					
 				} else if( reactivated ) {
 					
 					/* nothing has changed after re-activating, inform listeners about that */
+					console.log( this.name, "sim notifyNoUpdate" );
 					this.notifyNoUpdate();
 				}
 								
@@ -471,7 +499,10 @@ function Station( meta, eq ) {
 	};
 	
 	this.notifyUpdate = function() {
+		/* treat values in DataTable as UTC dates */
+		this.formatter.format( this.table, 0 );
 		
+		/* inform anyone interested */
 		for( var i = 0; i < this.updateHandler.length; i++ )
 			if( this.updateHandler[i] )
 				this.updateHandler[i]();
@@ -492,15 +523,15 @@ function Chart( data, width, height ) {
 	
 	this.data = data;
 	this.div = $( '#chart-div' ).clone().removeAttr( "id" );
-	this.dia = new google.visualization.LineChart( this.div.find('.dia')[0] );
+	this.dia = null;
 		
-	this.profile = { stime: 0 };
-		
-	google.visualization.events.addListener( this.dia, 'ready', (function() {
-		console.log("Chart", this.data.name, "drawn in", Date.now() - this.profile.stime, "ms");
-		this.div.find('.spanLoad').css('display','none');
-	}).bind(this));
+	this.div.height( height );
+	this.div.width( width );
 	
+	this.handler = null;
+	
+	this.profile = { stime: 0 };
+			
 	this.options = {
 		curveType: 'function',
 		width: width,
@@ -510,7 +541,6 @@ function Chart( data, width, height ) {
 	};
 	
 	this.listenerID = null;
-	this.line_on = false;
 	
 	this.init = function( data ) {
 		
@@ -527,14 +557,58 @@ function Chart( data, width, height ) {
 				};
 			} )(this) );
 				
-		this.options.title = data.name;
-		this.refresh();
+		this.options.title = data.name;		
 	};
 	
 	this.refresh = function() {
 		
+		/* get x-range that should be used when displaying the chart */
+		var xmin = this.data.eq ? this.data.startTime : new Date(serverTime - this.data.range);
+		var xmax = this.data.eq ? this.data.endTime : serverTime;
+				
+		if( this.data.eq ) {
+			var range = this.data.endTime.getTime() - this.data.startTime.getTime();
+			xmin = new Date( this.data.startTime.getTime() + this.data.prior - this.data.prior / this.data.eq.getAccel() );
+			xmax = new Date( this.data.startTime.getTime() + range / this.data.eq.getAccel() );
+		}
+		
+		/* set 5 ticks on x-axis explicitly */
+		var ticks = [];
+		var parts = [0.0, 0.25, 0.5, 0.75, 1.0];
+		for( var i = 0; i < parts.length; i++ ) {
+			/* because Google Charts does not support displaying the x-axis in UTC time,
+			 * specify tick labels explicitly */
+			var tick = new Date( xmin.getTime() + (xmax.getTime() - xmin.getTime()) * parts[i] );
+			var hours = (tick.getHours() + 24 + tick.getTimezoneOffset() / 60) % 24;
+			ticks.push( { v:tick, f: zeroPad(hours, 2) + ':' + zeroPad( tick.getMinutes(), 2) } );
+		}
+		
+		/* update hAxis */
+		this.options.hAxis = {
+			viewWindow: {
+				min: xmin,
+				max: xmax
+			},
+			ticks: ticks
+		};
+		
 		this.profile.stime = Date.now();
+		
+		this.div.css('display','none');
+		
+		/* lazy one time initialization */
+		if( this.dia == null ) {
+			this.dia = new google.visualization.LineChart( this.div.find('.dia')[0] );
+			google.visualization.events.addListener( this.dia, 'ready', this.ready.bind(this) );
+		}
+		
 		this.dia.draw( this.data.table, this.options );
+		this.div.css('display','inline-block');
+	};
+	
+	this.ready = function() {
+		console.log("Chart", this.data.name, "drawn in", Date.now() - this.profile.stime, "ms");
+		this.div.find('.spanLoad').css('display','none');
 	};
 	
 	this.dispose = function() {
@@ -544,63 +618,33 @@ function Chart( data, width, height ) {
 		
 		this.listenerID = null;
 	};
-	
-	this.drawLine = function( box, idx ) {
 		
-		var p1 = box.offset();
-		p1.left += box.width() / 2;
-			
-		var item = stations.get(idx);
-		var pixel = LatLonToPixel( item.lat, item.lon );
-		var p2 = $( '#mapview' ).offset();
-		
-		p2.left += pixel.x;
-		p2.top += pixel.y;
-		
-		canvas.drawLine( p1, p2 );
+	this.registerMouseListener = function( handler ) {
+		this.handler = handler;
 	};
 	
 	this.chartOnEnter = function() {
 		
-		$( this ).css( "outline", "2px solid #428bca" );
+		this.div.css( "outline", "2px solid #428bca" );
 		
-		var idx = $( this ).index();	
-		stationSymbols.highlight( idx, true );
-		
-		/* 'this' does not point to the object of this class but to the div at which the event occur */
-		var _this = stationView.box_list[idx];
-		
-		if( _this.line_on )
-			_this.drawLine( $(this), idx );
+		if( this.handler )
+			this.handler('enter');
 	};
 	
 	this.chartOnLeave = function() {
 		
-		$( this ).css( "outline", "1px solid #acaaa7" );
+		this.div.css( "outline", "1px solid #acaaa7" );
 		
-		var idx = $( this ).index();
-		stationSymbols.highlight( idx, false );
-		canvas.clearCanvas();
+		if( this.handler )
+			this.handler('leave');
 	};
 	
 	this.chartOnClick = function() {
-		
-		var idx = $( this ).index();
-		var _this = stationView.box_list[idx];
-		
-		if( _this.line_on ) {
-			
-			map.panTo( stationSymbols.symbols[idx].marker.getPosition() );
-			_this.drawLine( $(this), idx );
-		}
-		
-		dialogs.chart.show( _this.data );
+				
+		if( this.handler )
+			this.handler('click');
 	};
-	
-	this.enableLine = function( on ) {
-		this.line_on = on;
-	};
-	
+		
 	/* check if the chart is visible inside the scroll pane */
 	this.isVisible = function() {
 		var left = this.div.parent().offset().left;
@@ -610,11 +654,12 @@ function Chart( data, width, height ) {
 	
 	/* display loading overlay */
 	this.setLoading = function() {
+		this.div.find('.spanInactive').css('display','none');
 		this.div.find('.spanLoad').css('display','block');
 	};
 	
-	this.div.hover( this.chartOnEnter, this.chartOnLeave );
-	this.div.click( this.chartOnClick );
+	this.div.hover( this.chartOnEnter.bind(this), this.chartOnLeave.bind(this) );
+	this.div.click( this.chartOnClick.bind(this) );
 	
 	this.init( this.data );
 }
@@ -627,8 +672,28 @@ function MainChartDialog( widget ) {
 	
 	this.multi = 0;
 	
+	/* hide picker by default */
+	this.picker = false;
+	$('#picker .lnkGroup span').removeClass("glyphicon-chevron-up");
+	$('#picker .lnkGroup span').addClass("glyphicon-chevron-down");
+	$('#picker .grpContent').css( "display", "none");
+	
 	this.show = function( data ) {
 		this.data = data;
+		
+		/* toggle view depending on earthquake selection */
+		if( this.data.eq ) {
+			widget.find('.spanHead').show();
+			widget.find('.spanNoPick').hide();
+			$('#pickerEnable').prop('disabled', false);
+			$('#picker').show();
+		} else {
+			widget.find('.spanHead').hide();
+			widget.find('.spanNoPick').show();
+			$('#pickerEnable').prop('disabled', true);
+			$('#picker').hide();
+		}
+				
 		this.dialog.modal( 'show' );		
 	};
 	
@@ -642,31 +707,138 @@ function MainChartDialog( widget ) {
 		this.chart.setOnSlideListener( 0, this.onAmplSliderChange.bind(this) );
 		this.chart.setOnSlideListener( 1, this.onFreqSliderChange.bind(this) );
 		this.chart.setOnSlideListener( 2, this.onFreqSliderChange.bind(this) );
+		this.chart.showSliders( this.picker );
+		
+		this.loadFormData();
 	};
 	
-	this.onAmplSliderChange = function( val ) {
-		$('#pickerAmpl').val( val.toFixed(2) );
+	this.onClose = function() {
+		this.saveFormData();
 	};
 	
-	this.onFreqSliderChange = function( val ) {
+	this.onAmplSliderChange = function() {
+		$('#pickerAmpl').val( this.chart.getSliderValue(0).toFixed(2) );
+		this.updatePreview();
+	};
+	
+	this.onFreqSliderChange = function() {
 		var freq = Math.abs( this.chart.getSliderValue(1) - this.chart.getSliderValue(2) );
 		freq = freq / 1000.0 / 60.0;
 		$('#pickerFreq').val( freq.toFixed(2) );
+		this.setTotalFreq();
+	};
+	
+	this.onFreqInputChange = function( val ) {
+		this.setTotalFreq();
 	};
 	
 	this.onAmplInputChange = function( val ) {
 		this.chart.setSliderValue(0, $('#pickerAmpl').val());
 	};
-	
+		
 	this.onMultiplierChange = function( e ) {
 		var elem = $(e.delegateTarget);
 		$('#pickerDropDown button span').first().text( elem.text() );
+		this.multi = elem.parent().index();
+		this.setTotalFreq();
+	};
+	
+	this.setTotalFreq = function() {
+		var multi = $('#pickerDropDown button span:first').html();
+		var freq = $('#pickerFreq').val();
+		$('#pickerFreqTotal').val( freq * multi );
+		this.updatePreview();
+	};
+	
+	this.onTimeChange = function() {
+		this.updatePreview();
+	};
+	
+	this.showPicker = function() {
+		this.picker = ! this.picker;
+		this.chart.showSliders( this.picker );
+	};
+	
+	this.updatePreview = function() {
+		var text = "Period: " + $('#pickerFreqTotal').val() + " minutes &#183; "
+				 + "Amplitude: " + $('#pickerAmpl').val() + " meters &#183; "
+				 + "Time of Arrival: " + $('#pickerTime').val() + " UTC";
+		
+		widget.find('.spanValues').html( text );
+	};
+	
+	this.updateTime = function() {
+		
+		if( ! serverTime )
+			return;
+		
+		var sec = zeroPad( serverTime.getSeconds(), 2);
+		
+		widget.find('.localTime').html( getLocalDateString( serverTime ) + ':' + sec );
+		widget.find('.utcTime').html( getDateString( serverTime ) + ':' + sec );
+	};
+	
+	this.saveFormData = function() {
+		var formData = {};
+			
+		formData.sliders = new Array(3);
+		for( var i = 0; i < 3; i++ )
+			formData.sliders[i] = this.chart.getSliderValue(i);
+		
+		formData.zoom = this.chart.zoom;
+		formData.left = this.chart.left;
+		
+		formData.multi = this.multi;
+		formData.period = new Number( $('#pickerFreqTotal').val() );
+		formData.ampl = new Number( $('#pickerAmpl').val() );
+		formData.time = $('#pickerTime').val();
+		formData.pick = $('#pickerEnable').prop('checked');
+				
+		this.data.setPickData( formData );
+	};
+	
+	this.loadFormData = function() {
+		var formData = this.data.pickData;
+		var bounds = this.chart.getAxisBounds();
+		
+		if( formData ) {
+			for( var i = 0; i < 3; i++ )
+				this.chart.setSliderValue(i, formData.sliders[i]);
+			
+			this.chart.setState( formData.zoom, formData.left );
+			
+			$('#pickerDropDown li a')[ formData.multi ].click();
+			$('#pickerTime').val( formData.time );
+			$('#pickerEnable').prop('checked', formData.pick);
+			
+		} else {
+			
+			this.chart.setState( 1, 0 );
+			this.chart.setSliderValue(0, 0);
+			this.chart.setSliderValue(1, bounds.xmin);
+			this.chart.setSliderValue(2, bounds.xmax);
+			
+			var time = zeroPad( bounds.xmin.getUTCHours(), 2 ) + ':' + zeroPad( bounds.xmin.getUTCMinutes(), 2 );
+			
+			$('#pickerDropDown li a')[0].click();
+			$('#pickerTime').val( time );
+			$('#pickerEnable').prop('checked', false);
+		}
+		
+		this.updatePreview();
 	};
 		
 	/* register all handlers used within this dialog */
 	this.dialog.on('shown.bs.modal', this.ready.bind(this) );
+	this.dialog.on('hidden.bs.modal', this.onClose.bind(this) );
+	$('#pickerFreq').change( this.onFreqInputChange.bind(this) );
 	$('#pickerAmpl').change( this.onAmplInputChange.bind(this) );
+	$('#pickerTime').change( this.onTimeChange.bind(this) );
 	$('#pickerDropDown li a').click( this.onMultiplierChange.bind(this) );
+	$('#picker .lnkGroup').click( this.showPicker.bind(this) );
+		
+	/* update time every second */
+	setInterval( this.updateTime.bind(this), 1000 );
 }
 
 function Slider( vertical, off, len, middle, min, max, widget ) {
@@ -688,13 +860,18 @@ function Slider( vertical, off, len, middle, min, max, widget ) {
 		this.draw();
 	};
 	
+	this.getValue = function() {
+		return this.pos.middle;
+	};
+	
 	this.onMouseDown = function( e ) {
 
 		/* other elements should not react on this event */
 		e.preventDefault();
+		e.stopPropagation();
 		
-		this.widget.on( 'mousemove', this.onMouseMove.bind(this) );
-		this.widget.on( 'mouseup', this.onMouseUp.bind(this) );
+		$(window).on( 'mousemove', this.onMouseMove.bind(this) );
+		$(window).on( 'mouseup', this.onMouseUp.bind(this) );
 	
 		this.down = { x: e.pageX, y: e.pageY };
 	};
@@ -703,6 +880,7 @@ function Slider( vertical, off, len, middle, min, max, widget ) {
 				
 		/* other elements should not react on this event */
 		e.preventDefault();
+		e.stopPropagation();
 		
 		var diff = 0;
 		
@@ -733,8 +911,10 @@ function Slider( vertical, off, len, middle, min, max, widget ) {
 
 		/* other elements should not react on this event */
 		e.preventDefault();
+		e.stopPropagation();
 		
-		this.widget.off( 'mousemove' );
+		$(window).off( 'mousemove' );
+		$(window).off( 'mouseup' );
 		this.down = null;
 	};
 		
@@ -766,7 +946,6 @@ function Slider( vertical, off, len, middle, min, max, widget ) {
 		
 		this.canvas_slider.css( "left", left + "px" );
 		this.canvas_slider.css( "top", top + "px" );
-		this.canvas_slider.css( "display", "block" );
 		
 		var canvas = this.canvas_slider[0];
 		canvas.width  = this.canvas_slider.width();
@@ -809,7 +988,6 @@ function Slider( vertical, off, len, middle, min, max, widget ) {
 		
 		this.canvas_line.css( "left", left + "px" );
 		this.canvas_line.css( "top", top + "px" );
-		this.canvas_line.css( "display", "block" );
 		
 		canvas = this.canvas_line[0];
 		canvas.width  = this.canvas_line.width();
@@ -832,6 +1010,12 @@ function Slider( vertical, off, len, middle, min, max, widget ) {
 		ctx.stroke();
 	};
 	
+	this.show = function( val ) {
+		var cssVal = val ? 'block' : 'none'; 
+		this.canvas_line.css( 'display', cssVal );
+		this.canvas_slider.css( 'display', cssVal );
+	};
+	
 	this.canvas_slider.on( 'mousedown', this.onMouseDown.bind(this) );
 	
 	this.setValue( middle );
@@ -843,16 +1027,25 @@ function MainChart( widget, width, height ) {
 	this.div = widget;
 	this.dia = new google.visualization.LineChart( this.div[0] );
 	
+	/* bounding box that contains the real diagram area */
+	this.bbox = null;
+	
 	this.slider = [];
 	this.handler = [];
 	this.listenerID = null;
+	
+	this.zoom = 1;
+	this.left = 0;
+	this.drag = null;
 		
+	this.values = [];
+			
 	this.options = {
-			curveType: 'function',
-			width: width,
-			height: height,
-			interpolateNulls: true
-		};
+		curveType: 'function',
+		width: width,
+		height: height,
+		interpolateNulls: true
+	};
 	
 	this.init = function( data ) {
 		
@@ -860,7 +1053,7 @@ function MainChart( widget, width, height ) {
 		
 		this.data = data;
 		this.options.title = data.name;
-					
+							
 		/* register handler that will be called if the underlying station data changes */
 		this.listenerID =
 			this.data.setOnUpdateListener( (function(_this) {
@@ -870,19 +1063,6 @@ function MainChart( widget, width, height ) {
 			} )(this) );
 		
 		this.refresh();
-		
-		var cli = this.dia.getChartLayoutInterface();
-		var box = cli.getChartAreaBoundingBox();
-		var ampl = cli.getYLocation( 0 );
-				
-		this.slider.push( new Slider( false, box.left - 50, box.width + 50, ampl, box.top, box.top + box.height, widget ) );
-		this.slider.push( new Slider( true, box.top, box.height + 70, box.left, box.left, box.left + box.width, widget ) );
-		this.slider.push( new Slider( true, box.top, box.height + 70, box.left + box.width, box.left, box.left + box.width, widget ) );
-		
-		for( var i = 0; i < this.slider.length; i++ ) {
-			this.handler.push( null );
-			this.slider[i].setOnChangeListener( this.onControlChange.bind(this,i) );
-		}
 	};
 	
 	this.dispose = function() {
@@ -893,7 +1073,79 @@ function MainChart( widget, width, height ) {
 	};
 	
 	this.refresh = function() {
+				
+		/* get x-range that should be used when displaying the chart */
+		var xmin = this.data.eq ? this.data.startTime : new Date(serverTime - this.data.range);
+		var xmax = this.data.eq ? this.data.endTime : serverTime;
+				
+		if( this.data.eq ) {
+			var range = this.data.endTime.getTime() - this.data.startTime.getTime();
+			xmin = new Date( this.data.startTime.getTime() + this.data.prior - this.data.prior / this.data.eq.getAccel() );
+			xmax = new Date( this.data.startTime.getTime() + range / this.data.eq.getAccel() );
+		}
+		
+		var diff = xmax.getTime() - xmin.getTime();
+		var hiddenPart = diff * (1 - this.zoom);
+		xmin = new Date( xmin.getTime() + hiddenPart + this.left * hiddenPart );
+		xmax = new Date( xmax.getTime() + this.left * hiddenPart );
+		
+		/* set 5 ticks on x-axis explicitly */
+		var ticks = [];
+		var parts = [0.0, 0.25, 0.5, 0.75, 1.0];
+		for( var i = 0; i < parts.length; i++ ) {
+			/* because Google Charts does not support displaying the x-axis in UTC time,
+			 * specify tick labels explicitly */
+			var tick = new Date( xmin.getTime() + (xmax.getTime() - xmin.getTime()) * parts[i] );
+			var hours = (tick.getHours() + tick.getTimezoneOffset() / 60 + 24) % 24;
+			ticks.push( { v:tick, f: zeroPad(hours, 2) + ':' + zeroPad( tick.getMinutes(), 2) } );
+		}
+					
+		/* update hAxis */
+		this.options.hAxis = {
+			viewWindow: {
+				min: xmin,
+				max: xmax
+			},
+			ticks: ticks
+		};
+				
 		this.dia.draw( this.data.table, this.options );
+	};
+	
+	this.ready = function() {
+		
+		/* do one time initializations here */
+		if( this.slider.length == 0 ) {
+			
+			var cli = this.dia.getChartLayoutInterface();
+			var box = cli.getChartAreaBoundingBox();
+			var ampl = cli.getYLocation( 0 );
+								
+			this.slider.push( new Slider( false, box.left - 50, box.width + 50, ampl, box.top, box.top + box.height, widget ) );
+			this.slider.push( new Slider( true, box.top, box.height + 50, box.left, box.left, box.left + box.width, widget ) );
+			this.slider.push( new Slider( true, box.top, box.height + 50, box.left + box.width, box.left, box.left + box.width, widget ) );
+			
+			for( var i = 0; i < this.slider.length; i++ ) {
+				this.handler.push( null );
+				this.values.push( null );
+				this.slider[i].setOnChangeListener( this.onControlChange.bind(this,i) );
+			}
+			
+			/* set bounding box with relative coordinates */
+			this.bbox = box;
+		}
+		
+		/* update sliders according to new diagram range */
+		for( var i = 0; i < this.slider.length; i++ ) {
+			if( this.values[i] != null )
+				this.setSliderValue( i, this.values[i] );
+		}
+	};
+	
+	this.setState = function( zoom, left ) {
+		this.zoom = zoom;
+		this.left = left;
+		this.refresh();
 	};
 	
 	this.setOnSlideListener = function( idx, handler ) {
@@ -906,26 +1158,26 @@ function MainChart( widget, width, height ) {
 	
 	this.onControlChange = function( idx, val ) {
 		
-		if( this.handler[idx] )
-			this.handler[idx]( this.getSliderValue( idx ) );
-	};
-	
-	this.getSliderValue = function( idx ) {
-		
-		var trans;
 		var val = this.slider[idx].pos.middle;
 		
 		if( idx == 0 )
-			trans = this.dia.getChartLayoutInterface().getVAxisValue( val );
+			this.values[idx] = this.dia.getChartLayoutInterface().getVAxisValue( val );
 		else
-			trans = this.dia.getChartLayoutInterface().getHAxisValue( val );
+			this.values[idx] = this.dia.getChartLayoutInterface().getHAxisValue( val );
 		
-		return trans;
+		if( this.handler[idx] )
+			this.handler[idx]( this.values[idx] );
+	};
+	
+	this.getSliderValue = function( idx ) {		
+		return this.values[idx];
 	};
 	
 	this.setSliderValue = function( idx, val ) {
 		
 		var trans;
+		
+		this.values[idx] = val;
 		
 		if( idx == 0 )
 			trans = this.dia.getChartLayoutInterface().getYLocation( val );
@@ -933,7 +1185,97 @@ function MainChart( widget, width, height ) {
 			trans = this.dia.getChartLayoutInterface().getXLocation( val );
 		
 		this.slider[idx].setValue( trans );
+		
+		if( this.handler[idx] )
+			this.handler[idx]( this.values[idx] );
 	};
+	
+	this.showSliders = function( val ) {
+		for( var i = 0; i < this.slider.length; i++ )
+			this.slider[i].show( val );
+	};
+	
+	this.getAxisBounds = function() {
+		var win = this.options.hAxis.viewWindow;
+		return { xmin: win.min, xmax: win.max };
+	};
+	
+	/* */
+	this.onMouseDown = function(e) {
+		
+		/* check if the event refers to the chart area and not something around it (e.g the label) */
+		if( ! this.isInsideBBox( {x: e.clientX, y: e.clientY} ) )
+			return;
+		
+		this.drag = { x: e.clientX, y: e.clientY };
+		$(window).mousemove( this.onMouseDrag.bind(this) );
+		$(window).mouseup( this.onMouseUp.bind(this) );
+	};
+	
+	this.onMouseUp = function(e) {
+		this.drag = null;
+		$(window).unbind( 'mousemove' );
+	};
+	
+	this.onMouseDrag = function(e) {
+		var diff = this.drag.x - e.clientX;
+		this.drag = { x: e.clientX, y: e.clientY };
+		
+		this.left += (diff / this.options.width);
+		this.left = Math.min( this.left, 0 );
+		this.left = Math.max( this.left, -1 );
+		
+		this.refresh();
+	};
+	
+	this.onMouseWheelFF = function(e) {
+		
+		/* check if the event refers to the chart area and not something around it (e.g the label) */
+		if( ! this.isInsideBBox( {x: e.clientX, y: e.clientY} ) )
+			return;
+
+		this.zoomDia( - e.originalEvent.detail );
+	};
+	
+	this.onMouseWheel = function(e) {
+				
+		/* check if the event refers to the chart area and not something around it (e.g the label) */
+		if( ! this.isInsideBBox( {x: e.clientX, y: e.clientY} ) )
+			return;
+		
+		this.zoomDia( e.originalEvent.wheelDelta );
+	};
+	
+	this.zoomDia = function( offset ) {
+		
+		var delta = offset > 0 ? 0.5 : 2;
+		this.zoom *= delta;
+		this.zoom = Math.max( this.zoom, 0.125 );
+		this.zoom = Math.min( this.zoom, 1 );
+		
+		this.refresh();
+	};
+	
+	this.isInsideBBox = function( p ) {
+		
+		/* get relative coordinates of given point */
+		var x = p.x - this.div.offset().left;
+		var y = p.y - this.div.offset().top;
+		
+		/* check if point lies inside the bounding box */
+		if( x < this.bbox.left || x > this.bbox.left + this.bbox.width ||
+			y < this.bbox.top  || y > this.bbox.top + this.bbox.height )
+			return false;
+		
+		return true;
+	};
+	
+	this.div.mousedown( this.onMouseDown.bind(this) );
+	
+	this.div.bind( 'mousewheel', this.onMouseWheel.bind(this) );
+	this.div.bind( 'DOMMouseScroll', this.onMouseWheelFF.bind(this) );
+	
+	google.visualization.events.addListener( this.dia, 'ready', this.ready.bind(this) );
 }
 
 function StationView( widget, data ) {
@@ -942,38 +1284,54 @@ function StationView( widget, data ) {
 	this.data = data;
 	this.box_list = [];
 	
+	this.lines_on = false;
 	this.timer = null;
 			
 	/* should be called after stations were added to the data container */   
 	this.reload = function() {
+		
+		this.widget.empty();	
+		
+		if( ! this.widget.is(':visible') || this.data.length() == 0 ) {
+			this.widget.append('<div class="lnkSelect"><a href="javascript:showProp(null,\'#propTabStations\')">Select stations</a></div>');
+			return;
+		}
 				
 		this.dispose();
-		
-		this.widget.empty();
-				
+					
 		var width = 200;
 		var height = this.widget[0].clientHeight - 30;
+	
+		/* make the widget invisible to speed up appending new charts inside the following loop */
+		this.widget.css('display','none');
 		
 		for( var i = 0; i < this.data.length(); i++ ) {
 			
 			var item = this.data.get(i);
 			
-			if( this.box_list.length - 1 < i )
-				this.box_list.push( new Chart( item, width, height ) );
-			else
+			if( this.box_list.length - 1 < i ) {
+				var chart = new Chart( item, width, height );
+				chart.registerMouseListener( this.onMouseAction.bind(this,i) );
+				this.box_list.push( chart );
+			} else {
 				this.box_list[i].init( item );
+			}
 
 			this.widget.append( this.box_list[i].div );
 		}
+		
+		this.widget.css('display','block');
 		
 		this.activate();
 	};
 	
 	this.dispose = function() {
 		
+		this.deactivate();
+		
 		for( var i = 0; i < this.box_list.length; i++ )
 			this.box_list[i].dispose();
-		
+				
 		this.box_list = [];
 	};
 		
@@ -987,9 +1345,7 @@ function StationView( widget, data ) {
 	};
 	
 	this.enableLines = function( on ) {
-		
-		for( var i = 0; i < this.data.length(); i++ )
-			this.box_list[i].enableLine( on );
+		this.lines_on = on;
 	};
 	
 	this.scrollTo = function( idx, step_fun, done_fun ) {
@@ -1007,7 +1363,49 @@ function StationView( widget, data ) {
 		//this.widget.scrollLeft( val );
 	};
 	
+	this.drawLine = function( idx ) {
+		
+		var box = this.box_list[idx].div;
+		var p1 = box.offset();
+		p1.left += box.width() / 2;
+			
+		var item = this.data.get(idx);
+		var pixel = LatLonToPixel( item.lat, item.lon );
+		var p2 = $( '#mapview' ).offset();
+		
+		p2.left += pixel.x;
+		p2.top += pixel.y;
+		
+		canvas.drawLine( p1, p2 );
+	};
+	
+	this.onMouseAction = function( idx, type ) {
+		
+		if( type == 'enter' ) {
+			
+			stationSymbols.highlight( idx, true );
+			if( this.lines_on )
+				this.drawLine( idx );
+			
+		} else if( type == 'leave' ) {
+			
+			stationSymbols.highlight( idx, false );
+			canvas.clearCanvas();
+			
+		} else if( type == 'click' ) {
+			
+			if( this.lines_on ) {
+				map.panTo( stationSymbols.symbols[idx].marker.getPosition() );
+				this.drawLine( idx );
+			}
+			dialogs.chart.show( this.data.get(idx) );
+		}
+	};
+	
 	this.setData = function( data ) {
+		
+		this.deactivate(); 
+		
 		this.data = data;
 		this.reload();
 	};
@@ -1021,12 +1419,12 @@ function StationView( widget, data ) {
 		return list;
 	};
 	
-	/* call function 'activate' 1 sec after a scroll action is finished */
+	/* call function 'activate' 0.5 sec after a scroll action is finished */
 	this.onScroll = function() {
 		if( this.timer )
 			clearTimeout( this.timer );
 		
-		this.timer = setTimeout( this.activate.bind(this), 1000 );
+		this.timer = setTimeout( this.activate.bind(this), 500 );
 	};
 	
 	/* activate all visible stations */
@@ -1055,6 +1453,14 @@ function StationView( widget, data ) {
 		
 		for( var i = start; i < this.data.length(); i++ ) {
 			this.data.get( i ).deactivate();
+		}
+	};
+	
+	/* deactivate all stations */
+	this.deactivate = function() {
+		if( this.data ) {
+			for( var i = 0; i < this.data.length(); i++ )
+				this.data.get(i).deactivate();
 		}
 	};
 	
@@ -1117,9 +1523,10 @@ function Symbol( marker, idx, list ) {
 
 function StationSymbols( data, show ) {
 	
-	this.data = data;
 	this.symbols = [];
 	this.showLines = false;
+	this.data = data;
+	this.visible = show;
 	
 	this.info = new google.maps.InfoWindow();
 		
@@ -1129,10 +1536,10 @@ function StationSymbols( data, show ) {
 			
 			var item = this.data.get(i);
 			var pos = new google.maps.LatLng( item.lat, item.lon );
-						
+									
 			var marker = new google.maps.Marker ({
 				position: pos,
-				map: map,
+				map: null,
 				icon: {
 					anchor: new google.maps.Point( 0, 2 ),
 					path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
@@ -1147,6 +1554,8 @@ function StationSymbols( data, show ) {
 						
 			this.symbols.push( new Symbol( marker, i, this ) );
 		}
+		
+		this.show( this.visible );
 	};
 	
 	this.setData = function( data ) {
@@ -1190,9 +1599,9 @@ function StationSymbols( data, show ) {
 	};
 	
 	this.symbolOnClick = function( symbol ) {
-				
+						
 		var item = this.data.get( symbol.idx );
-		
+				
 		/* scroll to diagram and redraw the line */
 		with( { _this: this } ) {
 			stationView.scrollTo( symbol.idx, function() {
@@ -1204,7 +1613,7 @@ function StationSymbols( data, show ) {
 					_this.removeLine();
 			});
 		}
-	
+		
 		this.info.setContent( item.name );
 		this.info.open( map, symbol.marker );
 	};
@@ -1216,11 +1625,14 @@ function StationSymbols( data, show ) {
 	};
 	
 	this.symbolOnMouseLeave = function( symbol ) {
-		
+				
+		this.info.close();
 		this.removeLine();
 	};
 		
 	this.show = function( yes ) {
+		
+		this.visible = yes;
 		
 		for( var i = 0; i < this.symbols.length; i++ )
 			this.symbols[i].show( yes );
@@ -1237,7 +1649,6 @@ function StationSymbols( data, show ) {
 	};
 	
 	this.create();
-	this.show( show );
 }
 
 function sort_string( field, a, b ) {
@@ -1252,9 +1663,13 @@ function sort_string( field, a, b ) {
 }
 
 function sort_dist( lat, lon, a, b ) {
-	
-	var dist_a = Math.sqrt( Math.pow( a.lat - lat, 2 ) + Math.pow( a.lon - lon, 2 ) );
-	var dist_b = Math.sqrt( Math.pow( b.lat - lat, 2 ) + Math.pow( b.lon - lon, 2 ) );
+		
+	/* calculating the distance between two longitudes must respect the wrap around -180 and +180 degree */
+	var a_lon = Math.min( Math.abs(a.lon - lon), 180 - Math.abs( lon ) + 180 - Math.abs( a.lon ) );
+	var b_lon = Math.min( Math.abs(b.lon - lon), 180 - Math.abs( lon ) + 180 - Math.abs( b.lon ) );
+		
+	var dist_a = Math.sqrt( Math.pow( a.lat - lat, 2 ) + Math.pow( a_lon, 2 ) );
+	var dist_b = Math.sqrt( Math.pow( b.lat - lat, 2 ) + Math.pow( b_lon, 2 ) );
 	
 	if( dist_a < dist_b )
 		return -1;
@@ -1265,10 +1680,35 @@ function sort_dist( lat, lon, a, b ) {
 	return 0;
 }
 
+function sort_date( a, b ) {
+		
+	if( new Date(a.prop.date) < new Date(b.prop.date) )
+		return -1;
+	else if( new Date(a.prop.date) > new Date(b.prop.date) )
+		return 1;
+		
+	return 0;
+}
+
+function sort_timeline( a, b ) {
+	
+	/* because of inconsistent field naming, we have to distinguish at this point :( */
+	var a_date = a.timestamp ? a.timestamp : a.CreatedTime;
+	var b_date = b.timestamp ? b.timestamp : b.CreatedTime;
+		
+	if( new Date(a_date) < new Date(b_date) )
+		return -1;
+	else if( new Date(a_date) > new Date(b_date) )
+		return 1;
+		
+	return 0;
+}
+
 function VsdbPlayer( div ) {
 	
 	/* jquery objects */
 	this.div = div;
+	this.base = null;
 	this.btnPlay = this.div.find('.btnPlay');
 	this.drpNames = this.div.find('.drpNames');
 	this.drpAccel = this.div.find('.drpAccel');
@@ -1276,17 +1716,18 @@ function VsdbPlayer( div ) {
 	
 	this.running = false;
 	this.scenarios;
-	this.scenario;
-	this.accel;
-	
+	this.scenario = null;
+	this.accel = null;
+	this.cancelled = false;
+		
 	this.init = function() {
 		
 		function success( obj ) {
 						
-			this.scenarios = obj.result.list;
-						
-			console.log( this.scenarios );
+			this.drpNames.find('ul').empty();
 			
+			this.scenarios = obj.result.list;
+									
 			for( var i = 0; i < this.scenarios.length; i++ ) {
 				var name = this.scenarios[i].name;
 				var id = this.scenarios[i].id;
@@ -1299,42 +1740,60 @@ function VsdbPlayer( div ) {
 				}
 				this.scenarios[i].sensors = sensors;
 			}
-			
-			console.log( this.scenarios );
-						
+									
 			this.drpNames.find('a').click( this.onDrpChange.bind(this) );
 			this.update();
-		}
+		};
 		
-		for( var i = 1; i <= 10; i++ )
-			this.drpAccel.find('ul').append('<li><a href="#">' + i + '</a></li>');
+		if( this.base == null )
+			return;
+				
+		this.drpAccel.find('ul').empty();
+		
+		for( var k = 1; k <= 10; k++ )
+			this.drpAccel.find('ul').append('<li><a href="#">' + k + '</a></li>');
+		
 		this.drpAccel.find('ul').append('<li><a href="#">' + 16 + '</a></li>');
 		
 		this.drpAccel.find('a').click( this.onDrpChange.bind(this) );
 		
+		this.btnPlay.find('.load').hide();
+		
 		this.request( 'simlist', [], success.bind(this) );
+	};
+	
+	this.setBase = function( base ) {
+		this.base = base;
+		this.init();
 	};
 	
 	this.start = function() {
 			
 		function success( result ) {
-			console.log( 'start' );
 			console.log( result );
 		};
 				
 		var params;
 		params = [this.scenario.id, null, this.accel, this.scenario.sensors];
 		
+		this.drpNames.find('button').prop('disabled', true);
+		this.drpAccel.find('button').prop('disabled', true);
+		this.btnPlay.prop('disabled', true);
+		
+		this.btnPlay.find('.ready').hide();
+		this.btnPlay.find('.load').show();
+				
+		this.cancelled = false;
 		this.request( 'startsim', params, success.bind(this) );
 	};
 	
 	this.stop = function() {
 				
 		function success( result ) {
-			console.log( 'stop' );
 			console.log( result );
 		}
 		
+		this.cancelled = true;
 		this.request( 'stopsim', [], success.bind(this) );
 	};
 	
@@ -1343,16 +1802,36 @@ function VsdbPlayer( div ) {
 		function success( obj ) {
 			
 			var status = obj.result;
-					
-			/* toggle buttons	 if the state changes */
+											
+			/* toggle buttons if the state changes */
 			if( status.running != this.running ) {
 				this.running = status.running;
 				this.btnPlay.find('span').toggleClass('glyphicon-play');
 				this.btnPlay.find('span').toggleClass('glyphicon-stop');
 				this.drpNames.find('button').prop('disabled', this.running);
 				this.drpAccel.find('button').prop('disabled', this.running);
+				this.btnPlay.prop('disabled', false);
+				
+				/* show progress bar and resize the entire page */
+				this.div.find('.progress').show();
+				onResize();
+				
+				if( ! this.running ) {
+					this.btnPlay.removeClass("btn-danger");
+					this.btnPlay.addClass("btn-success");
+				} else {
+					this.btnPlay.addClass("btn-danger");
+					this.btnPlay.removeClass("btn-success");
+				}
+				
+				if( this.running == false && this.cancelled ) {
+					this.progess.find('.progress-txt').html( "Scenario cancelled." );
+				}
+				
+				this.btnPlay.find('.load').hide();
+				this.btnPlay.find('.ready').show();
 			}
-			
+						
 			/* set acceleration factor if player was already running */
 			if( status.ff && status.ff != this.accel ) {
 				this.drpAccel.find('button').html(status.ff + ' <span class="caret"></span>');
@@ -1372,18 +1851,19 @@ function VsdbPlayer( div ) {
 				var progress = 0;
 				
 				if( status.pos < 0 ) {
-					text = "Starting in " + status.pos / 1000 + " seconds...";
+					var dur = -status.pos / 1000 / this.accel;
+					text = "Starting in " + dur.toFixed() + " seconds...";
 				} else {
 					progress = (status.pos / status.end) * 100;
 					text = progress.toFixed(1) + " %";
 				}
 								
 				this.progess.css('width', progress + '%');
-				this.progess.html( text );
+				this.progess.find('.progress-txt').html( text );
 			}
-			
+						
 			setTimeout( this.update.bind(this), 1000 );
-		}
+		};
 		
 		this.request( 'status', [], success.bind(this) );
 	};
@@ -1399,7 +1879,7 @@ function VsdbPlayer( div ) {
 		$.ajax({
 	        type: 'POST',
 	        contentType: 'application/json; charset=utf-8',
-	        url: 'vsdbplayer/services/',
+	        url: this.base + '/services/',
 	        data: JSON.stringify( data ),
 	        dataType:"json", 
 	        success: function( result ) {
@@ -1437,6 +1917,10 @@ function VsdbPlayer( div ) {
 		} else if( dropdown.is( this.drpAccel ) ) {
 			this.accel = item.html();
 		}
+		
+		if( this.scenario && this.accel ) {
+			this.btnPlay.prop('disabled', false);
+		}
 	};
 	
 	/* register event handlers */
@@ -1447,7 +1931,7 @@ function VsdbPlayer( div ) {
 
 var eqlist = new CustomList( '#sidebar' );
 var saved = new CustomList( '#saved' );
-var timeline = new CustomList( '#timeline-data', 'timestamp' );
+var timeline = new CustomList( '#timeline-data', sort_timeline );
 var messages = new CustomList( '#messages' );
 var shared = new CustomList( '#static' );
 
@@ -1497,6 +1981,7 @@ var stationView;
 var stationSymbols;
 var canvas;
 var vsdbPlayer;
+var splash;
 
 var loaded = 0;
 
@@ -1532,9 +2017,9 @@ function initialize() {
 	canvas = new Canvas( $('#canvas-line'), null );
 	stationSymbols = new StationSymbols( stations, $( '#stat-chk' ).is(':checked') );
 	stationSymbols.enableLines( $('#stat-dias').css( "display" ) != "None" );
-	
+			
 	vsdbPlayer = new VsdbPlayer( $('#vsdbPlayer') );
-		
+	
 	var mapOptions = {
 			zoom: 2,
 			center: new google.maps.LatLng(0,0),
@@ -1628,6 +2113,9 @@ function initialize() {
 	$( '#stat-toggle-lnk' ).click( toggleStationView );
 	$( '#stat-chk' ).change( toggleStations );
 	
+	/* accept enter key on splash screen to log in */
+	$( '#splashPass, #splashUser' ).keypress( function(e) { if(e.which == 13) $('#splashSignIn').click();  } );
+	
 	$( window ).resize( onResize );
 	
 	checkSession();
@@ -1713,9 +2201,7 @@ function getUpdates( timestamp ) {
 			var mlist = result['main'];
 			var ulist = result['user'];
 			
-			/* TODO */
 			serverTime = new Date( result['serverTime'] );
-//			console.log( new Date( d.getTime() - 30 * 1000 ).toISOString() );
 				    		
 			var madd = false;
 			var uadd = false;
@@ -1755,15 +2241,20 @@ function getUpdates( timestamp ) {
 					
 				} else if( obj['event'] == 'update' ) {
 										
+					var parent = eqlist.find( obj['id'] );
+					var entry = entries.add( obj );
+				
 					// insert obj sorted again
 					eqlist.removeById( obj['id'] );
-					eqlist.push( obj );
+					eqlist.push( entry );
 					
-					entries.add( obj );
 					madd = true;
 					
-					if( searched( obj ) ) {
-						timeline.push( obj );
+					if( parent && parent._id == active )
+						active = obj._id;
+					
+					if( searched( entry ) ) {
+						timeline.push( entry );
 						sadd = true;
 					}
 				}
@@ -1999,13 +2490,20 @@ function addEntry( widget, data, i ) {
 	
 	$div.find( '.lnkTimeline' ).bind( 'click', { id: tid }, lnkIdOnClick );
 	
+	var dip = prop['dip'] ? prop['dip'] + '&deg;' : "n/a";
+	var strike = prop['strike'] ? prop['strike'] + '&deg;' : "n/a";
+	var rake = prop['rake'] ? prop['rake'] + '&deg;' : "n/a";
+	
 	$div.find( '.region' ).text( prop['region'] );
 	$div.find( '.mag').text( prop['magnitude'] );
 	$div.find( '.datetime' ).html( datestr + " &#183; " + timestr + " UTC" + " &#183; " + txtId );
 	$div.find( '.lonlat' ).html( 'Lat ' + prop['latitude'] + '&deg; &#183;  Lon ' + prop['longitude'] + '&deg; &#183;  Depth ' + prop['depth'] + ' km' );
-	$div.find( '.dip' ).html( 'Dip ' + prop['dip'] + '&deg; &#183; Strike ' + prop['strike'] + '&deg; &#183; Rake ' + prop['rake'] + '&deg;' );
+	$div.find( '.dip' ).html( 'Dip ' + dip + ' &#183; Strike ' + strike + ' &#183; Rake ' + rake );
 	
-	if( widget.attr('id') == 'sidebar' ) {
+	if( checkPerm("vsdb") )
+		$div.find( '.accel' ).html( 'Acceleration ' + data.getAccel() + "x" );
+	
+	if( widget.attr('id') == 'sidebar' && curuser.inst && curuser.inst.name == "gfz" ) {
 		var yearstr = data['_id'].substring(3,7);
 		$div.find( '.beach' ).attr( "src", "http://geofon.gfz-potsdam.de/data/alerts/" + yearstr + "/" + data['id'] + "/bb32.png" );
 		$div.find( '.geofon' ).attr( "href", "http://geofon.gfz-potsdam.de/eqinfo/event.php?id=" + data['id'] );
@@ -2028,8 +2526,10 @@ function addEntry( widget, data, i ) {
 	$div.find( '.lnkLearn' ).popover( options );
 	
 	if( ! data['process'] ) {
-		
-		if( ! prop['sea_area'] ) {
+				
+		if( ! data.hasCompParams() ) {
+			$div.find( '.status' ).html( "Missing parameters" );
+		} else if( ! prop['sea_area'] ) {
 			$div.find( '.status' ).html( simText['inland'] );
 		} else {
 			$div.find( '.status' ).html( simText['no'] );
@@ -2290,7 +2790,7 @@ function addMsg( widget, data, i ) {
 	
 	widget.prepend( $div );
 }
-	
+
 function getMarkerColor( mag ) {
 	
 	var color = 'gray';
@@ -2348,11 +2848,6 @@ function visualize( id ) {
 	markers.active.setMap( map );
 	
     if( active != id ) {
-
-        showWaveHeights( active, false );
-        showPolygons( active, false );
-        showGrid( active, false );
-        showPois( active, false );
 
         deselect( active );
         select( id );
@@ -2420,7 +2915,7 @@ function getIsos( entry, callback ) {
 		data: { "id": id, "process": 0, "arrT": arrT },
 		dataType: 'json',
 		success: function( result ) {
-			
+						
 			for( var i = 0; i < result.length; i++ ) {
 				
 				var resultObj = result[i];
@@ -2557,6 +3052,8 @@ function getNextMsgNr( entry, callback ) {
 function getPois( entry, callback ) {
 	
 	var id = entry._id;
+	
+	console.log( entry );
 
 	if( entry.pois != null ) {
 		showPois( id, true );
@@ -2570,7 +3067,7 @@ function getPois( entry, callback ) {
 		success: function( result ) {
 			
 			entry.pois = new Array();
-			
+						
 			if( result.length == 0 )
 				return;
 						
@@ -2602,7 +3099,7 @@ function getPois( entry, callback ) {
 						}
 					});
 				
-				var txt = "<b>" + poi.code + "</b><br>";
+				var txt = "<b>" + poi.country + " - " + poi.name + " (" + poi.code + ")</b><br>";
 				
 				var min = Math.floor( poi.eta );
 				var sec = Math.floor( (poi.eta % 1) * 60.0 );
@@ -2613,13 +3110,13 @@ function getPois( entry, callback ) {
 				} else {
 					txt += "<span>Uneffected.</span><br>";
 				}
-				
+								
 				point.info = new google.maps.InfoWindow({
 						content: txt
 					});
 				
 				entry.pois.push( point );
-				
+												
 				with( { p: i } ) {
 					google.maps.event.addListener( point.marker, 'click', function() {
 						var poi = entry.pois[p];
@@ -2637,9 +3134,10 @@ function getPois( entry, callback ) {
 					});
 				}
 			}
-
+			
             if( active == id )
                 showPois( id, true );
+            
 		},
 		complete: function() {
 			
@@ -2700,7 +3198,7 @@ function showPolygons( pointer, visible ) {
 		tmap = map;
 		
 	var entry = entries.get( pointer );
-
+	
 	for( var arrT in entry['polygons'] ) {
 		
 		polylines = entry['polygons'][arrT];
@@ -2779,7 +3277,7 @@ function showGrid( pointer, visible ) {
 }
 
 function showPois( pointer, visible ) {
-	
+		
 	if( pointer == null )
 		return;
 	
@@ -2795,20 +3293,19 @@ function showPois( pointer, visible ) {
 	var entry = entries.get( pointer );
 	
 	for( var i in entry.pois ) {
-		
 		entry.pois[i].marker.setMap( tmap );
 	}
 }
 
 function select( id ) {
 	
-	if( id == null )
+	if( id == null /*|| id == active*/ )
 		return;
 	
 	active = id;
 	
 	var entry = entries.get( active );
-	
+		
 	if( ! entry )
 		return;
 	
@@ -2894,6 +3391,9 @@ function signIn( user, password ) {
 			
 			if( resObj.status == "success" ) {
 				
+				/* to avoid caching problems, simply reload the page and start from session again */
+				window.location.reload();
+				
 				/* reset all password and status fields of sign-in widgets */
 				$( "#SignInDialog" ).modal("hide");
 				$('#diaStatus').html("");
@@ -2955,7 +3455,9 @@ function logIn( callback ) {
 	
 	loggedIn = true;
 	
-	getStations();
+	console.log( curuser );
+	
+	getStationList( addGlobalStations );
 	
 	showSplash( false );
 		
@@ -2987,6 +3489,28 @@ function logIn( callback ) {
 		$( '#tabTimeline' ).css( "display", "none" );
 	}
 	
+	/* check chart permission */
+	if( checkPerm("chart") ) {
+		/* show charts */
+		showStationView( true );
+		$( '#statview' ).show();
+		/* show station properties */
+		$( '#propTabStations' ).show();	
+	} else {
+		/* hide charts */
+		showStationView( false );
+		$( '#statview' ).hide();
+		/* hide station properties */
+		$( '#propTabStations' ).hide();
+	}
+		
+	if( checkPerm("vsdb") ) {
+		$( '#vsdbPlayer' ).show();
+		vsdbPlayer.setBase( curuser.inst.vsdblink );
+	} else {
+		$( '#vsdbPlayer' ).css( "display", "none" );
+	}
+	
 	onResize();
 		
 	shared.reset();
@@ -2995,6 +3519,8 @@ function logIn( callback ) {
 	configMailDialog();
 	
 	$( '#lnkUser' ).html( curuser.username );
+	if( curuser.inst )
+		$( '#lnkUser' ).append( " &nbsp;&#183;&nbsp; " + curuser.inst.name );
 	$( '#lnkUser' ).css( "display", "block" );
 }
 
@@ -3123,12 +3649,18 @@ function fillForm( entry ) {
 	$('#inRake').val( prop['rake'] );
 	$('#inDuration').val( 180 );
 	
-	$( '#inParentId' ).html( entry['_id'] );
-	
-	if( entry['root'] ) {
-		$( '#inRootId' ).html( entry['root'] );
+	/* do not set parent and root ID if this is a preset event */
+	if( entry['_id'] ) {
+		$( '#inParentId' ).html( entry['_id'] );
+		
+		if( entry['root'] ) {
+			$( '#inRootId' ).html( entry['root'] );
+		} else {
+			$( '#inRootId' ).html( entry['_id'] );
+		}
 	} else {
-		$( '#inRootId' ).html( entry['_id'] );
+		$( '#inParentId' ).html("");
+		$( '#inRootId' ).html("");
 	}
 	
 	if( prop['date'] ) {
@@ -3220,6 +3752,15 @@ function showEmailDialog( entry, msgnr ) {
 	$( "#mailTo" ).val( "" );
 	$( "#mailCC" ).val( "" );
 	$( "#mailSubject" ).val( "Tsunami warning message!" );
+			
+	if( curuser.properties ) {
+		$( "#ftpTo").html( curuser.properties.FtpHost + curuser.properties.FtpPath );
+		if( curuser.properties.FtpFile && curuser.properties.FtpFile != "" ) {
+			$( "#ftpToFile").val( curuser.properties.FtpFile );
+		} else {
+			$( "#ftpToFile").val( zeroPad( msgnr, 3 ) + ".txt" );
+		}
+	}
 	
 	var root = entry.root ? entry.root : entry._id;
 		
@@ -3358,9 +3899,65 @@ function showEmailDialog( entry, msgnr ) {
 	$( '#smsChars' ).html( smstext.length );
 	$( "#smsText" ).val( smstext );
 	
+	/* station data */
+	$( '#mailWaveActData' ).html( getStationData( entry ) );
+	
 	changeMsgText();
 	
 	$( "#EmailDia" ).modal("show");
+}
+
+function getStationData( eq ) {
+	
+	var text = "";
+	var headlen = "GAUGE LOCATION".length;
+	
+	if( ! eq.stations )
+		return "";
+		
+	/* iterate once to get the length of the headline */
+	for( var i = 0; i < eq.stations.length(); i++ ) {
+		
+		var stat = eq.stations.get(i);
+		var pickData = stat.pickData;
+		
+		if( ! pickData || ! pickData.pick )
+			continue;
+		
+		headlen = Math.max( headlen, stat.name.length );
+	}
+	
+	for( var i = 0; i < eq.stations.length(); i++ ) {
+		
+		var stat = eq.stations.get(i);
+		var pickData = stat.pickData;
+		
+		if( ! pickData || ! pickData.pick )
+			continue;
+		
+		var pretty_lat = charPad( Math.abs( stat.lat ).toFixed(2), 5, ' ' ) + (stat.lat < 0 ? "S" : "N");
+		var pretty_lon = charPad( Math.abs( stat.lon ).toFixed(2), 6, ' ' ) + (stat.lon < 0 ? "W" : "E");
+		var pretty_time =  charPad( pickData.time.replace(/\D/g,''), 4, '0' );
+		var pretty_ampl = charPad( pickData.ampl.toFixed(2), 5, ' ');
+		var pretty_period = charPad( pickData.period.toFixed(2), 6, ' ');
+		
+		text += withPadding( stat.name, headlen, " " ) + " "
+		     +  pretty_lat + " "
+		     + pretty_lon + " "
+		     + pretty_time + "Z "
+		     + pretty_ampl + "M "
+		     + pretty_period + "MIN\n";
+	}
+		
+	var head  = withPadding( "GAUGE LOCATION", headlen, " " ) + " "
+	          + "LAT    LON     TIME  AMPL   PER      \n"
+	          + withPadding( "", headlen, "-" ) + " "
+	          + "------ ------- ----- ------ ---------\n";
+	
+	if( text != "" )
+		text = head + text;
+	    
+	return text;
 }
 
 function changeMsgText() {
@@ -3408,6 +4005,9 @@ function changeMsgText() {
 		
 		msgText += getPlainText( $( "#mailAdvice" ) );
 		msgText += getPlainText( $( "#mailEqParams" ) );
+		
+		if( ! $("#mailWaveActData").is(':empty') )
+			msgText += getPlainText( $( "#mailWaveAct" ) );
 				
 		if( ! $("#mailWatchList").is(':empty') )
 			msgText += getPlainText( $( "#mailWatchEval" ) );
@@ -3439,6 +4039,9 @@ function changeMsgText() {
 		msgText += getPlainText( $( "#mailAdvice" ) );
 		msgText += getPlainText( $( "#mailEqParams" ) );
 		
+		if( ! $("#mailWaveActData").is(':empty') )
+			msgText += getPlainText( $( "#mailWaveAct" ) );
+		
 		if( ! $("#mailWatchList").is(':empty') )
 			msgText += getPlainText( $( "#mailWatchEval" ) );
 		
@@ -3465,6 +4068,9 @@ function changeMsgText() {
 		
 		msgText += getPlainText( $( "#mailAdvice" ) );
 		msgText += getPlainText( $( "#mailEqParams" ) );
+		
+		if( ! $("#mailWaveActData").is(':empty') )
+			msgText += getPlainText( $( "#mailWaveAct" ) );
 		
 		if( ! $("#mailWatchList").is(':empty') )
 			msgText += getPlainText( $( "#mailWatchEval" ) );
@@ -3528,10 +4134,11 @@ function sendEmail() {
 	var intTo = $( "#intTo" ).val();
 	var subject = $( "#mailSubject" ).val();
 	var faxTo = $( "#faxTo" ).val();
-	var ftpChk = $( "#ftChk" ).val();
+	var ftpChk = $( "#ftpChk" ).prop("checked");
+	var ftpFile = $( "#ftpToFile" ).val();
 	var smsTo = $( "#smsTo" ).val();
 	var smsText = $( "#smsText" ).val();
-	
+		
 	var parent = $( "#mailParent" ).html();
 	var root = $( "#mailEvent" ).html();
 	
@@ -3624,7 +4231,7 @@ function sendEmail() {
 		$.ajax({
 			type: 'POST',
 			url: "msgsrv/ftp",
-			data: { apiver: 1, text: text, evid: root, parentid: parent, msgnr: msgnr }, 
+			data: { apiver: 1, fname: ftpFile, text: text, evid: root, parentid: parent, msgnr: msgnr }, 
 			dataType: 'json',
 			success: function( result ) {
 				status = result.status;
@@ -3996,7 +4603,7 @@ function mapZoomed() {
 	if( zoom < 5 )
 		showPois( active, false );
 	
-	if( zoom >= 5 )
+	if( zoom >= 5 ) 
 		showPois( active, true );
 }
 
@@ -4007,7 +4614,7 @@ function searchEvents() {
 	deselect();
 	removeMarker( $('#timeline-data') );
 	timeline.reset();
-	
+			
 	$.ajax({
 		type: 'POST',
 		url: "srv/search",
@@ -4026,7 +4633,7 @@ function searchEvents() {
 				var entry = entries.getOrInsert( result[i] );
 				timeline.push( entry );
 			}
-					            
+					     
 			showEntries( timeline );
 			
 			$( curtab ).click();
@@ -4056,7 +4663,7 @@ function lnkIdOnClick( args ) {
 	$( "#hrefTimeline" ).click();
 }
 
-function showProp() {
+function showProp( e, activeTab ) {
 	
 	var prop = curuser.properties;
 	var perm = curuser.permissions;
@@ -4087,6 +4694,7 @@ function showProp() {
 			$( '#propFTPPwd' ).val( prop.FtpPassword );
 			$( '#propFTPHost' ).val( prop.FtpHost );
 			$( '#propFTPPath' ).val( prop.FtpPath );
+			$( '#propFTPFile' ).val( prop.FtpFile );
 			$( '#propSmsSID' ).val( prop.TwilioSID );
 			$( '#propSmsToken' ).val( prop.TwilioToken );
 			$( '#propSmsFrom' ).val( prop.TwilioFrom );
@@ -4114,7 +4722,44 @@ function showProp() {
 		$( '#propTabInst' ).css( "display", "none" );
 	}
 	
+	/* stations */
+	if( curuser.countries ) {
+		var widget = $( '#propStations .countries' );
+		widget.empty();
+		for( var i = 0; i < curuser.countries.length; i++ ) {
+			var span = $('<span class="country-code"><input type="checkbox">' + curuser.countries[i]._id + ' (' + curuser.countries[i].count + ')</span>');
+			var checkbox = span.find('input');
+			checkbox.prop( 'checked', curuser.countries[i].on );
+			checkbox.change( onCountrySelect );
+			widget.append( span );
+		}
+		onCountrySelect();
+	}
+	
+	if( activeTab )
+		$( activeTab + ' a' ).click();
+	
 	$( '#PropDia' ).modal('show');
+}
+
+function onCountrySelect() {
+	
+	var chkBoxes = $( '#propStations .countries' ).find( 'input' );
+	var sum = 0;
+	
+	for( var i = 0; i < chkBoxes.length; i++ ) {
+		if( chkBoxes.eq(i).is(':checked') )
+			sum += curuser.countries[i].count;
+	}
+	
+	
+	$('#propStations .count').html( "Selected stations in total: " + sum );
+		
+	if( sum > 100 ) {
+		$('#propStations .warn').html( "Using more than 100 stations may lead to a noticeable slowdown of the entire page!" );
+	} else {
+		$('#propStations .warn').html("");
+	}
 }
 
 function groupOnClick() {
@@ -4123,7 +4768,7 @@ function groupOnClick() {
 	var arrow =  $(this).children('.grpArrow');
 			
 	content.css( "display", arrow.hasClass( 'glyphicon-chevron-up' ) ? "none" : "inline" );
-	
+		
 	arrow.toggleClass( 'glyphicon-chevron-up' );
 	arrow.toggleClass( 'glyphicon-chevron-down' );
 }
@@ -4165,9 +4810,11 @@ function configMailDialog() {
 		$( '#msgSMS' ).css( "display", "block" );
 			
 	// set default behavior of mail dialog
-	$( '.lnkGroup' ).click();
-	$( '#msgMail .lnkGroup' ).click();
-	$( '#msgText .lnkGroup' ).click();
+	$( '#msgCloud .lnkGroup' ).click();
+	$( '#msgFtp .lnkGroup' ).click();
+	$( '#msgFax .lnkGroup' ).click();
+	$( '#msgSMS .lnkGroup' ).click();
+	$( '#msgEvents .lnkGroup' ).click();
 }
 
 /* this functions takes a variable number of arguments */
@@ -4202,14 +4849,16 @@ function checkPerm( type ) {
 		return perm.ftp && prop 
 						&& checkProp( prop.FtpUser )
 						&& checkProp( prop.FtpHost )
-						&& checkProp( prop.FtpPath )
-						&& checkProp( prop.FtpPassword );
+						&& checkProp( prop.FtpPath );
 	
 	if( type == "sms" )
 		return perm.sms && prop
 						&& checkProp( prop.TwilioSID )
 						&& checkProp( prop.TwilioToken )
 						&& checkProp( prop.TwilioFrom );
+	
+	if( type == "vsdb" )
+		return ( curuser.inst && curuser.inst.vsdblink );
 	
 	return perm[ type ];
 }
@@ -4230,6 +4879,7 @@ function propSubmit() {
 				 "FtpPassword": $( '#propFTPPwd' ).val(),
 				 "FtpHost": $( '#propFTPHost' ).val(),
 				 "FtpPath": $( '#propFTPPath' ).val(),
+				 "FtpFile": $( '#propFTPFile' ).val(),
 				 "TwilioSID": $( '#propSmsSID' ).val(),
 				 "TwilioToken": $( '#propSmsToken' ).val(),
 				 "TwilioFrom": $( '#propSmsFrom' ).val()
@@ -4238,7 +4888,7 @@ function propSubmit() {
 	var inst = { "descr": $( '#propInstName' ).val(),
 			 	 "msg_name": $( '#propInstMsgName' ).val(),
 		       };
-				
+					
 	$( '#propStatus' ).html("");
 	
 	if( newpwd != confpwd ) {
@@ -4249,6 +4899,24 @@ function propSubmit() {
 	var data = { prop: JSON.stringify( prop ),
 				 inst: JSON.stringify( inst )
 	   			};
+		
+	/* stations */
+	var statChanged = false;
+	if( curuser.countries ) {
+		var widget = $( '#propStations .countries' );
+		var clist = [];
+		
+		for( var i = 0; i < curuser.countries.length; i++ ) {
+			var checked = widget.find('input').eq(i).is(':checked');
+			if( checked != curuser.countries[i].on )
+				statChanged = true;
+			if( checked == true )
+				clist.push( curuser.countries[i]._id );
+		}
+		
+		if( statChanged )
+			data.stations = JSON.stringify( clist );
+	}
 	
 	if( newpwd != "" || curpwd != "" ) {
 		data.curpwd = curpwd;
@@ -4267,6 +4935,11 @@ function propSubmit() {
 			if( result.status == "success" ) {
 				curuser = result.user;
 				configMailDialog();
+				
+				/* TODO: generalize and support eq related stations too */
+				if( statChanged )
+					getStationList( addGlobalStations );
+				
 				$( '#PropDia' ).modal("hide");
 			} else {
 				$( '#propStatus' ).html("Error: " + result.error);
@@ -4344,6 +5017,20 @@ function getDateString( date ) {
 	var day = date.getUTCDate();
 	var hour = date.getUTCHours();
 	var minutes = date.getUTCMinutes();
+	
+	var datestr = year + "/" + zeroPad( month, 2 ) + "/" + zeroPad( day, 2 );
+	var timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 );
+	
+	return datestr + " &#183; " + timestr;
+}
+
+function getLocalDateString( date ) {
+	
+	var year = date.getFullYear();
+	var month = date.getMonth() + 1;
+	var day = date.getDate();
+	var hour = date.getHours();
+	var minutes = date.getMinutes();
 	
 	var datestr = year + "/" + zeroPad( month, 2 ) + "/" + zeroPad( day, 2 );
 	var timestr = zeroPad( hour, 2 ) + ":" + zeroPad( minutes, 2 );
@@ -4517,7 +5204,8 @@ function onResize() {
 		return;
 	
 	/* adjust anything that was dynamically sized */
-	var h = $('.tabs-head').height() + $('#vsdbPlayer').outerHeight();
+	var playerHeight = $('#vsdbPlayer').is(':visible') ? $('#vsdbPlayer').outerHeight() : 0;
+	var h = $('.tabs-head').height() + playerHeight + 1;
 	$( '.tab-pane' ).css( "top", h );
 	
 	var width = $( "#splash-video" ).width();
@@ -4611,22 +5299,25 @@ function toggleStationView() {
 	
 	var lnk = $( '#stat-toggle-lnk span' );
 	var visible = lnk.hasClass( 'glyphicon-chevron-down' );
-		
-	if( visible ) {
-		
-		$( '#stat-dias' ).css( "display", "none" );
-		$( '#mapview' ).css( "height", "100%" );
-		
-	} else {
-		
-		$( '#stat-dias' ).css( "display", "block" );		
-		$( '#mapview' ).css( "height", "calc( 100% - " + $( '#stat-dias' ).css("height") + " )" );
-	}
-	
+			
 	lnk.toggleClass( 'glyphicon-chevron-up' );
 	lnk.toggleClass( 'glyphicon-chevron-down' );
 	
+	showStationView( ! visible );
 	stationSymbols.enableLines( ! visible );
+}
+
+function showStationView( flag ) {
+	
+	if( flag == true ) {
+		$( '#stat-dias' ).css( "display", "block" );		
+		$( '#mapview' ).css( "height", "calc( 100% - " + $( '#stat-dias' ).css("height") + " )" );
+		stationView.reload();
+	} else {
+		$( '#stat-dias' ).css( "display", "none" );
+		$( '#mapview' ).css( "height", "100%" );
+		stationView.deactivate();
+	}
 	
 	google.maps.event.trigger( map, 'resize' );
 }
@@ -4643,9 +5334,14 @@ function getStationList( handler ) {
 		
 	var data = {};
 	
-	if( curuser.inst )
-		data['inst'] = curuser.inst.name;
+	if( ! checkPerm("chart") )
+		handler( null );
 	
+	if( ! checkPerm("vsdb") )
+		data['inst'] = "gfz_ex_test";
+	else if( curuser.inst )
+		data['inst'] = curuser.inst.name;
+		
 	$.ajax({
 		type: 'POST',
 		url: "webguisrv/stationlist",
@@ -4653,6 +5349,19 @@ function getStationList( handler ) {
 		dataType: 'json',
 		success: function( result ) {
 			serverTime = new Date( result.serverTime );
+			
+			/* filter stations according to properties */
+			var filtered = [];
+			for( var i = 0; i < result.stations.length; i++ ) {
+				var stat = result.stations[i];
+				var elem = contains( curuser.countries, '_id', stat.country );
+				var type_ok = (! stat.sensor || ["rad","prs","flt","pr1"].indexOf( stat.sensor ) >= 0 ); 
+				if( elem && elem.on && type_ok ) {
+					filtered.push( stat );
+				}
+			}
+			result.stations = filtered;
+			
 			handler( result );
 		}, 
 		error: function() {
@@ -4661,41 +5370,35 @@ function getStationList( handler ) {
 	});
 }
 
-function getStations() {
+function contains( array, field, value ) {
 	
-	var data = {};
-	
-	if( curuser.inst )
-		data['inst'] = curuser.inst.name;
-	
-	$.ajax({
-		type: 'POST',
-		url: "webguisrv/stationlist",
-		data: data,
-		dataType: 'json',
-		success: function( result ) {
-										
-			var list = result.stations;
-			
-			serverTime = new Date( result.serverTime );
-			
-			for( var i = 0; i < list.length; i++ ) {
-												
-				var stat = new Station( list[i] );
-				stat.load();
-				stations.insert( stat );
-			}
-
-			stationView.reload();
-			stationView.enableLines( $( '#stat-chk' ).is(':checked') );
-			stationSymbols.recreate();
-		},
-		error: function() {
-		},
-		complete: function() {
+	for( var i = 0; i < array.length; i++ ) {
+		if( array[i][field] == value ) {
+			return array[i];
 		}
-	});
+	}
+	
+	return null;
+}
+
+function addGlobalStations( result ) {
+	
+	if( ! result )
+		return;
+	
+	var list = result.stations;
+	
+	stations.clear();
+	for( var i = 0; i < list.length; i++ ) {
 		
+		var stat = new Station( list[i] );
+		stat.load();
+		stations.insert( stat );
+	}
+	
+	stationView.reload();
+	stationView.enableLines( $( '#stat-chk' ).is(':checked') );
+	stationSymbols.recreate();
 }
 
 var overlay;

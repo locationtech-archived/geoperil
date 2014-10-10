@@ -26,7 +26,7 @@
 <body>
   	<div class="container fullsize">
 	  	<div class="row headline"> 
-	  		<nav class="navbar navbar-default" role="navigation">	  		
+	  		<nav class="navbar navbar-default">	  		
 	  			<div class="navbar-collapse collapse">
 	  				<ul class="nav navbar-nav navbar-form navbar-left nav_title">
 	  					<li><img class="title" alt="TRIDEC Cloud" src="img/trideccloud-logo.png"></li>
@@ -58,9 +58,9 @@
 	  						</button>
 	  					</li>
 	  				</ul> -->
-	  				<!-- <ul class="nav navbar-nav navbar-right">
-	  					<li><a href="javascript: void(0);" id="lnkUser">Text</a></li>
-	  				</ul> -->
+	  				<ul class="nav navbar-nav navbar-right">
+	  					<li><a href="" id="lnkUser"></a></li>
+	  				</ul>
 	  			</div>
 	  		</nav>
 	  	</div> <!-- end of headline -->
@@ -68,6 +68,7 @@
 	  	<div class="row mainview">
 	  		<div class="col-md-4 left-col" id="side">
 	  			<div id="vsdbPlayer" class="row">
+	  				<div class="head">Virtual Scenario Database (VSDB) Player</div>
 	  				<div class="dropdown pull-left drpNames">
 						<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
 					    	Scenario
@@ -82,11 +83,14 @@
 					  	</button>
 					  	<ul class="dropdown-menu"></ul>
 					</div>
-					<button type="button" class="btn btn-default btnPlay">
-						<span class="glyphicon glyphicon-play"></span>
+					<button type="button" class="btn btn-success btnPlay" disabled>
+						<span class="ready glyphicon glyphicon-play"></span>
+						<i class="load fa fa-spinner fa-spin fa-lg"></i>
 					</button>
 					<div class="progress">
-  						<div class="progress-bar progress-bar-danger"></div>
+  						<div class="progress-bar progress-bar-danger">
+  							<span class="progress-txt"></span>
+  						</div>
 					</div>
 	  			</div>
 	  			
@@ -116,7 +120,7 @@
 		  			<div class="col-md-12 tab-pane active" id="sidebar"></div>
 		  			<div class="col-md-12 tab-pane" id="saved"></div>
 		  			<div class="col-md-12 tab-pane" id="custom">					  					
-		  				<form class="form-horizontal form-center" role="form">
+		  				<form class="form-horizontal form-center">
 		  					<div class="input-group input-group-sm">
 		  						<span class="input-group-addon left-label">Name:</span>
 		  						<input id="inName" type="text" class="form-control" placeholder="Custom">
@@ -276,7 +280,7 @@
 		 
 	<!-- sidebar context menu template that appears on right click -->
 	<div id="contextMenu" class="dropdown clearfix">
-	    <ul class="dropdown-menu" role="menu" aria-labelledby="contextMenu">
+	    <ul class="dropdown-menu">
 	    	<li><a id="ctxEdit" href="#" tabindex="-1">Edit</a></li>
 	    	<li class="divider"></li>
 	    </ul>
@@ -324,7 +328,7 @@
 					</div>
 					<div class="row process">
 						<div class="progress">
-							<div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+							<div class="progress-bar"></div>
 						</div>
 						<span class="medium status"></span>
 						<span class="lnkLast"></span>
@@ -343,6 +347,9 @@
 						<div class="row">
 							<span class="small calc"></span>
 						</div>
+						<div class="row">
+								<span class="small accel"></span>
+							</div>
 						<div class="row">
 							<input class="chk_grid" type="checkbox">
 							<span class="small grid"></span>
@@ -416,11 +423,11 @@
 	</div>
 	
 	<!-- modal "SignIn" dialog -->
-	<div class="modal fade" id="SignInDialog" tabindex="-1" role="dialog" aria-labelledby="SignInDialog" aria-hidden="true">
+	<div class="modal fade" id="SignInDialog" tabindex="-1">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
 	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <button type="button" class="close" data-dismiss="modal">&times;</button>
 	        <h4 class="modal-title">Please sign in to continue</h4>
 	      </div>
 	      <div class="modal-body">
@@ -438,11 +445,11 @@
 	</div><!-- /.modal -->
 	
 	<!-- modal contact dialog -->
-	<div class="modal fade" id="ContactDialog" tabindex="-1" role="dialog" aria-labelledby="ContactDialog" aria-hidden="true">
+	<div class="modal fade" id="ContactDialog" tabindex="-1">
 	  <div class="modal-dialog modal-sm">
 	    <div class="modal-content">
 	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <button type="button" class="close" data-dismiss="modal">&times;</button>
 	        <h4 class="modal-title">Connect</h4>
 	      </div>
 	      <div class="modal-body">
@@ -469,11 +476,11 @@
 	</div><!-- /.modal -->	
 	
 	<!-- modal disclaimer dialog -->
-	<div class="modal fade" id="DisclaimDia" tabindex="-1" role="dialog" aria-labelledby="Disclaimer" aria-hidden="true">
+	<div class="modal fade" id="DisclaimDia" tabindex="-1">
 	  <div class="modal-dialog modal-sm">
 	    <div class="modal-content">
 	      <div class="modal-header">
-	        <button type="button" class="close disClose" aria-hidden="true">&times;</button>
+	        <button type="button" class="close disClose">&times;</button>
 	        <h4 class="modal-title">About</h4>
 	      </div>
 	      <div class="modal-body">
@@ -493,11 +500,11 @@
 	</div><!-- /.modal -->
 	
 	<!-- modal about dialog -->
-	<div class="modal fade" id="AboutDia" tabindex="-1" role="dialog" aria-labelledby="About" aria-hidden="true">
+	<div class="modal fade" id="AboutDia" tabindex="-1">
 	  <div class="modal-dialog modal-sm">
 	    <div class="modal-content">
 	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <button type="button" class="close" data-dismiss="modal">&times;</button>
 	        <h4 class="modal-title">About</h4>
 	      </div>
 	      <div class="modal-body">
@@ -516,15 +523,15 @@
 	</div><!-- /.modal -->
 		
 	<!-- modal email dialog -->
-	<div class="modal fade mail-fade" id="EmailDia" tabindex="-1" role="dialog" aria-labelledby="Email" aria-hidden="true">
+	<div class="modal fade mail-fade" id="EmailDia" tabindex="-1">
 	  <div class="modal-dialog modal-sm mail-dialog">
 	    <div class="modal-content mail-content">
 	      <div class="modal-header mail-header">
-	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <button type="button" class="close" data-dismiss="modal">&times;</button>
 	        <h4 class="modal-title">Send messages</h4>
 	      </div>
 	      <div class="modal-body mail-body">
-	      	<form class="form-horizontal" role="form">
+	      	<form class="form-horizontal">
 	      		<div id="msgCloud" class="group">
 	      			<div class="grpHeader">
 	      				<span class="grpHeadline">Cloud addresses</span>
@@ -592,7 +599,9 @@
 							<span id="ftpChkSpan" class="form-control">
 								<input id="ftpChk" type="checkbox">
 							</span>
-							<span id="ftpTo" class="form-control">Test</span>
+							<span id="ftpTo" class="form-control"></span>
+							<span class="input-group-addon slash">/</span>
+							<input id="ftpToFile" type="text" class="form-control">
 							<span class="input-group-addon mail-right">
 								<span class="glyphicon glyphicon-link"></span>
 							</span>
@@ -649,8 +658,7 @@
 							
 							<span id="mailWaveAct">
 							MEASUREMENTS OR REPORTS OF TSUNAMI WAVE ACTIVITY
-							?????
-							
+								<span id="mailWaveActData"></span>
 							LAT - LATITUDE (N-NORTH, S-SOUTH)
 							LON - LONGITUDE (E-EAST, W-WEST)
 							TIME - TIME OF THE MEASUREMENT (Z IS UTC TIME)
@@ -746,6 +754,7 @@
 				  		</div>
 		   			</div>
 				</div>
+			</form>
 	      </div>
 	      <div class="modal-footer mail-footer">
 	      	<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
@@ -756,16 +765,17 @@
 	</div><!-- /.modal -->
 	
 	<!-- modal prop dialog -->
-	<div class="modal fade" id="PropDia" data-keyboard="false" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="Properties" aria-hidden="true">
+	<div class="modal fade" id="PropDia" data-keyboard="false" data-backdrop="static" tabindex="-1">
 	  <div class="modal-dialog modal-sm">
 	    <div class="modal-content">
 	      <div class="modal-header propHeader">
-	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <button type="button" class="close" data-dismiss="modal">&times;</button>
 	        <h4 class="modal-title">Properties</h4><br>
 	        <ul class="nav nav-tabs">
 				<li id="propTabGeneral" class="active"><a href="#propGeneral" data-toggle="tab">General</a></li>
 			 	<li id="propTabMsgs"><a href="#propMsgs" data-toggle="tab">Messages</a></li>
 			 	<li id="propTabInst"><a href="#propInst" data-toggle="tab">Institution</a></li>
+			 	<li id="propTabStations"><a href="#propStations" data-toggle="tab">Stations</a></li>
 			</ul>
 	      </div>
 	      <div class="modal-body">
@@ -842,6 +852,8 @@
 				  			<div class="input-group input-group-sm prop-label">
 								<span class="input-group-addon">FTP-Path:</span>
 								<input id="propFTPPath" type="text" class="form-control">
+								<span class="input-group-addon slash">/</span>
+								<input id="propFTPFile" type="text" class="form-control">
 								<span class="input-group-addon prop-right">
 									<span class="glyphicon glyphicon-link"></span>
 								</span>
@@ -889,6 +901,13 @@
 						<input id="propInstMsgName" class="form-control">
 		  			</div>
 		      	</div>
+		      	<div class="tab-pane" id="propStations">
+		      		<span>Select your countries of interest:</span>
+		  			<div class="countries"></div>
+		  			<div class="clear"></div>
+		  			<span class="count"></span><br>
+		  			<span class="warn"></span>
+		      	</div>
 		  	</div>
 		  	<p id="propStatus" class="form-control-static prop-label"></p>
 	      </div>
@@ -899,13 +918,13 @@
 	    </div><!-- /.modal-content -->
 	  </div><!-- /.modal-dialog -->
 	</div><!-- /.modal -->
-		
+			
 	<!-- modal showText dialog -->
-	<div class="modal fade" id="showTextDia" tabindex="-1" role="dialog" aria-labelledby="showText" aria-hidden="true">
+	<div class="modal fade" id="showTextDia" tabindex="-1">
 	  <div class="modal-dialog modal-sm">
 	    <div class="modal-content">
 	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <button type="button" class="close" data-dismiss="modal">&times;</button>
 	        <h4 class="modal-title">Message</h4>
 	      </div>
 	      <div class="modal-body">
@@ -919,11 +938,11 @@
 	</div><!-- /.modal -->
 	
 	<!-- modal showText dialog -->
-	<div class="modal fade" id="shareDia" tabindex="-1" role="dialog" aria-labelledby="share" aria-hidden="true">
+	<div class="modal fade" id="shareDia" tabindex="-1">
 	  <div class="modal-dialog modal-sm">
 	    <div class="modal-content">
 	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <button type="button" class="close" data-dismiss="modal">&times;</button>
 	        <h4 class="modal-title">Share map</h4>
 	      </div>
 	      <div class="modal-body">
@@ -941,42 +960,72 @@
 	</div><!-- /.modal -->
 	
 	<!-- modal chart dialog -->
-	<div class="modal fade" id="chartDia" tabindex="-1" role="dialog" aria-labelledby="chart" aria-hidden="true">
+	<div class="modal fade" id="chartDia" tabindex="-1">
 	  <div class="modal-dialog modal-sm">
 	    <div class="modal-content">
 	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	        <button type="button" class="close" data-dismiss="modal">&times;</button>
 	        <h4 class="modal-title">Sealevel data</h4>
 	      </div>
 	      <div class="modal-body">
+	      	<div class="input-group input-group-sm prop-label pull-left time">
+				<span class="input-group-addon">Local time:</span>
+				<span class="form-control localTime"></span>
+  			</div>
+  			<div class="input-group input-group-sm prop-label time">
+				<span class="input-group-addon">UTC time:</span>
+				<span class="form-control utcTime"></span>
+  			</div>
 	        <div id="mainchart-div"></div>
-	        <div id="picker">
-	  			<div class="input-group input-group-sm">
-					<span class="input-group-addon">Frequency:</span>
-					<input id="pickerFreq" class="form-control">
-					<span class="input-group-addon">x</span>
-					<div class="input-group-btn" id="pickerDropDown">
-					  <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
-					  	<span>4</span>
-					  	<span>&nbsp</span>
-					    <span class="caret"></span>
-					  </button>
-					  <ul class="dropdown-menu">
-					    <li><a href="#">1</a></li>
-					    <li><a href="#">2</a></li>
-					    <li><a href="#">4</a></li>
-					  </ul>
-					</div>
-					<span class="input-group-addon">=</span>
-					<input id="pickerFreqMulti" class="form-control">
-	  			</div>
-	  			<div class="input-group input-group-sm">
-					<span class="input-group-addon">Amplitude:</span>
-					<input id="pickerAmpl" class="form-control">
-					<span class="input-group-btn">
-						<button class="btn btn-default" type="button">Pick</button>
-					</span>
-	  			</div>
+	        <div class="input-group pickEnable">
+				<span class="input-group-addon">
+					<input type="checkbox" id="pickerEnable">
+				</span>
+				<span class="form-control spanHead">
+					Include picked values in message:<br>
+					<span class="spanValues"></span>
+				</span>
+				<span class="form-control spanNoPick">
+					Select an event to enable the picking of values
+				</span>
+			</div>
+	        <div id="picker" class="group">
+			  	<div class="grpHeader">
+      				<span class="grpHeadline">Picker</span>
+      				<a class="lnkGroup test" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+      			</div>
+      			<div class="grpContent">
+		  			<div class="input-group input-group-sm">
+						<span class="input-group-addon lab-left">Period:</span>
+						<input id="pickerFreq" class="form-control">
+						<span class="input-group-addon">x</span>
+						<div class="input-group-btn" id="pickerDropDown">
+						  <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+						  	<span>1</span>
+						  	<span>&nbsp;</span>
+						    <span class="caret"></span>
+						  </button>
+						  <ul class="dropdown-menu">
+						    <li><a href="#">1</a></li>
+						    <li><a href="#">2</a></li>
+						    <li><a href="#">4</a></li>
+						  </ul>
+						</div>
+						<span class="input-group-addon">=</span>
+						<input id="pickerFreqTotal" class="form-control">
+						<span class="input-group-addon lab-right">Minutes</span>
+		  			</div>
+		  			<div class="input-group input-group-sm">
+						<span class="input-group-addon lab-left">Amplitude:</span>
+						<input id="pickerAmpl" class="form-control">
+						<span class="input-group-addon lab-right">Meters</span>
+		  			</div>
+		  			<div class="input-group input-group-sm">
+						<span class="input-group-addon lab-left">Time of Arrival:</span>
+						<input id="pickerTime" class="form-control" maxlength="5">
+						<span class="input-group-addon lab-right">UTC</span>
+		  			</div>
+		  		</div>
 	        </div>
 	      </div>
 	      <div class="modal-footer">
@@ -989,12 +1038,17 @@
 	<!-- chart div -->
 	<div id="chart-div" class="chart-div">
 		<div class="dia"></div>
-		<span class="spanLoad">
-			<i class="iconLoad fa fa-spinner fa-spin fa-lg "></i><br>
+		<span class="spanDia spanInactive">
+			<i class="iconLoad fa fa-pause fa-lg"></i><br>
+			<i class="textLoad">Disabled</i><br>
+			<i class="textSmall">Wait for 1 second to activate.</i>
+		</span>
+		<span class="spanDia spanLoad">
+			<i class="iconLoad fa fa-spinner fa-spin fa-lg"></i><br>
 			<i class="textLoad">Loading...</i>
 		</span>
 	</div>
-	
+		
 	<canvas id="canvas-line"></canvas>
 		
 </body>

@@ -14,6 +14,7 @@ html, body {
 
 .mainview .tabs {
 	background-color: #fafafa;
+	padding-top: 5px;
 }
 
 .mainview .tabs-head {
@@ -308,11 +309,18 @@ html, body {
 }
 
 #ftpTo {
-	width: 65%;
+	width: 45%;
+	background-color: #f8f8f8;
+}
+
+.slash {
+	width: 5% !important;
 }
 
 #ftpChkSpan {
 	width: 5%;
+	padding-top: 0px;
+	padding-bottom: 0px;
 }
 
 .search-group {
@@ -611,6 +619,9 @@ pre {
 
 #lnkUser {
 	display: none;
+	color: #333333;
+	cursor: default;
+	pointer-events: none;
 }
 
 #mapview {
@@ -632,6 +643,18 @@ pre {
 	padding-left: 0.5em;
 }
 
+#stat-dias .lnkSelect {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	text-align: center;
+}
+#stat-dias .lnkSelect a {
+	display: inline;
+	height: 1.2em;
+	font-size: 1.2em;
+}
+	
 #stat-panel {
 	position: absolute;
 	right: 0px;
@@ -659,7 +682,7 @@ pre {
 	cursor: hand;
 }
 
-.chart-div .spanLoad {
+.chart-div .spanDia {
 	position: absolute;
 	width: 100%;
 	height: 4.2em;
@@ -669,14 +692,22 @@ pre {
 	text-align: center;
 }
 
-.chart-div .spanLoad .iconLoad {
+.chart-div .spanLoad {
+	display: none;
+}
+
+.chart-div .spanDia .iconLoad {
 	font-size: 3em;
 	margin-bottom: 0.2em;
 	color: #428bca;
 }
 
-.chart-div .spanLoad .textLoad {
+.chart-div .spanDia .textLoad {
 	font-size: 1em;
+}
+
+.chart-div .spanDia .textSmall {
+	font-size: 0.8em;
 }
 
 #canvas-line, #canvas-chart, .canvas-gen {
@@ -692,11 +723,82 @@ pre {
 }
 
 #vsdbPlayer {
-	padding: 5px;
-	border-bottom: 0.1em solid #dddddd;
+	padding: 1em;
+	border: 2px solid #acaaa7;
+	border-top: 1px solid #acaaa7;
+}
+
+#vsdbPlayer .head {
+	margin-bottom: 0.5em;
+	padding-left: 0.2em;
+	font-weight: bold;
 }
 
 #vsdbPlayer .progress {
-	margin-top: 5px;
+	position: relative;
+	margin-top: 0.5em;
 	margin-bottom: 0px;
+	border: 1px solid #dddddd;
+	display: none;
+}
+
+#vsdbPlayer .progress-txt {
+	display: block;
+	position: absolute;
+	width: 100%;
+	text-align: center;
+	color: black;
+}
+
+#chartDia .time {
+	width: 50%;
+}
+
+#chartDia .pickEnable {
+	padding-bottom: 1em;
+}
+
+#chartDia #picker .input-group {
+	width: 80%;
+	left: 10%;
+	padding-top: 0.3em;
+	padding-bottom: 0.3em;
+}
+
+#chartDia #picker .lab-left {
+	width: 10em;
+}
+
+#chartDia #picker .lab-right {
+	width: 6em;
+}
+
+#chartDia #mainchart-div :active {
+	cursor: move;
+}
+
+#chartDia .localTime,
+#chartDia .utcTime,
+#chartDia .spanHead,
+#chartDia .spanNoPick {
+	background-color: #f8f8f8;
+}
+
+#propStations .countries {
+	margin-top: 1em;
+	margin-left: 2em;
+}
+
+#propStations .country-code {
+	float: left;
+	min-width: 8em;
+}
+
+#propStations .clear {
+	clear: both;
+	margin-bottom: 1em;
+}
+
+#propStations .warn {
+	color: red;
 }
