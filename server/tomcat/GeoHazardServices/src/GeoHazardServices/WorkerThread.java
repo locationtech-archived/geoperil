@@ -17,6 +17,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -232,7 +233,37 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 		tfps = new HashMap<String, DBObject>();
 		
-		DBCursor cursor = dbclient.getDB( "easywave" ).getCollection("tfps").find();
+		DBObject tfpQuery = null;
+		DBCursor cursor;
+		
+		if( task.user.inst != null ) {
+			
+			/* filter TFPs according to institution settings */
+			DBObject instQuery = new BasicDBObject( "name", task.user.inst );
+			cursor = dbclient.getDB( "easywave" ).getCollection("institutions").find( instQuery );
+		
+			if( cursor.hasNext() ) {
+				
+				DBObject instObj = cursor.next();
+				@SuppressWarnings("unchecked")
+				List<Object> tfpList = (List<Object>) instObj.get("tfps");
+				
+				if( tfpList != null ) {
+					
+					BasicDBList tfpOrList = new BasicDBList();
+					for( Object s: tfpList ) {
+						tfpOrList.add( new BasicDBObject("code",s) );
+					}
+					
+					tfpQuery = new BasicDBObject( "$or", tfpOrList );
+				}
+				
+			}
+			cursor.close();
+		}
+		
+		System.out.println( tfpQuery );
+		cursor = dbclient.getDB( "easywave" ).getCollection("tfps").find( tfpQuery );
 		
 		sshCon[0].out.println("rm ftps.inp");
 				
@@ -253,9 +284,44 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			String poi = id + "\t" + lon + "\t" + lat;
 			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
 		}
+		cursor.close();
 		
-		cursor = dbclient.getDB( "easywave" ).getCollection("stations").find();
+		DBObject userObj = new BasicDBObject("_id", task.user.objId );
+		BasicDBList ccodes = null;
+		DBObject filter = null;
+		DBObject query = null;
+		BasicDBList andList = new BasicDBList();
 		
+		cursor = dbclient.getDB( "easywave" ).getCollection("users").find( userObj );
+		/* check if a real users requests this computation */
+		if( cursor.hasNext() ) {
+			
+			DBObject obj = cursor.next();
+			ccodes = (BasicDBList) obj.get("countries");
+			/* if no country specified, set to an empty list */
+			if( ccodes == null )
+				ccodes = new BasicDBList();
+			
+			filter = new BasicDBObject( "$in", ccodes );
+			andList.add( new BasicDBObject( "country", filter ) );
+			
+		}
+		
+		cursor.close();
+		
+		String inst = task.user.inst;
+		
+		if( inst == null || inst.equals("gfz") )
+			inst = "gfz_ex_test";
+			
+		andList.add( new BasicDBObject( "inst", inst ) );
+		
+		query = new BasicDBObject( "$and", andList );
+		
+		if( query != null ) {
+			cursor = dbclient.getDB( "easywave" ).getCollection("stations").find( query );
+		}
+						
 		for( DBObject obj: cursor ) {
 			
 			String id = (String) obj.get( "name" );
@@ -264,9 +330,13 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			
 			String poi = "s_" + id + "\t" + lon + "\t" + lat;
 			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
+			
+			System.out.println( id );
 		}
 		
 		sshCon[0].out.flush();
+		
+		cursor.close();
 		
 		return 0;
 	}
@@ -396,6 +466,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 						dbObject.put( "curSimTime", 0.0 );
 						dbObject.put( "calcTime", 0.0 );
 						dbObject.put( "resources", this.hardware );
+						dbObject.put( "accel", task.accel );
 						
 						/* create final DB object used tp update the collection  */
 						BasicDBObject update = new BasicDBObject();
@@ -659,6 +730,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 				poiFile.close();
 			}
 			
+			long start = System.currentTimeMillis();
+			
 			File f = new File( workdir + "/eWave.poi.ssh" );
 			BufferedReader reader = new BufferedReader( new FileReader( f ) );
 		
@@ -668,6 +741,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			
 			DBCollection simData = dbclient.getDB( "easywave" ).getCollection("simsealeveldata");
 			DBObject obj;
+			List<DBObject> objList = new ArrayList<DBObject>();
 			
 			/* translate date into time stamp */
 			long time = task.eqparams.date.getTime() / 1000;
@@ -688,13 +762,15 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		    	}
 		    	
 		    	long rel_time = (long)(Float.valueOf(data[0]) * 60);
-		    	long stamp = time + rel_time;
 		    	
 		    	if( rel_time > task.duration * 60 )
 		    		break;
 		    	
+		    	rel_time /= task.accel;
+		    	long stamp = time + rel_time;
+		    			    	
 		    	/* extract value of each station for the next timestamp */
-		    	for( int i = 0; i < statIds.size(); i++ ) {		    		
+		    	for( int i = 0; i < statIds.size(); i++ ) {   		
 		    		
 		    		/*String params = "apiver=1&inst=gfz&secret=_123abc_" + 
 		    						"&timestamp=" + stamp +
@@ -711,8 +787,10 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		    		obj.put("station", statNames.get(i));
 		    		obj.put("value", data[ statIds.get(i) ]);
 		    		obj.put("evid",task.id);
+		    				    
+		    		objList.add( obj );
 		    		
-		    		simData.insert( obj, WriteConcern.UNACKNOWLEDGED );
+		    		//simData.insert( obj, WriteConcern.UNACKNOWLEDGED );
 		    		
 		    		//sendPost( "http://localhost/feedersrv/feedsealevel", params );
 		    	}
@@ -720,6 +798,13 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		    }
 			
 			reader.close();
+			long duration1 = System.currentTimeMillis() - start;
+			
+			/* bulk insert */
+			simData.insert( objList, WriteConcern.UNACKNOWLEDGED );
+			
+			long duration2 = System.currentTimeMillis() - start;
+			System.out.println( duration1 + " - " + duration2 );			
 			
 		} catch (IOException e) {
 			e.printStackTrace();

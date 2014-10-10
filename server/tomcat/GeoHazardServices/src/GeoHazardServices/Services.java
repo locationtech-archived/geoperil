@@ -39,6 +39,7 @@ import org.bson.types.ObjectId;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.mongodb.AggregationOutput;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
@@ -347,7 +348,8 @@ public class Services {
 		  @FormParam("secret") String secret,
 		  @FormParam("id") String id,
 		  @FormParam("refineId") Long refineId,
-		  @FormParam("dur") Integer dur) {
+		  @FormParam("dur") Integer dur,
+		  @FormParam("accel") Integer accel ) {
 	  	  		
 	  Object[] required = { inst, secret, id, refineId, dur };
 	  
@@ -390,15 +392,19 @@ public class Services {
 	  double depth = prop.getDouble("depth");
 	  Date date = prop.getDate("date");
 	
+	  if( accel == null )
+		  accel = 1;
+	  
 	  /* prepare the simulation for execution */
-	  return request( lon, lat, mag, depth, dip, strike, rake, compId.toString(), instObj, dur, date );
+	  return request( lon, lat, mag, depth, dip, strike, rake, compId.toString(), instObj, dur, date, accel );
   }
 
   private String request( double lon, double lat, double mag, double depth, double dip,
-		  				 double strike, double rake, String id, User user, int dur, Date date ) {
+		  				 double strike, double rake, String id, User user, int dur,
+		  				 Date date, int accel ) {
 	  	  
 	  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
-	  TaskParameter task = new TaskParameter( eqp, id, user, dur );
+	  TaskParameter task = new TaskParameter( eqp, id, user, dur, accel );
 	  		  
 	  if( queue.offer( task ) == false ) {
 		  System.err.println("Work queue is full");
@@ -523,7 +529,7 @@ public class Services {
 	  db.getCollection("events").insert( event );
 	  
 	  /* start request */
-	  return request( lon, lat, mag, depth, dip, strike, rake, id, user, dur, date );
+	  return request( lon, lat, mag, depth, dip, strike, rake, id, user, dur, date, 1 );
   }
     
   @POST
@@ -546,15 +552,22 @@ public class Services {
 		  @FormParam("sea_area") String sea_area,
 		  @FormParam("root") String root,
 		  @FormParam("parent") String parent,
-		  @FormParam("comp") Integer comp ) {
+		  @FormParam("comp") Integer comp,
+		  @FormParam("accel") Integer accel) {
 	  
-	  Object[] required = { inst, secret, id, name, lon, lat, mag, depth,
-			  				dip, strike, rake, dateStr };
+	  Object[] required = { inst, secret, id, name, dateStr };
 	  	  	  
 	  System.out.println( id + ", " + name );
 	  
 	  if( ! checkParams( request, required ) )
-		  return jsfailure();
+	  	  return jsfailure();
+	  		  
+	  /* if id is already used, make a refinement */
+	  DBCursor cursor = db.getCollection("eqs").find( new BasicDBObject( "id", id ) );
+	  if( cursor.hasNext() ) {
+		  return data_update( request, inst, secret, id, null, name, lon, lat, mag,
+				  			  depth, dip, strike, rake, dateStr, sea_area, comp, accel );
+	  }
 	  	  
 	  /* check if we got a valid institution and the correct secret */
 	  Inst instObj = institutions.get( inst );
@@ -611,8 +624,9 @@ public class Services {
 	  /* insert new event into 'events'-collection */
 	  db.getCollection("events").insert( event );
 	  
-	  if( comp != null )
-		  computeById( request, inst, secret, id, refineId, comp );
+	  Object[] reqComp = { inst, secret, id, lon, lat, mag, depth, dip, strike, rake };
+	  if( comp != null && checkParams( request, reqComp ) )
+		  computeById( request, inst, secret, id, refineId, comp, accel );
 			 
 	  return jssuccess( new BasicDBObject( "refineId", refineId ) );
   }
@@ -719,7 +733,7 @@ public class Services {
 	  	  
 	  DBCursor cursor = coll.find( new BasicDBObject("username", username) );
 	  DBObject obj;
-	  
+	  	  
 	  if( cursor.hasNext() ) {
 		  		  
 		  obj = cursor.next();
@@ -749,6 +763,8 @@ public class Services {
 			  			  
 			  BasicDBObject result = new BasicDBObject("status", "success");
 			  result.put( "user", getUserObj(username) );
+			  
+			  System.out.println( "CLOUD " + new Date() + " SignIn from user " + username );
 			  
 			  return gson.toJson( result );
 		  }
@@ -788,6 +804,7 @@ public class Services {
 			  sessionCookie.setMaxAge( 0 );
 			  response.addCookie( sessionCookie );
 			  
+			  System.out.println( "CLOUD " + new Date() + " SignOut from user " + username );
 			  return jssuccess();
 		  }
 	  }
@@ -812,6 +829,8 @@ public class Services {
 		  
 		  BasicDBObject result = new BasicDBObject("status", "success");
 		  result.put( "user", getUserObj( user.name ) );
+		  
+		  System.out.println( "CLOUD " + new Date() + " Resuming session for user " + user.name );
 		  
 		  return gson.toJson( result );
 	  }
@@ -840,15 +859,65 @@ public class Services {
 	  
 	  cursor = db.getCollection("institutions").find( new BasicDBObject("_id", instId) );
 	  
+	  String instName = null;
+	  
 	  if( cursor.hasNext() ) {
 		  
 		  DBObject inst = cursor.next();
 		  inst.removeField("_id");
 		  inst.removeField("secret");
 		  userObj.put( "inst", inst );
+		  instName = (String) inst.get( "name" );
+	  }
+	  	  
+	  cursor.close();
+	  
+	  if( instName == null || instName.equals("gfz") )
+		  instName = "gfz_ex_test";
+	  
+	  /* get all available country codes and count elements in each group */
+	  DBObject groupFields = new BasicDBObject( "_id", "$country" );
+	  groupFields.put( "count", new BasicDBObject( "$sum", 1) );
+	  
+	  DBObject group = new BasicDBObject( "$group", groupFields );
+	  
+	  BasicDBList types = new BasicDBList();
+	  types.add( new BasicDBObject( "sensor", "rad" ) );
+	  types.add( new BasicDBObject( "sensor", "prs" ) );
+	  types.add( new BasicDBObject( "sensor", "pr1" ) );
+	  types.add( new BasicDBObject( "sensor", "flt" ) );
+	  types.add( new BasicDBObject( "sensor", null ) );
+	  
+	  DBObject filterFields = new BasicDBObject( "$or", types );
+	  
+	  BasicDBList andList = new BasicDBList();
+	  andList.add( filterFields );
+	  andList.add( new BasicDBObject( "inst", instName ) );
+	  
+	  DBObject andObj = new BasicDBObject( "$and", andList );
+	  DBObject filter = new BasicDBObject( "$match", andObj );
+	  
+	  /* sort alphabetically */
+	  DBObject sortFields = new BasicDBObject("_id", 1);
+	  DBObject sort = new BasicDBObject("$sort", sortFields );
+	  
+	  AggregationOutput output = db.getCollection("stations").aggregate( filter, group, sort );
+	  BasicDBList countries = new BasicDBList();
+	  
+	  /* convert answer into string list */
+	  @SuppressWarnings("unchecked")
+	  List<String> clist = (List<String>) obj.get("countries");
+	  
+	  for( DBObject res: output.results() ) {
+		  String code = (String) res.get("_id");
+		  if( code == null )
+			  continue;
+		  boolean isOn = (clist != null) && clist.contains( code );
+		  res.put( "on", isOn );
+		  countries.add( res );
 	  }
 	  
-	  cursor.close();
+	  userObj.put("countries", countries);
 	  	  
 	  return userObj;
   }
@@ -919,12 +988,9 @@ public class Services {
 	users.add( user );
 	
 	if( user != null ) {
-		
-		DBObject userObj = getUserObj( user.name );
-		DBObject instObj = (DBObject) userObj.get("inst");
-				
-		if( instObj != null ) {
-			users.add( institutions.get( instObj.get("name") ) );
+								
+		if( user.inst != null ) {
+			users.add( institutions.get( user.inst ) );
 		} else {
 			users.add( institutions.get("gfz") );
 		}
@@ -1047,12 +1113,9 @@ public class Services {
 	if( user != null ) {
 		
 		users.add( new BasicDBObject( "user", user.objId ) );
-		
-		DBObject userObj = getUserObj( user.name );
-		DBObject instObj = (DBObject) userObj.get("inst");
-				
-		if( instObj != null ) {
-			users.add( new BasicDBObject( "user", institutions.get( instObj.get("name") ).objId ) );
+						
+		if( user.inst != null ) {
+			users.add( new BasicDBObject( "user", institutions.get( user.inst ).objId ) );
 		} else {
 			users.add( new BasicDBObject( "user", institutions.get("gfz").objId ) );
 		}
@@ -1173,7 +1236,7 @@ public class Services {
 	 inQuery.put( "arrT", new BasicDBObject( "$gt", arrT ) );
 	 	 
 	 DBCursor cursor = coll.find( inQuery );
-	 
+	 	 	 
 	 return cursor.toArray().toString();
  }
  
@@ -1240,6 +1303,7 @@ public class Services {
 		 list.add( tfp );
 	 }	 
 	 	 
+	 System.out.println( "getPois - size: " + list.size() );
 	 return list.toString();
  }
  
@@ -1289,6 +1353,7 @@ public class Services {
 	 
 	 BasicDBObject sort = new BasicDBObject("timestamp", -1);
 	 sort.put("prop.date", -1);
+	 System.out.println(inQuery);
 	 DBCursor cursor = coll.find( inQuery ).sort( sort );
 	 	 
 	 List<DBObject> results = new ArrayList<DBObject>();
@@ -1363,10 +1428,11 @@ public class Services {
 		  @FormParam("strike") Double strike,
 		  @FormParam("rake") Double rake,
 		  @FormParam("date") String dateStr,
-		  @FormParam("sea_area") String sea_area ) {
+		  @FormParam("sea_area") String sea_area,
+		  @FormParam("comp") Integer comp,
+		  @FormParam("accel") Integer accel ) {
 	
-	  Object[] required = { inst, secret, id, name, lon, lat, mag, depth,
-							dip, strike, rake, dateStr };
+	  Object[] required = { inst, secret, id, name, dateStr };
 
 	  if( ! checkParams( request, required ) )
 		  return jsfailure();
@@ -1458,6 +1524,10 @@ public class Services {
 	  /* insert new event into 'events'-collection */
 	  db.getCollection("events").insert( event );
 
+	  Object[] reqComp = { inst, secret, id, lon, lat, mag, depth, dip, strike, rake };
+	  if( comp != null && checkParams( request, reqComp ) )
+		  computeById( request, inst, secret, id, refineId, comp, accel );
+	  
 	 return jssuccess( new BasicDBObject( "refineId", refineId ) );
  }
  
@@ -1532,6 +1602,7 @@ public class Services {
 		  @FormParam("newpwd") String newPass,
 		  @FormParam("prop") String prop,
 		  @FormParam("inst") String inst,
+		  @FormParam("stations") String stations,
 		  @CookieParam("server_cookie") String session ) {
 	 	 	 	 
 	 /* check session key and find out if the request comes from an authorized user */
@@ -1585,7 +1656,7 @@ public class Services {
 	 if( instObj != null ) {
 		 
 		 ObjectId instRef = (ObjectId) newObj.get( "inst" );
-		 boolean perm_manage = (perm.get("manage") != null) && ( (Boolean) perm.get("manage") == true );
+		 boolean perm_manage = (perm != null) && (perm.get("manage") != null) && ( (Boolean) perm.get("manage") == true );
 		 
 		 if( perm_manage && instRef != null ) {
 			 
@@ -1595,6 +1666,14 @@ public class Services {
 			 
 			 db.getCollection("institutions").update( new BasicDBObject( "_id", instRef ), new BasicDBObject( "$set", instObj ) );
 		 }
+	 }
+	 
+	 /* stations */
+	 BasicDBList statObj = (BasicDBList) JSON.parse( stations );
+	 
+	 /* simply override the array containing the desired country codes */
+	 if( statObj != null ) {
+		 newObj.put( "countries", statObj );
 	 }
 	 
 	 coll.update( inQuery, newObj );
