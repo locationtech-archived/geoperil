@@ -2020,6 +2020,8 @@ function initialize() {
 			
 	vsdbPlayer = new VsdbPlayer( $('#vsdbPlayer') );
 	
+	splash = new Splash(); 
+	
 	var mapOptions = {
 			zoom: 2,
 			center: new google.maps.LatLng(0,0),
@@ -2068,14 +2070,7 @@ function initialize() {
 	   	   };
 
 	$( '#btnDeselect' ).tooltip( options );
-		    			
-	// show disclaimer - redirect to xkcd if not accepted
-	if( ! $.cookie('disclaimer') ) {
-		$( '.disClose' ).click( function() { window.location.href = "http://dynamic.xkcd.com/random/comic/"; } );
-		$( '#disAccept' ).click( function() { $.cookie('disclaimer', 'true'); } );
-		$( '#DisclaimDia' ).modal( { show: true, backdrop: 'static' } );
-	}
-	
+		    				
 	$( '#preset > .list-group-item' ).click( loadPreset );
 	
 	$( '#sidebar' ).scroll( scrollList );
@@ -3398,7 +3393,7 @@ function signIn( user, password ) {
 				$( "#SignInDialog" ).modal("hide");
 				$('#diaStatus').html("");
 				$('#splashStatus').html("");
-				
+												
 				curuser = resObj.user;
 				logIn( signTarget );
 								
@@ -3452,6 +3447,13 @@ function diaSignIn() {
 }
 
 function logIn( callback ) {
+	
+	// show disclaimer - redirect to xkcd if not accepted
+	if( ! $.cookie('disclaimer') ) {
+		$( '.disClose' ).click( function() { window.location.href = "http://dynamic.xkcd.com/random/comic/"; } );
+		$( '#disAccept' ).click( function() { $.cookie('disclaimer', 'true'); } );
+		$( '#DisclaimDia' ).modal( { show: true, backdrop: 'static' } );
+	}
 	
 	loggedIn = true;
 	
@@ -3520,7 +3522,7 @@ function logIn( callback ) {
 	
 	$( '#lnkUser' ).html( curuser.username );
 	if( curuser.inst )
-		$( '#lnkUser' ).append( " &nbsp;&#183;&nbsp; " + curuser.inst.name );
+		$( '#lnkUser' ).append( " &nbsp;&#183;&nbsp; " + curuser.inst.descr );
 	$( '#lnkUser' ).css( "display", "block" );
 }
 
@@ -5274,6 +5276,7 @@ function getUniqueList( list ) {
 function showSplash( show ) {
 		
 	$( "#splash" ).css( "display", show ? "block" : "none" );
+	$( "#splash-new" ).css( "display", show ? "block" : "none" );
 	$( ".mainview" ).css( "display", show ? "none" : "block" );
 	
 	if( show == true ) {
@@ -5510,3 +5513,73 @@ function LatLonToPixel( lat, lon ) {
 	return pixel;
 }
 
+function Splash() {
+		
+	this.div = $( '#splash-new' );
+	this.navArrow = this.div.find( '.nav-arrow' );
+	this.slides = $('#splash-new .slide');
+	
+	this.last = new Array( this.slides.length );
+	this.last.fill( 0 );
+	
+	this.scrollMain = function( e ) {
+			
+		this.slides.each( this.scrollDiv.bind(this) );
+		
+		if( $(window).scrollTop() + $(window).height() == $(document).height() ) {
+			this.navArrow.removeClass('glyphicon-download');
+			this.navArrow.addClass('glyphicon-upload');
+		} else {
+			this.navArrow.addClass('glyphicon-download');
+			this.navArrow.removeClass('glyphicon-upload');
+		}
+			
+	};
+	
+	this.scrollDiv = function( idx, div ) {
+				
+		div = $(div);
+		var scrollTop = div.scrollTop();
+		var diff = $(document).scrollTop() - this.last[idx];
+		
+		var top = $(document).scrollTop() + $('.container').height();
+		
+		if( top > div.offset().top && $(document).scrollTop() < div.offset().top + div.height() ) {
+			var val = Math.min( scrollTop - diff / 1.5, div.height() );
+			val = Math.max( val, 0 );
+			div.scrollTop( val );
+		}
+		
+		this.last[idx] = $(document).scrollTop();
+	};
+	
+	this.navigate = function() {
+		
+		var elem = $( document.elementFromPoint( 0, 0 ) );
+		var pos = 0;
+		
+		elem = elem.closest( '.section, .slide' );
+		
+		if( elem.length == 0 ) {
+			/* we are at the top */
+			elem = this.div.find( '.section:first' );
+		}
+	
+		elem = elem.nextAll( '.section' );
+		
+		if( elem.length > 0 && this.navArrow.hasClass('glyphicon-download') ) {
+			/* we are not at the bottom */
+			pos = elem.offset().top + 1;
+		}
+					
+		$("html, body").animate( {
+			scrollTop: pos
+		}, 1000 );
+	};
+		
+	$(window).scroll( this.scrollMain.bind(this) );
+	
+	$('#splash-new .slide').scrollTop( 5000 );
+	
+	this.navArrow.click( this.navigate.bind(this) );
+}
