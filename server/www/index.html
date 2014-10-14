@@ -276,7 +276,7 @@
 	  	
 	  	<div id="splash-new" class="row">
 	  		<div class="section">
-	  			<img class="image" src="img/head.png" width=100% />
+	  			<img class="image" src="img/head.sm.jpg" width=100% />
 	  			<div class="overlay">
 			  		<div class="no" style="width: 35%; top: 8vw;">
 			  			<h3>Look ahead with the TRIDEC Cloud</h3>
@@ -344,7 +344,7 @@
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/6.jpg" width=100% />
+	  			<img src="img/6.sm.jpg" width=100% />
 	  		</div>
 	  		
 	  		<div class="section">
@@ -372,7 +372,7 @@
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/5.jpg" width=100% />
+	  			<img src="img/5.sm.jpg" width=100% />
 	  		</div>
 	  		
 	  		<div class="section">
@@ -400,7 +400,7 @@
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/4.jpg" width=100% />
+	  			<img src="img/4.sm.jpg" width=100% />
 	  		</div>
 	  		
 	  		<div class="section">
@@ -443,7 +443,7 @@
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/3.jpg" width=100% />
+	  			<img src="img/3.sm.jpg" width=100% />
 	  		</div>
 	  		
 	  		<div class="section">
@@ -478,7 +478,7 @@
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/2.jpg" width=100% />
+	  			<img src="img/2.sm.jpg" width=100% />
 	  		</div>
 	  		
 	  		<div class="section">
@@ -509,7 +509,7 @@
 			  </div>
 			  	
 		  	<div class="slide">
-  				<img src="img/1.png" width=100%/>
+  				<img src="img/1.sm.jpg" width=100%/>
   			</div>
 	  		
 	  		<div class="section">
@@ -549,7 +549,7 @@
 			</div>
 			  	
 		  	<div class="slide">
-  				<img src="img/0.jpg" width=100%/>
+  				<img src="img/0.sm.jpg" width=100%/>
   			</div>
   		
   			<div class="section">
@@ -1039,7 +1039,7 @@
 							<span class="input-group-addon">Mobile numbers:</span>
 							<input id="smsTo" type="text" class="form-control">
 							<span class="input-group-addon mail-right">
-								<span class="glyphicon glyphicon-phone "></span>
+								<span class="glyphicon glyphicon-phone"></span>
 							</span>
 				  		</div>
 				  		<span class="smsHeadline">SMS-Text (<span id="smsChars"></span> / 160 characters):</span>
@@ -1088,6 +1088,7 @@
 	        <ul class="nav nav-tabs">
 				<li id="propTabGeneral" class="active"><a href="#propGeneral" data-toggle="tab">General</a></li>
 			 	<li id="propTabMsgs"><a href="#propMsgs" data-toggle="tab">Messages</a></li>
+			 	<li id="propTabNotify"><a href="#propNotify" data-toggle="tab">Notifications</a></li>
 			 	<li id="propTabInst"><a href="#propInst" data-toggle="tab">Institution</a></li>
 			 	<li id="propTabStations"><a href="#propStations" data-toggle="tab">Stations</a></li>
 			</ul>
@@ -1203,6 +1204,27 @@
 				  			</div>
 			      		</div>
 			      	</div>
+		      	</div>
+		      	<div class="tab-pane" id="propNotify">
+		      		<div class="input-group input-group-sm prop-label">
+						<span class="input-group-addon">Sms</span>
+						<input id="propNotifySms" type="text" class="form-control">
+						<span class="input-group-addon prop-right">
+							<span class="glyphicon glyphicon-phone"></span>
+						</span>
+		  			</div>
+		  			<div class="input-group input-group-sm prop-label">
+						<span class="input-group-addon">Mail</span>
+						<input id="propNotifyMail" type="text" class="form-control">
+						<span class="input-group-addon prop-right">
+							<span class="glyphicon glyphicon-envelope"></span>
+						</span>
+		  			</div>
+		  			<div class="input-group input-group-sm prop-label">
+						<span class="input-group-addon">Magnitude &ge;</span>
+						<input id="propNotifyMag" type="text" class="form-control">
+						<span class="input-group-addon prop-right">Mw</span>
+		  			</div>
 		      	</div>
 		      	<div class="tab-pane" id="propInst">
 		      		<div class="prop-label">View or edit institution related information</div>

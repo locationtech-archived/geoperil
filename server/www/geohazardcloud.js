@@ -147,8 +147,13 @@ function Earthquake( meta ) {
 	this.getAccel = function() {
 		
 		var ret = 1;
+		
+		/* TODO: this is for compatibility reasons only - can be removed in future releases */
 		if( this.process && this.process.length > 0 && this.process[0].accel )
 			ret = this.process[0].accel;
+		
+		if( this.accel )
+			ret = this.accel;
 		
 		return ret;
 	};
@@ -4669,6 +4674,7 @@ function showProp( e, activeTab ) {
 	
 	var prop = curuser.properties;
 	var perm = curuser.permissions;
+	var notify = curuser.notify;
 		
 	/* clear all input fields to avoid displaying old data from another user! */
 	$( '#PropDia :input' ).val( "" );
@@ -4722,6 +4728,12 @@ function showProp( e, activeTab ) {
 		
 	} else {
 		$( '#propTabInst' ).css( "display", "none" );
+	}
+	
+	if( notify ) {
+		$( '#propNotifySms' ).val( notify.sms );
+		$( '#propNotifyMail' ).val( notify.mail );
+		$( '#propNotifyMag' ).val( notify.mag );
 	}
 	
 	/* stations */
@@ -4890,6 +4902,11 @@ function propSubmit() {
 	var inst = { "descr": $( '#propInstName' ).val(),
 			 	 "msg_name": $( '#propInstMsgName' ).val(),
 		       };
+	
+	var notify = { "sms": $( '#propNotifySms' ).val(),
+				   "mail": $( '#propNotifyMail' ).val(),
+				   "mag":  $( '#propNotifyMag' ).val()
+				 };
 					
 	$( '#propStatus' ).html("");
 	
@@ -4899,7 +4916,8 @@ function propSubmit() {
 	}
 	
 	var data = { prop: JSON.stringify( prop ),
-				 inst: JSON.stringify( inst )
+				 inst: JSON.stringify( inst ),
+				 notify: JSON.stringify( notify ),
 	   			};
 		
 	/* stations */
@@ -5520,7 +5538,9 @@ function Splash() {
 	this.slides = $('#splash-new .slide');
 	
 	this.last = new Array( this.slides.length );
-	this.last.fill( 0 );
+	
+	for( var i = 0; i < this.last.length; i++ )
+		this.last[i] = 0;
 	
 	this.scrollMain = function( e ) {
 			
