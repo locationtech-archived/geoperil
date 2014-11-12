@@ -193,7 +193,7 @@ class WebGuiSrv(Base):
                 end = time.mktime(datetime.datetime.now().timetuple())
             request = {"inst":inst, "station":station, "timestamp": {"$gt":start, "$lte":end}}
 #            print(request)
-            values = self._db["sealeveldata"].find(request)
+            values = self._db["sealeveldata"].find(request).sort("timestamp",1)
             res = {"data":[],"last":None}
             for v in values:
                 if res["last"] is None or res["last"] < v["timestamp"]:
@@ -215,7 +215,7 @@ class WebGuiSrv(Base):
                 end = time.mktime(datetime.datetime.now().timetuple())
             request = {"evid":evid, "station":station, "timestamp": {"$gt":start, "$lte":end}}
 #            print(request)
-            values = self._db["simsealeveldata"].find(request)
+            values = self._db["simsealeveldata"].find(request).sort("timestamp",1)
             res = {"data":[],"last":None}
             for v in values:
                 if res["last"] is None or res["last"] < v["timestamp"]:

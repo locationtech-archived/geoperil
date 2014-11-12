@@ -62,7 +62,7 @@ class MsgSrv(Base):
                 self._db["messages_received"].update({"Message-ID": msgid, "ReadTime": None, "ReceiverID": user["_id"]}, \
                                                      {"$set":{"ReadTime": datetime.datetime.utcnow()}})
                 msg = self._db["messages_received"].find_one({"Message-ID": msgid, "ReceiverID": user["_id"]})
-                return jssuccess(readtime = None if msg is None else msg["ReadTime"].strftime( "%b %w, %Y %I:%M:%S %p" ))
+                return jssuccess(readtime = None if msg is None else msg["ReadTime"].strftime( "%b %d, %Y %I:%M:%S %p" ))
             else:
                 return jsfail(errors = ["API version not supported."])
         else:
@@ -76,7 +76,7 @@ class MsgSrv(Base):
                 self._db["messages_received"].update({"Message-ID": msgid, "MapDisplayTime": None, "ReceiverID": user["_id"]}, \
                                                      {"$set":{"MapDisplayTime": datetime.datetime.utcnow()}})
                 msg = self._db["messages_received"].find_one({"Message-ID": msgid, "ReceiverID": user["_id"]})
-                return jssuccess(mapdisplaytime = None if msg is None else msg["MapDisplayTime"].strftime( "%b %w, %Y %I:%M:%S %p" ))
+                return jssuccess(mapdisplaytime = None if msg is None else msg["MapDisplayTime"].strftime( "%b %d, %Y %I:%M:%S %p" ))
             else:
                 return jsfail(errors = ["API version not supported."])
         else:
@@ -305,9 +305,9 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def ftp(self, apiver, text, evid = None, parentid = None, groupID = None, msgnr = None ):
+    def ftp(self, apiver, fname, text, evid = None, parentid = None, groupID = None, msgnr = None ):
         user = self.getUser()
-        if user is not None and user["permissions"].get("ftp",False):
+        if user is not None and user["permissions"].get("ftp",False) and fname != None and fname != "":
             if apiver == "1":
                 dbmsg={
                     "Type": "FTP",
@@ -321,7 +321,7 @@ class MsgSrv(Base):
                     dbmsg["NextMsgNr"] = int(msgnr)
                 host = user["properties"].get("FtpHost","")
                 port = user["properties"].get("FtpPort",21)
-                path = user["properties"].get("FtpPath","")
+                path = user["properties"].get("FtpPath","") + "/" + fname
                 username = user["properties"].get("FtpUser","anonymous")
                 password = user["properties"].get("FtpPassword","anonymous")
                 dbmsg["To"] = [ "%s@%s:%d%s" % (username,host,port,path) ]
