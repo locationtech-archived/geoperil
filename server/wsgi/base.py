@@ -55,6 +55,38 @@ def jsdeny(**d):
     d["status"] = "denied"
     return bytes(json.dumps(d,cls=JSONEncoder),"utf-8")
 
+def checkargs(args,*req,**reqv):
+    # checkargs(args, "a", ["b", "c"], d=5, e=[1,2,3], f=[], g=[[]])
+    #   a has to be in args
+    #   b or c have to be in args
+    #   d has to be in args and must be 5
+    #   e has to be in args and must be 1, 2 or 3
+    #   f must not be in args
+    #   g has to be in args and must be []
+    for r in req:
+        if type(r) is list:
+            found = False
+            for a in r:
+                if a in args:
+                    found = True
+                    break
+            if not found:
+                return False
+        else:
+            if r not in args:
+                return False
+    for r,v in reqv.items():
+        if type(v) == list:
+            if len(v) == 0 and r in args:
+                return False
+            elif len(v)> 0 and r in args and args[r] not in v:
+                return False
+        else:
+            if r not in args or args[r] != v:
+                return False
+    return True
+
+
 class Base:
     def __init__(self,db):
         self._db = db
@@ -62,8 +94,5 @@ class Base:
     def getUser(self):
         if "server_cookie" in cherrypy.request.cookie:
             uuid = cherrypy.request.cookie["server_cookie"].value
-            # java uuid workaround
-#            uuid = list(UUID(uuid).bytes)
-#            uuid = UUID(bytes=bytes(list(reversed(uuid[0:8])) + list(reversed(uuid[8:16]))))
             return self._db["users"].find_one({"session":uuid})
         return None

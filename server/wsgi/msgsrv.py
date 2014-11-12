@@ -13,17 +13,46 @@ import copy
 
 logger = logging.getLogger("MsgSrv")
 
+def sendmail(send_from, send_to, send_subject, send_text, send_cc = "", send_date = None, send_msgid = None):
+    msg = MIMEMultipart()
+    msg["From"] = send_from
+    if type(send_to) == str:
+        msg["To"] = send_to
+    elif type(send_to) == list and len(send_to) > 0:
+        msg["To"] = ", ".join(send_to)
+    if type(send_cc) == str:
+        msg["Cc"] = send_cc
+    elif type(send_cc) == list and len(send_cc) > 0:
+        msg["Cc"] = ", ".join(send_cc)
+    msg["Subject"] = send_subject
+    msg["Date"] = formatdate() if send_date is None else send_date
+    msg["Message-ID"] = make_msgid() if send_msgid is None else send_msgid
+    msg.attach(MIMEText(send_text,_charset='utf-8'))
+
+    smtp = smtplib.SMTP('cgp1.gfz-potsdam.de')
+    errors = []
+    success = False
+    try:
+        res = smtp.send_message(msg)
+        for k,v in res.items():
+            errors.append( (k, (v[0],v[1].decode('utf-8'))) )
+        success = True
+    except smtplib.SMTPRecipientsRefused as ex:
+        errors = {}
+        for k,v in ex.recipients.items():
+            errors.append( (k, (v[0],v[1].decode('utf-8'))) )
+    except smtplib.SMTPSenderRefused as ex:
+        errors = [ (ex.sender, (ex.smtp_code,str(ex.smtp_error))) ]
+        success = None
+    smtp.quit()
+    return success,errors
+
+
 class MsgSrv(Base):
 
     @cherrypy.expose
     def index(self):
         return "Hello World!" + str(self.getUser())
-
-    @cherrypy.expose
-    def json(self, json):
-        print(json)
-        return
-
 
     @cherrypy.expose
     def readmsg(self, apiver, msgid ):
@@ -110,8 +139,7 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def mail(self, apiver, to, subject, text, cc = "", attachments = [], evid = None, parentid = None, groupID = None, msgnr = None ):
-        # TODO: propper attachment handling testing
+    def mail(self, apiver, to, subject, text, cc = "", evid = None, parentid = None, groupID = None, msgnr = None ):
         user = self.getUser()
         if user is not None and user["permissions"].get("mail",False):
             if apiver == "1":
@@ -124,7 +152,6 @@ class MsgSrv(Base):
                     }
                 if msgnr != None:
                     dbmsg["NextMsgNr"] = int(msgnr)
-                warnings = []
                 send_from = user["username"]
                 send_to = to.replace(","," ").replace(";"," ").split()
                 send_cc = cc.replace(","," ").replace(";"," ").split()
@@ -133,60 +160,22 @@ class MsgSrv(Base):
                 send_date = formatdate()
                 send_msgid = make_msgid()
 
-                msg = MIMEMultipart()
-                msg["From"] = send_from
                 dbmsg["From"] = send_from
                 if len(send_to) > 0:
-                    msg["To"] = ", ".join(send_to)
                     dbmsg["To"] = send_to
                 if len(send_cc) > 0:
-                    msg["Cc"] = ", ".join(send_cc)
                     dbmsg["Cc"] = send_cc
-                msg["Subject"] = send_subject
                 dbmsg["Subject"] = send_subject
-                msg["Date"] = send_date
                 dbmsg["Date"] = send_date
-                msg["Message-ID"] = send_msgid
                 dbmsg["Message-ID"] = send_msgid
-                msg.attach(MIMEText(send_text,_charset='utf-8'))
                 dbmsg["Text"] = send_text
-                dbmsg["Attachments"] = {}
-                for a in attachments:
-                    if a.file:
-                        a.file.seek(0)
-                        cnt = a.file.readall()
-                        part = MIMEApplication(cnt)
-                        part.add_header('Content-Disposition', 'attachment; filename="%s"' % a.filename)
-                        msg.attach(part)
-                        dbmsg["Attachments"][a.filename] = cnt
 
-                smtp = smtplib.SMTP('cgp1.gfz-potsdam.de')
-                errors = []
-                success = False
-                try:
-                    res = smtp.send_message(msg)
-                    for k,v in res.items():
-                        errors.append( (k, (v[0],v[1].decode('utf-8'))) )
-                    success = True
-                except smtplib.SMTPRecipientsRefused as ex:
-                    errors = {}
-                    for k,v in ex.recipients.items():
-                        errors.append( (k, (v[0],v[1].decode('utf-8'))) )
-                except smtplib.SMTPSenderRefused as ex:
-                    errors = [ (ex.sender, (ex.smtp_code,str(ex.smtp_error))) ]
-                    success = None
+                success, errors = sendmail(send_from, send_to, send_subject, send_text, send_cc, send_date, send_msgid)
                 if len(errors) > 0 and success is not None:
                     errtext = "There were errors while sending your Message.\n"
                     for v in errors:
                         errtext+="\n%s:\t%d: %s" % (v[0],v[1][0],v[1][1])
-                    errmsg = MIMEMultipart()
-                    errmsg["From"] = user["username"]
-                    errmsg["To"] = user["username"]
-                    errmsg["Date"] = formatdate()
-                    errmsg["Subject"] = "Error in Tridec Cloud Mailing System"
-                    errmsg.attach(MIMEText(errtext,_charset='utf-8'))
-                    smtp.send_message(errmsg)
-                smtp.quit()
+                    sendmail(user["username"], user["username"], "Error in Tridec Cloud Mailing System", errtext)
 
                 dbmsg["errors"] = errors
                 self._db["messages_sent"].insert(dbmsg)

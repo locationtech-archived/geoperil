@@ -11,6 +11,31 @@ class FeederSrv(Base):
         return "Hello World!" + str(self.getUser())
 
     @cherrypy.expose
+    def feed(self, cls="auto", **data):
+        if "inst" in data and "secret" in data and \
+          self._db["institutions"].find_one({"name":data["inst"], "secret": data["secret"]}) is not None:
+            if cls == "auto":
+                cls = self.guessclass(data)
+            if cls is None:
+                return jsfail(errors = ["Auto recognizing data failed."])
+            elif cls == "station":
+                return self.feedstation(**data)
+            elif cls == "sealeveldata":
+                return self.feedsealevel(**data)
+            else:
+                return jsfail(errors = ["Unknown class %s." % cls])
+        return jsdeny()
+
+    def guessclass(self, data):
+        if checkargs(data,"timestamp","value","station",apiver="1"):
+            return "sealeveldata"
+        elif checkargs(data,["json","xml","text"],apiver="2"):
+            return "sealeveldata"
+        elif checkargs(data,"station","apiver"):
+            return "station"
+        return None
+
+    @cherrypy.expose
     def feedstation(self, apiver, inst, secret, station):
         if apiver == "1":
             inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
