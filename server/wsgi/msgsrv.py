@@ -61,10 +61,10 @@ def sendtwilliosms(twisid, twitoken, twifrom, to, text):
         ex = e.find("RestException")
         if ex is None:
             for side in e.iter("Sid"):
-                success.append( (nr, side.text) )
+                success.append( (to, side.text) )
                 break
         else:
-            errors.append( (nr, ElementTree.tostring(ex,encoding='unicode')) )
+            errors.append( (to, ElementTree.tostring(ex,encoding='unicode')) )
         return success, errors
     elif type(to) == list:
         errors = []
