@@ -47,6 +47,33 @@ def sendmail(send_from, send_to, send_subject, send_text, send_cc = "", send_dat
     smtp.quit()
     return success,errors
 
+def sendtwilliosms(twisid, twitoken, twifrom, to, text):
+    if type(to) == str:
+        errors = []
+        success = []
+        auth = requests.auth.HTTPBasicAuth( twisid, twitoken )
+        payload = {}
+        payload["To"] = to.strip()
+        payload["From"] = twifrom
+        payload["Body"] = text
+        r = requests.post("https://api.twilio.com/2010-04-01/Accounts/%s/Messages" % twisid, data=payload, auth=auth)
+        e = ElementTree.fromstring(r.text)
+        ex = e.find("RestException")
+        if ex is None:
+            for side in e.iter("Sid"):
+                success.append( (nr, side.text) )
+                break
+        else:
+            errors.append( (nr, ElementTree.tostring(ex,encoding='unicode')) )
+        return success, errors
+    elif type(to) == list:
+        errors = []
+        success = []
+        for nr in to:
+            succ, err = sendtwilliosms(twisid, twitoken, twifrom, nr, text)
+            errors += err
+            success += succ
+        return success, errors
 
 class MsgSrv(Base):
 
@@ -264,26 +291,12 @@ class MsgSrv(Base):
                 to = to.replace(",",";").split(";")
                 dbmsg["To"] = to
                 dbmsg["Text"] = text
-                errors = []
-                success = []
+
                 twisid = user["properties"].get("TwilioSID","")
                 twitoken = user["properties"].get("TwilioToken","")
                 twifrom = user["properties"].get("TwilioFrom","")
-                auth = requests.auth.HTTPBasicAuth( twisid, twitoken )
-                for nr in to:
-                    payload = {}
-                    payload["To"] = nr
-                    payload["From"] = twifrom
-                    payload["Body"] = text
-                    r = requests.post("https://api.twilio.com/2010-04-01/Accounts/%s/Messages" % twisid, data=payload, auth=auth)
-                    e = ElementTree.fromstring(r.text)
-                    ex = e.find("RestException")
-                    if ex is None:
-                        for side in e.iter("Sid"):
-                            success.append( (nr, side.text) )
-                            break
-                    else:
-                        errors.append( (nr, ElementTree.tostring(ex,encoding='unicode')) )
+                success, errors = sendtwilliosms(twisid, twitoken, twifrom, to, text)
+
                 dbmsg["sentsmsids"] = success
                 dbmsg["errors"] = errors
                 self._db["messages_sent"].insert(dbmsg)
