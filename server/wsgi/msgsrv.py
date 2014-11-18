@@ -79,8 +79,8 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def instsms(self, apiver, inst, secret, username, to, text)
-        if apiver == 1:
+    def instsms(self, apiver, inst, secret, username, to, text):
+        if apiver == "1":
             inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
             if inst is not None and inst.get("instsms",False):
                 to = to.replace(",",";").split(";")
@@ -99,8 +99,8 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def instmail(self, apiver, inst, secret, fromaddr, toaddr, subject, text, cc = "") 
-        if apiver == 1:
+    def instmail(self, apiver, inst, secret, fromaddr, toaddr, subject, text, cc = ""):
+        if apiver == "1":
             inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
             if inst is not None and inst.get("instmail",False):
                 toaddr = toaddr.replace(","," ").replace(";"," ").split()
