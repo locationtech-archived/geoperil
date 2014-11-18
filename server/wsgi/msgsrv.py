@@ -10,6 +10,7 @@ import ftplib
 import io
 import datetime
 import copy
+import inspect
 
 logger = logging.getLogger("MsgSrv")
 
@@ -79,7 +80,12 @@ class MsgSrv(Base):
 
     @cherrypy.expose
     def index(self):
-        return "Hello World!" + str(self.getUser())
+        s = ""
+        for n in dir(self):
+            m = self.__getattribute__(n)
+            if inspect.ismethod(m):
+                s += n + inspect.formatargspec(*inspect.getargspec(m)) + "\n"
+        return s
 
     @cherrypy.expose
     def readmsg(self, apiver, msgid ):
