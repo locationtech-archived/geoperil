@@ -85,6 +85,7 @@ class MsgSrv(Base):
             m = self.__getattribute__(n)
             if inspect.ismethod(m):
                 s += n + inspect.formatargspec(*inspect.getargspec(m)) + "\n"
+                s += str(dir(m)) + "\n"
         return s
 
     @cherrypy.expose
