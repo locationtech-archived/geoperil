@@ -5,10 +5,6 @@ logger = logging.getLogger("MsgSrv")
 class WorkerSrv(Base):
 
     @cherrypy.expose
-    def index(self):
-        return "Hello World!" + str(self.getUser())
-
-    @cherrypy.expose
     def register(self,uuid,slots):
         w = self._db["workers"].find_one({"uuid":uuid})
         if w is None:

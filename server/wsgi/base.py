@@ -3,6 +3,7 @@ import os
 import cherrypy
 import json
 import logging
+import inspect
 from pymongo import MongoClient
 from uuid import UUID, uuid4
 import hashlib
@@ -90,6 +91,17 @@ def checkargs(args,*req,**reqv):
 class Base:
     def __init__(self,db):
         self._db = db
+
+    @cherrypy.expose
+    def index(self):
+        s = ""
+        for n in dir(self):
+            if n not in ["index"]:
+                m = self.__getattribute__(n)
+                if inspect.ismethod(m) and hasattr(m,"exposed") and m.exposed:
+                    spec = inspect.getfullargspec(m)
+                    s += "<li><b>%s</b> %s<br>" % (n, inspect.formatargspec(*spec))
+        return "<html><ul>%s</ul></html>" % s
 
     def getUser(self):
         if "server_cookie" in cherrypy.request.cookie:

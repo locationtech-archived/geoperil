@@ -8,10 +8,6 @@ logger = logging.getLogger("MsgSrv")
 class WebGuiSrv(Base):
 
     @cherrypy.expose
-    def index(self):
-        return "Hello World!" + str(self.getUser())
-
-    @cherrypy.expose
     def session(self):
         user = self.getUser()
         if user is not None:

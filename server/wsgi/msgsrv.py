@@ -10,7 +10,6 @@ import ftplib
 import io
 import datetime
 import copy
-import inspect
 
 logger = logging.getLogger("MsgSrv")
 
@@ -77,16 +76,6 @@ def sendtwilliosms(twisid, twitoken, twifrom, to, text):
         return success, errors
 
 class MsgSrv(Base):
-
-    @cherrypy.expose
-    def index(self):
-        s = ""
-        for n in dir(self):
-            m = self.__getattribute__(n)
-            if inspect.ismethod(m):
-                s += n + inspect.formatargspec(*inspect.getargspec(m)) + "\n"
-                s += str(dir(m)) + "\n"
-        return s
 
     @cherrypy.expose
     def readmsg(self, apiver, msgid ):

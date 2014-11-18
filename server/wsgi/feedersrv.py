@@ -7,10 +7,6 @@ logger = logging.getLogger("MsgSrv")
 class FeederSrv(Base):
 
     @cherrypy.expose
-    def index(self):
-        return "Hello World!" + str(self.getUser())
-
-    @cherrypy.expose
     def feed(self, cls="auto", **data):
         if "inst" in data and "secret" in data and \
           self._db["institutions"].find_one({"name":data["inst"], "secret": data["secret"]}) is not None:
