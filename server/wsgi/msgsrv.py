@@ -78,6 +78,40 @@ def sendtwilliosms(twisid, twitoken, twifrom, to, text):
 class MsgSrv(Base):
 
     @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def instsms(self, apiver, inst, secret, username, to, text)
+        if apiver == 1:
+            inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
+            if inst is not None and inst.get("instsms",False):
+                to = to.replace(",",";").split(";")
+                user = self._db["users"].find_one({"username":username})
+                twisid = user["properties"].get("TwilioSID","")
+                twitoken = user["properties"].get("TwilioToken","")
+                twifrom = user["properties"].get("TwilioFrom","")
+                success, errors = sendtwilliosms(twisid, twitoken, twifrom, to, text)
+                if len(success) > 0:
+                    return jssuccess(sentsmsids = success, errors = errors)
+                else:
+                    return jsfail(errors = errors)
+            return jsdeny()
+        else:
+            return jsfail(errors = ["API version not supported."])
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def instmail(self, apiver, inst, secret, fromaddr, toaddr, subject, text, cc = "") 
+        if apiver == 1:
+            inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
+            if inst is not None and inst.get("instmail",False):
+                toaddr = toaddr.replace(","," ").replace(";"," ").split()
+                cc = cc.replace(","," ").replace(";"," ").split()
+                success, errors = sendmail(fromaddr, toaddr, subject, text, cc)
+                return jssuccess(errors = errors) if success else jsfail(errors = errors)
+            return jsdeny()
+        else:
+            return jsfail(errors = ["API version not supported."])
+
+    @cherrypy.expose
     def readmsg(self, apiver, msgid ):
         user = self.getUser()
         if user is not None:
