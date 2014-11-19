@@ -414,6 +414,25 @@ public class Services {
 	  return jssuccess( new BasicDBObject( "_id", id ) );
   }
       
+  String newRandomId( String username ) {
+	  
+	  Random rand = new Random();
+	  String id;
+	  
+	  DBCollection coll = db.getCollection("eqs");
+	  
+	  while ( true ) {
+		  
+		  Integer nr = rand.nextInt( 90000 ) + 10000;
+		  id = username + nr.toString(); 
+		
+		  if( coll.find( new BasicDBObject("_id", id) ).count() == 0 )
+			  break;
+	  }
+	  
+	  return id;
+  }
+  
   @POST
   @Path("/compute")
   @Produces(MediaType.APPLICATION_JSON)
@@ -477,16 +496,14 @@ public class Services {
 	  DBCollection coll = db.getCollection("eqs");
 	  
 	  /* create an unique ID that is not already present in the DB */
-	  Random rand = new Random();
-	  String id;
+	  String id = newRandomId(user.name);
 	  
-	  while ( true ) {
-		  
-		  Integer nr = rand.nextInt( 90000 ) + 10000;
-		  id = user.name + nr.toString(); 
-		
-		  if( coll.find( new BasicDBObject("_id", id) ).count() == 0 )
-			  break;
+	  DBCursor cursor = coll.find( new BasicDBObject("_id", parent) );
+	  int accel = 1;
+	  if( cursor.hasNext() ) {
+		  Integer val = (Integer) cursor.next().get("accel");
+		  if( val != null )
+			  accel = val;
 	  }
 	  
 	  /* get current timestamp */
@@ -514,6 +531,7 @@ public class Services {
 	  obj.put( "prop", sub );
 	  obj.put( "root", root );
 	  obj.put( "parent", parent );
+	  obj.put( "accel", accel );
 	  
 	  /* insert object into collection */
 	  coll.insert( obj );
@@ -529,7 +547,7 @@ public class Services {
 	  db.getCollection("events").insert( event );
 	  
 	  /* start request */
-	  return request( lon, lat, mag, depth, dip, strike, rake, id, user, dur, date, 1 );
+	  return request( lon, lat, mag, depth, dip, strike, rake, id, user, dur, date, accel );
   }
     
   @POST
@@ -556,12 +574,10 @@ public class Services {
 		  @FormParam("accel") Integer accel) {
 	  
 	  Object[] required = { inst, secret, id, name, dateStr };
-	  	  	  
-	  System.out.println( id + ", " + name );
-	  
+	  	  	  	  
 	  if( ! checkParams( request, required ) )
 	  	  return jsfailure();
-	  		  
+	  	  		  
 	  /* if id is already used, make a refinement */
 	  DBCursor cursor = db.getCollection("eqs").find( new BasicDBObject( "id", id ) );
 	  if( cursor.hasNext() ) {
@@ -609,6 +625,11 @@ public class Services {
 	  obj.put( "root", root );
 	  obj.put( "parent", parent );
 	  
+	  if( accel == null )
+		  accel = 1;
+	  
+	  obj.put( "accel", accel );
+	  
 	  /* create a new event */
 	  BasicDBObject event = new BasicDBObject();
 	  event.put( "id", compId.toString() );
@@ -620,6 +641,7 @@ public class Services {
 	  db.getCollection("eqs").insert( obj );
 	  
 	  System.out.println(obj);
+	  notifyUsers( mag );
 	  
 	  /* insert new event into 'events'-collection */
 	  db.getCollection("events").insert( event );
@@ -629,6 +651,37 @@ public class Services {
 		  computeById( request, inst, secret, id, refineId, comp, accel );
 			 
 	  return jssuccess( new BasicDBObject( "refineId", refineId ) );
+  }
+  
+  private void notifyUsers( double mag ) {
+	  
+	  Inst instObj = institutions.get( "gfz" );
+	  
+	  DBObject query = new BasicDBObject( "inst", instObj.objId );
+	  DBCursor cursor = db.getCollection("users").find( query );
+	  
+	  for( DBObject user: cursor ) {
+		  		  
+		  DBObject notify = (DBObject) user.get("notify");
+		  if( notify == null || ! (notify.get("mag") instanceof Double) )
+			  continue;
+				  		  
+		  Double magThreshold = (Double) notify.get("mag");
+		  
+		  if( magThreshold != null && mag >= magThreshold ) {
+			
+			  /* notify user about earthquake */
+			  String sms = (String) notify.get("sms");
+			  if( sms != null ) {
+				  System.out.println(sms);
+			  }
+			  
+			  String mail = (String) notify.get("mail");
+			  if( mail != null ) {
+				  System.out.println(mail);
+			  }
+		  }
+	  }
   }
     
   @GET
@@ -854,6 +907,7 @@ public class Services {
 	  userObj.put( "_id", obj.get("_id") );
 	  userObj.put( "permissions", obj.get("permissions") );
 	  userObj.put( "properties", obj.get("properties") );
+	  userObj.put( "notify", obj.get("notify") );
 	  
 	  ObjectId instId = (ObjectId) obj.get("inst");
 	  
@@ -1182,6 +1236,11 @@ public class Services {
 					DBCursor csrUser = db.getCollection("users").find( new BasicDBObject("_id", obj2.get("SenderID")) ); 
 					if( csrUser.hasNext() )
 						obj2.put( "From", (String) csrUser.next().get("username") );
+					
+					DBCursor csrParent = db.getCollection("eqs").find( new BasicDBObject( "_id", obj2.get("ParentId") ) );
+					 
+					 if( csrParent.hasNext() )
+						 obj2.put( "parentEvt", csrParent.next() );
 				}
 				
 				/* check if entry belongs to general or user specific list */
@@ -1282,7 +1341,7 @@ public class Services {
 //	 BasicDBObject inQuery = new BasicDBObject("id", id);
 //	 BasicDBObject filter = new BasicDBObject("_id", 0);
 //	 DBCursor cursor = coll.find( inQuery, filter );
-	 
+	 	 
 	 ArrayList<DBObject> list = new ArrayList<DBObject>();
 	 
 	 DBCollection coll = db.getCollection("tfp_comp");
@@ -1510,6 +1569,11 @@ public class Services {
 	  obj.put( "prop", sub );
 	  obj.put( "root", root );
 	  obj.put( "parent", entry.get("_id") );
+	  
+	  if( accel == null )
+		  accel = 1;
+	  
+	  obj.put( "accel", accel );
 	  			  	   
 	  /* create a new event */
 	  BasicDBObject event = new BasicDBObject();
@@ -1602,6 +1666,7 @@ public class Services {
 		  @FormParam("newpwd") String newPass,
 		  @FormParam("prop") String prop,
 		  @FormParam("inst") String inst,
+		  @FormParam("notify") String notify,
 		  @FormParam("stations") String stations,
 		  @CookieParam("server_cookie") String session ) {
 	 	 	 	 
@@ -1668,6 +1733,20 @@ public class Services {
 		 }
 	 }
 	 
+	 DBObject notifyObj = (DBObject) JSON.parse( notify );
+	 
+	 if( notifyObj != null ) {
+	 
+		 DBObject curNotify = (DBObject) newObj.get("notify");
+		 
+		 if( curNotify == null )
+			 curNotify = new BasicDBObject();
+		 
+		 curNotify.putAll( notifyObj );
+		 
+		 newObj.put( "notify", curNotify );
+	 }
+	 
 	 /* stations */
 	 BasicDBList statObj = (BasicDBList) JSON.parse( stations );
 	 
@@ -1710,6 +1789,8 @@ public class Services {
 	 inQuery.put( "lon", lon );
 	 inQuery.put( "lat", lat );
 	 inQuery.put( "zoom", zoom );
+	 inQuery.put( "timestamp", new Date() );
+	 inQuery.put( "user", user.objId );
 	 
 	 coll.insert( inQuery );
 	 ObjectId objId = (ObjectId) inQuery.get( "_id" );
@@ -1719,12 +1800,22 @@ public class Services {
 	 return jssuccess( result );
  }
  
+ private String getIP( HttpServletRequest request ) {
+ 
+	 String ip = request.getHeader("X-FORWARDED-FOR");  
+	 if (ip == null)
+		 ip = request.getRemoteAddr();
+	 
+	 return ip;
+}
+ 
  @POST
  @Path("/getShared")
  @Produces(MediaType.APPLICATION_JSON)
  public String getShared(
 		  @Context HttpServletRequest request,
-		  @FormParam("lnkid") String lnkId ) {
+		  @FormParam("lnkid") String lnkId,
+		  @CookieParam("server_cookie") String session ) {
 	 	 
 	 Object[] required = { lnkId };
 
@@ -1750,6 +1841,21 @@ public class Services {
 	 DBObject lnkObj = cursor.next();
 	 Object evtId = lnkObj.get("EventID");
 	 
+	 /* store meta data */
+	 User user = signedIn( session );
+	 Object userId = null;
+	 
+	 if( user != null )
+		 userId = user.objId;
+	 
+	 DBObject access = new BasicDBObject( "timestamp", new Date() );
+	 access.put( "user", userId );
+	 access.put( "ip", getIP(request) );
+	 
+	 DBObject elem = new BasicDBObject( "access", access );
+	 DBObject update = new BasicDBObject( "$push", elem );
+	 db.getCollection("static").findAndModify( inQuery, update );
+	 
 	 cursor.close();
 	 	 	 
 	 BasicDBObject event = new BasicDBObject( "_id", evtId );
@@ -1769,6 +1875,87 @@ public class Services {
 	 cursor.close();
 	 
 	 return jssuccess( json );
+ }
+ 
+ @POST
+ @Path("/copyToUser")
+ @Produces(MediaType.APPLICATION_JSON)
+ public String copyToUser(
+		  @Context HttpServletRequest request,
+		  @FormParam("srcId") String srcId,
+		  @CookieParam("server_cookie") String session ) {
+	 
+	 Object[] required = { srcId };
+
+	 if( ! checkParams( request, required ) )
+		 return jsfailure();
+	 
+	 User user = signedIn( session );
+	 
+	 if( user == null )
+		 return jsdenied();
+	 
+	 /* do not copy the event again if there is already one copy for that user */
+	 BasicDBObject inQuery = new BasicDBObject( "copied", srcId );
+	 inQuery.put( "user", user.objId );
+	 DBCursor cursor = db.getCollection("eqs").find( inQuery );
+	 
+	 if( cursor.hasNext() ) {
+		 cursor.close();
+		 return jssuccess( new BasicDBObject("msg","Copy already exists.") );
+	 }
+	 
+	 cursor.close();
+	 
+	 inQuery = new BasicDBObject( "_id", srcId );
+	 cursor = db.getCollection("eqs").find( inQuery );
+ 
+	 if( ! cursor.hasNext() )
+		 return jsfailure();
+	 	 
+	 DBObject obj = cursor.next();
+	 cursor.close();
+	 
+	 String id = newRandomId(user.name);
+	 obj.put("user", user.objId);
+	 obj.put("_id", id );
+	 obj.put("id", id );
+	 obj.put( "timestamp", new Date() );
+	 obj.put( "copied", srcId );
+	 
+	 db.getCollection("eqs").insert( obj );
+	 
+	 /* copy TFP results */
+	 cursor = db.getCollection("tfp_comp").find( new BasicDBObject( "EventID", srcId ) );
+	 for( DBObject res: cursor ) {
+		 res.put( "EventID", id );
+		 res.removeField( "_id" );
+		 db.getCollection("tfp_comp").insert( res );
+	 }
+	 
+	 cursor.close();
+	 
+	 /* copy isolines */
+	 cursor = db.getCollection("results").find( new BasicDBObject( "id", srcId ) );
+	 for( DBObject res: cursor ) {
+		 res.put( "id", id );
+		 res.removeField( "_id" );
+		 db.getCollection("results").insert( res );
+	 }
+	 
+	 cursor.close();
+	 
+	 /* copy wave heights */
+	 cursor = db.getCollection("results2").find( new BasicDBObject( "id", srcId ) );
+	 for( DBObject res: cursor ) {
+		 res.put( "id", id );
+		 res.removeField( "_id" );
+		 db.getCollection("results2").insert( res );
+	 }
+	 
+	 cursor.close();
+	 
+	 return jssuccess( new BasicDBObject("msg","Event successfully copied.") );
  }
  
  private List<DBObject> msg( int limit, User user ) {
@@ -1819,7 +2006,7 @@ public class Services {
 		 DBCursor csr = db.getCollection("eqs").find( new BasicDBObject( "_id", msg.get("ParentId") ) );
 		 
 		 if( csr.hasNext() )
-			 msg.put( "event", csr.next() );
+			 msg.put( "parentEvt", csr.next() );
 	 }
 	 
 	 return result;

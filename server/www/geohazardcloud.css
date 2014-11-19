@@ -7,8 +7,13 @@ html, body {
 	width: 100%;
 }
 
+.headline {
+        height: 4em;
+        overflow-y: auto;
+}
+
 .mainview {
-	height: 90%;
+	height: calc(100% - 4em);
 	display: none;
 }
 
@@ -196,6 +201,26 @@ html, body {
 	padding-bottom: 0.3em;
 }
 
+.entry .info {
+	position: relative;
+	background-color: #5cb85c;
+	width: 100%;
+	text-align: center;
+	margin-bottom: 0.5em;
+	display: none;
+	
+	border-bottom-left-radius: 1em 1em;
+	border-bottom-right-radius: 1em 1em;
+}
+
+.entry .info span {
+	color: white;
+}
+
+.entry .info a {
+	position: absolute; right: 0.5em; color: white;
+}
+
 .entry .marker {
 	display: block;
 	margin-left: auto;
@@ -260,6 +285,11 @@ html, body {
 }
 
 .entry .lnkTimeline {
+	margin-right: 0.4em;
+	display: none;
+}
+
+.entry .lnkCopy {
 	margin-right: 0.4em;
 	display: none;
 }
@@ -599,8 +629,9 @@ pre {
 
 #splashStatus {
 	color: red;
-	padding-bottom: 0.5em;
+	/*padding-bottom: 0.5em;*/
 	text-align: center;
+	background: rgba(0,0,0,0.5);
 }
 
 #splash-table {
@@ -726,6 +757,7 @@ pre {
 	padding: 1em;
 	border: 2px solid #acaaa7;
 	border-top: 1px solid #acaaa7;
+	display: none;
 }
 
 #vsdbPlayer .head {
@@ -805,6 +837,7 @@ pre {
 
 #splash-new {
 	position: relative;
+	display: none;
 }
 
 #splash-new .section {

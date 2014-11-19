@@ -201,6 +201,7 @@ function EntryMap() {
 
 function Container( key, sortFun ) {
 	
+	/* TODO: map can be removed */
 	this.map = {};
 	this.list = [];
 	this.sortFun = sortFun;
@@ -213,8 +214,20 @@ function Container( key, sortFun ) {
 		return this.list[i];
 	};
 	
+	this.getByKey = function( key, val ) {
+		
+		for( var i = 0; i < this.list.length; i++ ) {
+		
+			if( this.list[i][key] == val )
+				return this.list[i];
+		}
+		
+		return null;
+	};
+	
 	this.insert = function( item ) {
 		
+		/* TODO: remove map, but check dependencies */
 		this.map[ item[ key ] ] = item;
 		
 		for( var i = 0; i < this.list.length; i++ ) {
@@ -227,6 +240,19 @@ function Container( key, sortFun ) {
 	   }
 	   
 	   this.list.push( item );
+	};
+	
+	this.replace = function( key, item ) {
+		
+		for( var i = 0; i < this.list.length; i++ ) {
+			
+			if( this.list[i][key] == item[key] ) {
+				this.list[i] = item;
+				return;
+			}
+		}
+		
+		this.list.push( item );
 	};
 	
 	this.clear = function() {
@@ -1935,7 +1961,7 @@ function VsdbPlayer( div ) {
 }
 
 var eqlist = new CustomList( '#sidebar' );
-var saved = new CustomList( '#saved' );
+var saved = new CustomList( '#saved', sort_timeline );
 var timeline = new CustomList( '#timeline-data', sort_timeline );
 var messages = new CustomList( '#messages' );
 var shared = new CustomList( '#static' );
@@ -2025,7 +2051,9 @@ function initialize() {
 			
 	vsdbPlayer = new VsdbPlayer( $('#vsdbPlayer') );
 	
-	splash = new Splash(); 
+	/* TODO: it might be neccessary to wait until the images are loaded successfully to rely on scrollTop() */
+	/* but how to do it? */
+	splash = new Splash();
 	
 	var mapOptions = {
 			zoom: 2,
@@ -2164,9 +2192,9 @@ function getEvents( callback ) {
 				entry.prop = { date: msglist[i]['CreatedTime'] };
 				messages.push( entry );
 				
-				var event = entry.event;
-				if( event )
-					entries.getOrInsert( event );
+				var parentEvt = entry.parentEvt;
+				if( parentEvt )
+					entries.getOrInsert( parentEvt );
 			}
 		            
 			showEntries( eqlist );
@@ -2298,6 +2326,10 @@ function getUpdates( timestamp ) {
 					
 					messages.push( entry );
 					msgadd = true;
+					
+					var parentEvt = entry.parentEvt;
+					if( parentEvt )
+						entries.getOrInsert( parentEvt );
 				}
 			}
 			
@@ -2489,6 +2521,8 @@ function addEntry( widget, data, i ) {
 		tid = data.root;
 	
 	$div.find( '.lnkTimeline' ).bind( 'click', { id: tid }, lnkIdOnClick );
+	$div.find( '.lnkCopy' ).click( lnkCopyOnClick.bind(this,data._id) );
+	$div.find( '.info a' ).click( closeInfoBar.bind(this,data) );
 	
 	var dip = prop['dip'] ? prop['dip'] + '&deg;' : "n/a";
 	var strike = prop['strike'] ? prop['strike'] + '&deg;' : "n/a";
@@ -2518,7 +2552,7 @@ function addEntry( widget, data, i ) {
 	var options = { placement:'bottom',
 					title:'Info',
 					html: true,
-					container: $div,
+					container: $div, //'body',
 					animation: false
 				   };
 	
@@ -2543,7 +2577,7 @@ function addEntry( widget, data, i ) {
 	
 	options = { placement:'top',
 				title:'Modify and reprocess',
-				container: $div,
+				container: $div, //'body',
 				animation: false
 		   	   };
 	
@@ -2561,19 +2595,25 @@ function addEntry( widget, data, i ) {
 	options.title = 'Show timeline';
 	$div.find( '.lnkTimeline' ).tooltip( options );
 	
+	options.title = 'Copy to my list';
+	$div.find( '.lnkCopy' ).tooltip( options );
+	
 	var color = getMarkerColor( prop['magnitude'] );
 			
-	if( checkPerm( "share" ) )
+	if( checkPerm( "share" ) && ! data.extern )
 		$div.find( '.lnkStatic' ).css( "display", "inline" );
 	
-	if( checkPerm( "comp" ) )
+	if( checkPerm( "comp" ) && ! data.extern )
 		$div.find( '.lnkEdit' ).css( "display", "inline" );
 	
-	if( checkPermsAny( "intmsg", "mail", "fax", "ftp", "sms" ) )
+	if( checkPermsAny( "intmsg", "mail", "fax", "ftp", "sms" ) && ! data.extern )
 		$div.find( '.lnkSend' ).css( "display", "inline" );
 	
-	if( checkPerm( "timeline" ) )
+	if( checkPerm( "timeline" ) && ! data.extern )
 		$div.find( '.lnkTimeline' ).css( "display", "inline" );
+	
+	if( data.extern )
+		$div.find( '.lnkCopy' ).css( "display", "inline" );
 	
 	if( curuser != null && id_equals( curuser._id, data.user ) ) {
 		
@@ -2636,7 +2676,7 @@ function addMsg( widget, data, i ) {
 		data['div'] = {};
 	
 	data['div'][ '#' + widget.attr('id') ] = $div;
-			
+				
 	var date = new Date( data['CreatedTime'] );
 	var year = date.getUTCFullYear();
 	var month = date.getUTCMonth() + 1;
@@ -2758,7 +2798,7 @@ function addMsg( widget, data, i ) {
 	
 	options.title = 'Show timeline';
 	$div.find( '.lnkTimeline' ).tooltip( options );
-	
+		
 //	options.title = '<span style="font-size: 0.9em;">Delete entry?</span>';
 //	options.container = 'body';
 //	options.placement = 'bottom';
@@ -2843,7 +2883,7 @@ function entryOnClick() {
 function visualize( id ) {
 		
 	var entry = entries.get( id );
-	
+		
 	setMarkerPos( markers.active, entry.prop.latitude, entry.prop.longitude );
 	markers.active.setMap( map );
 	
@@ -3052,10 +3092,17 @@ function getNextMsgNr( entry, callback ) {
 function getPois( entry, callback ) {
 	
 	var id = entry._id;
+		
+	/* check if POIs were already inserted into the DB completely */
+	if( entry.process && ( entry.process.length < 1 || entry.process[0].progress < 100) ) {
+		
+		if( callback != null )
+			setTimeout( callback, 500 );
+		
+		return "pending";
+	}
 	
-	console.log( entry );
-
-	if( entry.pois != null ) {
+	if( entry.pois != null  ) {
 		showPois( id, true );
         return "done";
     }
@@ -3067,14 +3114,14 @@ function getPois( entry, callback ) {
 		success: function( result ) {
 			
 			entry.pois = new Array();
-						
+			
 			if( result.length == 0 )
 				return;
-						
+												
 			for( var i = 0; i < result.length; i++ ) {
 				
 				var poi = result[i];
-				
+								
 				var center = new google.maps.LatLng( poi.lat_real, poi.lon_real );
 				
 				var point = { marker: null,
@@ -3155,9 +3202,9 @@ function getPoiColor( poi ) {
 	
 	if( poi.eta == -1 ) {
 		color = "#ADADAD";
-	} else if( poi.ewh < 0.75 ) {
+	} else if( poi.ewh < 0.2 ) {
 		color = "#00CCFF";
-	} else if( poi.ewh < 1.5 ) {
+	} else if( poi.ewh < 0.5 ) {
 		color = "#FFFF00";
 	} else if( poi.ewh < 3 ) {
 		color = "#FF6600";
@@ -3174,12 +3221,10 @@ function getPoiLevel( poi ) {
 	
 	if( poi.eta == -1 ) {
 		level = "";
-	} else if( poi.ewh < 0.75 ) {
+	} else if( poi.ewh < 0.2 ) {
 		level = "INFORMATION";
-	} else if( poi.ewh < 1.5 ) {
+	} else if( poi.ewh < 0.5 ) {
 		level = "ADVISORY";
-	} else if( poi.ewh < 3 ) {
-		level = "WATCH";
 	} else {
 		level = "WATCH";
 	}
@@ -3390,10 +3435,7 @@ function signIn( user, password ) {
 		complete: function() {
 			
 			if( resObj.status == "success" ) {
-				
-				/* to avoid caching problems, simply reload the page and start from session again */
-				window.location.reload();
-				
+								
 				/* reset all password and status fields of sign-in widgets */
 				$( "#SignInDialog" ).modal("hide");
 				$('#diaStatus').html("");
@@ -3559,7 +3601,7 @@ function logOut() {
 	
 	loggedIn = false;
 	
-	showSplash( true );
+	//showSplash( true );
 	
 	simText = defaultText;
 		
@@ -3585,6 +3627,9 @@ function logOut() {
 	
 	$( '#lnkUser' ).html( "" );
 	$( '#lnkUser' ).css( "display", "none" );
+	
+	/* to avoid caching problems, simply reload the page and start from session again */
+	window.location.reload();
 }
 
 function compute() {
@@ -3734,6 +3779,10 @@ function mailOnClick( e ) {
 	showEmailDialog( entry );
 }
 
+String.prototype.splice = function( idx, str ) {
+    return this.slice(0,idx) + str + this.slice(idx);
+};
+
 function showEmailDialog( entry, msgnr ) {
 				
 	if( !loggedIn ) {
@@ -3751,10 +3800,17 @@ function showEmailDialog( entry, msgnr ) {
 		return
 	}
 	
+	/* generate shared link to embed in message */
+	
 	$( ".mailNumber" ).html( zeroPad( msgnr, 3 ) );
 		
 	var prop = entry.prop;
 		
+	$( "#intTo" ).val( "" );
+	$( "#faxTo" ).val( "" );
+	$( "#smsTo" ).val( "" );
+	$( "#ftpChk" ).prop("checked", false);
+	
 	$( "#mailFrom" ).html( curuser.username );
 	$( "#mailTo" ).val( "" );
 	$( "#mailCC" ).val( "" );
@@ -3776,14 +3832,26 @@ function showEmailDialog( entry, msgnr ) {
 	
 	var originTime = new Date( prop.date );
 	
+	var prop_lat = Math.abs( prop.latitude ).toFixed(2) + ( prop.latitude < 0 ? " SOUTH" : " NORTH" );
+	var prop_lon = Math.abs( prop.longitude ).toFixed(2) + ( prop.longitude < 0 ? " WEST" : " EAST" );
+		
 	$( "#mailDate" ).html( toMsgDateFormat( new Date() ) );
 	$( "#mailOriginTime" ).html( toMsgDateFormat( originTime ) );
-	$( "#mailCoordinates" ).html( Math.abs( prop.latitude ).toFixed(2) + ( prop.latitude < 0 ? " SOUTH" : " NORTH" ) + " ");
-	$( "#mailCoordinates" ).append( Math.abs( prop.longitude ).toFixed(2) + ( prop.longitude < 0 ? " WEST" : " EAST" ) );
+	$( "#mailCoordinates" ).html( prop_lat + " ");
+	$( "#mailCoordinates" ).append( prop_lon );
 	$( "#mailDepth" ).html( prop.depth );
 	$( "#mailLocation" ).html( prop.region );
 	$( "#mailMag" ).html( prop.magnitude );
 			
+	var maxLevel = "";
+	
+	var iso_map = { "INFORMATION": new Array(),
+				    "WATCH": new Array(),
+				    "ADVISORY": new Array()
+			  	  };
+	
+	$( "#mailFCPs" ).html( "" );
+	
 	if( entry.pois != null ) {
 			
 		/* previously iterate once to get maximum length of location names */
@@ -3819,12 +3887,22 @@ function showEmailDialog( entry, msgnr ) {
 					 "ADVISORY": new Array()
 				   };
 		
+		var tfpvals = { "INFORMATION": {},
+			    		"WATCH":       {},
+			    		"ADVISORY":    {}
+			  		  };
+		
+		var maxvals = { "INFORMATION": new Container( 'country', sort_string.bind(this,'eta') ),
+					    "WATCH":       new Container( 'country', sort_string.bind(this,'eta') ),
+					    "ADVISORY":    new Container( 'country', sort_string.bind(this,'eta') )
+					  };
+				
 		var region_map = { "INFORMATION": new Array(),
 						   "WATCH": new Array(),
 						   "ADVISORY": new Array(),
 						   "ALL": new Array()
 						  };
-		
+						
 		for( var i = 0; i < entry.pois.length; i++ ) {
 			
 			var poi = entry.pois[i].data;
@@ -3832,44 +3910,82 @@ function showEmailDialog( entry, msgnr ) {
 			if( poi.eta == -1 )
 				continue;
 			
-			var poi_name = poi.country + "-" + poi.name;
-					
-			var pretty_station = poi_name + new Array( minlen - poi_name.length + 1 ).join(" ");
-			var pretty_lat = charPad( Math.abs( poi.lat_real ).toFixed(2), 5, ' ' );
-			var pretty_lon = charPad( Math.abs( poi.lon_real ).toFixed(2), 6, ' ' );
-			//var pretty_ewh = charPad( poi.ewh.toFixed(2), 5, ' ' );
 			var level = getPoiLevel( poi );
-			
-			var min = Math.floor( poi.eta );
-			var sec = Math.floor( (poi.eta % 1) * 60.0 );
-			
-			var eta_ms = (min * 60 + sec) * 1000;
-			var pretty_eta = toMsgDateFormat( new Date( originTime.getTime() + eta_ms ) );
-			pretty_eta = pretty_eta.split(' ', 3).join(' ');
 						
-			var txt = "";
-			txt += pretty_station + " ";
-			txt += pretty_lat + (poi.lat_real < 0 ? "S" : "N") + " ";
-			txt += pretty_lon + (poi.lon_real < 0 ? "W" : "E") + " ";
-			txt += withPadding( pretty_eta, headlens[2], " " ) + " ";
-			//txt += pretty_ewh + " ";
-			txt += level + "\n<br>";
+			if( ! tfpvals[ level ][ poi.country ] )
+				tfpvals[ level ][ poi.country ] = new Container( 'name', sort_string.bind(this,'eta') );
 			
-			TFPs[ level ].push( txt );
+			/* insert poi sorted according to eta value */
+			tfpvals[ level ][ poi.country ].insert( poi );
+			
+			/* store item with lowest eta value per country in maxvals list */
+			var poi_head = maxvals[ level ].getByKey( 'country', poi.country );
+			if( ! poi_head || poi_head.eta > poi.eta ) {
+				maxvals[ level ].replace( 'country', poi );
+			}
 									
 			region_map[ level ].push( poi.country );
 			region_map[ "ALL" ].push( poi.country );
+			
+			iso_map[ level ].push( poi.iso_2 );
 		}
+				
+		var levels = [ "INFORMATION", "ADVISORY", "WATCH" ];
+		for( var i = 0; i < levels.length; i++ ) {
 		
-		TFPs["WATCH"].sort();
-		TFPs["ADVISORY"].sort();
+			var level = levels[i];
+			
+			/* sort list of countries according to eta value */
+			maxvals[ level ].sort();
+			
+			for( var j = 0; j < maxvals[ level ].length(); j++ ) {
+				
+				var country = maxvals[ level ].get(j).country;
+				for( var k = 0; k < tfpvals[ level ][ country ].length(); k++ ) {
+					
+					var poi = tfpvals[ level ][ country ].get(k);
+					
+					var poi_name = poi.country + "-" + poi.name;
+					var pretty_station = poi_name + new Array( minlen - poi_name.length + 1 ).join(" ");
+					var pretty_lat = charPad( Math.abs( poi.lat_real ).toFixed(2), 5, ' ' );
+					var pretty_lon = charPad( Math.abs( poi.lon_real ).toFixed(2), 6, ' ' );
+					//var pretty_ewh = charPad( poi.ewh.toFixed(2), 5, ' ' );
+					
+					var min = Math.floor( poi.eta );
+					var sec = Math.floor( (poi.eta % 1) * 60.0 );
+					
+					var eta_ms = (min * 60 + sec) * 1000;
+					var pretty_eta = toMsgDateFormat( new Date( originTime.getTime() + eta_ms ) );
+					pretty_eta = pretty_eta.split(' ', 3).join(' ');
+								
+					var txt = "";
+					txt += pretty_station + " ";
+					txt += pretty_lat + (poi.lat_real < 0 ? "S" : "N") + " ";
+					txt += pretty_lon + (poi.lon_real < 0 ? "W" : "E") + " ";
+					txt += withPadding( pretty_eta, headlens[2], " " ) + " ";
+					//txt += pretty_ewh + " ";
+					txt += level + "\n<br>";
+					
+					TFPs[ level ].push( txt );
+				}
+			}
+		}
+								
+		iso_map["WATCH"].sort();
+		iso_map["ADVISORY"].sort();
+		iso_map["WATCH"] = getUniqueList( iso_map["WATCH"] );
+		iso_map["ADVISORY"] = getUniqueList( iso_map["ADVISORY"] );
 		
 		subtract( region_map[ "INFORMATION" ], region_map[ "WATCH" ] );
 		subtract( region_map[ "INFORMATION" ], region_map[ "ADVISORY" ] );
-										
-		if( TFPs["WATCH"].length > 0 ||  TFPs["ADVISORY"].length > 0 ) {
+		
+		/* get highest alert level */
+		for( var i = 0; i < levels.length; i++ )
+			if( TFPs[ levels[i] ].length > 0 )
+				maxLevel = levels[i];
+		
+		if( /*TFPs["INFORMATION"].length > 0 ||*/ TFPs["WATCH"].length > 0 || TFPs["ADVISORY"].length > 0 ) {
 			
-			$( "#mailFCPs" ).html( "" );
 			for( var k = 0; k < heads.length; k++ )
 				$( "#mailFCPs" ).append( withPadding( heads[k], headlens[k], " " ) + " " );
 			
@@ -3878,9 +3994,16 @@ function showEmailDialog( entry, msgnr ) {
 				/* generates as many '-' as there are letters in the head string */
 				$( "#mailFCPs" ).append( withPadding( "", headlens[k], "-" ) + " " );
 			}
+			$( "#mailFCPs" ).append("\n<br>");
 						
-			$( "#mailFCPs" ).append( "\n<br>" + TFPs["WATCH"].join("") );
-			$( "#mailFCPs" ).append( "\n<br>" + TFPs["ADVISORY"].join("") );
+			if( TFPs["WATCH"].length > 0 )
+				$( "#mailFCPs" ).append( TFPs["WATCH"].join("") + "\n<br>" );
+			
+			if( TFPs["ADVISORY"].length > 0 )
+				$( "#mailFCPs" ).append( TFPs["ADVISORY"].join("") + "\n<br>" );
+			
+			/*if( TFPs["INFORMATION"].length > 0 )
+				$( "#mailFCPs" ).append( TFPs["INFORMATION"].join("") + "\n<br>" );*/
 		}
 
 		printRegionList( getUniqueList( region_map[ "INFORMATION" ] ), $("#mailInfoList") );
@@ -3889,7 +4012,7 @@ function showEmailDialog( entry, msgnr ) {
 	}
 		
 	/* SMS text */
-	var short_region = prop.region.length < 27 ? prop.region : prop.region.substring( 0, 24 ) + "...";
+	/*var short_region = prop.region.length < 27 ? prop.region : prop.region.substring( 0, 24 ) + "...";
 	var smstext = "...THIS IS AN EXERCISE...\n\n" +
 				  "AN EARTHQUAKE HAS OCCURRED:\n\n  " +
 				  short_region + "\n  " +
@@ -3899,10 +4022,42 @@ function showEmailDialog( entry, msgnr ) {
 				  prop.depth + "KM\n  " +
 				  prop.magnitude + " Mw\n\n" +
 				  "...EXERCISE...";
-	
+					  
 	if( smstext.length > 160 )
-		smstext = smstext.substring( 0, 160 );
+		smstext = smstext.substring( 0, 160 );*/
 	
+	var smstext  = "*TEST*TSUNAMI EXERCISE MSG;";
+		smstext += "NEAMTWS-GFZ;";
+		
+		var alerts = new Array();
+		
+		if( maxLevel == "WATCH" )
+			alerts = [ "WATCH", "ADVISORY" ];
+		
+		if( maxLevel == "ADVISORY" )
+			alerts = [ "ADVISORY" ];
+		
+		for( var j = 0; j < alerts.length; j++ ) {
+			
+			var level = alerts[j];
+			
+			smstext += level + ":";
+			
+			var len = iso_map[ level ].length;
+			for( var i = 0; i < len; i++ ) {
+				smstext += iso_map[ level ][i];
+				smstext += i < len - 1 ? " " : ";";
+			}
+		}
+
+		smstext += toMsgDateFormat( originTime, true ) + ";";
+		smstext += "EQ Mw" + prop.magnitude + ";";
+		smstext += prop.region + ";";
+		smstext += prop_lat.replace( " NORTH", "N" ).replace( " SOUTH", "S" ) + ";";
+		smstext += prop_lon.replace( " WEST", "W" ).replace( " EAST", "E" ) + ";";
+		smstext += prop.depth + "KM;";
+		smstext += "*TEST*";
+			
 	$( '#smsChars' ).html( smstext.length );
 	$( "#smsText" ).val( smstext );
 	
@@ -3914,9 +4069,58 @@ function showEmailDialog( entry, msgnr ) {
 	$( "#EmailDia" ).modal("show");
 }
 
+function splitSMS( smstext ) {
+	
+	var result = smstext;
+	
+	/* split sms text to fit multiple messages */
+	var maxlen = 160;
+	var partEnd = "(CONTINUES)";
+	var partBegin = "(CONTINUED)";
+	var end = "END OF MSG;";
+	while( result.length > maxlen ) {
+				
+		result = result.splice( maxlen - partEnd.length, partEnd + partBegin );
+		
+		if( maxlen == 160 )
+			result = result.splice( result.length - "*TEST*".length, end );
+		
+		maxlen += 160;
+	}
+	
+	return result;
+}
+
+//TODO: workaround for NEAMWave14
+function getCountry( iso_2 ) {
+	
+	var clist = {
+			"ES": "SPAIN",
+			"FR": "FRANCE",
+			"GE": "UNITED KINGDOM",
+			"GI": "GIBRALTAR",
+			"GR": "GREECE",
+			"IE": "IRELAND",
+			"IT": "ITALY",
+			"MA": "MOROCCO",
+			"PT": "PORTUGAL",
+			"RO": "ROMANIA",
+			"TR": "TURKEY",
+			"UA": "UKRAINE",
+	};
+	
+	var country = clist[ iso_2 ];
+	
+	if( ! country )
+		country = iso_2;
+	
+	return country;
+}
+
 function getStationData( eq ) {
 	
 	var text = "";
+	var headlen2 = "COUNTRY".length; // TODO: workaround for NEAMWave14
 	var headlen = "GAUGE LOCATION".length;
 	
 	if( ! eq.stations )
@@ -3932,6 +4136,9 @@ function getStationData( eq ) {
 			continue;
 		
 		headlen = Math.max( headlen, stat.name.length );
+		
+		var country = getCountry( stat.countryname );
+		headlen2 = Math.max( headlen2, country.length );
 	}
 	
 	for( var i = 0; i < eq.stations.length(); i++ ) {
@@ -3948,16 +4155,21 @@ function getStationData( eq ) {
 		var pretty_ampl = charPad( pickData.ampl.toFixed(2), 5, ' ');
 		var pretty_period = charPad( pickData.period.toFixed(2), 6, ' ');
 		
-		text += withPadding( stat.name, headlen, " " ) + " "
-		     +  pretty_lat + " "
+		var country = getCountry( stat.countryname );
+		
+		text +=  withPadding( country, headlen2, " " ) + " "
+			 + withPadding( stat.name, headlen, " " ) + " "
+		     + pretty_lat + " "
 		     + pretty_lon + " "
 		     + pretty_time + "Z "
 		     + pretty_ampl + "M "
 		     + pretty_period + "MIN\n";
 	}
 		
-	var head  = withPadding( "GAUGE LOCATION", headlen, " " ) + " "
+	var head  = withPadding( "COUNTRY", headlen2, " " ) + " "
+			  + withPadding( "GAUGE LOCATION", headlen, " " ) + " "
 	          + "LAT    LON     TIME  AMPL   PER      \n"
+	          + withPadding( "", headlen2, "-" ) + " "
 	          + withPadding( "", headlen, "-" ) + " "
 	          + "------ ------- ----- ------ ---------\n";
 	
@@ -4016,14 +4228,24 @@ function changeMsgText() {
 		if( ! $("#mailWaveActData").is(':empty') )
 			msgText += getPlainText( $( "#mailWaveAct" ) );
 				
-		if( ! $("#mailWatchList").is(':empty') )
-			msgText += getPlainText( $( "#mailWatchEval" ) );
+		if( ! $("#mailWatchList").is(':empty') ) {
+			if( number == 1 ) {
+				msgText += getPlainText( $( "#mailWatchEval1" ) );
+			} else {
+				msgText += getPlainText( $( "#mailWatchEvalMid" ) );
+			}
+		}
 		
-		if( ! $("#mailAdvisoryList").is(':empty') )
-			msgText += getPlainText( $( "#mailAdvisoryEval" ) );
+		if( ! $("#mailAdvisoryList").is(':empty') ) {
+			if( number == 1 ) {
+				msgText += getPlainText( $( "#mailAdvisoryEval1" ) );
+			} else {
+				msgText += getPlainText( $( "#mailAdvisoryEvalMid" ) );
+			}
+		}
 		
 		if( ! $("#mailInfoList").is(':empty') && number == 1 )
-			msgText += getPlainText( $( "#mailInfoEval" ) );
+			msgText += getPlainText( $( "#mailInfoEval1" ) );
 		
 		if( ! $("#mailFCPs").is(':empty') )
 			msgText += getPlainText( $( "#mailTFPs" ) );
@@ -4042,19 +4264,20 @@ function changeMsgText() {
 		
 		if( ! $("#mailAdvisoryList").is(':empty') )
 			msgText += getPlainText( $( "#mailAdvisorySum" ) );
-		
+				
 		msgText += getPlainText( $( "#mailAdvice" ) );
 		msgText += getPlainText( $( "#mailEqParams" ) );
-		
+				
+		/* added for NEAMWave14 */
 		if( ! $("#mailWaveActData").is(':empty') )
 			msgText += getPlainText( $( "#mailWaveAct" ) );
 		
 		if( ! $("#mailWatchList").is(':empty') )
-			msgText += getPlainText( $( "#mailWatchEval" ) );
+			msgText += getPlainText( $( "#mailWatchEvalEnd" ) );
 		
 		if( ! $("#mailAdvisoryList").is(':empty') )
-			msgText += getPlainText( $( "#mailAdvisoryEval" ) );
-		
+			msgText += getPlainText( $( "#mailAdvisoryEvalEnd" ) );
+				
 		msgText += getPlainText( $( "#mailFinal" ) );
 		msgText += getPlainText( $( "#mailEpilog" ) );
 		
@@ -4075,10 +4298,7 @@ function changeMsgText() {
 		
 		msgText += getPlainText( $( "#mailAdvice" ) );
 		msgText += getPlainText( $( "#mailEqParams" ) );
-		
-		if( ! $("#mailWaveActData").is(':empty') )
-			msgText += getPlainText( $( "#mailWaveAct" ) );
-		
+				
 		if( ! $("#mailWatchList").is(':empty') )
 			msgText += getPlainText( $( "#mailWatchEval" ) );
 		
@@ -4258,10 +4478,12 @@ function sendEmail() {
 		console.log( "Sent sms!" );
 		sent = true;
 		
+		var text = splitSMS( smsText );
+		
 		$.ajax({
 			type: 'POST',
 			url: "msgsrv/sms",
-			data: { apiver: 1, to: smsTo, text: smsText, evid: root, parentid: parent },
+			data: { apiver: 1, to: smsTo, text: text, evid: root, parentid: parent },
 			dataType: 'json',
 			success: function( result ) {
 				status = result.status;
@@ -4327,9 +4549,13 @@ function markMsgAsRead( msg ) {
 		success: function( result ) {
 			status = result.status;
 						
-			if( ! msg.ReadTime )
-				msg.ReadTime = result.readtime;
-			
+			if( ! msg.ReadTime ) {
+				/* result.readtime contains a utc date, but Date() expects a local date -
+				 * that's why we need to transform the utc date back to local time first */
+				var utc = new Date( result.readtime );
+				msg.ReadTime = new Date( utc.getTime() - utc.getTimezoneOffset() * 60000 );
+			}
+						
 			showEntries( messages );
 			showEntries( timeline );
 		},
@@ -4352,8 +4578,12 @@ function markMsgAsDisplayed( msg ) {
 		success: function( result ) {
 			status = result.status;
 						
-			if( ! msg.MapDisplayTime )
-				msg.MapDisplayTime = result.mapdisplaytime;
+			if( ! msg.MapDisplayTime ) {
+				/* result.readtime contains a utc date, but Date() expects a local date -
+				 * that's why we need to transform the utc date back to local time first */
+				var utc = new Date( result.mapdisplaytime );
+				msg.MapDisplayTime = new Date( utc.getTime() - utc.getTimezoneOffset() * 60000 );
+			}
 			
 			showEntries( messages );
 			showEntries( timeline );
@@ -4668,6 +4898,46 @@ function lnkIdOnClick( args ) {
 	$( '#inSearch' ).val( args.data.id );
 	$( '#btnSearch' ).click();
 	$( "#hrefTimeline" ).click();
+}
+
+function lnkCopyOnClick( id ) {
+	
+	if( !loggedIn ) {
+		
+		signTarget = lnkCopyOnClick.bind( this, id );
+		$( "#SignInDialog" ).modal("show");
+		return;
+	}
+	
+	$.ajax({
+		type: 'POST',
+		url: "srv/copyToUser",
+		data: { srcId: id },
+		dataType: 'json',
+		success: function( result ) {
+
+			if( result.status == "success" ) {
+				
+				var entry = entries.get( id );
+				for( var key in entry.div ) {
+					var info = entry.div[key].find('.info');
+					info.find('span').html(result.msg);
+					info.show( 400 );
+				}
+			}
+		},
+		error: function() {
+		},
+		complete: function() {
+		}
+	});
+	
+}
+
+function closeInfoBar( entry ) {
+	for( var key in entry.div ) {
+		entry.div[key].find('.info').hide();
+	}
 }
 
 function showProp( e, activeTab ) {
@@ -5058,7 +5328,7 @@ function getLocalDateString( date ) {
 	return datestr + " &#183; " + timestr;
 }
 
-function toMsgDateFormat( date ) {
+function toMsgDateFormat( date, short ) {
 	
 	var months = [ "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC" ];
 	var HH = zeroPad( date.getUTCHours(), 2);
@@ -5067,7 +5337,9 @@ function toMsgDateFormat( date ) {
 	var MMM = months[ date.getUTCMonth() ];
 	var yyyy = date.getUTCFullYear();
 	
-	var datestr = HH + "" + mm + "Z" + " " + dd + " " + MMM + " " + yyyy;
+	var sep = short ? "" : " ";
+	
+	var datestr = HH + "" + mm + "Z" + " " + dd + sep + MMM + sep + yyyy;
 	
 	return datestr;
 }
@@ -5089,6 +5361,8 @@ function checkStaticLink() {
 	share = true;
 	
 	showSplash( false );
+	showStationView( false );
+	$( '#stat-panel' ).hide();
 	
 	$( '.tab-private' ).css( "display", "none" );
 	$( '#tabRecent' ).css( "display", "none" );
@@ -5113,8 +5387,8 @@ function checkStaticLink() {
 				showEntries( shared );
 								
 				visualize( res.eq._id );
-				//map.panTo( { lat: Number(res.pos.lat), lng: Number(res.pos.lon) } );
-				//map.setZoom( res.pos.zoom );
+				map.panTo( { lat: Number(res.pos.lat), lng: Number(res.pos.lon) } );
+				map.setZoom( res.pos.zoom );
 			}
 		},
 		error: function() {
@@ -5356,7 +5630,7 @@ function getStationList( handler ) {
 	var data = {};
 	
 	if( ! checkPerm("chart") )
-		handler( null );
+		return handler( null );
 	
 	if( ! checkPerm("vsdb") )
 		data['inst'] = "gfz_ex_test";
@@ -5539,11 +5813,13 @@ function Splash() {
 	
 	this.last = new Array( this.slides.length );
 	
+	this.test = 0;
+	
 	for( var i = 0; i < this.last.length; i++ )
 		this.last[i] = 0;
 	
 	this.scrollMain = function( e ) {
-			
+					
 		this.slides.each( this.scrollDiv.bind(this) );
 		
 		if( $(window).scrollTop() + $(window).height() == $(document).height() ) {
@@ -5557,14 +5833,15 @@ function Splash() {
 	};
 	
 	this.scrollDiv = function( idx, div ) {
-				
+						
 		div = $(div);
 		var scrollTop = div.scrollTop();
 		var diff = $(document).scrollTop() - this.last[idx];
 		
 		var top = $(document).scrollTop() + $('.container').height();
 		
-		if( top > div.offset().top && $(document).scrollTop() < div.offset().top + div.height() ) {
+		/* start scrolling if image is visible for one half */
+		if( top > div.offset().top + div.height() / 2 && $(document).scrollTop() < div.offset().top + div.height() ) {
 			var val = Math.min( scrollTop - diff / 1.5, div.height() );
 			val = Math.max( val, 0 );
 			div.scrollTop( val );
@@ -5599,7 +5876,7 @@ function Splash() {
 		
 	$(window).scroll( this.scrollMain.bind(this) );
 	
-	$('#splash-new .slide').scrollTop( 5000 );
+	this.slides.scrollTop( 5000 );
 	
 	this.navArrow.click( this.navigate.bind(this) );
 }

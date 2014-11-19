@@ -252,7 +252,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					
 					BasicDBList tfpOrList = new BasicDBList();
 					for( Object s: tfpList ) {
-						tfpOrList.add( new BasicDBObject("code",s) );
+						tfpOrList.add( new BasicDBObject("code", new BasicDBObject( "$regex", s )) );
 					}
 					
 					tfpQuery = new BasicDBObject( "$or", tfpOrList );
@@ -262,7 +262,6 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			cursor.close();
 		}
 		
-		System.out.println( tfpQuery );
 		cursor = dbclient.getDB( "easywave" ).getCollection("tfps").find( tfpQuery );
 		
 		sshCon[0].out.println("rm ftps.inp");
@@ -466,7 +465,6 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 						dbObject.put( "curSimTime", 0.0 );
 						dbObject.put( "calcTime", 0.0 );
 						dbObject.put( "resources", this.hardware );
-						dbObject.put( "accel", task.accel );
 						
 						/* create final DB object used tp update the collection  */
 						BasicDBObject update = new BasicDBObject();

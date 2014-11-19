@@ -344,6 +344,48 @@
 	  		</div>
 	  		
 	  		<div class="slide">
+	  			<img src="img/7.sm.jpg" width=100% />
+	  		</div>
+	  		
+	  		<div class="section">
+	  			<div class="back">
+	  				<div class="left">
+			  			<div class="video">
+			  				<iframe height="100%" width="100%" src="//www.youtube.com/embed/l8XJpql_tLM?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  			</div>
+			  			<br>
+			  			<div class="video">
+			  				<iframe height="100%" width="100%" src="//www.youtube.com/embed/3QhxC0PBTkg?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  			</div>
+			  		</div>
+			  		<div class="no">
+			  			<h3>Release 'Hélène'</h3>
+			  			<div><span>
+			  				We are happy to announce TRIDEC Cloud release 'Hélène' integrating two exciting convenience features.
+							<br><br>
+							The first feature is called 'Cloud Message'. Cloud messages are sent internally within the TRIDEC
+							Cloud to other users. They are complementary to e-mail, fax, FTP/GTS, and SMS and not only contain
+							text information. Additionally cloud messages integrate interactive and dynamic event data and
+							simulation data. Thus the recipients are enabled to interact dynamically with the map and diagrams
+							beyond traditional text information. Please test it yourself with your colleagues or check out the
+							video at <a href="http://youtu.be/l8XJpql_tLM">http://youtu.be/l8XJpql_tLM</a>.
+							<br><br>
+							The second feature is called 'Share Map'. Maps and related data are shared with others by using URL
+							addresses. Just send send a link either to a list of closed recipients via e-mail, or to the public
+							via twitter, Google Plus, and Facebook. Recipients open the web address of the map in their web browser
+							and thus can interact immediately with the map. This feature works even if the recipient is not a TRIDEC
+							Cloud user. But if the recipient is a TRIDEC Cloud user the magic continues - shared maps can be copied
+							into 'My List' of the recipient's user account. Thus users are enabled to fully interact with shared maps
+							as they know it from own events. They may modify and reprocess the shared map or use it for warning
+							message dissemination. Test it or check out the video at <a href="http://youtu.be/3QhxC0PBTkg">http://youtu.be/3QhxC0PBTkg</a>.
+			  			</span></div>
+			  		</div>
+			  		
+			  		<div class="clear"></div>
+			  	</div>
+	  		</div>
+	  		
+	  		<div class="slide">
 	  			<img src="img/6.sm.jpg" width=100% />
 	  		</div>
 	  		
@@ -559,7 +601,7 @@
 			  			<div><span>
 			  				The first prototype version addressed the implementation and integration of a GPU-accelerated
 							application for instant tsunami propagation calculations in the context of early warning and has
-							been presented the first time at a conference in April 2015.
+							been presented the first time at a conference in April 2014.
 							<br><br>
 							The integration of GPU accelerated simulation computations have been an integral part of this
 							prototype to foster early warning with on-demand tsunami predictions based on actual source
@@ -600,6 +642,10 @@
 	<!-- sidebar entry template -->
 	<div id="entry" class="row entry">
 		<div class="col-md-12" >
+			<div class="info">
+				<span></span>
+				<a href="#">&times;</a>
+			</div>
 			<div class="row row-region">
 				<div class="col-md-2"></div>
 				<div class="col-md-10">
@@ -646,6 +692,7 @@
 						</div>
 						<span class="medium status"></span>
 						<span class="lnkLast"></span>
+						<a class="lnkCopy pull-right" href="#"><span class="glyphicon glyphicon-floppy-open"></span></a>
 						<a class="lnkTimeline pull-right" href="#"><span class="glyphicon glyphicon-sort-by-attributes"></span></a>
 						<a class="lnkStatic pull-right" href="#"><span class="glyphicon glyphicon-share-alt"></span></a>
 						<a class="lnkSend pull-right" href="#"><span class="glyphicon glyphicon-send"></span></a>
@@ -661,9 +708,6 @@
 						<div class="row">
 							<span class="small calc"></span>
 						</div>
-						<div class="row">
-								<span class="small accel"></span>
-							</div>
 						<div class="row">
 							<input class="chk_grid" type="checkbox">
 							<span class="small grid"></span>
@@ -932,7 +976,7 @@
 				  			<span id="mailProlog">
 				  			TSUNAMI EXERCISE MESSAGE NUMBER <span class="mailNumber"></span><br>
 				  			<span class="mailProvider"></span><br>
-				  			CREATED AT <span id="mailDate"></span><br><br>
+				  			ISSUED AT <span id="mailDate"></span><br><br>
 				  			
 				  			... THIS IS AN EXERCISE ...<br><br>
 				  			</span>
@@ -962,7 +1006,6 @@
 				
 							<span id="mailEqParams">
 							AN EARTHQUAKE HAS OCCURRED WITH THESE PRELIMINARY PARAMETERS<br>
-				  			
 				  			ORIGIN TIME - <span id="mailOriginTime"></span><br>
 							COORDINATES - <span id="mailCoordinates"></span><br>
 							DEPTH       - <span id="mailDepth"></span> KM<br>
@@ -981,23 +1024,48 @@
 							VALUES ARE GIVEN IN METERS (M).
 							PER - PERIOD OF TIME IN MINUTES (MIN) FROM ONE WAVE TO THE NEXT.
 							</span>
-							
-							<span id="mailWatchEval">
+														
+							<span id="mailWatchEval1">
 							EVALUATION OF TSUNAMI WATCH
 							IT IS NOT KNOWN THAT A TSUNAMI WAS GENERATED. THIS MESSAGE IS BASED ONLY ON THE EARTHQUAKE EVALUATION. AN EARTHQUAKE OF THIS SIZE HAS THE POTENTIAL TO GENERATE A TSUNAMI THAT CAN STRIKE COASTLINES WITH A WAVE HEIGHT GREATER THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP GREATER THAN 1M. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY. THIS CENTER WILL MONITOR SEA LEVEL DATA FROM GAUGES NEAR THE EARTHQUAKE TO DETERMINE IF A TSUNAMI WAS GENERATED AND ESTIMATE THE SEVERITY OF THE THREAT. A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
 							</span>
 							
-							<span id="mailAdvisoryEval">
-							EVALUATION OF TSUNAMI ADVISORY
-							SEA LEVEL READINGS INDICATE A TSUNAMI WAS GENERATED.
-							THIS TSUNAMI CAN STRIKE COASTLINES WITH A WAVE HEIGHT LESS THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP LESS THAN 1M. THIS CENTER WILL CONTINUE TO MONITOR SEA LEVEL GAUGES NEAREST THE REGION AND REPORT IF ANY ADDITIONAL TSUNAMI WAVE ACTIVITY IS OBSERVED. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY.  A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
+							<span id="mailWatchEvalMid">
+							EVALUATION OF TSUNAMI WATCH
+							SEA LEVEL READINGS INDICATE A TSUNAMI WAS GENERATED. THIS TSUNAMI CAN STRIKE COASTLINES WITH A WAVE HEIGHT GREATER THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP GREATER THAN 1M. THIS CENTER WILL CONTINUE TO MONITOR SEA LEVEL GAUGES NEAREST THE REGION AND REPORT IF ANY ADDITIONAL TSUNAMI WAVE ACTIVITY IS OBSERVED. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY. A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
 							</span>
 							
-							<span id="mailInfoEval">
+							<span id="mailWatchEvalEnd">
+							EVALUATION OF TSUNAMI WATCH
+							SEA LEVEL READINGS INDICATE A TSUNAMI WAS GENERATED. OBSERVATIONS AND MODELS INDICATE THAT NO MORE TSUNAMI WAVES ARE EXPECTED. WHEN NO MAJOR WAVES ARE OBSERVED FOR TWO HOURS AFTER THE ESTIMATED TIME OF ARRIVAL OR DAMAGING WAVES HAVE NOT OCCURRED FOR AT LEAST TWO HOURS THEN LOCAL AUTHORITIES CAN ASSUME THE THREAT IS PASSED. DANGER TO BOATS AND COASTAL STRUCTURES CAN CONTINUE FOR SEVERAL HOURS DUE TO THE CONTINUING SEA LEVEL CHANGES AND RAPID CURRENTS. AS LOCAL CONDITIONS CAN CAUSE A WIDE VARIATION IN TSUNAMI WAVE ACTION THE ALL CLEAR DETERMINATION MUST BE MADE BY LOCAL AUTHORITIES.
+							</span>
+							
+							<span id="mailAdvisoryEval1">
+							EVALUATION OF TSUNAMI ADVISORY
+							IT IS NOT KNOWN THAT A TSUNAMI WAS GENERATED. THIS WATCH IS BASED ONLY ON THE EARTHQUAKE EVALUATION. AN EARTHQUAKE OF THIS SIZE HAS THE POTENTIAL TO GENERATE A TSUNAMI THAT CAN STRIKE COASTLINES WITH A WAVE HEIGHT LESS THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP LESS THAN 1M. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY. THIS CENTER WILL MONITOR SEA LEVEL DATA FROM GAUGES NEAR THE EARTHQUAKE TO DETERMINE IF A TSUNAMI WAS GENERATED AND ESTIMATE THE SEVERITY OF THE THREAT. A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
+							</span>
+							
+							<span id="mailAdvisoryEvalMid">
+							EVALUATION OF TSUNAMI ADVISORY
+							SEA LEVEL READINGS INDICATE A TSUNAMI WAS GENERATED. THIS TSUNAMI CAN STRIKE COASTLINES WITH A WAVE HEIGHT LESS THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP LESS THAN 1M. THIS CENTER WILL CONTINUE TO MONITOR SEA LEVEL GAUGES NEAREST THE REGION AND REPORT IF ANY ADDITIONAL TSUNAMI WAVE ACTIVITY IS OBSERVED. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY. A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
+							</span>
+							
+							<span id="mailAdvisoryEvalEnd">
+							EVALUATION OF TSUNAMI ADVISORY
+							SEA LEVEL READINGS INDICATE A TSUNAMI WAS GENERATED. OBSERVATIONS AND MODELS INDICATE THAT NO MORE TSUNAMI WAVES ARE EXPECTED. WHEN NO MAJOR WAVES ARE OBSERVED FOR TWO HOURS AFTER THE ESTIMATED TIME OF ARRIVAL OR DAMAGING WAVES HAVE NOT OCCURRED FOR AT LEAST TWO HOURS THEN LOCAL AUTHORITIES CAN ASSUME THE THREAT IS PASSED. DANGER TO BOATS AND COASTAL STRUCTURES CAN CONTINUE FOR SEVERAL HOURS DUE TO THE CONTINUING SEA LEVEL CHANGES AND RAPID CURRENTS. AS LOCAL CONDITIONS CAN CAUSE A WIDE VARIATION IN TSUNAMI WAVE ACTION THE ALL CLEAR DETERMINATION MUST BE MADE BY LOCAL AUTHORITIES.
+							</span>
+														
+							<span id="mailInfoEval1">
 							EVALUATION OF TSUNAMI INFORMATION
 							BASED ON HISTORICAL EARTHQUAKE AND TSUNAMI MODELLING THERE IS NO THREAT THAT A TSUNAMI HAS BEEN GENERATED THAT CAN CAUSE DAMAGE OR MAJOR EFFECT IN THE REGION. THIS MESSAGE IS FOR INFORMATION ONLY.
 							</span>
 							
+							<span id="mailInfoEvalMid">
+							</span>
+							
+							<span id="mailInfoEvalEnd">
+							</span>
+														
 							<span id="mailTFPs">
 				  			ESTIMATED INITIAL TSUNAMI WAVE ARRIVAL TIMES AT FORECAST POINTS WITHIN THE WATCH AREA AND ADVISORY AREA GIVEN BELOW. ACTUAL ARRIVAL TIMES MAY DIFFER AND THE INITIAL WAVE MAY NOT BE THE LARGEST. A TSUNAMI IS A SERIES OF WAVES AND THE TIME BETWEEN SUCCESSIVE WAVES CAN BE FIVE MINUTES TO ONE HOUR.<br><br>
 				  			
@@ -1042,8 +1110,8 @@
 								<span class="glyphicon glyphicon-phone"></span>
 							</span>
 				  		</div>
-				  		<span class="smsHeadline">SMS-Text (<span id="smsChars"></span> / 160 characters):</span>
-				  		<textarea id="smsText" class="form-control inArea" rows="5" maxlength="160"></textarea>
+				  		<span class="smsHeadline">SMS-Text (<span id="smsChars"></span> characters):</span>
+				  		<textarea id="smsText" class="form-control inArea" rows="5"></textarea>
 				  	</div>
 				</div>
 				<div id="msgEvents" class="group">
