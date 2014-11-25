@@ -9,7 +9,7 @@ import simplejson
 from multiprocessing.pool import ThreadPool
 
 IOCSLMSRV = "http://www.ioc-sealevelmonitoring.org/service.php"
-TIMEOUT = 300
+TIMEOUT = 600
 
 configfile = "config.json"
 cmd = "retrievedata"
@@ -29,9 +29,9 @@ def getdataforstation(args):
         p["timestart"] = datetime.datetime.utcfromtimestamp(s["lasttimestamp"]).strftime('%Y-%m-%dT%H:%M:%S')
     else:
         p["timestart"] = (datetime.datetime.utcnow() - datetime.timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%S')
-    print("Requesting values for %s since %s..." % (s["name"],p["timestart"]))
-    sdata = requests.get(IOCSLMSRV, params=p, timeout=TIMEOUT)
     try:
+        print("Requesting values for %s since %s..." % (s["name"],p["timestart"]))
+        sdata = requests.get(IOCSLMSRV, params=p, timeout=TIMEOUT)
         sdata = json.loads(sdata.text)
         for d in sdata:
             dt = datetime.datetime.strptime(d["stime"].strip(),'%Y-%m-%d %H:%M:%S')
