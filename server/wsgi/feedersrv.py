@@ -122,11 +122,12 @@ class FeederSrv(Base):
                         verr += 1
                 if len(values)>0:
                     self._db["sealeveldata"].insert(values)
-                return jssuccess(values = vnr, errors = verr)
+                last = self._db["sealeveldata"].find_one({"inst":inst["name"],"station":station},sort=[("timestamp",-1)])
+                lastts = None if last is None else last["timestamp"]
+                return jssuccess(values = vnr, errors = verr, lastts = lastts)
             else:
                 return jsfail(errors = ["Parameter station is missing."])
         return jsfail(errors = ["Dataformat %s not known." % dataformat])
-
 
     def feedsealevel_api2_xml(self, inst, xml):
         return jsfail(errors = ["Not yet implemented."])
