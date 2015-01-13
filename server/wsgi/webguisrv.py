@@ -104,6 +104,27 @@ class WebGuiSrv(Base):
         return jsdeny()
 
     @cherrypy.expose
+    def instlist(self):
+        user = self.getUser()
+        if user is not None and user["permissions"].get("admin",False):
+            insts = self._db["institutions"].find()
+            return jssuccess(institutions=insts)
+        return jsdeny()
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def saveinst(self, instobj):
+        user = self.getUser()
+        if user is not None and user["permissions"].get("admin",False):
+            instobj = json.loads(instobj)
+            if "_id" in instobj:
+                self._db["institutions"].update({"_id":instobj["_id"]},{"$set":instobj})
+                instobj = self._db["institutions"].find_one({"_id":instobj["_id"]})
+                return jssuccess(institution = instobj)
+            return jsfail(errors = ["Institution not found."])
+        return jsdeny()
+
+    @cherrypy.expose
     def userlist(self):
         user = self.getUser()
         if user is not None and user["permissions"].get("admin",False):
