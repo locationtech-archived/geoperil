@@ -107,7 +107,7 @@ class WebGuiSrv(Base):
     def instlist(self):
         user = self.getUser()
         if user is not None and user["permissions"].get("admin",False):
-            insts = self._db["institutions"].find()
+            insts = list(self._db["institutions"].find())
             return jssuccess(institutions=insts)
         return jsdeny()
 
@@ -128,7 +128,7 @@ class WebGuiSrv(Base):
     def userlist(self):
         user = self.getUser()
         if user is not None and user["permissions"].get("admin",False):
-            users = self._db["users"].find()
+            users = list(self._db["users"].find())
             for u in users:
                 u.pop("password",None)
                 u.pop("pwhash",None)
