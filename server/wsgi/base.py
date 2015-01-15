@@ -4,7 +4,8 @@ import cherrypy
 import json
 import logging
 import inspect
-from pymongo import MongoClient
+from pymongo import MongoClient, MongoReplicaSetClient
+from pymongo.read_preferences import ReadPreference
 from uuid import UUID, uuid4
 import hashlib
 from base64 import b64encode, b64decode
@@ -28,8 +29,11 @@ class JSONEncoder(json.JSONEncoder):
             return str(o)
         return json.JSONEncoder.default(self, o)
 
+mongourl="mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0"
+
 def startapp(app):
-    dbe = MongoClient()
+    dbe = MongoReplicaSetClient(mongourl,w="majority")
+    atexit.register(dbe.close)
     db = dbe["easywave"]
     return cherrypy.Application( app( db ) , script_name=None, config=None)
 
