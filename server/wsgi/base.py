@@ -4,6 +4,7 @@ import cherrypy
 import json
 import logging
 import inspect
+import atexit
 from pymongo import MongoClient, MongoReplicaSetClient
 from pymongo.read_preferences import ReadPreference
 from uuid import UUID, uuid4

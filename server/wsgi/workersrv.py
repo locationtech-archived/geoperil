@@ -41,12 +41,12 @@ class WorkerSrv(Base):
         def handler(self,workerid):
             while True:
                 task = self._db["tasks"].find_and_modify(
-                    {"state":"queued"}, update={"$set":{"state":"pending"}}, sort=[("created",1)], new=True 
+                    {"state":"queued"}, update={"$set":{"state":"pending"}}, sort=[("created",1)], new=True
                 )
                 if task is not None:
-                    worker = self._db["workers"].find_and_modify( 
-                        {"state":"idle",{"providessimtypes":{"$all":[task["simtype"]]}}},
-                        update={"$set":{"state":"chosen","task":task["taskid"]}}, sort=[("priority":1)]
+                    worker = self._db["workers"].find_and_modify(
+                        {"state":"idle","providedsimtypes":{"$all":[task["simtype"]]}},
+                        update={"$set":{"state":"chosen","task":task["taskid"]}}, sort=[("priority",1)]
                     )
                     if worker is None:
                         self._db["tasks"].update({"_id":task["_id"]},{"$set":{"state":"queued"}})
