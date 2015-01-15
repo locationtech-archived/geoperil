@@ -31,11 +31,12 @@ class JSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 mongourl="mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0"
+mongodbname="trideccloud"
 
 def startapp(app):
     dbe = MongoReplicaSetClient(mongourl,w="majority")
     atexit.register(dbe.close)
-    db = dbe["easywave"]
+    db = dbe[mongodbname]
     return cherrypy.Application( app( db ) , script_name=None, config=None)
 
 def checkpassword(password,pwsalt,pwhash):
