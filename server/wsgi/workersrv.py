@@ -9,6 +9,7 @@ class WorkerSrv(Base):
         self._db["tasks"].ensure_index("taskid",unique=True)
 
     @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
     def register(self,inst,secret,workerid,name,priority,providedsims):
         inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
         if inst is not None:
@@ -18,8 +19,8 @@ class WorkerSrv(Base):
                     "workerid":workerid,
                     "inst":inst["name"],
                     "name":name,
-                    "priority":priority,
-                    "providedsims":providedsims if type(providedsims) == list else list(providedsims),
+                    "priority":int(priority),
+                    "providedsims":[s.strip() for s in providedsims.split(",")],
                     "state":"offline",
                     "lastcontact":time.time(),
                     "task":None,
@@ -40,6 +41,7 @@ class WorkerSrv(Base):
 
         def handler(self,workerid):
             while True:
+                self._db["workers"].update({"lastcontact":{"$lt":time.time()-60}},{"$set":{"state":"offline"}})
                 task = self._db["tasks"].find_and_modify(
                     {"state":"queued"}, update={"$set":{"state":"pending"}}, sort=[("created",1)], new=True
                 )
