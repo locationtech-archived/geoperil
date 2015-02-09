@@ -59,7 +59,8 @@ class WebGuiSrv(Base):
         if user is not None and user["permissions"].get("admin",False):
             username = str(username)
             password = str(password)
-            inst = str(inst)
+            if inst is not None:
+                inst = str(inst)
             if self._db["users"].find_one({"username":username}) is None:
                 salt, pwhash = createsaltpwhash(password)
                 newuser = {
@@ -99,7 +100,7 @@ class WebGuiSrv(Base):
                 if inst is not None and self._db["institutions"].find_one({"name":inst}) is None:
                     self._db["institutions"].insert({"name":inst, "secret":None})
                 self._db["users"].insert(newuser)
-                return jssuccess()
+                return jssuccess(user = newuser)
             return jsfail(errors = ["User already exists."])
         return jsdeny()
 
@@ -108,7 +109,10 @@ class WebGuiSrv(Base):
         user = self.getUser()
         if user is not None and user["permissions"].get("admin",False):
             insts = list(self._db["institutions"].find())
-            return jssuccess(institutions=insts)
+            res = []
+            for i in insts:
+                res.append(i)
+            return jssuccess(institutions=res)
         return jsdeny()
 
     @cherrypy.expose
@@ -117,23 +121,38 @@ class WebGuiSrv(Base):
         user = self.getUser()
         if user is not None and user["permissions"].get("admin",False):
             instobj = json.loads(instobj)
-            if "_id" in instobj:
-                self._db["institutions"].update({"_id":instobj["_id"]},{"$set":instobj})
-                instobj = self._db["institutions"].find_one({"_id":instobj["_id"]})
-                return jssuccess(institution = instobj)
-            return jsfail(errors = ["Institution not found."])
+            if self._db["institutions"].find_one({"name":instobj["name"]}) is None:
+                self._db["institutions"].insert(instobj)
+            else:
+                instobj.pop("_id")
+                self._db["institutions"].update({"name":instobj["name"]},{"$set":instobj})
+            instobj = self._db["institutions"].find_one({"name":instobj["name"]})
+            return jssuccess(institution = instobj)
         return jsdeny()
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def delinst(self, name):
+        user = self.getUser()
+        if user is None or not user["permissions"].get("admin",False):
+            return jsdeny()
+        if self._db["institutions"].find_one({"name":name}) is None:
+            return jsfail(errors = ["Institution does not exist."])
+        self._db["institutions"].remove({"name":name})
+        return jssuccess()
 
     @cherrypy.expose
     def userlist(self):
         user = self.getUser()
         if user is not None and user["permissions"].get("admin",False):
             users = list(self._db["users"].find())
+            res = []
             for u in users:
                 u.pop("password",None)
                 u.pop("pwhash",None)
                 u.pop("pwsalt",None)
-            return jssuccess(users=users)
+                res.append(u)
+            return jssuccess(users=res)
         return jsdeny()
 
     @cherrypy.expose
@@ -143,6 +162,10 @@ class WebGuiSrv(Base):
         if user is not None and user["permissions"].get("admin",False):
             userobj = json.loads(userobj)
             if "_id" in userobj:
+                # all IDs have to be translated into the ObjectId type, because they are only Strings in JS :(
+                userid = ObjectId( userobj.pop("_id",None) )
+                if userobj["inst"] is not None:
+                    userobj["inst"] = ObjectId( userobj["inst"] )
                 userobj.pop("pwsalt",None)
                 userobj.pop("pwhash",None)
                 if "password" in userobj:
@@ -151,11 +174,22 @@ class WebGuiSrv(Base):
                         userobj["password"] = b64encode(hashlib.new("sha256",bytes(userobj["password"],"utf-8")).digest()).decode("ascii")
                     else:
                         userobj.pop("password",None)
-                self._db["users"].update({"_id":userobj["_id"]},{"$set":userobj})
-                userobj = self._db["users"].find_one({"_id":userobj["_id"]})
+                userobj = self._db["users"].update({"_id":userid},{"$set":userobj})
+                userobj = self._db["users"].find_one({"_id":userid})
                 return jssuccess(user = userobj)
             return jsfail(errors = ["User not found."])
         return jsdeny()
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def deluser(self, username):
+        user = self.getUser()
+        if user is None or not user["permissions"].get("admin",False):
+            return jsdeny()
+        if self._db["users"].find_one({"username":username}) is None:
+            return jsfail(errors = ["User does not exist."])
+        self._db["users"].remove({"username":username})
+        return jssuccess()
 
     @cherrypy.expose
     def stationlist(self, inst=None):
