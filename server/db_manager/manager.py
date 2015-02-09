@@ -93,18 +93,24 @@ def getType( db, inst, entry ):
     
     # convert iso date string of form YYYY-MM-DDTHH:MM:SS.mmmZ to datetime
     date = datetime.datetime.strptime( entry["date"], "%Y-%m-%dT%H:%M:%S.%fZ" )
-        
+                
     query = { "prop.region": entry["name"],
               "prop.latitude": entry["lat"],
               "prop.longitude": entry["lon"],
               "prop.magnitude": entry["mag"],
               "prop.depth": entry["depth"],
-              "prop.strike": entry["strike"],
-              "prop.dip": entry["dip"],
-              "prop.rake": entry["rake"],
               "prop.date": date,
             }
         
+    if "dip" in entry:
+        query["prop.dip"] = entry["dip"]
+        
+    if "strike" in entry:
+        query["prop.strike"] = entry["strike"]
+    
+    if "rake" in entry:
+        query["prop.rake"] = entry["rake"]
+    
     query.update( { "id": entry['id'],
                     "user": inst["_id"],
                   })
@@ -135,7 +141,46 @@ def getType( db, inst, entry ):
     # entry exists already
     return "existing"
         
-def main( s ):
+def read_mt( entry, mt ):
+
+    s = """(\d\d/\d\d/\d\d) (\d\d:\d\d:\d\d.\d\d)
+(.*?)
+Epicenter: (.*?) (.*?)
+MW (.*?)
+
+GFZ MOMENT TENSOR SOLUTION
+Depth ([ \d]{1,3}) .*?
+(?:.*?\n){8}
+Best Double Couple:.*?
+ NP1:Strike=([ \d]{1,3}) Dip=([ \d]{1,2}) Slip=([- \d]{1,4})
+"""
+
+    response = urllib.request.urlopen( 'http://geofon.gfz-potsdam.de' + mt )
+    data = response.read()
+    txt = data.decode('utf-8')
+
+    prop = re.findall( s, txt )
+
+    if len(prop) == 0:
+      return 1
+
+    prop = prop[0]
+
+    date = datetime.datetime.strptime( prop[0] + " " + prop[1], "%y/%m/%d %H:%M:%S.%f")
+
+    entry["name"] = prop[2]
+    entry["lat"] = float(prop[3])
+    entry["lon"] = float(prop[4])
+    entry["mag"] = float(prop[5])
+    entry["depth"] = float(prop[6])
+    entry["strike"] = float(prop[7])
+    entry["dip"] = float(prop[8])
+    entry["rake"] = float(prop[9])
+    entry["date"] = date.isoformat()[:-3] + 'Z' #ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
+
+    return 0
+        
+def main():
         
     pidfile = "/tmp/dbmanager.pid"
     if os.path.isfile( pidfile ):
@@ -147,7 +192,7 @@ def main( s ):
     
     startTime = time.time()
     
-    url = 'http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt&page='
+    url = 'http://geofon.gfz-potsdam.de/eqinfo/list.php?page='
     page = 1
        
     cntTotal = 0
@@ -170,8 +215,23 @@ def main( s ):
         response = urllib.request.urlopen( url + str(page) )
         data = response.read()
         text = data.decode('utf-8')
+                
+        pattern = ("<tr.*?>.*?"
+         "<td.*?><a.*?(gfz\d\d\d\d\w\w\w\w)'>(.*?)</a></td>.*?" # eventId, date
+         "<td.*?>(.*?)</td>.*?" # magnitude
+         "<td.*?>(.*?)</td>.*?" # latitude
+         "<td.*?>(.*?)</td>.*?" # longitude
+         "<td.*?>(.*?)</td>.*?" # depth
+         "<td.*?>.*?</td>.*?" # status
+         "<td.*?>(?:<a href='(.*?)'>MT</a>)?</td>.*?" # link to mt.txt
+         "<td.*?>(.*?)</td>.*?" # region
+         "</tr>"
+        )
         
-        matches = re.findall( "<a href='([^>]*?/mt.txt)'>", text )
+        matches = re.findall( pattern, text, re.MULTILINE | re.DOTALL )
+        
+        #if page == 2:
+        #    break
         
         if len( matches ) == 0:
             break
@@ -180,39 +240,38 @@ def main( s ):
         
         for m in matches:
 
+            #print(m)
+
             cntTotal += 1
-            eid = re.findall( "/(gfz\d\d\d\d\w\w\w\w)/", m )[0]
-            response = urllib.request.urlopen( 'http://geofon.gfz-potsdam.de' + m )
-            data = response.read()
-            txt = data.decode('utf-8')
             
-            prop = re.findall( s, txt )
-       
-            if len(prop) == 0:
-                print('Error: ', eid)
+            entry = {
+              "inst": inst["name"],
+              "secret": inst["secret"],
+              "id": m[0],
+            }
+            
+            ret = 0
+            
+            # parse mt.txt if moment tensor is available
+            mt = m[6]
+            if mt != '':
+                ret = read_mt( entry, mt )
+            else:
+                date = datetime.datetime.strptime( m[1], "%Y-%m-%d %H:%M:%S")
+                entry["date"] = date.isoformat() + '.000Z' #ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
+                entry["name"] = m[7]
+                entry["lat"] = float(m[3][:-6]) * (1 - 2*m[3].endswith("S"))
+                entry["lon"] = float(m[4][:-6]) * (1 - 2*m[3].endswith("W"))
+                entry["mag"] = float(m[2])
+                entry["depth"] = float(m[5])
+                       
+            if ret != 0:
+                print('Error: ', entry["id"])
                 cntError += 1
                 continue
-                
-            prop = prop[0]
-                
-            date = datetime.datetime.strptime( prop[0] + " " + prop[1], "%y/%m/%d %H:%M:%S.%f")
             
-            print( "Fetch: ", date, eid )
-                        
-            entry = { "inst": inst["name"],
-                      "secret": inst["secret"],
-                      "id": eid,
-                      "name": prop[2],
-                      "lat": float(prop[3]),
-                      "lon": float(prop[4]),
-                      "mag": float(prop[5]),
-                      "depth": float(prop[6]),
-                      "strike": float(prop[7]),
-                      "dip": float(prop[8]),
-                      "rake": float(prop[9]),
-                      "date": date.isoformat()[:-3] + 'Z', #ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
-                     }
-                            
+            print( "Fetch: ", entry["date"], entry["id"] )
+                                            
             # get type of entry and set IHO region
             type = getType( db, inst, entry )
                                                     
@@ -229,43 +288,22 @@ def main( s ):
                 
         type = elem["type"]
         entry = elem["entry"]
-        refineId = 0
                 
         if type == "new":
-            cntInsert += 1
-            
-            #print( "New: ", entry  )
-            data = urllib.parse.urlencode( entry ).encode('ascii')
-            req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/data_insert', data)
-            res = urllib.request.urlopen( req ).read()
-            #print( "Result: ", res )
-            
+            cntInsert += 1            
         elif type == "update":
             cntUpdate += 1
-            
-            #print( "Update", entry )
-            data = urllib.parse.urlencode( entry ).encode('ascii')
-            req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/data_update', data )
-            res = urllib.request.urlopen( req ).read().decode("utf-8")
-            js = json.loads( res )
-            #print( "Result: ", js )
-            refineId = js["refineId"]
                 
         if "sea_area" in entry and entry["mag"] > 5.5 and entry["depth"] < 100:
             cntSim += 1
-            
-            # request simulation of this event
-            entry.update( { "refineId": refineId,
-                            "dur": 180 } );
-            
-            #print( "Compute: ", entry )
-            data = urllib.parse.urlencode( entry ).encode('ascii')
-            req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/computeById', data)
-            res = urllib.request.urlopen( req )
-            #print( "Result: ", res.read() )
+            entry.update( { "comp": 180 } )
+          
+        data = urllib.parse.urlencode( entry ).encode('ascii')
+        req = urllib.request.Request('http://localhost/srv/data_insert', data)
+        res = urllib.request.urlopen( req ).read()
                                                                
         time.sleep( 0.01 )
-                    
+                            
     print('Total: %u' % cntTotal)
     print('Inserted: %u' % cntInsert)
     print('Updated: %u' % cntUpdate)
@@ -279,17 +317,5 @@ def main( s ):
     
     
 if __name__ == "__main__":
-    
-    s = """(\d\d/\d\d/\d\d) (\d\d:\d\d:\d\d.\d\d)
-(.*?)
-Epicenter: (.*?) (.*?)
-MW (.*?)
-
-GFZ MOMENT TENSOR SOLUTION
-Depth ([ \d]{1,3}) .*?
-(?:.*?\n){8}
-Best Double Couple:.*?
- NP1:Strike=([ \d]{1,3}) Dip=([ \d]{1,2}) Slip=([- \d]{1,4})
-"""
-    
-    main( s )
+        
+    main()
