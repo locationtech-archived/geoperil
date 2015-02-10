@@ -13,7 +13,7 @@ FEEDURL = "http://trideccloud.gfz-potsdam.de/feedersrv"
 INST = "gfz_ex_test"
 SECRET = "abcdef"
 MAXRANGE = 7 * 24 * 3600    # 1 week
-TIMEOUT = 600
+TIMEOUT = 1800
 MAXRUNTIME = 1800
 PROCESSES = 4
 
