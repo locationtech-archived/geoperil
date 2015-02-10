@@ -108,11 +108,8 @@ class WebGuiSrv(Base):
     def instlist(self):
         user = self.getUser()
         if user is not None and user["permissions"].get("admin",False):
-            insts = list(self._db["institutions"].find())
-            res = []
-            for i in insts:
-                res.append(i)
-            return jssuccess(institutions=res)
+            insts = list( self._db["institutions"].find() )
+            return jssuccess(institutions=insts)
         return jsdeny()
 
     @cherrypy.expose
@@ -134,25 +131,23 @@ class WebGuiSrv(Base):
     @cherrypy.tools.allow(methods=['POST'])
     def delinst(self, name):
         user = self.getUser()
-        if user is None or not user["permissions"].get("admin",False):
-            return jsdeny()
-        if self._db["institutions"].find_one({"name":name}) is None:
+        if user is not None and user["permissions"].get("admin",False):
+            if self._db["institutions"].find_one({"name":name}) is not None:
+                self._db["institutions"].remove({"name":name})
+                return jssuccess()
             return jsfail(errors = ["Institution does not exist."])
-        self._db["institutions"].remove({"name":name})
-        return jssuccess()
+        return jsdeny()
 
     @cherrypy.expose
     def userlist(self):
         user = self.getUser()
         if user is not None and user["permissions"].get("admin",False):
-            users = list(self._db["users"].find())
-            res = []
+            users = list( self._db["users"].find() )
             for u in users:
                 u.pop("password",None)
                 u.pop("pwhash",None)
                 u.pop("pwsalt",None)
-                res.append(u)
-            return jssuccess(users=res)
+            return jssuccess(users=users)
         return jsdeny()
 
     @cherrypy.expose
@@ -184,12 +179,12 @@ class WebGuiSrv(Base):
     @cherrypy.tools.allow(methods=['POST'])
     def deluser(self, username):
         user = self.getUser()
-        if user is None or not user["permissions"].get("admin",False):
-            return jsdeny()
-        if self._db["users"].find_one({"username":username}) is None:
+        if user is not None and user["permissions"].get("admin",False):
+            if self._db["users"].find_one({"username":username}) is not None:
+                self._db["users"].remove({"username":username})
+                return jssuccess()
             return jsfail(errors = ["User does not exist."])
-        self._db["users"].remove({"username":username})
-        return jssuccess()
+        return jsdeny()
 
     @cherrypy.expose
     def stationlist(self, inst=None):
