@@ -174,7 +174,7 @@ class WebGuiSrv(Base):
                         userobj["password"] = b64encode(hashlib.new("sha256",bytes(userobj["password"],"utf-8")).digest()).decode("ascii")
                     else:
                         userobj.pop("password",None)
-                userobj = self._db["users"].update({"_id":userid},{"$set":userobj})
+                self._db["users"].update({"_id":userid},{"$set":userobj})
                 userobj = self._db["users"].find_one({"_id":userid})
                 return jssuccess(user = userobj)
             return jsfail(errors = ["User not found."])
