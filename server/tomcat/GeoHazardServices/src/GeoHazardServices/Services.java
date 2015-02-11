@@ -1,6 +1,13 @@
 package GeoHazardServices;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -575,25 +582,23 @@ public class Services {
 	  
 	  Object[] required = { inst, secret, id, name, dateStr };
 	  	  	  	  
+	  System.out.println(id);
+	  
 	  if( ! checkParams( request, required ) )
 	  	  return jsfailure();
-	  	  		  
-	  /* if id is already used, make a refinement */
-	  DBCursor cursor = db.getCollection("eqs").find( new BasicDBObject( "id", id ) );
-	  if( cursor.hasNext() ) {
-		  return data_update( request, inst, secret, id, null, name, lon, lat, mag,
-				  			  depth, dip, strike, rake, dateStr, sea_area, comp, accel );
-	  }
-	  	  
+	  	  		  	  	  
 	  /* check if we got a valid institution and the correct secret */
 	  Inst instObj = institutions.get( inst );
 	  if( instObj == null || ! instObj.secret.equals( secret ) )
 		  return jsdenied();
 	
 	  /* get Date object from date string */
+	  System.out.println( dateStr );
 	  Date date = parseIsoDate( dateStr );
 	  if( date == null )
 		  return jsfailure();
+	  
+	  System.out.println(id);
 	  
 	  /* get current timestamp */
 	  Date timestamp = new Date();
@@ -610,42 +615,84 @@ public class Services {
 	  sub.put( "strike", strike );
 	  sub.put( "rake", rake );
 	  sub.put( "sea_area", sea_area );
-	  
-	  long refineId = 0;
-	  CompId compId = new CompId( instObj.name, id, refineId );
-	  
+	  	  
+	  if( accel == null )
+		  accel = 1;
+	  	  
 	  /* create new DB object that should be added to the eqs collection */
 	  BasicDBObject obj = new BasicDBObject();
-	  obj.put( "_id", compId.toString() );
 	  obj.put( "id", id );
 	  obj.put( "user", instObj.objId );
-	  obj.put( "refineId", refineId );
 	  obj.put( "timestamp", timestamp );
 	  obj.put( "prop", sub );
 	  obj.put( "root", root );
 	  obj.put( "parent", parent );
-	  
-	  if( accel == null )
-		  accel = 1;
-	  
 	  obj.put( "accel", accel );
 	  
 	  /* create a new event */
 	  BasicDBObject event = new BasicDBObject();
-	  event.put( "id", compId.toString() );
 	  event.put( "user", instObj.objId );
 	  event.put( "timestamp", timestamp );
 	  event.put( "event", "new" );
-	  	  
-	  /* insert object into 'eqs' collection */
-	  db.getCollection("eqs").insert( obj );
 	  
+	  Long refineId = 0L;
+	  
+	  /* get earthquake collection */
+	  DBCollection coll = db.getCollection("eqs");
+	  /* search for given id */
+	  BasicDBObject inQuery = new BasicDBObject( "id", id );	  
+	  DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("refineId", -1) );
+	
+	  BasicDBObject entry = null;
+	  
+	  /* if id is already used, make a refinement */
+	  if( cursor.hasNext() ) {
+		  
+		  /* get properties of returned entry */
+		  entry = (BasicDBObject) cursor.next();
+		
+		  /* update entry ID in database by appending deprecated field */
+		  BasicDBObject depr = new BasicDBObject( "depr", true );
+		  coll.update( entry, new BasicDBObject( "$set", depr ) );
+		  
+		  refineId = (Long) entry.get( "refineId" );
+		  
+		  if( refineId == null ) {
+			  refineId = new Long(0);
+		  }
+  
+		  refineId++;
+		  		  
+		  /* override parent and root attributes */
+		  root = entry.get("root") == null ? (String) entry.get("_id") : (String) entry.get("root");
+		  obj.put( "root", root );
+		  obj.put( "parent", entry.get("_id") );
+
+		  /* override event type */
+		  event.put( "event", "update" );
+	  }
+	  
+	  /* set refinement and compound Ids */
+	  CompId compId = new CompId( instObj.name, id, refineId );
+	  obj.put( "_id", compId.toString() );
+	  obj.put( "refineId", refineId );
+	  event.put( "id", compId.toString() );
+
+	  /* clean up query */
+	  cursor.close();
+	  	  	  	  	  	  
+	  /* insert object into 'eqs' collection */
+	  coll.insert( obj );
+	  	  
 	  System.out.println(obj);
-	  notifyUsers( mag );
+	  
+	  if( inst.equals("gfz") )
+		  //notifyUsers( compId.toString(), name, lat, lon, mag );
+		  notifyUsers( obj, entry, comp );
 	  
 	  /* insert new event into 'events'-collection */
 	  db.getCollection("events").insert( event );
-	  
+	  	  
 	  Object[] reqComp = { inst, secret, id, lon, lat, mag, depth, dip, strike, rake };
 	  if( comp != null && checkParams( request, reqComp ) )
 		  computeById( request, inst, secret, id, refineId, comp, accel );
@@ -653,32 +700,118 @@ public class Services {
 	  return jssuccess( new BasicDBObject( "refineId", refineId ) );
   }
   
-  private void notifyUsers( double mag ) {
+  //private void notifyUsers( String id, String name, double lat, double lon, double mag ) {
+  private void notifyUsers( DBObject newObj, DBObject prevObj, Integer comp ) {
 	  
 	  Inst instObj = institutions.get( "gfz" );
+	  DBCursor cursor = db.getCollection("users").find();
 	  
-	  DBObject query = new BasicDBObject( "inst", instObj.objId );
-	  DBCursor cursor = db.getCollection("users").find( query );
+	  DBObject newProp = (DBObject) newObj.get("prop");
+	  Double newMag = (Double) newProp.get("magnitude");
+	  Double newLat = (Double) newProp.get("latitude");
+	  Double newLon = (Double) newProp.get("longitude");
+	  Double magDiff = 0.0;
+	  boolean simAvail = comp != null;
+	  boolean mtAvail = (
+			  newMag != null &&
+  			  newLat != null &&
+  			  newLon != null &&
+  			  newProp.get("depth") != null &&
+  			  newProp.get("dip") != null && 
+  			  newProp.get("strike") != null &&
+  			  newProp.get("rake") != null );
+	  	  
+	  if( newMag == null ) newMag = 0.0;
+	  
+	  if( prevObj != null ) {
+		  
+		  /* UPDATE */
+		  DBObject prevProp = (DBObject) prevObj.get("prop");
+		  Double prevMag = (Double) prevProp.get("magnitude");
+		  
+		  if( prevMag == null ) prevMag = 0.0;
+		  
+		  magDiff = Math.abs( newMag - prevMag );	  
+	  }
+		  
+	  String sharedLnk = "";
+	  if( comp != null )
+		  sharedLnk = "http://trideccloud.gfz-potsdam.de/?share="
+				  	+ static_int( (String)newObj.get("id"), newLon, newLat, 5.0, null );
 	  
 	  for( DBObject user: cursor ) {
-		  		  
-		  DBObject notify = (DBObject) user.get("notify");
-		  if( notify == null || ! (notify.get("mag") instanceof Double) )
+		  		  		  
+		  DBObject notify = (DBObject) user.get("notify");		  
+		  if( notify == null )
 			  continue;
-				  		  
-		  Double magThreshold = (Double) notify.get("mag");
 		  
-		  if( magThreshold != null && mag >= magThreshold ) {
+		  boolean sendMsg = false;
+		  
+		  /* check if we should notify about an update */
+		  if( prevObj != null ) {
+			  
+			  /* UPDATE */
+			  Number magChange = (Number) notify.get("onMagChange");
+			  Boolean onSim = (Boolean)  notify.get("onSim");
+			  Boolean onMT = (Boolean)  notify.get("onMT");
+			  
+			  if( magChange != null && magDiff >= magChange.doubleValue() )
+				  sendMsg = true;
+			  
+			  if( onSim != null && onSim && simAvail )
+				  sendMsg = true;
+			  
+			  if( onMT != null && onMT && mtAvail )
+				  sendMsg = true;
+			  
+		  } else {
+			  
+			  Number magThreshold = (Number) notify.get("onMag");
+			  
+			  if( magThreshold != null && newMag >= magThreshold.doubleValue() ) {
+				  sendMsg = true;
+			  }
+		  }  		  
+		  
+		  if( sendMsg ) {
 			
+			  String username = (String) user.get("username");
+			  
+			  String text = "AN EARTHQUAKE HAS OCCURRED AT " + (String) newProp.get("region")
+					      + " WITH MAGNITUDE OF " + Double.toString(newMag) + "\n"
+					  	  + "Visit the TRIDEC CLOUD platform for detailed information.";
+			  
+			  String base = "apiver=1" +
+					  		"&inst="   + instObj.name + 
+					  		"&secret=" + instObj.secret;
+			  
 			  /* notify user about earthquake */
 			  String sms = (String) notify.get("sms");
-			  if( sms != null ) {
-				  System.out.println(sms);
+			  if( sms != null && ! sms.equals("") ) {
+				  String params = base;
+				  params += "&username=" + username;
+				  /* TODO: move this into the sendPost method */
+				  try {
+					params += "&to="     + URLEncoder.encode( sms, "UTF-8" );
+				  } catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+				  }
+				  params += "&text="     + text;
+				  String ret = sendPost( "http://trideccloud.gfz-potsdam.de/msgsrv/instsms", params );
+				  
+				  System.out.println("CLOUD SMS-Notification: " + username + ", " + sms + ", " + ret);
 			  }
 			  
 			  String mail = (String) notify.get("mail");
-			  if( mail != null ) {
-				  System.out.println(mail);
+			  if( mail != null && ! mail.equals("") ) {
+				  String params = base;
+				  params += "&fromaddr=" + "tridec-cloud-noreply@gfz-potsdam.de";
+				  params += "&toaddr=" 	 + mail;
+				  params += "&subject="	 + "TRIDEC CLOUD Notification";
+				  params += "&text="     + text + "\n\n" + sharedLnk;
+				  String ret = sendPost( "http://trideccloud.gfz-potsdam.de/msgsrv/instmail", params );
+				  
+				  System.out.println("CLOUD Mail-Notification: " + username + ", " + mail + ", " + ret);
 			  }
 		  }
 	  }
@@ -1468,133 +1601,7 @@ public class Services {
 	 /* returning only cursor.toArray().toString() makes problems with the date fields */
 	 return gson.toJsonTree( results ).toString();
  }
- 
- @POST
- @Path("/data_update")
- @Produces(MediaType.APPLICATION_JSON)
- public String data_update(
-		  @Context HttpServletRequest request,
-		  @FormParam("inst") String inst,
-		  @FormParam("secret") String secret,
-		  @FormParam("id") String id,
-		  @FormParam("refineId") Long refineId,
-		  @FormParam("name") @DefaultValue("Custom") String name,
-		  @FormParam("lon") Double lon, 
-		  @FormParam("lat") Double lat,
-		  @FormParam("mag") Double mag,
-		  @FormParam("depth") Double depth,
-		  @FormParam("dip") Double dip,
-		  @FormParam("strike") Double strike,
-		  @FormParam("rake") Double rake,
-		  @FormParam("date") String dateStr,
-		  @FormParam("sea_area") String sea_area,
-		  @FormParam("comp") Integer comp,
-		  @FormParam("accel") Integer accel ) {
-	
-	  Object[] required = { inst, secret, id, name, dateStr };
-
-	  if( ! checkParams( request, required ) )
-		  return jsfailure();
-		
-	  /* check if we got a valid institution and the correct secret */
-	  Inst instObj = institutions.get( inst );
-	  if( instObj == null || ! instObj.secret.equals( secret ) )
-		  return jsdenied();
-	 	  
-	  /* get Date object from date string */
-	  Date date = parseIsoDate( dateStr );
-	  if( date == null )
-		  return jsfailure();
-		  
-	  /* get earthquake collection */
-	  DBCollection coll = db.getCollection("eqs");
-	
-	  /* TODO: check if given id was already refined - if so, return failure */
-	  
-	  /* search for given id */
-	  BasicDBObject inQuery = new BasicDBObject( "id", id );	  
-	  DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("refineId", -1) );
-	
-	  /* return if id not found */
-	  if( cursor.count() < 1 )
-		  return jsfailure();
-	
-	  /* get properties of returned entry */
-	  BasicDBObject entry = (BasicDBObject) cursor.next();
-	
-	  /* clean up query */
-	  cursor.close();
-	  
-	  if( refineId == null ) {
-	  
-	  	refineId = (Long) entry.get( "refineId" );
-	  
-	  	if( refineId == null ) {
-	  		refineId = new Long(0);
-	  	}
-	  
-	  	refineId++;
- 	  }
-	  
-	  /* update entry ID in database by appending deprecated field */
-	  BasicDBObject depr = new BasicDBObject( "depr", true );
-	  coll.update( entry, new BasicDBObject( "$set", depr ) );
-	  	  	  
-	  /* get current timestamp */
-	  Date timestamp = new Date();
-	  	  	  
-	  BasicDBObject sub = new BasicDBObject();
-	  sub.put( "date", date );
-	  sub.put( "region", name );
-	  sub.put( "latitude", lat );
-	  sub.put( "longitude", lon );
-	  sub.put( "magnitude", mag );
-	  sub.put( "depth", depth );
-	  sub.put( "dip", dip );
-	  sub.put( "strike", strike );
-	  sub.put( "rake", rake );
-	  sub.put( "sea_area", sea_area );
-
-	  CompId compId = new CompId( inst, id, refineId );
-	  
-	  String root = entry.get("root") == null ? (String) entry.get("_id") : (String) entry.get("root");
-	  
-	  /* create new DB object that should be added to the earthquake collection */
-	  BasicDBObject obj = new BasicDBObject();
-	  obj.put( "_id", compId.toString() );
-	  obj.put( "id", id );
-	  obj.put( "refineId", refineId );
-	  obj.put( "user", instObj.objId );
-	  obj.put( "timestamp", timestamp );
-	  obj.put( "prop", sub );
-	  obj.put( "root", root );
-	  obj.put( "parent", entry.get("_id") );
-	  
-	  if( accel == null )
-		  accel = 1;
-	  
-	  obj.put( "accel", accel );
-	  			  	   
-	  /* create a new event */
-	  BasicDBObject event = new BasicDBObject();
-	  event.put( "id", compId.toString() );
-	  event.put( "user", instObj.objId );
-	  event.put( "timestamp", timestamp );
-	  event.put( "event", "update" );
-	  
-	  /* insert object into collection */
-	  coll.insert( obj );
-	  
-	  /* insert new event into 'events'-collection */
-	  db.getCollection("events").insert( event );
-
-	  Object[] reqComp = { inst, secret, id, lon, lat, mag, depth, dip, strike, rake };
-	  if( comp != null && checkParams( request, reqComp ) )
-		  computeById( request, inst, secret, id, refineId, comp, accel );
-	  
-	 return jssuccess( new BasicDBObject( "refineId", refineId ) );
- }
- 
+  
  @POST
  @Path("/delete")
  @Produces(MediaType.APPLICATION_JSON)
@@ -1741,7 +1748,7 @@ public class Services {
 		 
 		 if( curNotify == null )
 			 curNotify = new BasicDBObject();
-		 
+		 		 
 		 curNotify.putAll( notifyObj );
 		 
 		 newObj.put( "notify", curNotify );
@@ -1783,6 +1790,14 @@ public class Services {
 		 return jsdenied();
 	 
 	 /* TODO: check if this id exists and their usage is authorized */
+	 String key = static_int( id, lon, lat, zoom, user.objId );
+	 
+	 BasicDBObject result = new BasicDBObject( "key", key );
+	 	 
+	 return jssuccess( result );
+ }
+ 
+ private String static_int( String id, Double lon, Double lat, Double zoom, Object uid ) {
 	 
 	 DBCollection coll = db.getCollection("static");
 	 BasicDBObject inQuery = new BasicDBObject( "EventID", id );
@@ -1790,14 +1805,12 @@ public class Services {
 	 inQuery.put( "lat", lat );
 	 inQuery.put( "zoom", zoom );
 	 inQuery.put( "timestamp", new Date() );
-	 inQuery.put( "user", user.objId );
+	 inQuery.put( "user", uid );
 	 
 	 coll.insert( inQuery );
 	 ObjectId objId = (ObjectId) inQuery.get( "_id" );
 	 
-	 BasicDBObject result = new BasicDBObject( "key", objId.toString() );
-	 	 
-	 return jssuccess( result );
+	 return objId.toString();
  }
  
  private String getIP( HttpServletRequest request ) {
@@ -2102,6 +2115,37 @@ public class Services {
 	  return jssuccess();
 }
  
+ /* TODO: split params into tokens and encode them separately */
+ private String sendPost( String url, String params ) {
+		
+	HttpURLConnection con = null;
+	
+	try {
+		con = (HttpURLConnection) new URL( url ).openConnection();
+		con.setRequestMethod("POST");
+		con.setDoOutput(true);
+		DataOutputStream wr = new DataOutputStream( con.getOutputStream() );
+		wr.writeBytes( params );
+		wr.flush();
+		wr.close();
+		
+		BufferedReader in = new BufferedReader(
+		        new InputStreamReader(con.getInputStream()));
+		String inputLine;
+		StringBuffer response = new StringBuffer();
+ 
+		while ((inputLine = in.readLine()) != null) {
+			response.append(inputLine);
+		}
+		in.close();
+ 
+		return response.toString();
+			
+	} catch (IOException e) {
+		return null;
+	}
+}
+ 
  private Date parseIsoDate( String dateStr ) {
 	
 	 /* used to convert to desired time format used by MongoDB */
@@ -2150,6 +2194,17 @@ public class Services {
  private String jssuccess( JsonObject js ) {
 	 js.add( "status", gson.toJsonTree("success") );
 	 return js.toString();
+ }
+ 
+ @POST
+ @Path("/getCFCZ")
+ @Produces(MediaType.APPLICATION_JSON)
+ public String getCFCZ() {
+	 	 	 
+	 DBCollection coll = db.getCollection("cfcz");
+	 DBCursor cursor = coll.find();
+	 	 	 
+	 return cursor.toArray().toString();
  }
  
 }
