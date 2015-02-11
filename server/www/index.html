@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://code.jquery.com/jquery.js"></script>
+    <script src="https://code.jquery.com/ui/1.11.2/jquery-ui.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.2/themes/smoothness/jquery-ui.css">
     <script src="jquery.cookie.js"></script>
 	<script src="js/bootstrap.js"></script>
 	<link href="css/bootstrap.css" rel="stylesheet">
@@ -25,45 +27,47 @@
 	</script>
 </head>
 <body>
+	<div class="wrapper">
+	<div class="border">
   	<div class="container fullsize">
-	  	<div class="row headline"> 
-	  		<nav class="navbar navbar-default">	  		
-	  			<div class="navbar-collapse collapse">
-	  				<ul class="nav navbar-nav navbar-form navbar-left nav_title">
-	  					<li><img class="title" alt="TRIDEC Cloud" src="img/trideccloud-logo.png"></li>
-	  				</ul>
-	  				<!-- <ul class="nav navbar-nav navbar-right navbar-form nav_logo">
-	  					<li class="logo"><img alt="gfz_logo" src="http://www-extern.gfz-potsdam.de/fileadmin/templates/images/logo_gfz_de.gif"></li>
-	  				</ul> -->
-	  				<ul class="nav navbar-nav navbar-right">
-	  					<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
-	  					<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
-	  					<li><a href="https://play.google.com/store/apps/details?id=org.fosslab.geohazard" target="_blank">App</a></li>
-	  					<li><a href="#AboutDia" data-toggle="modal">About</a></li>
-	  					<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
-	  					<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
-	  				</ul>
-	  				<ul class="nav navbar-nav navbar-form navbar-right nav_buttons">
-	  					<li><button id="btnSignIn" type="button" class="btn btn-primary">Sign In</button></li>
-	  					<li id="grpSignOut" class="btn-group">
-	  						<button id="btnProp" type="button" class="btn btn-default">
-	  							<span class="glyphicon glyphicon-cog"></span>
-	  						</button>
-	  						<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
-	  					</li>
-	  				</ul>
-	  				<!-- <ul class="nav navbar-nav navbar-form navbar-right nav_buttons">
-	  					<li>
-	  						<button type="button" class="btn btn-default" disabled>
-	  							<span class="glyphicon glyphicon-bell"></span>
-	  						</button>
-	  					</li>
-	  				</ul> -->
-	  				<ul class="nav navbar-nav navbar-right">
-	  					<li><a href="" id="lnkUser"></a></li>
-	  				</ul>
-	  			</div>
-	  		</nav>
+  		<div class="row gfz-head">
+  			<img class="gfz-logo pull-left" alt="GFZ Logo" src="img/logo_gfz_en.gif">
+  			<!-- <img class="tridec-logo" alt="TRIDEC Cloud Logo" src="img/trideccloud-logo.png"> -->
+  			<img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="img/wordmark_gfz_en.gif">
+  		</div>
+  		<hr>
+	  	<div class="headline">
+	  		<ul class="head-blk head-left head-img">
+	  			<li><img class="tridec-logo" alt="TRIDEC Cloud" src="img/trideccloud-logo.png"></li>
+	  		</ul>
+	  		<ul class="head-blk head-right">
+	  			<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="https://play.google.com/store/apps/details?id=org.fosslab.geohazard" target="_blank">App</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="#AboutDia" data-toggle="modal">About</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
+	  		</ul>
+	  		<ul class="head-blk head-right head-buttons">
+	  			<li id="grpSignOut" class="btn-group">
+					<button id="btnProp" type="button" class="btn btn-default">
+						<span class="glyphicon glyphicon-cog"></span>
+					</button>
+					<button id="btnAdmin" type="button" class="btn btn-default">
+						<span class="glyphicon glyphicon-user"></span>
+					</button>
+					<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
+				</li>
+	  		</ul>
+	  		<ul class="head-blk head-right">
+	  			<li><a href="" id="lnkUser"></a></li>
+	  		</ul>
+	  		<ul class="clear"></ul>
 	  	</div> <!-- end of headline -->
 	  	
 	  	<div class="row mainview">
@@ -94,12 +98,12 @@
   						</div>
 					</div>
 	  			</div>
-	  			
+	  				  			
 	  			<div class="row tabs-head">
 	  				<div class="col-md-10">
 	  					<div class="row tabs">
 							<ul class="nav nav-tabs main-tabs">
-								<li id="tabRecent" class="active"><a href="#sidebar" data-toggle="tab">Recent</a></li>
+								<li id="tabRecent" class="active"><a href="#sidebarTab" data-toggle="tab">Recent</a></li>
 							 	<li id="tabSaved" class="tab-private"><a href="#saved" id="hrefSaved" data-toggle="tab">My List</a></li>
 							  	<li id="tabCustom" class="tab-private"><a href="#custom" data-toggle="tab">Compose</a></li>
 							  	<li id="tabTimeline" class="tab-private"><a href="#timeline" id="hrefTimeline" data-toggle="tab">Timeline</a></li>
@@ -116,9 +120,24 @@
 						</div>
 					</div>
 	  			</div>
-	  			
+	  				  			
 	  			<div class="tab-content">
-		  			<div class="col-md-12 tab-pane active" id="sidebar"></div>
+		  			<div class="col-md-12 tab-pane active" id="sidebarTab">
+		  				<div id="filterWidget" class="row">
+			  				<div class="input-group input-group-sm">
+			  					<span class="input-group-addon">Mw</span>
+			  					<input class="txtMag form-control" type="text">
+				  				<span class="input-group-addon">		  					
+			        				<span><input class="chkMT" type="checkbox">MT</span>
+			        				<span><input class="chkSea" type="checkbox">Sea</span>
+			        				<span><input class="chkSim" type="checkbox">Sim</span>
+			      				</span>
+			  				</div>
+			  			</div>
+			  			<div class="row">
+		  					<div id="sidebar" class="col-md-12"></div>
+		  				</div>
+		  			</div>
 		  			<div class="col-md-12 tab-pane" id="saved"></div>
 		  			<div class="col-md-12 tab-pane" id="custom">					  					
 		  				<form class="form-horizontal form-center">
@@ -253,36 +272,40 @@
 	  		</div>
 	  		
 	  	</div> <!-- end of main view -->
-	  	
-	  	<!-- <div id="splash" class="row">
-	  		<div id="splash-content">
-		  		<div id="splash-video"></div>
-		  		<div id="splash-login">
-		  			<div id="splash-table">
-		  			<h3 class="splashForm">Welcome to <b>TRIDEC Cloud</b></h3>
-		  			<h4 class="splashForm">Sign in with your E-Mail address</h4>
-		  			<div id="splashIcon" class="splashForm">
-		  				<i class="fa fa-user"></i>
-		  			</div>
-		  			<p id="splashStatus" class="form-control-static splashForm"></p>
-			  		<input id="splashUser" type="text" class="form-control splashForm" placeholder="E-Mail" required>
-				  	<input id="splashPass" type="password" class="form-control splashForm" placeholder="Password" required>
-				  	<button id="splashSignIn" type="button" class="btn btn-primary splashForm">Sign In</button>
-				  	<a id="splash-lnkAcc" class="splashForm" href="mailto:martin.hammitzsch@gfz-potsdam.de,spazier@uni-potsdam.de?subject=Get%20account%20for%20TRIDEC%20Cloud&amp;body=Hello%20you%2C%0D%0A%0D%0AI%20am%20totally%20excited%20about%20the%20TRIDEC%20Cloud%20and%20would%20like%20to%20get%20an%20account%2E%0D%0A%0D%0ACheers">Get Account</a>
-				  	</div>
-			  	</div>
-		  	</div>
-	  	</div> -->
-	  	
-	  	<div id="splash-new" class="row">
+	  		  	
+	  	<div id="splash" class="row">
 	  		<div class="section">
-	  			<img class="image" src="img/head.sm.jpg" width=100% />
+	  			<div class="bg-image">
 	  			<div class="overlay">
-			  		<div class="no" style="width: 35%; top: 8vw;">
+	  				<div class="fi float-r margin-t">
+			  			<div class="login">
+				  			<div id="splash-table">
+					  			<h3 class="form">Welcome to <b>TRIDEC Cloud</b></h3>
+					  			<h4 class="form">Sign in with your E-Mail address</h4>
+					  			<div class="icon form">
+					  				<i class="fa fa-user"></i>
+					  			</div>
+					  			<p id="splashStatus" class="form-control-static form"></p>
+						  		<input id="splashUser" type="text" class="form-control form" placeholder="E-Mail" required>
+							  	<input id="splashPass" type="password" class="form-control form" placeholder="Password" required>
+							  	<button id="splashSignIn" type="button" class="btn btn-primary form">Sign In</button>
+							  	<span class="lnk form">
+							  		<span class="cells">
+							  			<a href="mailto:tridec-cloud-support@gfz-potsdam.de?subject=Get%20account%20for%20TRIDEC%20Cloud&amp;body=Hello%20you%2C%0D%0A%0D%0AI%20am%20totally%20excited%20about%20the%20TRIDEC%20Cloud%20and%20would%20like%20to%20get%20an%20account%2E%0D%0A%0D%0ACheers">Get Account</a>
+							  			<span>&#183;</span>
+							  			<a href="mailto:tridec-cloud-subscribe@gfz-potsdam.de?subject=Subscribe%20request%20for%20TRIDEC%20Cloud%20mailing%20list&amp;body=Please%20subscribe%20me%20to%20tridec-cloud@gfz-potsdam.de%0D%0A%0D%0A">Join List</a>
+							  			<span>&#183;</span>
+							  			<a href="mailto:tridec-cloud-support@gfz-potsdam.de?subject=Need%20more%20information%20on%20TRIDEC%20Cloud&amp;body=Hello%20you%2C%0D%0A%0D%0AI%20am%20totally%20excited%20about%20the%20TRIDEC%20Cloud%20and%20would%20like%20to%20get%20more%20information%2E%0D%0A%0D%0ACheers">Mail Us</a>
+							  		</span>
+							  	</span>
+						  	</div>
+					  	</div>
+			  		</div>
+			  		<div class="no float-r">
 			  			<h3>Look ahead with the TRIDEC Cloud</h3>
 			  			<div><span>
 			  				In times of cloud computing and ubiquitous computing the use of state of the art technology
-							concepts and paradigms have to be considered even for early warning systems. Based on the
+							concepts and paradigms have to be considered even for early warning and fast response systems. Based on the
 							experiences and the knowledge gained in three research projects new technologies are exploited to
 							implement a cloud-based and web-based prototype to open up new prospects.
 							<br><br>
@@ -292,29 +315,14 @@
 							and communicate threat specific information in a collaborative and distributed environment.
 			  			</span></div>
 			  		</div>
-			  		<div class="right" style="width: 35%; margin-left: 20%; height: 60%; top: calc( 8vw - 2.5% );">
-			  			<div id="splash-new-login">
-				  			<div id="splash-table">
-					  			<h3 class="splashForm">Welcome to <b>TRIDEC Cloud</b></h3>
-					  			<h4 class="splashForm">Sign in with your E-Mail address</h4>
-					  			<div id="splashIcon" class="splashForm">
-					  				<i class="fa fa-user"></i>
-					  			</div>
-					  			<p id="splashStatus" class="form-control-static splashForm"></p>
-						  		<input id="splashUser" type="text" class="form-control splashForm" placeholder="E-Mail" required>
-							  	<input id="splashPass" type="password" class="form-control splashForm" placeholder="Password" required>
-							  	<button id="splashSignIn" type="button" class="btn btn-primary splashForm">Sign In</button>
-							  	<a id="splash-lnkAcc" class="splashForm" href="mailto:martin.hammitzsch@gfz-potsdam.de,spazier@uni-potsdam.de?subject=Get%20account%20for%20TRIDEC%20Cloud&amp;body=Hello%20you%2C%0D%0A%0D%0AI%20am%20totally%20excited%20about%20the%20TRIDEC%20Cloud%20and%20would%20like%20to%20get%20an%20account%2E%0D%0A%0D%0ACheers">Get Account</a>
-						  	</div>
-					  	</div>
-			  		</div>
 			  		<div class="clear"></div>
+			  	</div>
 			  	</div>
 	  		</div>
 	  		
 	  		<div class="section">
 	  			<div class="back">
-			  		<div class="no">
+			  		<div class="no float-l">
 			  			<h3>TRIDEC Cloud for Tsunami</h3>
 			  			<div style="width=50%;"><span style="width=5em;">
 			  				Warning centers' staff and stakeholders of other involved parties just need a standard web browser
@@ -326,7 +334,7 @@
 							small GPU cloud working in the background and responsible for immediate processing. 
 						</span></div>
 			  		</div>
-			  		<div class="no">
+			  		<div class="no float-l">
 			  			<h3 style="height:1em;"></h3>
 			  			<div><span>
 			  				Thus
@@ -344,21 +352,13 @@
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/7.sm.jpg" width=100% />
+	  			<!-- <img src="img/7.sm.jpg" width=100% /> -->
+	  			<div class="image image-7"></div>
 	  		</div>
 	  		
 	  		<div class="section">
 	  			<div class="back">
-	  				<div class="left">
-			  			<div class="video">
-			  				<iframe height="100%" width="100%" src="//www.youtube.com/embed/l8XJpql_tLM?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
-			  			</div>
-			  			<br>
-			  			<div class="video">
-			  				<iframe height="100%" width="100%" src="//www.youtube.com/embed/3QhxC0PBTkg?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
-			  			</div>
-			  		</div>
-			  		<div class="no">
+			  		<div class="no float-r">
 			  			<h3>Release 'Hélène'</h3>
 			  			<div><span>
 			  				We are happy to announce TRIDEC Cloud release 'Hélène' integrating two exciting convenience features.
@@ -380,18 +380,26 @@
 							message dissemination. Test it or check out the video at <a href="http://youtu.be/3QhxC0PBTkg">http://youtu.be/3QhxC0PBTkg</a>.
 			  			</span></div>
 			  		</div>
-			  		
+			  		<div class="fi float-r">
+			  			<div class="video">
+			  				<iframe height="100%" width="100%" data-src="//www.youtube.com/embed/l8XJpql_tLM?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  			</div>
+			  			<div class="video">
+			  				<iframe height="100%" width="100%" data-src="//www.youtube.com/embed/3QhxC0PBTkg?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  			</div>
+			  		</div>
 			  		<div class="clear"></div>
 			  	</div>
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/6.sm.jpg" width=100% />
+	  			<!-- <img src="img/6.sm.jpg" width=100% /> -->
+	  			<div class="image image-6"></div>
 	  		</div>
 	  		
 	  		<div class="section">
 	  			<div class="back">
-			  		<div class="no">
+			  		<div class="no float-l">
 			  			<h3>Release 'Gerasimos'</h3>
 			  			<div><span>
 			  				The latest TRIDEC Cloud release integrates a new feature that allows tracing of activities
@@ -404,9 +412,9 @@
 							The video is available at <a href="http://youtu.be/Q5Znr61qUEw">http://youtu.be/Q5Znr61qUEw</a>
 			  			</span></div>
 			  		</div>
-			  		<div class="right">
+			  		<div class="fi float-l">
 			  			<div class="video">
-			  				<iframe height="100%" width="100%" src="//www.youtube.com/embed/Q5Znr61qUEw?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  				<iframe height="100%" width="100%" data-src="//www.youtube.com/embed/Q5Znr61qUEw?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
 			  			</div>
 			  		</div>
 			  		<div class="clear"></div>
@@ -414,17 +422,13 @@
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/5.sm.jpg" width=100% />
+	  			<!-- <img src="img/5.sm.jpg" width=100% /> -->
+	  			<div class="image image-5"></div>
 	  		</div>
 	  		
 	  		<div class="section">
 	  			<div class="back">
-			  		<div class="left">
-			  			<div class="video">
-			  				<iframe height="100%" width="100%" src="//www.youtube.com/embed/CaRXYR4PE8s?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
-			  			</div>
-			  		</div>
-			  		<div class="no">
+			  		<div class="no float-r">
 			  			<h3>Release 'Fernando'</h3>
 			  			<div><span>
 			  				This release enables training and exercises with virtual scenarios. With special accounts operators
@@ -437,17 +441,23 @@
 							for training and preparation of the international tsunami exercise NEAMWave14.
 			  			</span></div>
 			  		</div>
+			  		<div class="fi float-r">
+			  			<div class="video">
+			  				<iframe height="100%" width="100%" data-src="//www.youtube.com/embed/CaRXYR4PE8s?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  			</div>
+			  		</div>
 			  		<div class="clear"></div>
 			  	</div>
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/4.sm.jpg" width=100% />
+	  			<!-- <img src="img/4.sm.jpg" width=100% /> -->
+	  			<div class="image image-4"></div>
 	  		</div>
 	  		
 	  		<div class="section">
 	  			<div class="back">
-			  		<div class="no">
+			  		<div class="no float-l">
 			  			<h3>Release 'Emelie'</h3>
 			  			<div><span>
 			  				We are excited about the new TRIDEC Cloud release named 'Emelie'. This major release is now
@@ -475,9 +485,9 @@
 							(click the gear-wheel button) and select the 'Stations' tab in the pop-up dialogue.  				
 			  			</span></div>
 			  		</div>
-			  		<div class="left">
+			  		<div class="fi float-l">
 			  			<div class="video">
-			  				<iframe width="100%" height="100%" src="//www.youtube.com/embed/C56L4qj9aRA?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  				<iframe width="100%" height="100%" data-src="//www.youtube.com/embed/C56L4qj9aRA?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
 			  			</div>
 			  		</div>
 			  		<div class="clear"></div>
@@ -485,17 +495,13 @@
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/3.sm.jpg" width=100% />
+	  			<!-- <img src="img/3.sm.jpg" width=100% /> -->
+	  			<div class="image image-3"></div>
 	  		</div>
 	  		
 	  		<div class="section">
 	  			<div class="back">
-			  		<div class="left">
-			  			<div class="video">
-			  				<iframe height="100%" width="100%" src="//www.youtube.com/embed/bEIq3HY4gI8?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
-			  			</div>
-			  		</div>
-			  		<div class="no">
+			  		<div class="no float-r">
 			  			<h3>Releases 'Ceren' and 'Dov'</h3>
 			  			<div><span>
 			  				The new feature of the release 'Ceren' is the dissemination of short messages to mobile phones.
@@ -515,17 +521,23 @@
 							with a default FTP location.
 			  			</span></div>
 			  		</div>
+			  		<div class="fi float-r">
+			  			<div class="video">
+			  				<iframe height="100%" width="100%" data-src="//www.youtube.com/embed/bEIq3HY4gI8?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  			</div>
+			  		</div>
 			  		<div class="clear"></div>
 			  	</div>
 	  		</div>
 	  		
 	  		<div class="slide">
-	  			<img src="img/2.sm.jpg" width=100% />
+	  			<!-- <img src="img/2.sm.jpg" width=100% /> -->
+	  			<div class="image image-2"></div>
 	  		</div>
 	  		
 	  		<div class="section">
 	  			<div class="back">
-			  		<div class="no">
+			  		<div class="no float-l">
 			  			<h3>Release 'Begona'</h3>
 			  			<div><span>
 			  				Enjoy bug fixes and some interface polishing, and test the new feature of this release which is fax
@@ -541,9 +553,9 @@
 							mentioned above to get some visual guidance.				
 			  			</span></div>
 			  		</div>
-			  		<div class="left">
+			  		<div class="fi float-l">
 			  			<div class="video">
-			  				<iframe width="100%" height="100%" src="//www.youtube.com/embed/pGLyoQ5M6HA?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  				<iframe width="100%" height="100%" data-src="//www.youtube.com/embed/pGLyoQ5M6HA?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
 			  			</div>
 			  		</div>
 			  		<div class="clear"></div>
@@ -551,17 +563,13 @@
 			  </div>
 			  	
 		  	<div class="slide">
-  				<img src="img/1.sm.jpg" width=100%/>
+  				<!-- <img src="img/1.sm.jpg" width=100%/> -->
+  				<div class="image image-1"></div>
   			</div>
 	  		
 	  		<div class="section">
 	  			<div class="back">
-	  				<div class="left">
-			  			<div class="video">
-			  				<iframe width="100%" height="100%" src="//www.youtube.com/embed/ByVpGh40Tqg?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
-			  			</div>
-			  		</div>
-			  		<div class="no">
+			  		<div class="no float-r">
 			  			<h3>Release 'Alessandro'</h3>
 			  			<div><span>
 			  				We are happy to announce a new release of the TRIDEC Cloud.
@@ -586,17 +594,23 @@
 							airplane button). Or just check out the video at <a href="http://youtu.be/ByVpGh40Tqg">http://youtu.be/ByVpGh40Tqg</a>			
 			  			</span></div>
 			  		</div>
+			  		<div class="fi float-r">
+			  			<div class="video">
+			  				<iframe width="100%" height="100%" data-src="//www.youtube.com/embed/ByVpGh40Tqg?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  			</div>
+			  		</div>
 			  		<div class="clear"></div>
 			  	</div>
 			</div>
 			  	
 		  	<div class="slide">
-  				<img src="img/0.sm.jpg" width=100%/>
+  				<!-- <img src="img/0.sm.jpg" width=100%/> -->
+  				<div class="image image-0"></div>
   			</div>
   		
   			<div class="section">
 	  			<div class="back">
-			  		<div class="no">
+			  		<div class="no float-l">
 			  			<h3>Early Alpha Release</h3>
 			  			<div><span>
 			  				The first prototype version addressed the implementation and integration of a GPU-accelerated
@@ -615,9 +629,9 @@
 							a complementary video at <a href="http://youtu.be/6xFJZzWNi7o">http://youtu.be/6xFJZzWNi7o</a>.
 			  			</span></div>
 			  		</div>
-			  		<div class="right">
+			  		<div class="fi float-l">
 			  			<div class="video">
-			  				<iframe height="100%" width="100%" src="//www.youtube.com/embed/6xFJZzWNi7o?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
+			  				<iframe height="100%" width="100%" data-src="//www.youtube.com/embed/6xFJZzWNi7o?rel=0&vq=hd1080" frameborder="0" allowfullscreen></iframe>
 			  			</div>
 			  		</div>
 			  		<div class="clear"></div>
@@ -627,6 +641,8 @@
 	  	</div>
 	  	
 	</div> <!-- end of container -->
+	</div> <!-- end of border -->
+	</div> <!-- end of wrapper -->
 	
 	<!-- the following content is not shown directly and only used
 		 by JavaScript code to dynamically add prepared content -->
@@ -640,7 +656,7 @@
   	</div>
 
 	<!-- sidebar entry template -->
-	<div id="entry" class="row entry">
+	<div class="row eq-entry entry">
 		<div class="col-md-12" >
 			<div class="info">
 				<span></span>
@@ -719,7 +735,7 @@
 	</div>
 	
 	<!-- sidebar message template -->
-	<div id="msg" class="row entry">
+	<div class="row msg-entry entry">
 		<div class="col-md-12" >
 			<div class="row row-subject">
 				<div class="col-md-2"></div>
@@ -780,6 +796,18 @@
 		</div>
 	</div>
 	
+	<div class="popovers">
+		<span class="learn">
+			Currently, we use a rough and simple threshold mechanism to identify the tsunami potential
+			of an earthquake. If the location of the earthquake is inland, deeper than 100km, or has
+			a magnitude less than 5.5 then we don't consider the earthquake for any wave propagation
+			computation. However, if you think the earthquake is relevant for computation then you can
+			do so by using 'Modify and reprocess'. <br><br>Anyhow, in the near future we plan to use an
+			improved mechanism by adopting region dependent decision matrices defined by the UNESCO-IOC
+			ICGs, that is ICG/NEAMTWS, ICG/IOTWS, ICG/PTWS, and ICG/CARIBE EWS.
+		</span>
+	</div>
+	
 	<!-- modal "SignIn" dialog -->
 	<div class="modal fade" id="SignInDialog" tabindex="-1">
 	  <div class="modal-dialog">
@@ -821,9 +849,9 @@
 				We want you to join us. Here are a few ways you can get involved:
 			</span>
 			<ul>
-				<li>Get in contact and follow us: Martin (<a href="http://www.gfz-potsdam.de/en/staff-search/martin-hammitzsch/" target="_blank">staff page</a>, <a href="http://twitter.com/mrtnhmtz" target="_blank">@mrtnhmtz</a>, <a href="http://de.linkedin.com/in/martinhammitzsch" target="_blank">LinkedIn</a>), Johannes, and Andrey (<a href="http://www.gfz-potsdam.de/en/staff-search/andrey-babeyko/" target="_blank">staff page</a>).</li>
-				<li>Write an <a href="mailto:martin.hammitzsch@gfz-potsdam.de,spazier@uni-potsdam.de,babeyko@gfz-potsdam.de?subject=Need%20more%20information%20on%20TRIDEC%20Cloud&amp;body=Hello%20you%2C%0D%0A%0D%0AI%20am%20totally%20excited%20about%20the%20TRIDEC%20Cloud%20and%20would%20like%20to%20get%20more%20information%2E%0D%0A%0D%0ACheers">e-mail</a>, ask questions and let us know what you’re doing.</li>
-				<li>Coming soon: Join our mailing list and stay up to date with our latest news as well as share your thoughts and questions.</li>
+				<li>Get in contact and follow us: Martin (<a href="http://www.gfz-potsdam.de/en/staff-search/martin-hammitzsch/" target="_blank">staff page</a>, <a href="http://twitter.com/mrtnhmtz" target="_blank">@mrtnhmtz</a>, <a href="http://de.linkedin.com/in/martinhammitzsch" target="_blank">LinkedIn</a>) and Johannes.</li>
+				<li>Write an <a href="mailto:tridec-cloud-support@gfz-potsdam.de?subject=Need%20more%20information%20on%20TRIDEC%20Cloud&amp;body=Hello%20you%2C%0D%0A%0D%0AI%20am%20totally%20excited%20about%20the%20TRIDEC%20Cloud%20and%20would%20like%20to%20get%20more%20information%2E%0D%0A%0D%0ACheers">e-mail</a>, ask questions and let us know what you’re doing.</li>
+				<li><a href="mailto:tridec-cloud-subscribe@gfz-potsdam.de?subject=Subscribe%20request%20for%20TRIDEC%20Cloud%20mailing%20list&amp;body=Please%20subscribe%20me%20to%20tridec-cloud@gfz-potsdam.de%0D%0A%0D%0A">Join our mailing list</a> and stay up to date with our latest news as well as share your thoughts and questions.</li>
 			</ul>
 	      </div>
 	      <div class="modal-footer">
@@ -1274,8 +1302,9 @@
 			      	</div>
 		      	</div>
 		      	<div class="tab-pane" id="propNotify">
+		      		<div class="prop-label">General settings:</div>
 		      		<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">Sms</span>
+						<span class="input-group-addon">SMS</span>
 						<input id="propNotifySms" type="text" class="form-control">
 						<span class="input-group-addon prop-right">
 							<span class="glyphicon glyphicon-phone"></span>
@@ -1292,6 +1321,28 @@
 						<span class="input-group-addon">Magnitude &ge;</span>
 						<input id="propNotifyMag" type="text" class="form-control">
 						<span class="input-group-addon prop-right">Mw</span>
+		  			</div>
+		  			<br>
+		  			<div class="prop-label">Notify on update when:</div>
+		  			<div style="display: inline-block; padding-right: 1em;">
+		  			<div class="input-group input-group-sm">
+		  				<input id="propNotifyChangeChk" type="checkbox">
+		  				<span>Magnitude changes</span>
+		  			</div>
+		  			</div>
+		  			<div style="display: inline-block; width: 200px; vertical-align: bottom;">
+			  			<div class="input-group input-group-sm">
+							<input id="propNotifyChangeVal" type="text" class="form-control">
+							<span class="input-group-addon prop-right">Mw</span>
+			  			</div>
+		  			</div>
+		  			<div class="input-group input-group-sm">
+		  				<input id="propNotifyMT" type="checkbox">
+						<span>MT available</span>
+		  			</div>
+		  			<div class="input-group input-group-sm">
+		  				<input id="propNotifySim" type="checkbox">
+						<span>Simulation available</span>
 		  			</div>
 		      	</div>
 		      	<div class="tab-pane" id="propInst">
@@ -1454,6 +1505,120 @@
 	</div>
 		
 	<canvas id="canvas-line"></canvas>
+	
+	<div class="admin">
+		<div class="header">
+			<h4 class="modal-title">Admin-Interface</h4><br>
+			<ul class="nav nav-tabs">
+				<li class="active"><a href="#adminTabUser" data-toggle="tab">Users</a></li>
+				<li><a href="#adminTabInst" data-toggle="tab">Institutions</a></li>
+			</ul>
+		</div>
+		<div class="content tab-content">
+			<div id="adminTabUser" class="tab-pane active">
+				<div class="secProp"></div>
+				<div class="secPerm"></div>
+				<div class="secButtons">
+					<button type="button" class="btn btn-default pull-left btnClear">Clear</button>
+					<button type="button" class="btn btn-success pull-right btnSave">Save new user</button>
+					<button type="button" class="btn btn-primary pull-right btnModify">Modify user</button>
+					<button type="button" class="btn btn-danger pull-right btnDelete">Delete user</button>
+				</div>
+			</div>
+			<div id="adminTabInst" class="tab-pane">
+				<div class="secInputs"></div>
+				<div class="secButtons">
+					<button type="button" class="btn btn-default pull-left btnClear">Clear</button>
+					<button type="button" class="btn btn-success pull-right btnSave">Save new institution</button>
+					<button type="button" class="btn btn-primary pull-right btnModify">Modify institution</button>
+					<button type="button" class="btn btn-danger pull-right btnDelete">Delete institution</button>
+				</div>
+			</div>
+		</div>
+		<div class="footer">
+			<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+		</div>
+	</div>
+		
+	<div class="templates">
+		<!-- HtmlTextGroup -->
+		<div class="html-textgroup input-group input-group-sm prop-label">
+			<span class="html-label input-group-addon"></span>
+			<input class="html-text form-control" type="text">
+			<span class="html-icon input-group-addon prop-right">
+				<span class="glyphicon"></span>
+			</span>
+ 		</div>
+ 		
+ 		<!-- HtmlInputGroup -->
+		<div class="html-inputgroup input-group input-group-sm prop-label">
+			<span class="html-label input-group-addon"></span>
+			<span class="html-input"></span>
+			<span class="html-icon input-group-addon prop-right">
+				<span class="glyphicon"></span>
+			</span>
+ 		</div>
+ 		
+ 		<!--  HtmlBlock -->
+ 		<div class="html-block"></div>
+ 		
+ 		<!-- HtmlButton -->
+ 		<button type="button" class="html-button btn btn-primary"></button>
+ 		
+ 		<!-- HtmlCheckBox -->
+ 		<div class="html-checkbox">
+ 			<input class="html-check" type="checkbox">
+	  		<span class="html-label"></span>
+ 		</div>
+ 		
+ 		<!-- HtmlDynGroup -->
+ 		<div class="html-dyngroup">
+   			<div class="html-header">
+   				<span class="html-label"></span>
+   				<a class="html-arrow" href="#">
+   					<span class="glyphicon glyphicon-chevron-up"></span>
+   				</a>
+   			</div>
+   			<div class="html-content"></div>
+		</div>
+		
+		<!-- HtmlTabHeader -->
+		<ul><li class="html-tabheader"><a data-toggle="tab"></a></li></ul>
+		
+		<!-- HtmlTabGroup -->
+ 		<div class="html-tabgroup">
+ 			<ul class="html-header nav nav-tabs"></ul>
+ 			<div class="html-content tab-content"></div>
+ 		</div>
+ 		
+ 		<!-- HtmlDropDown -->
+ 		<div class="html-dropdown dropdown">
+			<button class="btn btn-default dropdown-toggle form-control" type="button" data-toggle="dropdown">
+				<span class="html-text"></span>
+		    	<span class="caret"></span>
+		  	</button>
+		  	<ul class="dropdown-menu"></ul>
+		</div>
+ 		
+ 		<!-- HtmlDropDownAuto -->
+ 		<div class="html-dropdown-auto input-group input-group-sm prop-label">
+ 			<input class="html-text form-control" class="form-control">
+ 		</div>
+ 				
+ 		<!-- HtmlDialog -->
+ 		<div class="html-dialog modal fade" tabindex="-1">
+		  <div class="modal-dialog modal-sm">
+		    <div class="modal-content">
+		      <div class="modal-header">
+		        <button type="button" class="close" data-dismiss="modal">&times;</button>
+		      </div>
+		      <div class="modal-body"></div>
+		      <div class="modal-footer"></div>
+		    </div><!-- /.modal-content -->
+		  </div><!-- /.modal-dialog -->
+		</div><!-- /.modal -->
+ 				
+	</div>
 		
 </body>
 </html>

@@ -1,19 +1,146 @@
 html, body {
 	height: 100%;
+	background: #FFF url(img/background.gif) repeat;
+}
+
+.wrapper {
+	background: transparent;
+  	background-color: transparent;
+  	margin: 0 auto;
+  	overflow: hidden;
+  	width: 90%;
+  	/*height: 100%;*/
+}
+
+.wrapper .border {
+	-moz-border-radius: 15px; 		/* Firefox */
+	-webkit-border-radius: 15px; 	/* Safari, Chrome */
+	-khtml-border-radius: 15px; 	/* Konqueror */
+	border-radius: 15px; 			/* CSS3 */  
+	-moz-box-shadow: 2px 2px 6px #999;
+	-webkit-box-shadow: 2px 2px 6px #999;  
+	box-shadow: 2px 2px 6px #999;
+	padding: 15px;
+	margin: 10px;
+	background-color: white;
+
+	height: calc(100% - 10px);
+}
+
+.wrapper .normal {
+	background-color: white;
+	width: 100%;
+}
+
+.wrapper hr {
+	margin-top: 7px;
+	margin-bottom: 8px;
+}
+
+.gfz-head {
+	height: 6em;
+	position: relative;
+}
+
+.gfz-logo {
+	margin-left: 10px;
+}
+
+.gfz-logo-small {
+	height: 3em;
+	display: none;
+	padding-right: 10px;
+}
+
+.gfz-wordmark {
+	margin-right: 10px;
+	padding-top: 31px;
+}
+
+.tridec-logo-small {
+	display: none;
+	width: auto;
+	height: 35px;
+	margin-top: 5px;
+}
+
+.tridec-logo {
+	width: auto;
+	height: 35px;
+}
+
+.nav_buttons {
+	margin-top: 0px;
+}
+
+.gfz-link a {
+	color: #00589C;
 }
         	
 .fullsize {
 	height: 100%;
 	width: 100%;
+	
+	/* fix what bootstrap has messed up */
+	padding-left: 0px;
+	padding-right: 0px;
 }
 
+.head-blk {
+	display: block;
+	list-style-type: none;
+	margin: 0px;
+	padding: 0px;
+}
+
+.head-right {
+	float: right;
+}
+
+.head-left {
+	float: left;	
+}
+
+.head-blk li {
+	float: left;
+	display: block;
+	margin-right: 10px;
+	margin-top: 20px;
+}
+
+.head-blk li a {
+	color: #00589C;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+.head-img li {
+	margin-top: 10px;
+	margin-left: 10px;
+}
+
+.head-buttons li {
+	margin-top: 12px;
+	margin-right: 20px;
+	margin-left: 10px;
+}
+
+.head-blk li a:hover {
+	color: #F60;
+}
+
+.clear {
+	clear: both;
+}
+	
 .headline {
-        height: 4em;
-        overflow-y: auto;
+    width: 100%;
 }
 
 .mainview {
-	height: calc(100% - 4em);
+	height: calc(100% - 4.5em);
+	padding-left: 15px;
+	padding-right: 15px;
 	display: none;
 }
 
@@ -36,35 +163,10 @@ html, body {
 	width: 100%;
 }
 
-.headline .navbar {
-	margin-bottom: 0px;
-}
-
-.headline .navbar-right img {
-	width: 100%;
-}
-
 .logo {
 	max-width: 50px;
 	height: auto;
 	outline: 1px solid black;
-}
-
-.nav_logo {
-	padding-right: 0px;
-}
-
-.nav_title {
-	padding-left: 0px;
-}
-
-.nav_buttons {
-	padding-right: 2em;
-}
-
-.title {
-	width: auto;
-	height: 35px;
 }
 	
 .right-col { 
@@ -99,7 +201,7 @@ html, body {
 	padding-left: 1em;
 }
     
-#sidebar, #saved, #custom, #timeline, #messages, #static {
+#sidebarTab, #saved, #custom, #timeline, #messages, #static {
 	position: absolute;
 	top: 3em;
 	left: 0px;
@@ -249,6 +351,7 @@ html, body {
 	margin-top: 0.2em;
 	margin-bottom: 0em;
 	width: 75%;
+	display: none;
 }
 
 .entry .process {
@@ -267,7 +370,6 @@ html, body {
 
 .entry .lnkLearn {
 	padding-right: 0.3em;
-	display: none;
 }
 
 .entry .lnkDelete {
@@ -355,7 +457,7 @@ html, body {
 
 .search-group {
 	height: 4em;
-	outline: 0.1em solid #acaaa7;
+	border: 0.1em solid #acaaa7;
 	padding-right: 1em;
 	padding-left: 1em;
 }
@@ -365,6 +467,14 @@ html, body {
 }
 
 #timeline-data {
+	position: absolute;
+	top: 4em;
+	bottom: 0px;
+	border-top: 0.1em;
+	padding-top: 0.1em;
+}
+
+#sidebar {
 	position: absolute;
 	top: 4em;
 	bottom: 0px;
@@ -557,102 +667,12 @@ pre {
 	width: 33.33%;
 }
 
-#splash {
-	position: relative;
-	height: 90%;
-	background-image: linear-gradient(#00579b 0%, #428bca 100%);
-	display: none;
-}
-
-#splash-content {
-	position: absolute;
-	top: 5%;
-	left: 5%;
-	width: 90%;
-	height: 90%;
-}
-
-#splash-video {
-	position: absolute;
-	left: 0%;
-	width: 66%;
-	height: 100%;
-}
-
-#splash-login {
-	position: absolute;
-	left: 68%;
-	width: 32%;
-	background-color: #f8f8f8;
-	top: 0px;
-	bottom: 0px;
-	margin: auto;
-    overflow-y: auto;
-	box-shadow: 0px 0px 5px 5px black;
-}
-
-#youtube {
-	position: absolute;
-	top: 0px;
-	bottom: 0px;
-	margin: auto;
-	box-shadow: 0px 0px 5px 5px black;
-}
-
-.splashForm {
-	/* position: relative; */
-	margin-left: 10%;
-	margin-right: 10%;
-	width: 80%;
-}
-
-#splashIcon i {
-	width: 100%;
-	text-align: center;
-	font-size: 500%;
-	padding-top: 5%;
-	padding-bottom: 5%;
-}
-
-#splashSignIn {
-	margin-top: 1em;
-}
-
-#splash-login h4 {
-	text-align: center;
-	padding-top: 0.5em;
-}
-
-#splash-login h3 {
-	text-align: center;
-}
-
-#splashStatus {
-	color: red;
-	/*padding-bottom: 0.5em;*/
-	text-align: center;
-	background: rgba(0,0,0,0.5);
-}
-
-#splash-table {
-	height: 100%;
-	width: 100%;
-	display: table;
-}
-
-#splash-lnkAcc {
-	width: 100%;
-	text-align: center;	
-    vertical-align : bottom;
-    height : 1px;
-    display : table-row;
-}
-
 #lnkUser {
 	display: none;
 	color: #333333;
 	cursor: default;
 	pointer-events: none;
+	font-weight: normal;
 }
 
 #mapview {
@@ -835,121 +855,240 @@ pre {
 	color: red;
 }
 
-#splash-new {
-	position: relative;
-	display: none;
-}
+/**** splash screen ****/
 
-#splash-new .section {
+#splash {
 	position: relative;
-	width: 100%;
-}
-
-#splash-new .section .image {
-	position: relative;
-	width: 100%;
-	z-index: 10;
-}
-
-#splash-new .section .overlay {
-	position: absolute;
-	top: 0px;
-	bottom: 0px;
-	margin: auto;
-	height: 100%;
-	width: 100%;
-}
-
-#splash-new .section .left {
-	position: relative;
-	width: 45%;
-	float: left;
+	/*display: none;*/
 	
-	margin: 2.5%;
-	margin-top: 4%;
-								
-	z-index: 100;
+	-moz-border-radius: 7px; /* Firefox */
+	-webkit-border-radius: 7px; /* Safari, Chrome */
+	-khtml-border-radius: 7px; /* Konqueror */
+	border-radius: 7px; /* CSS3 */
+	overflow: hidden;
+	margin: -5px;
+	/*margin-top: -15px;*/
 }
 
-#splash-new .section .right {
+#splash .section {
 	position: relative;
-	width: 45%;
-	float: left;
-		
-	margin: 2.5%;
-	margin-top: 4%;
-			
-	z-index: 100;
+	width: 100%;
 }
 
-#splash-new .section .clear {
+#splash .image {
+	/* force element to occupy the available space of the parent - even if it is empty */
+	height: 0px;
+	padding-top: 100%;
+	width: 100%;
+}
+
+#splash .section .clear {
 	position: relative;
 	clear: both;
 }
 
-#splash-new .section .back {
+#splash .section .back {
 	position: relative;
 	background-image: linear-gradient(#00579b 0%, #428bca 100%);
 }
 
-/* #A81511 */
-#splash-new .section .red {
-	background-image: linear-gradient(#9b000e 0%, #ca5a42 100%);
-}
-
-#splash-new .section .purple {
-	background-image: linear-gradient(#78009b 0%, #b542ca 100%);
-}
-
-#splash-new .slide {
-	height: 400px;
+#splash .slide {
+	height: 30vw;
 	width: 100%;
-	overflow: hidden;	
+	overflow: hidden;
 }
 
-#splash-new .video {
+#splash .video {
 	position: relative;
-	width: 40vw;
-	height: 22.5vw;
-	margin: auto;
+	width: 100%;
 	box-shadow: 0px 0px 2px 2px black;
+	display: inline-block;
+	margin-bottom: 2.5%;
 }
 
-#splash-new .video iframe {
+/* this is a CSS trick to force a specific ratio for a container */
+#splash .video:after {
+	padding-top: 56.25%; /* 16:9 ratio */
+    display: block;
+    content: '';
+}
+
+#splash .video iframe {
+	position: absolute;
+    top: 0; bottom: 0; right: 0; left: 0; /*fill parent*/
+}
+
+#splash .section .bg-image {
 	position: relative;
 	width: 100%;
-	height: 100%;
-}
-
-#splash-new .section .no {
-	position: relative;
-	width: 45%;
-	float: left;
-	padding: 1vw;
-			
-	margin-left: 2.5%;
-	margin-right: 2.5%;
-	margin-bottom: 2%;
-		
-	color: white;
-	font-size: 1.2vw;
+	background: url(img/head.sm.jpg) no-repeat;
+	background-size: cover;
 	
-	z-index: 100;
+	/*background-size: 100%;
+	height: 0px;
+	padding-top: 57%;*/
 }
 
-#splash-new .section .no h3 {
+#splash .section .overlay {
+	/*position: absolute;*/
+    top: 0; bottom: 0; right: 0; left: 0; /*fill parent*/
+    overflow-y: auto;
+}
+
+@media( min-width: 800px ) {
+
+	#splash .section .no {
+		position: relative;
+		width: 45%;
+		margin: 2.5%;
+			
+		color: white;
+		font-size: 1.2em;
+		
+		z-index: 100;
+	}
+	
+	#splash .section .fi {
+		position: relative;
+		width: 45%;
+		margin: 2.5%;
+	}
+	
+	#splash .section .float-l {
+		float: left;	
+	}
+	
+	#splash .section .float-r {
+		float: right;
+	}
+	
+	#splash .image-7 {
+		background: url(img/7.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-6 {
+		background: url(img/6.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-5 {
+		background: url(img/5.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-4 {
+		background: url(img/4.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-3 {
+		background: url(img/3.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-2 {
+		background: url(img/2.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-1 {
+		background: url(img/1.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-0 {
+		background: url(img/0.sm.jpg);
+		background-size: 100%;
+	}
+}
+
+@media( max-width: 800px ) {
+
+	#splash .section .no {
+		position: relative;
+		width: 90%;
+		margin-left: 5%;
+		margin-right: 5%;
+		padding-top: 5%;
+		padding-bottom: 5%;
+			
+		color: white;
+		font-size: 1.2em;
+		
+		z-index: 100;
+	}
+	
+	#splash .section .fi {
+		position: relative;
+		
+		/* center horizontal */
+		width: 90%;
+		margin-left: 5%;
+		margin-right: 5%;
+									
+		z-index: 100;
+	}
+	
+	#splash .section .margin-t {
+		margin-top: 5%;
+	}
+	
+	#splash .image-7 {
+		background: url(img/7.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-6 {
+		background: url(img/6.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-5 {
+		background: url(img/5.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-4 {
+		background: url(img/4.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-3 {
+		background: url(img/3.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-2 {
+		background: url(img/2.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-1 {
+		background: url(img/1.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-0 {
+		background: url(img/0.xs.jpg);
+		background-size: 100%;
+	}
+}
+	
+#splash .section .no h3 {
 	font-family: 'Prosto One', cursive;
+	margin-top: 0px;
 }
 
-#splash-new .section .no a {
+#splash .section .no a {
 	color: #FD7B39;
 }
 
-#splash-new .nav-arrow {
+#splash .nav-arrow {
 	position: fixed;
-	height: 1em;
+	height: 3em;
 	top: calc( 100% - 1.5em );
-	right: 0.3em;
+	right: 0em;
 	font-size: 3em;
 	z-index: 1000;
 	color: #111111;
@@ -957,47 +1096,216 @@ pre {
 	cursor: pointer;
 }
 
-#splash-new .nav-arrow:hover {
+#splash .nav-arrow:hover {
 	color: #bbbbbb;
 }
 
-#splash-new-login {
-	position: absolute;
-	left: 0px;
+#splash .login {
 	width: 100%;
-	top: 0px;
-	bottom: 0px;
-	margin: auto;
-    overflow-y: auto;
-    
     box-shadow: 0px 0px 2px 2px black;
     background: rgba(0,0,0,0.25);
     color: white;
 }
 
-#splash-new-login h4 {
+#splash .login h4 {
 	text-align: center;
 	padding-top: 0.5em;
 	
 	color: white;
 }
 
-#splash-new-login h3 {
+#splash .login h3 {
 	text-align: center;
 	
 	color: white;
 }
 
-#splash-new-login button {
+#splash .login button {
 	background-color: #00579b;
+	margin-bottom: 2em;
 }
 
-#splash-new-login a {
+#splash .login .cells a, #splash .login .cells span {
 	color: white;
 	font-weight: bold;
 	background: rgba(0,0,0,0.5);
+	display: table-cell;
 }
+
+#splash .login .form {
+	margin-left: 10%;
+	margin-right: 10%;
+	width: 80%;
+}
+
+#splash .login .icon i {
+	width: 100%;
+	text-align: center;
+	font-size: 500%;
+	padding-top: 5%;
+	padding-bottom: 5%;
+}
+
+#splash .login .lnk {
+	width: 100%;
+	text-align: center;	
+    vertical-align : bottom;
+    height : 1px;
+    display : table-row;
+}
+
+#splash .login .cells {
+	display : table;
+	width: 100%;
+}
+
+#splash .login #splashSignIn {
+	margin-top: 1em;
+}
+
+#splash .login #splashStatus {
+	color: red;
+	/*padding-bottom: 0.5em;*/
+	text-align: center;
+	background: rgba(0,0,0,0.5);
+}
+
+#splash-table {
+	height: 100%;
+	width: 100%;
+	display: table;
+}
+
+/********************/
 
 #propTabNotify {
 	display: none;
+}
+
+.ui-autocomplete {
+	/* needed to display the autocomplete menu of jQuery UI correctly with a modal Bootstrap dialog */
+	z-index: 30000;
+	
+	max-height: 150px;
+	overflow-x: hidden;
+    overflow-y: auto;
+}
+
+#propNotify input[type='checkbox'] {
+	margin-right: 25px;
+	margin-left: 25px;
+	margin-top: 10px;
+}
+
+#filterWidget {
+	height: 4em;
+	border: 0.1em solid #acaaa7;
+	padding-right: 1em;
+	padding-left: 1em;
+	padding-top: 1em;
+}
+
+#filterWidget input[type='checkbox'] {
+	vertical-align: text-top;
+	margin-right: 5px;
+	margin-left: 10px;
+	transform: scale(1.2);
+	-webkit-transform: scale(1.2);
+}
+
+.admin .modal-header {
+	padding-bottom: 0px;
+}
+
+.admin .nav-tabs {
+	border-bottom: 0px;
+}
+
+.admin .secPerm .html-checkbox {
+	width: 45%;
+	display: inline-block;
+}
+
+.admin .secButtons {
+	padding-top: 3em;
+	padding-bottom: 1em;
+}
+
+.admin .secButtons button {
+	margin-left: 0.2em;
+	margin-right: 0.2em;
+}
+
+.templates {
+	display: none;
+}
+
+.popovers {
+	font-size: 0.8em;
+	display: none;
+}
+
+/* HtmlDynGroup */
+
+.html-dyngroup {
+	outline: 0.2em solid #eeeeee;
+	/*padding-bottom: 0.5em;*/
+	margin-top: 1em;
+	width: auto;
+}
+
+.html-dyngroup .html-header {
+	padding-top: 0.2em;
+	padding-left: 0.2em;
+	overflow: auto;
+	border-bottom: 0.2em solid #eeeeee;
+	padding-bottom: 0.2em;
+}
+
+.html-dyngroup .html-header .html-label {
+	float: left;
+	margin-left: 0.5em;
+	font-size: 1.2em;
+}
+
+.html-dyngroup .html-header .html-arrow {
+	margin-right: 0.5em;
+	float: right;
+}
+
+/* HtmlCheckBox */
+.html-checkbox {
+	margin-left: 0.5em;
+	margin-top: 0.5em;
+}
+
+.html-checkbox .html-label {
+	margin-left: 0.3em;
+}
+
+/* HtmlDropDown */
+.html-dropdown button {
+	line-height: normal;
+	height: inherit;
+}
+
+.html-dropdown .dropdown-menu {
+	width: 100%;
+	text-align: center;
+}
+
+/* HtmlDropDownAuto */
+.html-dropdown-auto {
+	padding: 0px;
+}
+
+.ui-menu .ui-menu-item {
+	font-size: 12px;
+	font-family: inherit;
+}
+
+/* HtmlBlock */
+.html-block {
+	width: 100%;
+	/*border: 2px solid black;*/	
 }
