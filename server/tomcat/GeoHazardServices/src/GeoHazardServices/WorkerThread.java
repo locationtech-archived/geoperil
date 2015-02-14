@@ -2,7 +2,6 @@ package GeoHazardServices;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -11,8 +10,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Writer;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -49,6 +46,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	private TaskParameter task;
 	
 	private HashMap<String, DBObject> tfps;
+	private HashMap<String, DBObject> tsps;
 	
 	public WorkerThread( PriorityBlockingQueue<WorkerThread> queue,
 						 String workdir ) throws IOException {
@@ -232,6 +230,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			return 1;
 		
 		tfps = new HashMap<String, DBObject>();
+		tsps = new HashMap<String, DBObject>();
 		
 		DBObject tfpQuery = null;
 		DBCursor cursor;
@@ -285,6 +284,28 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		}
 		cursor.close();
 		
+		/* process TSPs */
+		cursor = dbclient.getDB( "easywave" ).getCollection("tsps").find();
+		for( DBObject obj: cursor ) {
+			String id = (String) obj.get( "_id" ).toString();
+			Double lat = (Double) obj.get( "lat_sea" );
+			Double lon = (Double) obj.get( "lon_sea" );
+			Number cfcz = (Number) obj.get( "FID_IO_DIS" );
+			
+			DBObject init = new BasicDBObject();
+			init.put( "ewh", 0.0 );
+			init.put( "eta", -1.0 );
+			init.put( "tsp", id );
+			init.put( "EventID", task.id );
+			init.put( "cfcz", cfcz );
+			tsps.put( "tsp_" + id, init );
+			
+			String poi = "tsp_" + id + "\t" + lon + "\t" + lat;
+			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
+		}
+		cursor.close();
+		
+		/* process stations */
 		DBObject userObj = new BasicDBObject("_id", task.user.objId );
 		BasicDBList ccodes = null;
 		DBObject filter = null;
@@ -329,8 +350,6 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			
 			String poi = "s_" + id + "\t" + lon + "\t" + lat;
 			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
-			
-			System.out.println( id );
 		}
 		
 		sshCon[0].out.flush();
@@ -683,9 +702,11 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		    	if( data[0].startsWith("s_") )
 		    		continue;
 		    	
-		    	DBObject tfp = tfps.get( data[0] );
-		    	tfp.put( "eta", Double.valueOf( data[1] ) );
-		    	tfp.put( "ewh", Double.valueOf( data[2] ) );
+		    	/* distinguish between TFP ans TSP */
+		    	DBObject poi;
+		    	poi = data[0].startsWith("tsp_") ? tsps.get( data[0] ) : tfps.get( data[0] );
+		    	poi.put( "eta", Double.valueOf( data[1] ) );
+		    	poi.put( "ewh", Double.valueOf( data[2] ) );
 		    }
 		    
 		    reader.close();
@@ -694,6 +715,35 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		    
 		    for( DBObject obj: tfps.values() ) {
 		    	coll.insert( obj );
+		    }
+		    
+		    coll = dbclient.getDB( "easywave" ).getCollection("comp");
+		    
+		    HashMap<Integer,Double> maxEWH = new HashMap<Integer, Double>();
+		    HashMap<Integer,Double> minETA = new HashMap<Integer, Double>();
+		    for( DBObject obj: tsps.values() ) {
+		    	obj.put("type", "TSP");
+		    	coll.insert( obj );
+		    	
+		    	Double ewh = (Double) obj.get("ewh");
+		    	Double eta = (Double) obj.get("eta");
+		    	Integer cfcz = (Integer) obj.get("cfcz");
+		    	if( ! maxEWH.containsKey(cfcz) ) {
+		    		maxEWH.put(cfcz, ewh);
+		    		minETA.put(cfcz, eta);
+		    	}
+		    	maxEWH.put(cfcz, Math.max( maxEWH.get(cfcz), ewh ) );
+		    	minETA.put(cfcz, Math.min( minETA.get(cfcz), eta ) );    	
+		    }
+		    
+		    for( Integer key: maxEWH.keySet() ) {
+		    	DBObject cfz = new BasicDBObject();
+		    	cfz.put("code", key);
+		    	cfz.put("type", "CFZ");
+		    	cfz.put("ewh", maxEWH.get(key));
+		    	cfz.put("eta", minETA.get(key));
+		    	cfz.put( "EventID", id );
+		    	coll.insert( cfz );
 		    }
 			
 		} catch (IOException e) {
@@ -769,14 +819,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		    			    	
 		    	/* extract value of each station for the next timestamp */
 		    	for( int i = 0; i < statIds.size(); i++ ) {   		
-		    		
-		    		/*String params = "apiver=1&inst=gfz&secret=_123abc_" + 
-		    						"&timestamp=" + stamp +
-		    						"&reltime=" + rel_time +
-									"&station=" + statNames.get(i) +
-									"&value=" + data[ statIds.get(i) ] +
-									"&evid=" + task.id;*/
-		    		
+		    				    		
 		    		/* write the simulation data directly into the database because of performance reasons */
 		    		obj = new BasicDBObject();
 		    		obj.put("inst", task.user.inst );
@@ -787,12 +830,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		    		obj.put("evid",task.id);
 		    				    
 		    		objList.add( obj );
-		    		
-		    		//simData.insert( obj, WriteConcern.UNACKNOWLEDGED );
-		    		
-		    		//sendPost( "http://localhost/feedersrv/feedsealevel", params );
-		    	}
-		    	
+		    	}	
 		    }
 			
 			reader.close();
@@ -812,37 +850,6 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		return 0;
 	}
 	
-	private void sendPost( String url, String params ) {
-		
-		HttpURLConnection con = null;
-		
-		try {
-			con = (HttpURLConnection) new URL( url ).openConnection();
-			con.setRequestMethod("POST");
-			con.setDoOutput(true);
-			DataOutputStream wr = new DataOutputStream( con.getOutputStream() );
-			wr.writeBytes(params);
-			wr.flush();
-			wr.close();
-			
-			BufferedReader in = new BufferedReader(
-			        new InputStreamReader(con.getInputStream()));
-			String inputLine;
-			StringBuffer response = new StringBuffer();
-	 
-			while ((inputLine = in.readLine()) != null) {
-				response.append(inputLine);
-			}
-			in.close();
-	 
-			//print result
-			//System.out.println(response.toString());
-			
-		} catch (IOException e) {
-			return;
-		}
-	}
-
 	@Override
 	public int compareTo( WorkerThread o ) {
 		return priority.compareTo( o.priority );
