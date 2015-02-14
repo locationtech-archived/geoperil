@@ -277,4 +277,24 @@ class WebGuiSrv(Base):
             return jssuccess(station = station, **res)
         return jsdeny()
 
+    @cherrypy.expose
+    def getcomp(self, evid, kind):
+        user = self.getUser()
+        if user is not None:
+           res = list( self._db["comp"].find({"EventID":evid, "type":kind}) )
+           return jssuccess(comp=res)
+        return jsdeny()
+
+    @cherrypy.expose
+    def getjets(self, evid):
+        user = self.getUser()
+        if user is not None:
+           params = self._db["settings"].find({"type":"jet_color"})
+           pmap = dict( (str(p["threshold"]), p["color"]) for p in params )
+           jets = list( self._db["results2"].find({"id":evid}).sort([("ewh",1)]) )
+           for j in jets:
+               j["color"] = pmap[j["ewh"]]
+           return jssuccess(jets = jets)
+        return jsdeny()
+
 application = startapp( WebGuiSrv )
