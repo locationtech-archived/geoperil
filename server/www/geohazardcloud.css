@@ -1309,3 +1309,33 @@ pre {
 	width: 100%;
 	/*border: 2px solid black;*/	
 }
+
+/* */
+#layer-switcher {
+	position: absolute;
+	right: 0px;
+	bottom: 6em;
+	height: 10em;
+	background-color: white;
+	border-top-left-radius: 1em 1em;
+	border-bottom-left-radius: 1em 1em;
+	
+}
+
+#layer-switcher .toggle {
+	display: inline-block;
+}
+
+#layer-switcher .toggle a span {
+	height: 2em;
+	padding-top: 4em;
+}
+
+#layer-switcher .content {
+	display: inline-block;
+	height: 100%;
+	vertical-align: middle;
+	padding: 0.5em;
+	padding-right: 2em;
+	border-left: 1px solid black;	
+}

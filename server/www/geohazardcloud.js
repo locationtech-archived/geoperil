@@ -96,14 +96,61 @@ function Earthquake(meta) {
 
 	ICallbacks.call( this );
 	
-	this.stations = null;
-
-	/*
-	 * add all attributes of the passed meta object to this object - be careful
-	 * to not override existing fields
-	 */
-	$.extend(this, meta);
-
+	this.init = function(meta) {
+		/*
+		 * add all attributes of the passed meta object to this object - be careful
+		 * to not override existing fields
+		 */
+		$.extend(this, meta);		
+		this.stations = null;
+		this.cfzs = new Container(sort_string.bind(this,'code'));
+		
+		this.jets = new Container(sort_string.bind(this,'ewh'));
+		
+		/* we also want to be notified if the selection status of this event has changed */
+		this.setCallback('select', this.select);
+	};
+	
+	this.select = function() {
+		if( this.selected ) {
+			this.loadStations();
+			this.load();
+		}
+	};
+	
+	this.load = function() {
+		if( this.selected ) {
+			this.loadCFZs();
+			this.loadTsunamiJets();
+		}
+	};
+	
+	this.loadTsunamiJets = function() {
+		ajax('webguisrv/getjets', {evid:this._id}, (function(result) {
+			/* traverse different EWH levels */
+			for (var i = 0; i < result.jets.length; i++) {
+				/* each level contains multiple polygons */
+				var jets = result.jets[i].points;
+				for (var j = 0; j < jets.length; j++) {
+					/* construct a single polygon here */
+					var pol = new Polygon( [jets[j]], result.jets[i].color );
+					pol.polygon.setOptions({zIndex:i});
+					pol.ewh = result.jets[i].ewh;
+					this.jets.insert(pol);
+				}
+			}
+			this.notifyOn('update');
+		}).bind(this));
+	};
+	
+	this.loadCFZs = function() {
+		ajax('webguisrv/getcomp', {evid:this._id, kind:'CFZ'}, (function(result) {
+			for( var i = 0; i < result.comp.length; i++ )
+				this.cfzs.insert( new CFZResult(result.comp[i]) );
+			this.notifyOn('update');
+		}).bind(this));
+	};
+		
 	this.loadStations = function() {
 
 		/* nothing to do if stations were already loaded */
@@ -132,7 +179,7 @@ function Earthquake(meta) {
 		var lon = this.prop.longitude;
 
 		/* create new container that holds all the stations */
-		this.stations = new Container('name', sort_dist.bind(this, lat, lon));
+		this.stations = new Container(sort_dist.bind(this, lat, lon));
 
 		/* instantiate each station accordingly and add it to the data container */
 		var list = result.stations;
@@ -183,6 +230,8 @@ function Earthquake(meta) {
 	this.notify = function() {
 		this.notifyOn('update');
 	};
+	
+	this.init(meta);
 }
 
 function EntryMap() {
@@ -228,12 +277,10 @@ function EntryMap() {
 
 Container.prototype = new ICallbacks();
 
-function Container(key, sortFun) {
+function Container(sortFun) {
 
 	ICallbacks.call( this );
 	
-	/* TODO: map can be removed */
-	this.map = {};
 	this.list = [];
 	this.sortFun = sortFun;
 
@@ -265,10 +312,7 @@ function Container(key, sortFun) {
 	};
 
 	this.insert = function(item) {
-
-		/* TODO: remove map, but check dependencies */
-		this.map[item[key]] = item;
-
+		
 		for (var i = 0; i < this.list.length; i++) {
 
 			if (this.sortFun(item, this.list[i]) == -1) {
@@ -529,7 +573,7 @@ function Station(meta, eq) {
 					 * if the data has changed, notify everyone who is
 					 * interested
 					 */
-					console.log(this.name, "live notifyUpdate");
+					//console.log(this.name, "live notifyUpdate");
 					this.notifyUpdate();
 
 				} else if (reactivated) {
@@ -538,7 +582,7 @@ function Station(meta, eq) {
 					 * nothing has changed after re-activating, inform listeners
 					 * about that
 					 */
-					console.log(this.name, "live notifyNoUpdate");
+					//console.log(this.name, "live notifyNoUpdate");
 					this.notifyNoUpdate();
 				}
 
@@ -569,7 +613,7 @@ function Station(meta, eq) {
 				 * nothing has changed after re-activating, inform listeners
 				 * about that
 				 */
-				console.log(this.name, "sim notifyNoUpdate");
+				//console.log(this.name, "sim notifyNoUpdate");
 			this.notifyNoUpdate();
 			return;
 		}
@@ -608,7 +652,7 @@ function Station(meta, eq) {
 						this.curSimTime = new Date(result.last * 1000);
 
 					/* notify everyone who is interested */
-					console.log(this.name, "sim notifyUpdate");
+					//console.log(this.name, "sim notifyUpdate");
 					this.notifyUpdate();
 
 				} else if (reactivated) {
@@ -617,7 +661,7 @@ function Station(meta, eq) {
 					 * nothing has changed after re-activating, inform listeners
 					 * about that
 					 */
-					console.log(this.name, "sim notifyNoUpdate");
+					//console.log(this.name, "sim notifyNoUpdate");
 					this.notifyNoUpdate();
 				}
 
@@ -774,8 +818,8 @@ function Chart(data, width, height) {
 	};
 
 	this.ready = function() {
-		console.log("Chart", this.data.name, "drawn in", Date.now()
-				- this.profile.stime, "ms");
+		/*console.log("Chart", this.data.name, "drawn in", Date.now()
+				- this.profile.stime, "ms");*/
 		this.div.find('.spanLoad').css('display', 'none');
 	};
 
@@ -2257,16 +2301,22 @@ function Filter(div) {
 	this.init();
 }
 
+GlobalControl.prototype = new ICallbacks();
+
 function GlobalControl() {
 
+	ICallbacks.call(this);
+	
 	// this.map = map;
 	this.filterWidget = new Filter($('#filterWidget'));
 
-	eqlist = new Container('id', sort_date.bind(this, -1));
-	saved = new Container('id', sort_timeline);
-	timeline = new Container('id', sort_timeline);
-	messages = new Container('id', sort_date.bind(this, -1));
-	shared = new Container('id', sort_date.bind(this, -1));
+	eqlist = new Container(sort_date.bind(this, -1));
+	saved = new Container(sort_timeline);
+	timeline = new Container(sort_timeline);
+	messages = new Container(sort_date.bind(this, -1));
+	shared = new Container(sort_date.bind(this, -1));
+	
+	this.layers = new Container(sort_string.bind(this,'name'));
 		
 	this.main = function() {
 
@@ -2309,7 +2359,18 @@ function GlobalControl() {
 		w.create();
 		this.widgets['tabStatic'] = w;
 		
+		/* register jquery event handlers */
 		$('.main-tabs > li').click(this.tabChanged.bind(this));
+		$('#btnDeselect').click(this.deselect.bind(this));
+		
+		/* add layers */
+		this.layers.insert( new CFZLayer('CFZ-Layer', map) );
+		this.layers.insert( new JetLayer('Tsunami-Jets', map) );	
+		for( var i = 0; i < this.layers.length(); i++ ) {
+			var layer = this.layers.get(i);
+			this.setCallback('select', layer.setData.bind(layer));
+		}	
+		new LayerSwitcher( $('#layer-switcher'), this.layers );
 	};
 	
 	this.tabChanged = function(e) {
@@ -2327,7 +2388,14 @@ function GlobalControl() {
 			eq = data.parentEvt;
 			markMsgAsDisplayed(data);	
 		}
-		visualize(eq._id);
+		this.notifyOn('select',eq);
+		visualize(eq);
+	};
+	
+	this.deselect = function() {
+		this.notifyOn('select',null);
+		/* TODO: for compatibility reasons */
+		deselect();
 	};
 
 	/* TODO: refactor */
@@ -2709,6 +2777,72 @@ function EQWidget(data, marker) {
 		this.data.setCallback('copy', this.showCopyInfo.bind(this));
 		this.data.setCallback('select', this.setSelect.bind(this));
 		this.marker = marker;
+		
+		/* set event listener */
+		this.div.mouseover(this.highlight.bind(this, true));
+		this.div.mouseout(this.highlight.bind(this, false));
+
+		this.div.find('.region').click(
+				this.notifyOn.bind(this, 'clk_entry', this.data));
+		this.div.find('.lnkTimeline').click(
+				this.notifyOn.bind(this, 'clk_timeline', this.data));
+		this.div.find('.lnkCopy').click(
+				this.notifyOn.bind(this, 'clk_copy', this.data));
+		this.div.find('.info a').click(
+				this.notifyOn.bind(this, 'clk_info', this.data));
+		this.div.find('.lnkEdit').click(
+				this.notifyOn.bind(this, 'clk_edit', this.data));
+		this.div.find('.lnkSend').click(
+				this.notifyOn.bind(this, 'clk_send', this.data));
+		this.div.find('.lnkStatic').click(
+				this.notifyOn.bind(this, 'clk_share', this.data));
+		this.div.find('.chk_grid').click(
+				this.onGridChange.bind(this));
+		this.div.find('.info a').click(
+				(function(){this.div.find('.info').hide();}).bind(this));
+
+		/* set popovers */
+		var options = {
+			placement : 'bottom',
+			title : 'Info',
+			html : true,
+			container : this.div,
+			animation : false
+		};
+
+		options.content = $('.popovers .learn').html();
+		this.div.find('.lnkLearn').popover(options);
+
+		options.placement = 'top';
+		options.title = 'Modify and reprocess';
+		this.div.find('.lnkEdit').tooltip(options);
+
+		options.title = 'Learn more';
+		this.div.find('.lnkLearn').tooltip(options);
+
+		options.title = 'Send message';
+		this.div.find('.lnkSend').tooltip(options);
+
+		options.title = 'Share map';
+		this.div.find('.lnkStatic').tooltip(options);
+
+		options.title = 'Show timeline';
+		this.div.find('.lnkTimeline').tooltip(options);
+
+		options.title = 'Copy to my list';
+		this.div.find('.lnkCopy').tooltip(options);
+		
+		/* the user can delete his own events */
+		if (curuser != null && id_equals(curuser._id, this.data.user)) {
+				
+			this.div.find('.lnkDelete').show();
+			this.div.find('.lnkDelete').click(
+					this.notifyOn.bind(this, 'clk_delete', this.data));
+
+			options.title = 'Delete entry';
+			this.div.find('.lnkDelete').tooltip(options);
+		}
+		
 		this.update();
 	};
 	
@@ -2811,7 +2945,7 @@ function EQWidget(data, marker) {
 		/* TODO: replace checkPerm() with perm.check() */
 		if (checkPerm('vsdb'))
 			this.div.find('.accel').html(
-					'Acceleration ' + data.getAccel() + 'x');
+					'Acceleration ' + this.data.getAccel() + 'x');
 
 		if (!this.data.extern) {
 
@@ -2832,71 +2966,7 @@ function EQWidget(data, marker) {
 
 			this.div.find('.lnkCopy').show();
 		}
-
-		/* set event listener */
-		this.div.mouseover(this.highlight.bind(this, true));
-		this.div.mouseout(this.highlight.bind(this, false));
-
-		this.div.find('.region').click(
-				this.notifyOn.bind(this, 'clk_entry', this.data));
-		this.div.find('.lnkTimeline').click(
-				this.notifyOn.bind(this, 'clk_timeline', this.data));
-		this.div.find('.lnkCopy').click(
-				this.notifyOn.bind(this, 'clk_copy', this.data));
-		this.div.find('.info a').click(
-				this.notifyOn.bind(this, 'clk_info', this.data));
-		this.div.find('.lnkEdit').click(
-				this.notifyOn.bind(this, 'clk_edit', this.data));
-		this.div.find('.lnkSend').click(
-				this.notifyOn.bind(this, 'clk_send', this.data));
-		this.div.find('.lnkStatic').click(
-				this.notifyOn.bind(this, 'clk_share', this.data));
-		this.div.find('.chk_grid').click(
-				this.onGridChange.bind(this));
-		this.div.find('.info a').click(
-				(function(){this.div.find('.info').hide();}).bind(this));
-
-		/* set popovers */
-		var options = {
-			placement : 'bottom',
-			title : 'Info',
-			html : true,
-			container : this.div,
-			animation : false
-		};
-
-		options.content = $('.popovers .learn').html();
-		this.div.find('.lnkLearn').popover(options);
-
-		options.placement = 'top';
-		options.title = 'Modify and reprocess';
-		this.div.find('.lnkEdit').tooltip(options);
-
-		options.title = 'Learn more';
-		this.div.find('.lnkLearn').tooltip(options);
-
-		options.title = 'Send message';
-		this.div.find('.lnkSend').tooltip(options);
-
-		options.title = 'Share map';
-		this.div.find('.lnkStatic').tooltip(options);
-
-		options.title = 'Show timeline';
-		this.div.find('.lnkTimeline').tooltip(options);
-
-		options.title = 'Copy to my list';
-		this.div.find('.lnkCopy').tooltip(options);
 		
-		/* the user can delete his own events */
-		if (curuser != null && id_equals(curuser._id, this.data.user)) {
-				
-			this.div.find('.lnkDelete').show();
-			this.div.find('.lnkDelete').click(
-					this.notifyOn.bind(this, 'clk_delete', this.data));
-
-			options.title = 'Delete entry';
-			this.div.find('.lnkDelete').tooltip(options);
-		}	
 		this.setSelect();
 	};
 	
@@ -3155,6 +3225,12 @@ function ICallbacks() {
 		/* get next id that identifies this callback - can be used to deregister later */
 		var cnt = this.callbacks[action].cnt++;
 		this.callbacks[action][cnt] = func;
+		return cnt;
+	};
+	
+	this.delCallback = function(action,cid) {
+		if( cid )
+			delete this.callbacks[action][cid];
 	};
 
 	this.notifyOn = function(action) {
@@ -3173,6 +3249,53 @@ function ICallbacks() {
 			if( this.callbacks[action][i] )
 				this.callbacks[action][i].apply(this, vargs);
 	};
+}
+
+function LayerSwitcher(div, layers) {
+	
+	this.init = function(div, layers) {
+		this.div = div;
+		this.layers = layers;
+		this.content = this.div.find('.content');
+		this.icon = this.div.find('.toggle span');
+		this.icon.click(this.onClick.bind(this));
+		this.expand(false);
+		this.update();
+	};
+	
+	this.toggle = function() {
+		this.icon.removeClass('glyphicon-chevron-left');
+		this.icon.removeClass('glyphicon-chevron-right');
+		
+		if( this.open ) {
+			this.icon.addClass('glyphicon-chevron-right');
+			this.content.show();
+		} else {
+			this.icon.addClass('glyphicon-chevron-left');
+			this.content.hide();
+		}
+	};
+	
+	this.update = function() {
+		this.content.html('<h4>Layers:</h4>');
+		for(var i = 0; i < this.layers.length(); i++) {
+			var layer = this.layers.get(i);
+			var cbox = new HtmlCheckBox(layer.name, true);
+			cbox.setCallback('change', layer.show.bind(layer));
+			this.content.append(cbox.div);
+		}
+	};
+	
+	this.expand = function(open) {
+		this.open = open;
+		this.toggle();
+	};
+	
+	this.onClick = function() {
+		this.expand(! this.open);
+	};
+	
+	this.init(div, layers);
 }
 
 var eqlist;
@@ -3291,7 +3414,7 @@ function initialize() {
 		chart : new MainChartDialog($('#chartDia'))
 	};
 
-	stations = new Container('name', sort_string.bind(this, 'name'));
+	stations = new Container(sort_string.bind(this, 'name'));
 	stationView = new StationView($('#stat-dias'), stations, $('#stat-chk').is(
 			':checked'));
 	canvas = new Canvas($('#canvas-line'), null);
@@ -3303,14 +3426,11 @@ function initialize() {
 	admin = new AdminDialog();
 	$("#btnAdmin").click(admin.show.bind(admin));
 	
-	cfcz_test();
-
 	$("#btnSignIn").click(drpSignIn);
 	$("#btnSignOut").click(signOut);
 	$("#btnProp").click(showProp);
 	$("#btnStart").click(compute);
 	$("#btnClear").click(clearForm);
-	$("#btnDeselect").click(deselect);
 
 	$(".main-tabs > li").click(tabChanged);
 
@@ -3425,10 +3545,8 @@ function getEvents(callback) {
 				var entry = entries.getOrInsert(new Message(msglist[i]));
 				messages.insert(entry);
 
-				if (entry.parentEvt) {
-					entry.parentEvt = new Earthquake(entry.parentEvt);
-					entries.getOrInsert(entry.parentEvt);
-				}
+				if (entry.parentEvt)
+					entry.parentEvt = entries.getOrInsert(new Earthquake(entry.parentEvt));
 			}
 
 			eqlist.notifyOn('change');
@@ -3532,7 +3650,12 @@ function getUpdates(timestamp) {
 						timeline.insert(entry);
 						sadd = true;
 					}
-
+					
+					/* a new custom earthquake event can only arrive after
+					 * a manual recomputation - thus select it here */
+					/* TODO: remove dependency to global instance */
+					global.vis(entry);
+					
 				} else if (obj['event'] == 'progress') {
 
 					/*
@@ -3543,7 +3666,7 @@ function getUpdates(timestamp) {
 						show = true;
 
 					entries.get(id).process = obj.process;
-					entries.get(id).notify();
+					entries.get(id).notifyOn('update');
 
 				} else if (obj['event'] == 'msg_sent'
 						|| obj['event'] == 'msg_recv') {
@@ -3552,10 +3675,8 @@ function getUpdates(timestamp) {
 					messages.insert(entry);
 					msgadd = true;
 
-					if (entry.parentEvt) {
-						entry.parentEvt = new Earthquake(entry.parentEvt);
-						entries.getOrInsert(entry.parentEvt);
-					}
+					if (entry.parentEvt)
+						entry.parentEvt = entries.getOrInsert(new Earthquake(entry.parentEvt));
 				}
 			}
 
@@ -3579,8 +3700,8 @@ function getUpdates(timestamp) {
 
 				var filled = entries.get(active)['process'][0]['progress'];
 				if (filled == 100) {
+					entries.get(active).load();
 					getPois(entries.get(active), null);
-					getWaveHeights(entries.get(active));
 				}
 
 				getIsos(entries.get(active), function() {
@@ -3619,57 +3740,6 @@ function removeMarker(widget) {
 		if ($(this).data("marker"))
 			$(this).data("marker").setMap(null);
 	});
-}
-
-function updateProgress(id, process, list) {
-
-	for (var i = 0; i < list.length; i++) {
-
-		if (list[i]['_id'] == id) {
-
-			if (list[i]['process'].length == 0) {
-				list[i]['process'].push(null);
-			}
-
-			list[i]['process'][0] = process;
-
-			var filled = process['progress'];
-
-			for ( var widget in list[i].div) {
-
-				var div = list[i].div[widget];
-
-				var grid = process['grid_dim'];
-				var latMin = grid['latMin'].toFixed(2);
-				var lonMin = grid['lonMin'].toFixed(2);
-				var latMax = grid['latMax'].toFixed(2);
-				var lonMax = grid['lonMax'].toFixed(2);
-
-				div.find('.chk_grid').css('display', 'inline');
-				div.find('.status').css('display', 'none');
-				div.find('.progress-bar').css('width', filled + "%");
-				div.find('.progress').css('display', 'block');
-				div.find('.progress-bar').css('width', filled + "%");
-				div.find('.resource').html(process['resources']);
-				div.find('.calc').html(
-						'Runtime ' + process['calcTime'] / 1000
-								+ ' sec &#183; SimDuration '
-								+ process['simTime'] + " min");
-				div.find('.grid').html(
-						'Grid ' + process['resolution']
-								+ '&prime; &#183; BBox (' + latMin + ', '
-								+ lonMin + '), (' + latMax + ', ' + lonMax
-								+ ')');
-
-				if (filled == 100) {
-					div.find('.progress').css('display', 'none');
-					div.find('.status').html(simText['done']);
-					div.find('.status').css('display', 'inline');
-				}
-
-			}
-		}
-	}
 }
 
 function zeroPad(num, count) {
@@ -3733,38 +3803,16 @@ function getMarkerColor(mag) {
 	return color;
 }
 
-function entryOnClick() {
-
-	var entry = $(this).parents(".entry").data("entry");
-	var id = entry['_id'];
-
-	/*
-	 * allow external events (e.g. a shared link) to be displayed without the
-	 * need to sign in
-	 */
-	if (!entry.extern && !loggedIn) {
-
-		signTarget = visualize.bind(this, id);
-		$("#SignInDialog").modal("show");
-		return;
-	}
-
-	visualize(id);
-}
-
-function visualize(id) {
-
-	var entry = entries.get(id);
+function visualize(entry) {
 
 	setMarkerPos(markers.active, entry.prop.latitude, entry.prop.longitude);
 	markers.active.setMap(map);
 
-	if (active != id) {
+	if (active != entry._id) {
 
 		deselect(active);
-		select(id);
+		select(entry);
 
-		getWaveHeights(entry);
 		getIsos(entry, null);
 		getPois(entry, null);
 
@@ -3878,65 +3926,6 @@ function getIsos(entry, callback) {
 			if (callback != null)
 				callback();
 
-		}
-	});
-
-}
-
-function getWaveHeights(entry) {
-
-	var id = entry['_id'];
-
-	if (!$.isEmptyObject(entry['heights'])) {
-		showWaveHeights(id, true);
-		return;
-	}
-
-	$.ajax({
-		url : "srv/getWaveHeights",
-		data : {
-			"id" : id,
-			"process" : 0
-		},
-		dataType : 'json',
-		success : function(result) {
-
-			for (var i = 0; i < result.length; i++) {
-
-				var resultObj = result[i];
-
-				sub = [];
-
-				lines = resultObj['points'];
-				for (var j = 0; j < lines.length; j++) {
-
-					points = lines[j];
-					coords = [];
-					for (var k = 0; k < points.length; k++) {
-						xy = points[k];
-						coords.push(new google.maps.LatLng(xy['d'], xy['e']));
-					}
-
-					polygon = new google.maps.Polygon({
-						path : coords,
-						geodesic : true,
-						strokeColor : resultObj['color'],
-						strokeOpacity : 0.5,
-						fillColor : resultObj['color'],
-						fillOpacity : 0.8,
-						zIndex : i
-					});
-
-					polygon.setMap(null);
-
-					sub.push(polygon);
-				}
-
-				entry['heights'][resultObj['ewh']] = sub;
-			}
-
-			if (active == id)
-				showWaveHeights(id, true);
 		}
 	});
 
@@ -4154,29 +4143,6 @@ function showPolygons(pointer, visible) {
 	}
 }
 
-function showWaveHeights(pointer, visible) {
-
-	if (pointer == null)
-		return;
-
-	var tmap = null;
-
-	if (visible)
-		tmap = map;
-
-	var entry = entries.get(pointer);
-
-	for ( var ewh in entry['heights']) {
-
-		polygons = entry['heights'][ewh];
-
-		for (var i = 0; i < polygons.length; i++) {
-
-			polygons[i].setMap(tmap);
-		}
-	}
-}
-
 function showGrid(pointer, visible) {
 
 	if (pointer == null)
@@ -4241,21 +4207,10 @@ function showPois(pointer, visible) {
 	}
 }
 
-function select(id) {
-
-	if (id == null /* || id == active */)
-		return;
-
-	active = id;
-
-	var entry = entries.get(active);
-
-	if (!entry)
-		return;
-
+function select(entry) {
+	active = entry._id;	
 	entry.selected = true;
 	entry.notifyOn('select');
-	entry.loadStations();
 }
 
 function deselect() {
@@ -4263,7 +4218,6 @@ function deselect() {
 	if (active == null)
 		return;
 
-	showWaveHeights(active, false);
 	showPolygons(active, false);
 	showGrid(active, false);
 	showPois(active, false);
@@ -4395,7 +4349,7 @@ function diaSignIn() {
 function logIn(callback) {
 
 	load_gmaps();
-	new GlobalControl();
+	global = new GlobalControl();
 
 	// show disclaimer - redirect to xkcd if not accepted
 	if (!$.cookie('disclaimer')) {
@@ -4559,23 +4513,7 @@ function compute() {
 	$("#tabSaved").css("display", "block");
 	$("#hrefSaved").click();
 
-	deselect();
-
-	$.ajax({
-		type : 'POST',
-		url : "srv/compute",
-		data : params,
-		dataType : 'json',
-		success : function(result) {
-			select(result['_id']);
-			map.panTo(new google.maps.LatLng(params.lat, params.lon));
-		},
-		error : function() {
-		},
-		complete : function() {
-		}
-	});
-
+	ajax('srv/compute', params, null );
 }
 
 function getParams() {
@@ -4789,10 +4727,10 @@ function showEmailDialog(entry, msgnr) {
 		};
 
 		var maxvals = {
-			"INFORMATION" : new Container('country', sort_string.bind(this,
+			"INFORMATION" : new Container(sort_string.bind(this,
 					'eta')),
-			"WATCH" : new Container('country', sort_string.bind(this, 'eta')),
-			"ADVISORY" : new Container('country', sort_string.bind(this, 'eta'))
+			"WATCH" : new Container(sort_string.bind(this, 'eta')),
+			"ADVISORY" : new Container(sort_string.bind(this, 'eta'))
 		};
 
 		var region_map = {
@@ -4812,7 +4750,7 @@ function showEmailDialog(entry, msgnr) {
 			var level = getPoiLevel(poi);
 
 			if (!tfpvals[level][poi.country])
-				tfpvals[level][poi.country] = new Container('name', sort_string
+				tfpvals[level][poi.country] = new Container(sort_string
 						.bind(this, 'eta'));
 
 			/* insert poi sorted according to eta value */
@@ -5482,18 +5420,6 @@ function getPlainText(span) {
 		text += $.trim(lines[i]) + "\n";
 
 	return text + "\n";
-}
-
-function msgOnClick() {
-
-	var id = $(this).parents(".entry").data("entry")['_id'];
-	var msg = entries.get(id);
-
-	visualize(msg.ParentId);
-
-	markMsgAsDisplayed(msg);
-
-	return;
 }
 
 function markMsgAsRead(msg) {
@@ -6278,8 +6204,8 @@ function deleteEntry(entry) {
 
 			if (result.status == 'success') {
 
-				if (eid == active)
-					deselect();
+				if (entry.selected)
+					global.deselect();
 
 				entry.deleted = true;
 				entry.notifyOn('delete');
@@ -6398,7 +6324,7 @@ function checkStaticLink() {
 				shared.insert(entry);
 				shared.notifyOn('change');
 
-				visualize(res.eq._id);
+				visualize(res.eq);
 				map.panTo({
 					lat : Number(res.pos.lat),
 					lng : Number(res.pos.lon)
@@ -6920,8 +6846,8 @@ function AdminDialog() {
 	
 	this.init = function() {
 		/* used to store users and institutions loaded from server */
-		this.userlist = new Container('username', sort_string.bind(this, 'username'));
-		this.instlist = new Container('name', sort_string.bind(this, 'name'));
+		this.userlist = new Container(sort_string.bind(this, 'username'));
+		this.instlist = new Container(sort_string.bind(this, 'name'));
 		
 		this.dialog = new HtmlDialog($('.admin'));
 		this.inputs = {
@@ -7386,24 +7312,35 @@ function HtmlTextField(div) {
 	this.div.change(this.onChange.bind(this));
 }
 
+HtmlCheckBox.prototype = new ICallbacks();
+
 function HtmlCheckBox(label, checked) {
 
+	ICallbacks.call(this);
+	
 	this.init = function(label, checked) {
 
 		this.div = $('.templates > .html-checkbox').clone();
 		this.div.find('> .html-label').html(label);
 		this.check = this.div.find('> .html-check');
+		this.check.change(this.onChange.bind(this));
 		
 		if( arguments.length > 1 )
 			this.value( checked );
 	};
 
 	this.value = function(checked) {
-		if(arguments.length >= 1)
+		if(arguments.length >= 1) {
 			this.check.prop('checked',checked == true);
+			this.onChange();
+		}
 		return this.check.prop('checked');
 	};
-
+	
+	this.onChange = function() {
+		this.notifyOn('change',this.value());
+	};
+	
 	this.init(label, checked);
 }
 
@@ -7809,37 +7746,198 @@ function ajaxCascade() {
 	ajax(ajaxObj);
 }
 
-function cfcz_test(complete, result) {
+function Layer(name, map) {
+	
+	this.init = function(name, map) {
+		this.name = name;
+		this.map = map;
+		this.data = null;
+		this.visible = true;
+	};
+	
+	this.setData = function(data) {
+		/* nothing to update if data hasn't changed */
+		if( this.data == data )
+			return;
+		/* if data was set previously, we need to deregister the callback and clear the layer */
+		if( this.data ) {
+			this.data.delCallback('update',this.cid);
+			this.clear();
+		}
+		/* assign new data now */
+		this.data = data;
+		/* register callback and update view */
+		if( this.data ) {
+			this.cid = this.data.setCallback('update',this.update.bind(this));
+			this.update();
+		}
+	};
+		
+	this.display = function() {};
+	this.clear = function() {};
+	
+	this.update = function() {
+		if( this.visible )
+			this.display();
+	};
+	
+	this.show = function(show) {
+		if( arguments.length > 0 && show == false )
+			return this.hide();
+		this.visible = true;
+		if( this.data )
+			this.display();
+	};
+	
+	this.hide = function() {
+		this.visible = false;
+		if( this.data )
+			this.clear();
+	};
+	
+	if( arguments.length > 0 )
+		this.init(name, map);
+}
 
-	if (!complete) {
-		ajax(getAjax('srv/getCFCZ/', null, cfcz_test.bind(this, true)));
-		return;
-	}
+JetLayer.prototype = new Layer();
 
-	for (var j = 0; j < result.length; j++) {
+function JetLayer(name,map) {
+	
+	Layer.call(this,name,map);
+			
+	this.display = function() {
+		for (var i = 0; i < this.data.jets.length(); i++)
+			this.data.jets.get(i).show(this.map);
+	};
+	
+	this.clear = function() {
+		for (var i = 0; i < this.data.jets.length(); i++)
+			this.data.jets.get(i).show(null);
+	};
+}
 
-		var triangleCoords = [];
+CFZLayer.prototype = new Layer();
 
-		obj = result[j];
-
-		for( var k = 0; k < obj._COORDS_.length; k++ ) {
-			triangleCoords.push([]);
-			for (var i = 0; i < obj._COORDS_[k].length; i++) {
-				var latlon = obj._COORDS_[k][i];
-				triangleCoords[k].push(new google.maps.LatLng(latlon[1], latlon[0]));
+function CFZLayer(name,map) {
+	
+	Layer.call(this,name,map);
+	
+	this.init = function() {
+		this.cfz_list = new Container(sort_string.bind(this,'FID_IO_DIS'));
+		this.getCFZs();
+	};
+		
+	this.getCFZs = function() {
+		ajax('srv/getCFCZ/', null, (function(result) {
+			for (var i = 0; i < result.length; i++)
+				this.cfz_list.insert( new CFZ(result[i]) );
+		}).bind(this));
+	};
+	
+	this.display = function() {
+		/* TODO: what about computed CFZs that doesn't exist anymore
+		 * or CFZs that were not computed but reside in the database ??? */		
+		var j = 0;
+		for (var i = 0; i < this.cfz_list.length(); i++) {
+			var pol = this.cfz_list.get(i);
+			pol.show( null );
+			while( j < this.data.cfzs.length() ) {
+				var res = this.data.cfzs.get(j);
+				if( res.code > pol.FID_IO_DIS )
+					break;
+				if( res.code == pol.FID_IO_DIS ) {
+					pol.show( this.map, getPoiColor( res ) );
+					j++;
+					break;
+				}
+				j++;
 			}
 		}
+	};
+	
+	this.clear = function() {
+		for (var i = 0; i < this.cfz_list.length(); i++)
+			this.cfz_list.get(i).show(null);
+	};
+		
+	this.init();
+}
 
-		bermudaTriangle = new google.maps.Polygon({
-			paths : triangleCoords,
-			strokeColor : '#000000',
-			strokeOpacity : 0.35,
-			strokeWeight : 2,
-			fillColor : '#000000',
-			fillOpacity : 0.25
-		});
-
-		bermudaTriangle.setMap(map);
-
+Geometry.LatLon = function() {		
+	if(arguments.length == 2) {
+		this.lat = arguments[0];
+		this.lon = arguments[1];
+	} else {
+		this.lat = arguments[0][0];
+		this.lon = arguments[0][1];
 	}
+	return new google.maps.LatLng( this.lat, this.lon );
 };
+
+function Geometry()  {	
+	this.init = function() {};
+	this.init();
+}
+
+function Polygon(coords,color) {
+		
+	this.init = function(coords,color) {
+		this.coords = [];
+		if( coords )
+			this.create(coords,color);
+	};
+		
+	this.create = function(coords,color) {		
+		this.coords = [];
+		for( var i = 0; i < coords.length; i++ ) {
+			this.coords.push([]);
+			for (var j = 0; j < coords[i].length; j++) {
+				var latlon = coords[i][j];
+				/* TODO: agree on a consistent polygon format in MongoDB */
+				if( latlon instanceof Array )
+					this.coords[i].push( Geometry.LatLon(latlon[1], latlon[0]) );
+				else
+					this.coords[i].push( Geometry.LatLon(latlon.d, latlon.e) );
+			}
+		}
+		
+		this.polygon = new google.maps.Polygon({
+			paths : this.coords,
+			strokeOpacity : 0.5,
+			fillOpacity : 0.8
+		});
+		
+		if( color )
+			this.polygon.setOptions({strokeColor: color, fillColor: color});
+	};
+		
+	this.show = function(map, color) {
+		if( color )
+			this.polygon.setOptions({strokeColor: color, fillColor: color});
+		this.polygon.setMap(map);
+	};
+	
+	this.init(coords,color);
+}
+
+CFZ.prototype = new Polygon();
+
+function CFZ(meta) {
+		
+	this.init = function(meta) {
+		$.extend(this,meta);
+		Polygon.call(this, this._COORDS_);
+		delete this._COORDS_;
+	};
+	
+	this.init(meta);
+}
+
+function CFZResult(meta) {
+	
+	this.init = function(meta) {
+		$.extend(this,meta);
+	};
+		
+	this.init(meta);
+}
