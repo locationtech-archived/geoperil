@@ -297,4 +297,12 @@ class WebGuiSrv(Base):
            return jssuccess(jets = jets)
         return jsdeny()
 
+    @cherrypy.expose
+    def getisos(self, evid, arr):
+        user = self.getUser()
+        if user is not None:
+           res = list( self._db["results"].find({"id":evid, "arrT": {"$gt":int(arr)}}) )
+           return jssuccess(comp=res)
+        return jsdeny()
+
 application = startapp( WebGuiSrv )
