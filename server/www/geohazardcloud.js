@@ -103,12 +103,17 @@ function Earthquake(meta) {
 		 */
 		$.extend(this, meta);		
 		this.stations = null;
-		this.cfzs = new Container(sort_string.bind(this,'code'));
-		
+		this.cfzs = new Container(sort_string.bind(this,'code'));	
 		this.jets = new Container(sort_string.bind(this,'ewh'));
+		this.isos = new Container();
+		
+		this.show_cfzs = true;
+		this.show_jets = true;
+		this.show_isos = true;
 		
 		/* we also want to be notified if the selection status of this event has changed */
 		this.setCallback('select', this.select);
+		this.setCallback('progress', this.progress);
 	};
 	
 	this.select = function() {
@@ -122,9 +127,16 @@ function Earthquake(meta) {
 		if( this.selected ) {
 			this.loadCFZs();
 			this.loadTsunamiJets();
+			this.loadIsos();
 		}
 	};
 	
+	this.progress = function() {
+		if( this.selected ) {
+			this.loadIsos();
+		}
+	};
+		
 	this.loadTsunamiJets = function() {
 		ajax('webguisrv/getjets', {evid:this._id}, (function(result) {
 			/* traverse different EWH levels */
@@ -134,7 +146,7 @@ function Earthquake(meta) {
 				for (var j = 0; j < jets.length; j++) {
 					/* construct a single polygon here */
 					var pol = new Polygon( [jets[j]], result.jets[i].color );
-					pol.polygon.setOptions({zIndex:i});
+					pol.poly.setOptions({zIndex:i});
 					pol.ewh = result.jets[i].ewh;
 					this.jets.insert(pol);
 				}
@@ -147,6 +159,23 @@ function Earthquake(meta) {
 		ajax('webguisrv/getcomp', {evid:this._id, kind:'CFZ'}, (function(result) {
 			for( var i = 0; i < result.comp.length; i++ )
 				this.cfzs.insert( new CFZResult(result.comp[i]) );
+			this.notifyOn('update');
+		}).bind(this));
+	};
+	
+	this.loadIsos = function() {
+		var next = this.isos.length() * 10;
+		ajax('webguisrv/getisos', {evid:this._id, arr:next}, (function(result) {
+			console.log(result);
+			for (var i = 0; i < result.comp.length; i++ ) {
+				var isos = result.comp[i].points;
+				for (var j = 0; j < isos.length; j++ ) {
+					/* construct a single polyline here */
+					var pol = new Polyline( [isos[j]], '#ccaacc' );
+					pol.poly.setOptions({zIndex:100});
+					this.isos.insert(pol);
+				}
+			}
 			this.notifyOn('update');
 		}).bind(this));
 	};
@@ -250,12 +279,9 @@ function EntryMap() {
 
 		var result = this.map[entry['_id']] = entry;
 
-		result['arrT'] = 0;
-		result['polygons'] = {};
 		result['rectangle'] = null;
 		result['show_grid'] = false;
 		result['pois'] = null;
-		result['heights'] = {};
 
 		return result;
 	};
@@ -315,6 +341,9 @@ function Container(sortFun) {
 		
 		for (var i = 0; i < this.list.length; i++) {
 
+			if( ! this.sortFun )
+				break;
+			
 			if (this.sortFun(item, this.list[i]) == -1) {
 
 				this.list.splice(i, 0, item);
@@ -505,7 +534,7 @@ function Station(meta, eq) {
 		if (!this.active)
 			return;
 
-		console.log("update");
+		//console.log("update");
 
 		var data = {
 			station : this.name,
@@ -2248,42 +2277,43 @@ function Filter(div) {
 
 	ICallbacks.call(this);
 	
-	/* store reference to HTML objects */
-	this.div = div;
-	this.txtMag = this.div.find('.txtMag');
-	this.chkMT = this.div.find('.chkMT');
-	this.chkSim = this.div.find('.chkSim');
-	this.chkSea = this.div.find('.chkSea');
+	this.init = function(div) {
+		
+		/* store reference to HTML objects */
+		this.div = div;
+		this.labRange = this.div.find('.labRange');
+		this.chkMT = this.div.find('.chkMT');
+		this.chkSim = this.div.find('.chkSim');
+		this.chkSea = this.div.find('.chkSea');
 
-	/* store values */
-	this.mag = null;
-	this.mt = false;
-	this.sim = false;
-	this.sea = false;
-
-	this.init = function() {
+		/* store values */
+		this.mt = false;
+		this.sim = false;
+		this.sea = false;
 
 		/* set on change listener */
-		this.txtMag.change(this.onChange.bind(this));
 		this.chkMT.change(this.onChange.bind(this));
 		this.chkSim.change(this.onChange.bind(this));
 		this.chkSea.change(this.onChange.bind(this));
-
-		this.mag = new HtmlTextField(this.txtMag);
-		this.mag.validate('^[0-9]*\\.?[0-9]*$');
+		
+		this.slider = new HtmlRangeSlider(0, 12, 0.5);
+		this.slider.setCallback('change', this.onChange.bind(this));
+		this.slider.setCallback('slide', this.onSlide.bind(this));
+		this.div.find('.slider').append(this.slider.div);
 	};
 
 	this.onChange = function() {
 		this.notifyOn('change');
 	};
+	
+	this.onSlide = function(values) {
+		this.labRange.html( values[0] + ' - ' + values[1] );
+	};
 
 	/* this function accepts one argument of type Earthquake */
 	this.filter = function( /* Earthquake */eq) {
 
-		// parseFloat() can give NaN that is not comparable with any number
-		// and will always return false, but that is fine in this case
-		if (this.mag.valid()
-				&& eq.prop.magnitude < parseFloat(this.txtMag.val()))
+		if( ! this.slider.contains( eq.prop.magnitude ) )
 			return false;
 
 		if (this.chkMT.is(':checked') && !eq.hasCompParams())
@@ -2298,7 +2328,7 @@ function Filter(div) {
 		return true;
 	};
 
-	this.init();
+	this.init(div);
 }
 
 GlobalControl.prototype = new ICallbacks();
@@ -2365,12 +2395,13 @@ function GlobalControl() {
 		
 		/* add layers */
 		this.layers.insert( new CFZLayer('CFZ-Layer', map) );
-		this.layers.insert( new JetLayer('Tsunami-Jets', map) );	
+		this.layers.insert( new JetLayer('Tsunami-Jets', map) );
+		this.layers.insert( new IsoLayer('Isolines', map) );
 		for( var i = 0; i < this.layers.length(); i++ ) {
 			var layer = this.layers.get(i);
 			this.setCallback('select', layer.setData.bind(layer));
 		}	
-		new LayerSwitcher( $('#layer-switcher'), this.layers );
+		//new LayerSwitcher( $('#layer-switcher'), this.layers );		
 	};
 	
 	this.tabChanged = function(e) {
@@ -2400,7 +2431,7 @@ function GlobalControl() {
 
 	/* TODO: refactor */
 	this.search = function(data) {
-
+		
 		if( data instanceof Message )
 			data = data.parentEvt;
 		
@@ -2409,7 +2440,7 @@ function GlobalControl() {
 			tid = data.root;
 
 		$('#inSearch').val(tid);
-		$('#btnSearch').click();
+		$('#btnSearch').click();		
 		$('#hrefTimeline').click();
 	};
 
@@ -2587,7 +2618,6 @@ function ListWidget(div, data, map, callbacks) {
 				marker.show();
 
 			eqwidget = new EQWidget(elem, marker);
-			elem.setCallback('update', eqwidget.update.bind(eqwidget));
 		}
 		
 		elem.setCallback('delete', this.create.bind(this));
@@ -2801,6 +2831,21 @@ function EQWidget(data, marker) {
 		this.div.find('.info a').click(
 				(function(){this.div.find('.info').hide();}).bind(this));
 
+		/* create layer switcher */
+		var layers = {
+			'Forecast points/zones': this.onCFZLayer.bind(this),
+			'Wave jets': this.onJetLayer.bind(this),
+			'Travel times': this.onIsoLayer.bind(this)
+		};
+		this.chk_boxes = [];
+		this.div.find('.layers').empty();
+		for( attr in layers ) {
+			var cbox = new HtmlCheckBox(attr);
+			cbox.setCallback('change', layers[attr]);
+			this.div.find('.layers').append(cbox.div);
+			this.chk_boxes.push(cbox);
+		}
+		
 		/* set popovers */
 		var options = {
 			placement : 'bottom',
@@ -2888,7 +2933,7 @@ function EQWidget(data, marker) {
 		} else {
 			this.div.find('.beach').hide();
 		}
-		
+				
 		if (!this.data.process) {
 
 			var status;
@@ -2910,6 +2955,14 @@ function EQWidget(data, marker) {
 			this.div.find('.status').show();
 
 		} else {
+			
+			this.div.find('.status').hide();
+			this.div.find('.progress').show();
+			this.div.find('.calc_data').show();
+			
+			this.chk_boxes[0].value( this.data.show_cfzs );
+			this.chk_boxes[1].value( this.data.show_jets );
+			this.chk_boxes[2].value( this.data.show_isos );
 
 			/* we still consider only one simulation per EQ */
 			var process = this.data.process[0];
@@ -2919,10 +2972,6 @@ function EQWidget(data, marker) {
 			var lonMin = grid.lonMin.toFixed(2);
 			var latMax = grid.latMax.toFixed(2);
 			var lonMax = grid.lonMax.toFixed(2);
-
-			this.div.find('.status').hide();
-			this.div.find('.chk_grid').show();
-			this.div.find('.progress').show();
 
 			this.div.find('.progress-bar').css('width', process.progress + '%');
 			this.div.find('.resource').html(process.resources);
@@ -2975,6 +3024,21 @@ function EQWidget(data, marker) {
 		this.notifyOn('clk_grid', this.data);
 	};
 	
+	this.onCFZLayer = function(val) {
+		this.data.show_cfzs = val;
+		this.data.notifyOn('update');
+	};
+	
+	this.onJetLayer = function(val) {
+		this.data.show_jets = val;
+		this.data.notifyOn('update');
+	};
+	
+	this.onIsoLayer = function(val) {
+		this.data.show_isos = val;
+		this.data.notifyOn('update');
+	};
+	
 	this.showCopyInfo = function(res) {
 		var info = this.div.find('.info');
 		info.find('span').html(res);
@@ -2999,15 +3063,11 @@ function EQWidget(data, marker) {
 		this.marker.show();
 	};
 
-	this.highlight = function(turnOn, event) {
-
-		if (jQuery.contains(event.currentTarget, event.relatedTarget))
+	this.highlight = function(turnOn) {
+		if( this.data.selected )
 			return;
-
 		var color = turnOn ? '#c3d3e1' : '#fafafa';
-
 		this.marker.setAnimation(turnOn);
-
 		this.div.css('background-color', color);
 	};
 
@@ -3160,11 +3220,7 @@ function MsgWidget(data) {
 		this.div.find('.lnkDelete').show();
 	};
 
-	this.highlight = function(turnOn, event) {
-
-		if (jQuery.contains(event.currentTarget, event.relatedTarget))
-			return;
-
+	this.highlight = function(turnOn) {
 		var color = turnOn ? '#c3d3e1' : '#fafafa';
 		this.div.css('background-color', color);
 	};
@@ -3244,10 +3300,11 @@ function ICallbacks() {
 			return;
 		
 		var cnt = this.callbacks[action].cnt;
-
+		
 		for(var i = 0; i < cnt; i++)
-			if( this.callbacks[action][i] )
+			if( this.callbacks[action][i] ) {
 				this.callbacks[action][i].apply(this, vargs);
+			}
 	};
 }
 
@@ -3348,8 +3405,6 @@ var stationSymbols;
 var canvas;
 var vsdbPlayer;
 var splash;
-
-var adminDia;
 
 var loaded = 0;
 
@@ -3616,17 +3671,19 @@ function getUpdates(timestamp) {
 
 				} else if (obj['event'] == 'update') {
 
-					var parent = eqlist.find(obj['id']);
 					var entry = entries.add(new Earthquake(obj));
+					var parent = eqlist.getByKey('id',entry.id).item;
+					console.log('update',parent);
 
-					// insert obj sorted again
-					eqlist.removeById(obj['id']);
-					eqlist.insert(entry);
+					// replace parent
+					eqlist.replace('id',entry);
 
 					madd = true;
 
-					if (parent && parent._id == active)
-						active = obj._id;
+					if (parent && parent.selected) {
+						entry.selected = true;
+						entry.notifyOn('select');
+					}
 
 					if (searched(entry)) {
 						timeline.insert(entry);
@@ -3667,6 +3724,7 @@ function getUpdates(timestamp) {
 
 					entries.get(id).process = obj.process;
 					entries.get(id).notifyOn('update');
+					entries.get(id).notifyOn('progress');
 
 				} else if (obj['event'] == 'msg_sent'
 						|| obj['event'] == 'msg_recv') {
@@ -3703,17 +3761,11 @@ function getUpdates(timestamp) {
 					entries.get(active).load();
 					getPois(entries.get(active), null);
 				}
-
-				getIsos(entries.get(active), function() {
-					getUpdates(timestamp);
-				});
-
-			} else {
-
-				timerId = setTimeout(function() {
-					getUpdates(timestamp);
-				}, 1000);
 			}
+
+			timerId = setTimeout(function() {
+				getUpdates(timestamp);
+			}, 1000);
 
 		},
 		error : function() {
@@ -3731,15 +3783,6 @@ function showMarker(widget) {
 			$(this).data("marker").setMap(map);
 	});
 
-}
-
-function removeMarker(widget) {
-
-	widget.children().each(function() {
-
-		if ($(this).data("marker"))
-			$(this).data("marker").setMap(null);
-	});
 }
 
 function zeroPad(num, count) {
@@ -3813,42 +3856,12 @@ function visualize(entry) {
 		deselect(active);
 		select(entry);
 
-		getIsos(entry, null);
 		getPois(entry, null);
 
 		showGrid(active, entry['show_grid']);
 	}
 
 	map.panTo(markers.active.getPosition());
-}
-
-function highlight(event) {
-
-	var turnOn = event.data["turnOn"];
-	var marker = $(this).data("marker");
-
-	if (jQuery.contains(event.currentTarget, event.relatedTarget))
-		return;
-
-	if (turnOn) {
-
-		color = '#c3d3e1'; // #99b3cc';
-
-		if (marker)
-			marker.setAnimation(google.maps.Animation.BOUNCE);
-
-	} else {
-
-		color = '#fafafa';
-
-		if (marker)
-			marker.setAnimation(null);
-	}
-
-	if ($(this).data("entry")._id == active)
-		return;
-
-	$(this).css('background-color', color);
 }
 
 function addMarker(lat, lon, icon) {
@@ -3868,67 +3881,6 @@ function getMarkerIconLink(text, color) {
 			+ text + '|' + color.substring(1) + '|000000';
 
 	return link;
-}
-
-function getIsos(entry, callback) {
-
-	var id = entry['_id'];
-	var arrT = entry['arrT'];
-
-	$.ajax({
-		url : "srv/getIsolines",
-		data : {
-			"id" : id,
-			"process" : 0,
-			"arrT" : arrT
-		},
-		dataType : 'json',
-		success : function(result) {
-
-			for (var i = 0; i < result.length; i++) {
-
-				var resultObj = result[i];
-
-				entry['arrT'] = resultObj['arrT'];
-
-				sub = [];
-
-				lines = resultObj['points'];
-				for (var j = 0; j < lines.length; j++) {
-
-					points = lines[j];
-					coords = [];
-					for (var k = 0; k < points.length; k++) {
-						xy = points[k];
-						coords.push(new google.maps.LatLng(xy['d'], xy['e']));
-					}
-
-					polyline = new google.maps.Polyline({
-						path : coords,
-						geodesic : true,
-						strokeColor : '#BF0000',
-						strokeOpacity : 1.0,
-						strokeWeight : 1,
-						zIndex : 100
-					});
-
-					polyline.setMap(null);
-
-					sub.push(polyline);
-				}
-
-				entry['polygons'][resultObj['arrT']] = sub;
-			}
-
-			if (active == id)
-				showPolygons(id, true);
-
-			if (callback != null)
-				callback();
-
-		}
-	});
-
 }
 
 function getNextMsgNr(entry, callback) {
@@ -4121,28 +4073,6 @@ function getPoiLevel(poi) {
 	return level;
 }
 
-function showPolygons(pointer, visible) {
-
-	if (pointer == null)
-		return;
-
-	var tmap = null;
-
-	if (visible)
-		tmap = map;
-
-	var entry = entries.get(pointer);
-
-	for ( var arrT in entry['polygons']) {
-
-		polylines = entry['polygons'][arrT];
-
-		for (var i = 0; i < polylines.length; i++) {
-			polylines[i].setMap(tmap);
-		}
-	}
-}
-
 function showGrid(pointer, visible) {
 
 	if (pointer == null)
@@ -4218,7 +4148,6 @@ function deselect() {
 	if (active == null)
 		return;
 
-	showPolygons(active, false);
 	showGrid(active, false);
 	showPois(active, false);
 
@@ -5768,9 +5697,6 @@ function mapZoomed() {
 function searchEvents() {
 
 	searchId = $('#inSearch').val();
-
-	deselect();
-	removeMarker($('#timeline-data'));
 	timeline.clear();
 
 	$.ajax({
@@ -6204,7 +6130,7 @@ function deleteEntry(entry) {
 
 			if (result.status == 'success') {
 
-				if (entry.selected)
+				if (eid == active)
 					global.deselect();
 
 				entry.deleted = true;
@@ -7329,12 +7255,18 @@ function HtmlCheckBox(label, checked) {
 			this.value( checked );
 	};
 
-	this.value = function(checked) {
-		if(arguments.length >= 1) {
-			this.check.prop('checked',checked == true);
-			this.onChange();
-		}
-		return this.check.prop('checked');
+	this.value = function(checked,notify) {
+		var curval = this.check.prop('checked');		
+		if(arguments.length < 1)
+			return curval;		
+		if( curval == checked )
+			return curval;
+		
+		this.check.prop('checked',checked == true);
+		/* only notify others if explicit requested by the caller */
+		if( notify == true )
+			this.onChange();		
+		return checked;
 	};
 	
 	this.onChange = function() {
@@ -7678,6 +7610,45 @@ function HtmlDialog(box) {
 	this.init(box);
 }
 
+HtmlRangeSlider.prototype = new ICallbacks();
+
+function HtmlRangeSlider(min,max,step) {
+
+	ICallbacks.call(this);
+	
+	this.init = function(min,max,step) {
+		this.div = $('.templates > .html-range-slider').clone();
+		this.div.slider({
+			range: true,
+			min: min,
+			max: max,
+			step: step,
+			values: [min,max],
+			slide: this.onslide.bind(this),
+			stop: this.notifyOn.bind(this,'change')
+		});
+	};
+	
+	this.onslide = function(event, ui) {
+		this.notifyOn('slide',ui.values);
+	};
+	
+	this.values = function(vals) {
+		if (arguments.length > 0)
+			this.div.slider('values',vals);
+		return this.div.slider('values');
+	};
+	
+	this.contains = function(val) {
+		var range = this.values();
+		if( val >= range[0] && val <= range[1] )
+			return true;
+		return false;
+	};
+	
+	this.init(min,max,step);
+}
+
 /* ajax related framework functions */
 function getAjax(url, data, callback) {
 
@@ -7805,7 +7776,13 @@ function JetLayer(name,map) {
 	
 	Layer.call(this,name,map);
 			
-	this.display = function() {
+	this.update = function() {
+		if( this.data.show_jets )
+			return this.display();
+		return this.clear();
+	};
+	
+	this.display = function() {	
 		for (var i = 0; i < this.data.jets.length(); i++)
 			this.data.jets.get(i).show(this.map);
 	};
@@ -7813,6 +7790,29 @@ function JetLayer(name,map) {
 	this.clear = function() {
 		for (var i = 0; i < this.data.jets.length(); i++)
 			this.data.jets.get(i).show(null);
+	};
+}
+
+IsoLayer.prototype = new Layer();
+
+function IsoLayer(name,map) {
+	
+	Layer.call(this,name,map);
+			
+	this.update = function() {
+		if( this.data.show_isos )
+			return this.display();
+		return this.clear();
+	};
+	
+	this.display = function() {
+		for (var i = 0; i < this.data.isos.length(); i++)
+			this.data.isos.get(i).show(this.map);
+	};
+	
+	this.clear = function() {
+		for (var i = 0; i < this.data.isos.length(); i++)
+			this.data.isos.get(i).show(null);
 	};
 }
 
@@ -7832,6 +7832,12 @@ function CFZLayer(name,map) {
 			for (var i = 0; i < result.length; i++)
 				this.cfz_list.insert( new CFZ(result[i]) );
 		}).bind(this));
+	};
+	
+	this.update = function() {
+		if( this.data.show_cfzs )
+			return this.display();
+		return this.clear();
 	};
 	
 	this.display = function() {
@@ -7883,8 +7889,10 @@ function Polygon(coords,color) {
 		
 	this.init = function(coords,color) {
 		this.coords = [];
-		if( coords )
-			this.create(coords,color);
+		if( coords ) {
+			this.create(coords);
+			this.apply(color);
+		}
 	};
 		
 	this.create = function(coords,color) {		
@@ -7899,22 +7907,52 @@ function Polygon(coords,color) {
 				else
 					this.coords[i].push( Geometry.LatLon(latlon.d, latlon.e) );
 			}
-		}
-		
-		this.polygon = new google.maps.Polygon({
+		}				
+	};
+	
+	this.apply = function(color) {
+		this.poly = new google.maps.Polygon({
 			paths : this.coords,
 			strokeOpacity : 0.5,
 			fillOpacity : 0.8
 		});
 		
 		if( color )
-			this.polygon.setOptions({strokeColor: color, fillColor: color});
+			this.poly.setOptions({strokeColor: color, fillColor: color});
 	};
 		
 	this.show = function(map, color) {
 		if( color )
-			this.polygon.setOptions({strokeColor: color, fillColor: color});
-		this.polygon.setMap(map);
+			this.poly.setOptions({strokeColor: color, fillColor: color});
+		this.poly.setMap(map);
+	};
+	
+	this.init(coords,color);
+}
+
+Polyline.prototype = new Polygon();
+
+function Polyline(coords,color) {
+	
+	Polygon.call(this);
+	
+	this.init = function(coords,color) {
+		if( coords ) {
+			this.create(coords);
+			this.apply(color);
+		}
+		
+		if( color )
+			this.poly.setOptions({strokeColor: color});
+	};
+	
+	this.apply = function() {
+		this.poly = new google.maps.Polyline({
+			path : this.coords[0],
+			geodesic : true,
+			strokeOpacity : 1.0,
+			strokeWeight : 1,
+		});
 	};
 	
 	this.init(coords,color);
@@ -7924,6 +7962,8 @@ CFZ.prototype = new Polygon();
 
 function CFZ(meta) {
 		
+	Polygon.call(this);
+	
 	this.init = function(meta) {
 		$.extend(this,meta);
 		Polygon.call(this, this._COORDS_);

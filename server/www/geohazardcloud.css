@@ -398,7 +398,14 @@ html, body {
 
 .entry .chk_grid {
 	vertical-align: top;
+}
+
+.entry .calc_data {
 	display: none;
+}
+
+.entry .layers .html-checkbox {
+	display: inline-block;
 }
 
 .entry .status, .entry .stat-read, .entry .stat-disp {
@@ -476,7 +483,7 @@ html, body {
 
 #sidebar {
 	position: absolute;
-	top: 4em;
+	top: 5em;
 	bottom: 0px;
 	border-top: 0.1em;
 	padding-top: 0.1em;
@@ -1198,7 +1205,7 @@ pre {
 }
 
 #filterWidget {
-	height: 4em;
+	height: 5em;
 	border: 0.1em solid #acaaa7;
 	padding-right: 1em;
 	padding-left: 1em;
@@ -1211,6 +1218,10 @@ pre {
 	margin-left: 10px;
 	transform: scale(1.2);
 	-webkit-transform: scale(1.2);
+}
+
+#filterWidget .slider {
+	padding-top: 0.5em;	
 }
 
 .admin .modal-header {
@@ -1307,7 +1318,19 @@ pre {
 /* HtmlBlock */
 .html-block {
 	width: 100%;
-	/*border: 2px solid black;*/	
+	/*border: 2px solid black;*/
+}
+
+.html-range-slider {
+	background: #d9534f;
+}
+
+.html-range-slider .ui-slider-range {
+	background: #5cb85c;
+}
+
+.html-range-slider .ui-slider-handle {
+	width: 0.8em;
 }
 
 /* */
@@ -1319,7 +1342,7 @@ pre {
 	background-color: white;
 	border-top-left-radius: 1em 1em;
 	border-bottom-left-radius: 1em 1em;
-	
+	display: none;
 }
 
 #layer-switcher .toggle {
