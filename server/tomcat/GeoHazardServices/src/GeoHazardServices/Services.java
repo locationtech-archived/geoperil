@@ -686,22 +686,24 @@ public class Services {
 	  	  
 	  System.out.println(obj);
 	  
+	  Object[] reqComp = { inst, secret, id, lon, lat, mag, depth, dip, strike, rake };
+	  boolean simulate = comp != null && checkParams( request, reqComp );
+	  
 	  if( inst.equals("gfz") )
 		  //notifyUsers( compId.toString(), name, lat, lon, mag );
-		  notifyUsers( obj, entry, comp );
+		  notifyUsers( obj, entry, simulate );
 	  
 	  /* insert new event into 'events'-collection */
 	  db.getCollection("events").insert( event );
 	  	  
-	  Object[] reqComp = { inst, secret, id, lon, lat, mag, depth, dip, strike, rake };
-	  if( comp != null && checkParams( request, reqComp ) )
+	  if( simulate )
 		  computeById( request, inst, secret, id, refineId, comp, accel );
 			 
 	  return jssuccess( new BasicDBObject( "refineId", refineId ) );
   }
   
   //private void notifyUsers( String id, String name, double lat, double lon, double mag ) {
-  private void notifyUsers( DBObject newObj, DBObject prevObj, Integer comp ) {
+  private void notifyUsers( DBObject newObj, DBObject prevObj, Boolean simAvail ) {
 	  
 	  Inst instObj = institutions.get( "gfz" );
 	  DBCursor cursor = db.getCollection("users").find();
@@ -711,7 +713,6 @@ public class Services {
 	  Double newLat = (Double) newProp.get("latitude");
 	  Double newLon = (Double) newProp.get("longitude");
 	  Double magDiff = 0.0;
-	  boolean simAvail = comp != null;
 	  boolean mtAvail = (
 			  newMag != null &&
   			  newLat != null &&
@@ -735,9 +736,9 @@ public class Services {
 	  }
 		  
 	  String sharedLnk = "";
-	  if( comp != null )
+	  if( simAvail )
 		  sharedLnk = "http://trideccloud.gfz-potsdam.de/?share="
-				  	+ static_int( (String)newObj.get("id"), newLon, newLat, 5.0, null );
+				  	+ static_int( (String)newObj.get("_id"), newLon, newLat, 5.0, null );
 	  
 	  for( DBObject user: cursor ) {
 		  		  		  
