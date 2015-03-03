@@ -483,7 +483,7 @@ html, body {
 
 #sidebar {
 	position: absolute;
-	top: 5em;
+	top: 4.5em;
 	bottom: 0px;
 	border-top: 0.1em;
 	padding-top: 0.1em;
@@ -1205,7 +1205,7 @@ pre {
 }
 
 #filterWidget {
-	height: 5em;
+	height: 4.5em;
 	border: 0.1em solid #acaaa7;
 	padding-right: 1em;
 	padding-left: 1em;
@@ -1220,8 +1220,14 @@ pre {
 	-webkit-transform: scale(1.2);
 }
 
-#filterWidget .slider {
-	padding-top: 0.5em;	
+#filterWidget .range {
+	padding: 0px;
+}
+
+#filterWidget .labRange {
+	width: 100%;
+	display: block;
+	text-align: center;
 }
 
 .admin .modal-header {
@@ -1235,6 +1241,7 @@ pre {
 .admin .secPerm .html-checkbox {
 	width: 45%;
 	display: inline-block;
+	margin-left: 0.5em;
 }
 
 .admin .secButtons {
@@ -1286,12 +1293,13 @@ pre {
 
 /* HtmlCheckBox */
 .html-checkbox {
-	margin-left: 0.5em;
+	margin-right: 0.5em;
 	margin-top: 0.5em;
 }
 
 .html-checkbox .html-label {
-	margin-left: 0.3em;
+	margin-left: 0.2em;
+	vertical-align: text-bottom;
 }
 
 /* HtmlDropDown */
@@ -1322,15 +1330,23 @@ pre {
 }
 
 .html-range-slider {
-	background: #d9534f;
+	background: #dddddd;
+	margin-top: 2px;
+	height: 5px;
+	margin-left: 0px;
 }
 
 .html-range-slider .ui-slider-range {
-	background: #5cb85c;
+	background: #428bca;
 }
 
 .html-range-slider .ui-slider-handle {
-	width: 0.8em;
+	width: 10px;
+	height: 13px;
+	margin-top: -1px;
+	margin-left: -0.4em;
+	background: #dddddd;
+	border: 2px solid #cccccc;
 }
 
 /* */

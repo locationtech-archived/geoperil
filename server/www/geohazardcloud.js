@@ -106,10 +106,14 @@ function Earthquake(meta) {
 		this.cfzs = new Container(sort_string.bind(this,'code'));	
 		this.jets = new Container(sort_string.bind(this,'ewh'));
 		this.isos = new Container();
+		this.tfps = new Container();
 		
 		this.show_cfzs = true;
 		this.show_jets = true;
 		this.show_isos = true;
+		
+		/* stores the arrival time upon new isolines should be fetch on the next update */
+		this.last_arr = 0;
 		
 		/* we also want to be notified if the selection status of this event has changed */
 		this.setCallback('select', this.select);
@@ -122,13 +126,32 @@ function Earthquake(meta) {
 			this.load();
 		}
 	};
-	
-	this.load = function() {
-		if( this.selected ) {
+		
+	/* TODO: check if the type handling is suitable */
+	this.load = function(callback,type) {
+		/* if the following yields true, we already fetched the results from the server */
+		if( this.isLoaded(type) )
+			return true;
+		/* we are already done with loading, if there are no simulation results */
+		if( ! this.process || this.process.length == 0 )
+			return true;
+		
+		if(callback)
+			this.setCallback(type?'loaded_'+type:'loaded',callback);
+		
+		/* no simulations results yet, but they are coming soon */
+		if( this.process[0].progress < 100 )
+			return false;
+		/* we need to load at least some missing data */
+		if( ! type || type == 'TFPS' )
+			this.loadTFPs();
+		if( ! type || type == 'CFZS' )
 			this.loadCFZs();
+		if( ! type || type == 'JETS' )
 			this.loadTsunamiJets();
+		if( ! type )
 			this.loadIsos();
-		}
+		return false;
 	};
 	
 	this.progress = function() {
@@ -138,6 +161,8 @@ function Earthquake(meta) {
 	};
 		
 	this.loadTsunamiJets = function() {
+		if( this.jets_loaded )
+			return;
 		ajax('webguisrv/getjets', {evid:this._id}, (function(result) {
 			/* traverse different EWH levels */
 			for (var i = 0; i < result.jets.length; i++) {
@@ -148,24 +173,48 @@ function Earthquake(meta) {
 					var pol = new Polygon( [jets[j]], result.jets[i].color );
 					pol.poly.setOptions({zIndex:i});
 					pol.ewh = result.jets[i].ewh;
+					pol.setInfoWin( new InfoWindow('<span>Wave heights greater than ' + pol.ewh + ' meter.</span>') );
 					this.jets.insert(pol);
 				}
 			}
-			this.notifyOn('update');
+			this.jets_loaded = true;
+			this.notifyOn('loaded_JETS');
+			this.checkLoaded();
 		}).bind(this));
 	};
 	
 	this.loadCFZs = function() {
+		if( this.cfzs_loaded )
+			return;
 		ajax('webguisrv/getcomp', {evid:this._id, kind:'CFZ'}, (function(result) {
 			for( var i = 0; i < result.comp.length; i++ )
 				this.cfzs.insert( new CFZResult(result.comp[i]) );
-			this.notifyOn('update');
+			this.cfzs_loaded = true;
+			this.notifyOn('loaded_CFZS');
+			this.checkLoaded();
+		}).bind(this));
+	};
+	
+	this.loadTFPs = function() {
+		if( this.tfps_loaded )
+			return;
+		ajax('webguisrv/gettfps', {evid:this._id}, (function(result) {
+			console.log(result);
+			for (var i = 0; i < result.comp.length; i++) {
+				var tfp = new TFP(result.comp[i]);
+				tfp.point = new Point( tfp.lat_real, tfp.lon_real );
+				tfp.point.setColor( getPoiColor(tfp) );
+				tfp.point.setInfoWin( new InfoWindow(tfp.toHtml()) );
+				this.tfps.insert( tfp );
+			}
+			this.tfps_loaded = true;
+			this.notifyOn('loaded_TFPS');
+			this.checkLoaded();
 		}).bind(this));
 	};
 	
 	this.loadIsos = function() {
-		var next = this.isos.length() * 10;
-		ajax('webguisrv/getisos', {evid:this._id, arr:next}, (function(result) {
+		ajax('webguisrv/getisos', {evid:this._id, arr:this.last_arr}, (function(result) {
 			console.log(result);
 			for (var i = 0; i < result.comp.length; i++ ) {
 				var isos = result.comp[i].points;
@@ -175,6 +224,7 @@ function Earthquake(meta) {
 					pol.poly.setOptions({zIndex:100});
 					this.isos.insert(pol);
 				}
+				this.last_arr += 10;
 			}
 			this.notifyOn('update');
 		}).bind(this));
@@ -256,8 +306,22 @@ function Earthquake(meta) {
 		return ret;
 	};
 
-	this.notify = function() {
+	this.isLoaded = function(type) {
+		if( type == 'TFPS' && this.tfps_loaded )
+			return true;
+		if( type == 'CFZS' && this.tfps_loaded )
+			return true;
+		if( type == 'JETS' && this.tfps_loaded )
+			return true;
+		if( this.jets_loaded && this.cfzs_loaded && this.tfps_loaded )
+			return true;
+		return false;
+	};
+	
+	this.checkLoaded = function() {
 		this.notifyOn('update');
+		if( this.isLoaded() )
+			this.notifyOn('loaded');
 	};
 	
 	this.init(meta);
@@ -2296,10 +2360,13 @@ function Filter(div) {
 		this.chkSim.change(this.onChange.bind(this));
 		this.chkSea.change(this.onChange.bind(this));
 		
-		this.slider = new HtmlRangeSlider(0, 12, 0.5);
+		this.slider = new HtmlRangeSlider(0, 10, 0.5);
 		this.slider.setCallback('change', this.onChange.bind(this));
 		this.slider.setCallback('slide', this.onSlide.bind(this));
 		this.div.find('.slider').append(this.slider.div);
+		
+		/* initial slide */
+		this.onSlide( this.slider.values() );
 	};
 
 	this.onChange = function() {
@@ -2397,10 +2464,11 @@ function GlobalControl() {
 		this.layers.insert( new CFZLayer('CFZ-Layer', map) );
 		this.layers.insert( new JetLayer('Tsunami-Jets', map) );
 		this.layers.insert( new IsoLayer('Isolines', map) );
+		this.layers.insert( new TFPLayer('Isolines', map) );
 		for( var i = 0; i < this.layers.length(); i++ ) {
 			var layer = this.layers.get(i);
 			this.setCallback('select', layer.setData.bind(layer));
-		}	
+		}
 		//new LayerSwitcher( $('#layer-switcher'), this.layers );		
 	};
 	
@@ -3445,7 +3513,6 @@ function load_gmaps() {
 	map = new google.maps.Map(document.getElementById('mapview'), mapOptions);
 
 	google.maps.event.addListener(map, 'click', clickMap);
-	google.maps.event.addListener(map, 'zoom_changed', mapZoomed);
 	google.maps.event.addListener(map, 'resize', mapResized);
 
 	google.maps.event
@@ -3667,7 +3734,7 @@ function getUpdates(timestamp) {
 						show = true;
 
 					entries.get(id).process = obj.process;
-					entries.get(id).notify();
+					entries.get(id).notifyOn('update');
 
 				} else if (obj['event'] == 'update') {
 
@@ -3759,7 +3826,6 @@ function getUpdates(timestamp) {
 				var filled = entries.get(active)['process'][0]['progress'];
 				if (filled == 100) {
 					entries.get(active).load();
-					getPois(entries.get(active), null);
 				}
 			}
 
@@ -3856,8 +3922,6 @@ function visualize(entry) {
 		deselect(active);
 		select(entry);
 
-		getPois(entry, null);
-
 		showGrid(active, entry['show_grid']);
 	}
 
@@ -3914,127 +3978,6 @@ function getNextMsgNr(entry, callback) {
 	});
 
 	return 0;
-}
-
-function getPois(entry, callback) {
-
-	var id = entry._id;
-
-	/* check if POIs were already inserted into the DB completely */
-	if (entry.process
-			&& (entry.process.length < 1 || entry.process[0].progress < 100)) {
-
-		if (callback != null)
-			setTimeout(callback, 500);
-
-		return "pending";
-	}
-
-	if (entry.pois != null) {
-		showPois(id, true);
-		return "done";
-	}
-
-	$
-			.ajax({
-				url : "srv/getPois",
-				data : {
-					"id" : id,
-					"process" : 0
-				},
-				dataType : 'json',
-				success : function(result) {
-
-					entry.pois = new Array();
-
-					if (result.length == 0)
-						return;
-
-					for (var i = 0; i < result.length; i++) {
-
-						var poi = result[i];
-
-						var center = new google.maps.LatLng(poi.lat_real,
-								poi.lon_real);
-
-						var point = {
-							marker : null,
-							info : null,
-							isOpen : false,
-							data : poi
-						};
-
-						var color = getPoiColor(poi);
-
-						point.marker = new google.maps.Marker({
-							position : center,
-							map : null,
-							icon : {
-								path : google.maps.SymbolPath.CIRCLE,
-								fillOpacity : 0.7,
-								fillColor : color,
-								strokeOpacity : 1.0,
-								strokeColor : "white",
-								strokeWeight : 1.5,
-								scale : 5
-							// pixels
-							}
-						});
-
-						var txt = "<b>" + poi.country + " - " + poi.name + " ("
-								+ poi.code + ")</b><br>";
-
-						var min = Math.floor(poi.eta);
-						var sec = Math.floor((poi.eta % 1) * 60.0);
-
-						if (poi.eta != -1) {
-							txt += "<span>Estimated Arrival Time: " + min + ":"
-									+ sec + " minutes</span><br>";
-							txt += "<span>Estimated Wave Height: "
-									+ poi.ewh.toFixed(2) + " meters</span><br>";
-						} else {
-							txt += "<span>Uneffected.</span><br>";
-						}
-
-						point.info = new google.maps.InfoWindow({
-							content : txt
-						});
-
-						entry.pois.push(point);
-
-						with ({
-							p : i
-						}) {
-							google.maps.event.addListener(point.marker,
-									'click', function() {
-										var poi = entry.pois[p];
-
-										if (!poi.isOpen) {
-
-											poi.info.open(map, poi.marker);
-											poi.isOpen = true;
-
-										} else {
-
-											poi.info.close();
-											poi.isOpen = false;
-										}
-									});
-						}
-					}
-
-					if (active == id)
-						showPois(id, true);
-
-				},
-				complete : function() {
-
-					if (callback != null)
-						callback();
-				}
-			});
-
-	return "pending";
 }
 
 function getPoiColor(poi) {
@@ -4116,27 +4059,6 @@ function showGrid(pointer, visible) {
 	entry['rectangle'].setMap(map);
 }
 
-function showPois(pointer, visible) {
-
-	if (pointer == null)
-		return;
-
-	var tmap = null;
-
-	if (visible) {
-		tmap = map;
-
-		if (map.getZoom() < 5)
-			return;
-	}
-
-	var entry = entries.get(pointer);
-
-	for ( var i in entry.pois) {
-		entry.pois[i].marker.setMap(tmap);
-	}
-}
-
 function select(entry) {
 	active = entry._id;	
 	entry.selected = true;
@@ -4149,7 +4071,6 @@ function deselect() {
 		return;
 
 	showGrid(active, false);
-	showPois(active, false);
 
 	if (markers.active)
 		markers.active.setMap(null);
@@ -4550,10 +4471,11 @@ function showEmailDialog(entry, msgnr) {
 		$("#SignInDialog").modal("show");
 		return;
 	}
-
-	if (getPois(entry, showEmailDialog.bind(this, entry)) != "done")
+	
+	/* check if static data was already loaded and register handler if not */
+	if( entry.load( showEmailDialog.bind(this, entry), 'TFPS' ) == false )
 		return;
-
+		
 	if (!msgnr) {
 		getNextMsgNr(entry, showEmailDialog.bind(this, entry));
 		return
@@ -4616,7 +4538,7 @@ function showEmailDialog(entry, msgnr) {
 
 	$("#mailFCPs").html("");
 
-	if (entry.pois != null) {
+	if (entry.tfps.length() > 0) {
 
 		/* previously iterate once to get maximum length of location names */
 		var heads = new Array("LOCATION-FORECAST POINT", "COORDINATES   ",
@@ -4629,9 +4551,9 @@ function showEmailDialog(entry, msgnr) {
 			headlens[i] = heads[i].length;
 
 		var minlen = heads[0].length;
-		for (var i = 0; i < entry.pois.length; i++) {
+		for (var i = 0; i < entry.tfps.length(); i++) {
 
-			var poi = entry.pois[i].data;
+			var poi = entry.tfps.get(i);
 
 			if (poi.eta == -1)
 				continue;
@@ -4669,9 +4591,9 @@ function showEmailDialog(entry, msgnr) {
 			"ALL" : new Array()
 		};
 
-		for (var i = 0; i < entry.pois.length; i++) {
+		for (var i = 0; i < entry.tfps.length(); i++) {
 
-			var poi = entry.pois[i].data;
+			var poi = entry.tfps.get(i);
 
 			if (poi.eta == -1)
 				continue;
@@ -5486,7 +5408,7 @@ function checkInput() {
 	stat = checkRange('#inDip', 0, 90) && stat;
 	stat = checkRange('#inStrike', 0, 360) && stat;
 	stat = checkRange('#inRake', -180, 180) && stat;
-	stat = checkRange('#inDuration', 0, 480) && stat;
+	stat = checkRange('#inDuration', 0, 600) && stat;
 
 	$('#btnStart').prop('disabled', !stat);
 
@@ -5681,17 +5603,6 @@ function loadPreset() {
 	fillForm(entry);
 
 	$('#custom').scrollTop(0);
-}
-
-function mapZoomed() {
-
-	var zoom = map.getZoom();
-
-	if (zoom < 5)
-		showPois(active, false);
-
-	if (zoom >= 5)
-		showPois(active, true);
 }
 
 function searchEvents() {
@@ -6216,7 +6127,8 @@ function checkStaticLink() {
 
 	/* we need google maps from this point on */
 	load_gmaps();
-	new GlobalControl();
+	if( ! global )
+		global = new GlobalControl();
 
 	toggleCloudButton();
 
@@ -6250,7 +6162,7 @@ function checkStaticLink() {
 				shared.insert(entry);
 				shared.notifyOn('change');
 
-				visualize(res.eq);
+				global.vis(entry);
 				map.panTo({
 					lat : Number(res.pos.lat),
 					lng : Number(res.pos.lon)
@@ -7852,6 +7764,7 @@ function CFZLayer(name,map) {
 				if( res.code > pol.FID_IO_DIS )
 					break;
 				if( res.code == pol.FID_IO_DIS ) {
+					pol.setInfoWin( new InfoWindow( res.toHtml() ) );
 					pol.show( this.map, getPoiColor( res ) );
 					j++;
 					break;
@@ -7866,6 +7779,46 @@ function CFZLayer(name,map) {
 			this.cfz_list.get(i).show(null);
 	};
 		
+	this.init();
+}
+
+TFPLayer.prototype = new Layer();
+
+function TFPLayer(name,map) {
+	
+	Layer.call(this,name,map);
+			
+	this.init = function() {
+		google.maps.event.addListener(this.map, 'zoom_changed', this.zoomed.bind(this));
+	};
+	
+	this.update = function() {
+		if( this.data.show_cfzs )
+			return this.display();
+		return this.clear();
+	};
+	
+	this.display = function() {
+		this.zoomed();
+		for (var i = 0; i < this.data.tfps.length(); i++)
+			this.data.tfps.get(i).point.show(this.map);
+	};
+	
+	this.clear = function() {
+		for (var i = 0; i < this.data.tfps.length(); i++)
+			this.data.tfps.get(i).point.hide();
+	};
+	
+	this.zoomed = function() {
+		if( ! this.data )
+			return;
+		var scale = 5;
+		if( this.map.getZoom() < 5 )
+			scale -= (5 - this.map.getZoom()) * 1.5;
+		for (var i = 0; i < this.data.tfps.length(); i++)
+			this.data.tfps.get(i).point.setScale(scale);	
+	};
+	
 	this.init();
 }
 
@@ -7889,6 +7842,7 @@ function Polygon(coords,color) {
 		
 	this.init = function(coords,color) {
 		this.coords = [];
+		this.window = null;
 		if( coords ) {
 			this.create(coords);
 			this.apply(color);
@@ -7919,12 +7873,23 @@ function Polygon(coords,color) {
 		
 		if( color )
 			this.poly.setOptions({strokeColor: color, fillColor: color});
+		
+		/* register click event handler */
+		google.maps.event.addListener(this.poly, 'click', (function(e) {
+			if( ! this.window )
+				return;
+			this.window.open( this.poly.getMap(), e.latLng );
+		}).bind(this));
 	};
 		
 	this.show = function(map, color) {
 		if( color )
 			this.poly.setOptions({strokeColor: color, fillColor: color});
 		this.poly.setMap(map);
+	};
+	
+	this.setInfoWin = function(win) {
+		this.window = win; 
 	};
 	
 	this.init(coords,color);
@@ -7958,6 +7923,68 @@ function Polyline(coords,color) {
 	this.init(coords,color);
 }
 
+function Point(lat,lon) {
+	
+	this.init = function(lat,lon) {
+		this.window = null;
+		this.marker = new google.maps.Marker({
+			position : Geometry.LatLon(lat,lon),
+			map : null
+		});
+		this.defaultIcon();
+		
+		/* register click event handler */
+		google.maps.event.addListener(this.marker, 'click', (function(e) {
+			if( ! this.window )
+				return;
+			this.window.open( this.marker.getMap(), e.latLng );
+		}).bind(this));
+	};
+	
+	this.setIcon = function(icon) {
+		this.marker.setIcon(icon);
+	};
+	
+	this.defaultIcon = function() {
+		var icon = {
+			path : google.maps.SymbolPath.CIRCLE,
+			fillOpacity : 0.7,
+			fillColor : 'white',
+			strokeOpacity : 1.0,
+			strokeColor : 'white',
+			strokeWeight : 1.5,
+			scale : 5
+		};
+		this.setIcon(icon);
+	};
+	
+	this.setColor = function(color) {
+		this.marker.getIcon().fillColor = color;
+	};
+	
+	this.setScale = function(scale) {
+		var icon = this.marker.getIcon();
+		icon.scale = scale;
+		this.marker.setIcon(icon);
+	};
+	
+	this.show = function(map) {
+		/* avoid reloading */
+		if( ! this.marker.getMap() )
+			this.marker.setMap(map);
+	};
+	
+	this.hide = function() {
+		this.marker.setMap(null);
+	};
+	
+	this.setInfoWin = function(win) {
+		this.window = win; 
+	};
+		
+	this.init(lat,lon);
+}
+
 CFZ.prototype = new Polygon();
 
 function CFZ(meta) {
@@ -7978,6 +8005,68 @@ function CFZResult(meta) {
 	this.init = function(meta) {
 		$.extend(this,meta);
 	};
+	
+	this.toHtml = function() {	
+        var min = Math.floor(this.eta);
+        var sec = Math.floor((this.eta % 1) * 60.0);
+        var txt = '<b>' + this.country + ' - ' + this.name + ' (' + this.code + ')</b><br>';
+
+        if (this.eta != -1) {
+        	txt += '<span>Estimated Arrival Time: ' + min + ':'	+ sec + ' minutes</span><br>';
+        	txt += '<span>Estimated Wave Height: ' + this.ewh.toFixed(2) + ' meters</span><br>';
+        } else {
+        	txt += '<span>Not affected or not covered by computation.</span><br>';
+        }
+        
+        return txt;
+	};
 		
 	this.init(meta);
+}
+
+function TFP(meta) {
+	this.init = function(meta) {
+		$.extend(this,meta);
+	};
+	
+	this.toHtml = function() {	
+        var min = Math.floor(this.eta);
+        var sec = Math.floor((this.eta % 1) * 60.0);
+        var txt = '<b>' + this.country + ' - ' + this.name + ' (' + this.code + ')</b><br>';
+
+        if (this.eta != -1) {
+        	txt += '<span>Estimated Arrival Time: ' + min + ':'	+ sec + ' minutes</span><br>';
+        	txt += '<span>Estimated Wave Height: ' + this.ewh.toFixed(2) + ' meters</span><br>';
+        } else {
+        	txt += '<span>Not affected or not covered by computation.</span><br>';
+        }
+        
+        return txt;
+	};
+	
+	this.init(meta);
+}
+
+function InfoWindow(html) {
+
+	this.init = function(html) {
+		this.window = new google.maps.InfoWindow();
+		this.setHtml(html);
+	};
+	
+	this.setHtml = function(html) {
+		if( html )
+			this.window.setContent(html);
+	};
+	
+	this.open = function(map,latlon) {
+		this.window.setPosition(latlon);
+		this.window.open(map);
+	};
+	
+	this.close = function() {
+		this.window.close();
+	};
+
+	this.init(html);
 }
