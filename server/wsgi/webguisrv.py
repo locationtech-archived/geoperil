@@ -305,4 +305,20 @@ class WebGuiSrv(Base):
            return jssuccess(comp=res)
         return jsdeny()
 
+    @cherrypy.expose
+    def gettfps(self, evid):
+        user = self.getUser()
+        if user is not None:
+           crs = self._db["tfp_comp"].find({"EventID":evid})
+           res = []
+           for tfp in crs:
+              obj = self._db["tfps"].find_one({"_id":ObjectId(tfp["tfp"])})
+              if obj is None:
+                 continue
+              obj["ewh"] = tfp["ewh"]
+              obj["eta"] = tfp["eta"]
+              res.append(obj)
+           return jssuccess(comp=res)
+        return jsdeny()
+
 application = startapp( WebGuiSrv )
