@@ -13,6 +13,11 @@ import hashlib
 from base64 import b64encode, b64decode
 from copy import copy, deepcopy
 from bson.objectid import ObjectId
+import configparser
+
+os.chdir(os.environ["PWD"])
+config = configparser.ConfigParser()
+config.read("config.cfg")
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,13 +36,13 @@ class JSONEncoder(json.JSONEncoder):
             return str(o)
         return json.JSONEncoder.default(self, o)
 
-mongourl="mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0"
-mongodbname="trideccloud"
-
 def startapp(app):
-    dbe = MongoReplicaSetClient(mongourl,w="majority")
-    atexit.register(dbe.close)
-    db = dbe[mongodbname]
+    if config["mongodb"].getboolean('replicaset'):
+        dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority")
+        atexit.register(dbe.close)
+    else:
+        dbe = MongoClient(config["mongodb"]["url"],w="majority")
+    db = dbe[config["mongodb"]["dbname"]]
     return cherrypy.Application( app( db ) , script_name=None, config=None)
 
 def checkpassword(password,pwsalt,pwhash):
