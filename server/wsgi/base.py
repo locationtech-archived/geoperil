@@ -41,10 +41,10 @@ def startapp(app):
     return cherrypy.Application( app( db ) , script_name=None, config=None)
 
 def checkpassword(password,pwsalt,pwhash):
-    return pwhash == b64encode(hashlib.new("SHA-256",pwsalt + ":" + password)).decode("ascii")
+    return pwhash == createsaltpwhash(password,pwsalt)[1]
 
-def createsaltpwhash(password):
-    salt = b64encode(os.urandom(8)).decode("ascii")
+def createsaltpwhash(password,salt=None):
+    salt = b64encode(os.urandom(8)).decode("ascii") if salt is None else salt
     pwhash = b64encode(hashlib.new("sha256",bytes(salt + ":" + password,"utf-8")).digest()).decode("ascii")
     return salt, pwhash
 

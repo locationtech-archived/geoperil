@@ -62,6 +62,7 @@ class WebGuiSrv(Base):
             if inst is not None:
                 inst = str(inst)
             if self._db["users"].find_one({"username":username}) is None:
+                print(password)
                 salt, pwhash = createsaltpwhash(password)
                 newuser = {
                     "username": username,
@@ -97,9 +98,13 @@ class WebGuiSrv(Base):
                         "FtpPassword":"anonymous",
                     },
                 }
+                print(newuser["password"])
                 if inst is not None and self._db["institutions"].find_one({"name":inst}) is None:
                     self._db["institutions"].insert({"name":inst, "secret":None})
                 self._db["users"].insert(newuser)
+                newuser.pop("password")
+                newuser.pop("pwsalt")
+                newuser.pop("pwhash")
                 return jssuccess(user = newuser)
             return jsfail(errors = ["User already exists."])
         return jsdeny()
@@ -164,13 +169,18 @@ class WebGuiSrv(Base):
                 userobj.pop("pwsalt",None)
                 userobj.pop("pwhash",None)
                 if "password" in userobj:
+                    print(userobj["password"])
                     if len(userobj["password"])>3:
                         userobj["pwsalt"], userobj["pwhash"] = createsaltpwhash(userobj["password"])
                         userobj["password"] = b64encode(hashlib.new("sha256",bytes(userobj["password"],"utf-8")).digest()).decode("ascii")
+                        print(userobj["password"])
                     else:
                         userobj.pop("password",None)
                 self._db["users"].update({"_id":userid},{"$set":userobj})
                 userobj = self._db["users"].find_one({"_id":userid})
+                userobj.pop("password")
+                userobj.pop("pwsalt")
+                userobj.pop("pwhash")
                 return jssuccess(user = userobj)
             return jsfail(errors = ["User not found."])
         return jsdeny()
