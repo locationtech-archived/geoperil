@@ -525,6 +525,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		String gdal = String.format( "gdal_contour -f kml -i 10 -fl %d eWave.2D.%05d.time arrival.%d.kml",
 									  time - 10, time * 60, time - 10);
 		
+		String ogr2ogr = String.format( "ogr2ogr -f kml -simplify 0.001 arrival.%d.kml arrival.%d.kml", time - 10, time - 10);
+		
 		String kml_parser = String.format( "python ../getShape.py arrival.%d.kml %d %s", time - 10, time - 10, id );
 		
 		String kml_file = String.format( "arrival.%d.kml", time - 10 );
@@ -537,6 +539,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					
 				/* ssh should be okay upon here, therefore run commands */
 				sshCon[1].out.println( gdal );
+				sshCon[1].out.println( ogr2ogr );
 				sshCon[1].out.println( "echo '\004'" );
 				sshCon[1].out.flush();
 						
@@ -597,6 +600,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 				
 		String gdal = String.format( "gdal_contour -f kml -fl %s eWave.2D.sshmax heights.%s.kml", ewh, ewh);
 		
+		String ogr2ogr = String.format( "ogr2ogr -f kml -simplify 0.001 heights.%s.kml heights.%s.kml", ewh, ewh);
+		
 		String kml_parser = String.format( "python ../getEWH.py heights.%s.kml %s %s", ewh, ewh, id );
 		
 		String kml_file = String.format( "heights.%s.kml", ewh );
@@ -609,6 +614,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					
 				/* ssh should be okay upon here, therefore run commands */
 				sshCon[1].out.println( gdal );
+				sshCon[1].out.println( ogr2ogr );
 				sshCon[1].out.println( "echo '\004'" );
 				sshCon[1].out.flush();
 						

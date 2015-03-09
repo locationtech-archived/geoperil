@@ -291,9 +291,19 @@ class WebGuiSrv(Base):
     def getcomp(self, evid, kind):
         user = self.getUser()
         if user is not None:
-           res = list( self._db["comp"].find({"EventID":evid, "type":kind}) )
+           if kind == "CFZ":
+              res = self.getcfzs(evid)
+           else:
+              res = list( self._db["comp"].find({"EventID":evid, "type":kind}) )
            return jssuccess(comp=res)
         return jsdeny()
+
+    def getcfzs(self, evid):
+        res = list( self._db["comp"].find({"EventID":evid, "type":"CFZ"}) )
+        for r in res:
+           cfz = self._db["cfcz"].find_one({"FID_IO_DIS":r["code"]},{"_COORDS_":0})
+           r.update(cfz)
+        return res
 
     @cherrypy.expose
     def getjets(self, evid):

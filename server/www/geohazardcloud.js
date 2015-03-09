@@ -103,7 +103,7 @@ function Earthquake(meta) {
 		 */
 		$.extend(this, meta);		
 		this.stations = null;
-		this.cfzs = new Container(sort_string.bind(this,'code'));	
+		this.cfzs = new Container(sort_string.bind(this,'eta'));	
 		this.jets = new Container(sort_string.bind(this,'ewh'));
 		this.isos = new Container();
 		this.tfps = new Container();
@@ -163,7 +163,7 @@ function Earthquake(meta) {
 	this.loadTsunamiJets = function() {
 		if( this.jets_loaded )
 			return;
-		ajax('webguisrv/getjets', {evid:this._id}, (function(result) {
+		ajax_mt('webguisrv/getjets', {evid:this._id}, (function(result) {
 			/* traverse different EWH levels */
 			for (var i = 0; i < result.jets.length; i++) {
 				/* each level contains multiple polygons */
@@ -186,7 +186,7 @@ function Earthquake(meta) {
 	this.loadCFZs = function() {
 		if( this.cfzs_loaded )
 			return;
-		ajax('webguisrv/getcomp', {evid:this._id, kind:'CFZ'}, (function(result) {
+		ajax_mt('webguisrv/getcomp', {evid:this._id, kind:'CFZ'}, (function(result) {
 			for( var i = 0; i < result.comp.length; i++ )
 				this.cfzs.insert( new CFZResult(result.comp[i]) );
 			this.cfzs_loaded = true;
@@ -198,7 +198,7 @@ function Earthquake(meta) {
 	this.loadTFPs = function() {
 		if( this.tfps_loaded )
 			return;
-		ajax('webguisrv/gettfps', {evid:this._id}, (function(result) {
+		ajax_mt('webguisrv/gettfps', {evid:this._id}, (function(result) {
 			console.log(result);
 			for (var i = 0; i < result.comp.length; i++) {
 				var tfp = new TFP(result.comp[i]);
@@ -214,7 +214,7 @@ function Earthquake(meta) {
 	};
 	
 	this.loadIsos = function() {
-		ajax('webguisrv/getisos', {evid:this._id, arr:this.last_arr}, (function(result) {
+		ajax_mt('webguisrv/getisos', {evid:this._id, arr:this.last_arr}, (function(result) {
 			console.log(result);
 			for (var i = 0; i < result.comp.length; i++ ) {
 				var isos = result.comp[i].points;
@@ -309,9 +309,9 @@ function Earthquake(meta) {
 	this.isLoaded = function(type) {
 		if( type == 'TFPS' && this.tfps_loaded )
 			return true;
-		if( type == 'CFZS' && this.tfps_loaded )
+		if( type == 'CFZS' && this.cfzs_loaded )
 			return true;
-		if( type == 'JETS' && this.tfps_loaded )
+		if( type == 'JETS' && this.jets_loaded )
 			return true;
 		if( this.jets_loaded && this.cfzs_loaded && this.tfps_loaded )
 			return true;
@@ -2406,6 +2406,7 @@ function GlobalControl() {
 	
 	// this.map = map;
 	this.filterWidget = new Filter($('#filterWidget'));
+	this.mapProgress = $('.map_progress');
 
 	eqlist = new Container(sort_date.bind(this, -1));
 	saved = new Container(sort_timeline);
@@ -2488,6 +2489,13 @@ function GlobalControl() {
 			markMsgAsDisplayed(data);	
 		}
 		this.notifyOn('select',eq);
+		/* show progress on map until loading of event has finished */
+		if( ! eq.isLoaded() ) {
+			this.mapProgress.show();
+			eq.setCallback('loaded',(function() {
+				this.mapProgress.hide();
+			}).bind(this));
+		}
 		visualize(eq);
 	};
 	
@@ -4475,6 +4483,10 @@ function showEmailDialog(entry, msgnr) {
 	/* check if static data was already loaded and register handler if not */
 	if( entry.load( showEmailDialog.bind(this, entry), 'TFPS' ) == false )
 		return;
+	
+	/* check if static data was already loaded and register handler if not */
+	if( entry.load( showEmailDialog.bind(this, entry), 'CFZS' ) == false )
+		return;
 		
 	if (!msgnr) {
 		getNextMsgNr(entry, showEmailDialog.bind(this, entry));
@@ -4711,6 +4723,28 @@ function showEmailDialog(entry, msgnr) {
 				$("#mailAdvisoryList"));
 	}
 
+	/* CFZ table */
+	var txt = '';
+	for( var i = 0; i < entry.cfzs.length(); i++ ) {
+		var cfz = entry.cfzs.get(i);
+		if( cfz.eta == -1 )
+			continue;
+		var location = cfz.COUNTRY + '-' + cfz.STATE_PROV;
+		var min = Math.floor(cfz.eta);
+		var sec = Math.floor((cfz.eta % 1) * 60.0);
+		var eta_ms = (min * 60 + sec) * 1000;
+		var pretty_eta = toMsgDateFormat(new Date(originTime.getTime() + eta_ms));
+		    pretty_eta = pretty_eta.split(' ', 3).join(' ');
+		txt += withPadding(location.substr(0,45), 45, ' ') + ' ' + pretty_eta + ' ';
+		txt += getPoiLevel(cfz) + '\n<br>';
+	}
+	if( txt != '' ) {
+		txt = 'LOCATION-FORECAST ZONE                        ARRIVAL TIME LEVEL\n<br>' +
+		      '--------------------------------------------- ------------ ------------\n<br>' +
+		      txt;
+	}
+	$('#mailCFZs').html(txt);
+		
 	/* SMS text */
 	/*
 	 * var short_region = prop.region.length < 27 ? prop.region :
@@ -4947,6 +4981,9 @@ function changeMsgText() {
 
 		if (!$("#mailFCPs").is(':empty'))
 			msgText += getPlainText($("#mailTFPs"));
+		
+		if (!$("#mailCFZs").is(':empty'))
+			msgText += getPlainText($("#mailCFZs"));
 
 		msgText += getPlainText($("#mailSuppl"));
 		msgText += getPlainText($("#mailEpilog"));
@@ -7694,7 +7731,7 @@ function JetLayer(name,map) {
 		return this.clear();
 	};
 	
-	this.display = function() {	
+	this.display = function() {
 		for (var i = 0; i < this.data.jets.length(); i++)
 			this.data.jets.get(i).show(this.map);
 	};
@@ -8009,7 +8046,7 @@ function CFZResult(meta) {
 	this.toHtml = function() {	
         var min = Math.floor(this.eta);
         var sec = Math.floor((this.eta % 1) * 60.0);
-        var txt = '<b>' + this.country + ' - ' + this.name + ' (' + this.code + ')</b><br>';
+        var txt = '<b>' + this.COUNTRY + ' - ' + this.STATE_PROV + ' (' + this.code + ')</b><br>';
 
         if (this.eta != -1) {
         	txt += '<span>Estimated Arrival Time: ' + min + ':'	+ sec + ' minutes</span><br>';
@@ -8069,4 +8106,26 @@ function InfoWindow(html) {
 	};
 
 	this.init(html);
+}
+
+/* real mutlithreaded ajax call */
+function ajax_mt(url, data, callback) {
+	var ajaxObj;
+	if (arguments.length == 1) {
+		ajaxObj = arguments[0];
+	} else if (arguments.length == 3) {
+		ajaxObj = getAjax.apply(this, arguments);
+	} else {
+		return;
+	}
+	
+	delete ajaxObj.callback;
+	
+	var worker = new Worker('ajax_mt.js');
+	worker.onmessage = function(msg) {
+		console.log(msg);
+		if( callback )
+			callback( msg.data );
+	};
+	worker.postMessage(ajaxObj);
 }

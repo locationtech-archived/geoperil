@@ -1004,7 +1004,8 @@ pre {
 		background-size: 100%;
 	}
 	
-	#splash .image-0 {
+	#splash .image-0,
+	#splash .image-8 {
 		background: url(img/0.sm.jpg);
 		background-size: 100%;
 	}
@@ -1377,4 +1378,19 @@ pre {
 	padding: 0.5em;
 	padding-right: 2em;
 	border-left: 1px solid black;	
+}
+
+.map_progress {
+	position: absolute;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    margin: auto;
+    height: 2em;
+    width: 2em;
+    z-index: 100;
+    color: white;
+    font-size: 2em;
+    display: none;
 }
