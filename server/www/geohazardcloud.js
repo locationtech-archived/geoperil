@@ -103,7 +103,7 @@ function Earthquake(meta) {
 		 */
 		$.extend(this, meta);		
 		this.stations = null;
-		this.cfzs = new Container(sort_string.bind(this,'eta'));	
+		this.cfzs = new Container(sort_string.bind(this,'code'));	
 		this.jets = new Container(sort_string.bind(this,'ewh'));
 		this.isos = new Container();
 		this.tfps = new Container();
@@ -470,6 +470,13 @@ function Container(sortFun) {
 
 			console.log(this.list[i]);
 		}
+	};
+		
+	this.sortarr = function(fun) {
+		/* copy list */
+		var ret = this.list.slice();
+		ret.sort(fun);
+		return ret;
 	};
 }
 
@@ -4725,8 +4732,9 @@ function showEmailDialog(entry, msgnr) {
 
 	/* CFZ table */
 	var txt = '';
-	for( var i = 0; i < entry.cfzs.length(); i++ ) {
-		var cfz = entry.cfzs.get(i);
+	var list = entry.cfzs.sortarr( sort_string.bind(this,'eta') );
+	for( var i = 0; i < list.length; i++ ) {
+		var cfz = list[i];
 		if( cfz.eta == -1 )
 			continue;
 		var location = cfz.COUNTRY + '-' + cfz.STATE_PROV;
@@ -6164,7 +6172,7 @@ function checkStaticLink() {
 
 	/* we need google maps from this point on */
 	load_gmaps();
-	if( ! global )
+	if( typeof global === 'undefined' )
 		global = new GlobalControl();
 
 	toggleCloudButton();
