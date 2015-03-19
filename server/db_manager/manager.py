@@ -93,7 +93,7 @@ def getType( db, inst, entry ):
     
     # convert iso date string of form YYYY-MM-DDTHH:MM:SS.mmmZ to datetime
     date = datetime.datetime.strptime( entry["date"], "%Y-%m-%dT%H:%M:%S.%fZ" )
-                
+
     query = { "prop.region": entry["name"],
               "prop.latitude": entry["lat"],
               "prop.longitude": entry["lon"],
@@ -168,6 +168,13 @@ Best Double Couple:.*?
 
     date = datetime.datetime.strptime( prop[0] + " " + prop[1], "%y/%m/%d %H:%M:%S.%f")
 
+    # adjust to right format if milliseconds are missing
+    datestr = date.isoformat();
+    if not '.' in datestr:
+        datestr = datestr + ".000000";
+
+    datestr = datestr[:-3] + 'Z'; #ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
+
     entry["name"] = prop[2]
     entry["lat"] = float(prop[3])
     entry["lon"] = float(prop[4])
@@ -176,7 +183,7 @@ Best Double Couple:.*?
     entry["strike"] = float(prop[7])
     entry["dip"] = float(prop[8])
     entry["rake"] = float(prop[9])
-    entry["date"] = date.isoformat()[:-3] + 'Z' #ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
+    entry["date"] = datestr
 
     return 0
         
@@ -230,7 +237,7 @@ def main():
         
         matches = re.findall( pattern, text, re.MULTILINE | re.DOTALL )
         
-        #if page == 2:
+        #if page == 5:
         #    break
         
         if len( matches ) == 0:
@@ -261,10 +268,9 @@ def main():
                 entry["date"] = date.isoformat() + '.000Z' #ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
                 entry["name"] = m[7]
                 entry["lat"] = float(m[3][:-6]) * (1 - 2*m[3].endswith("S"))
-                entry["lon"] = float(m[4][:-6]) * (1 - 2*m[3].endswith("W"))
+                entry["lon"] = float(m[4][:-6]) * (1 - 2*m[4].endswith("W"))
                 entry["mag"] = float(m[2])
                 entry["depth"] = float(m[5])
-                       
             if ret != 0:
                 print('Error: ', entry["id"])
                 cntError += 1
@@ -299,7 +305,7 @@ def main():
             entry.update( { "comp": 180 } )
           
         data = urllib.parse.urlencode( entry ).encode('ascii')
-        req = urllib.request.Request('http://localhost/srv/data_insert', data)
+        req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/data_insert', data)
         res = urllib.request.urlopen( req ).read()
                                                                
         time.sleep( 0.01 )
