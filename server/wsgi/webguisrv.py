@@ -83,9 +83,10 @@ class WebGuiSrv(Base):
                         "sms": False,           # can send sms messages
                         "ftp": False,           # can send messages to ftp/gts
                         "share": False,         # can create share links
-                        "compute": False,       # can compute simulations
+                        "comp": False,          # can compute simulations
                         "manage": False,        # can manage their institution
                         "chart" : False,        # can view charts with sealevel data
+                        "timeline": False       # can use timeline
                     },
                     "properties": {
                         "InterfaxUsername":"",
