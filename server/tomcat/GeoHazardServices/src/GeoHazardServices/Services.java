@@ -1800,13 +1800,13 @@ public class Services {
  
  private String static_int( String id, Double lon, Double lat, Double zoom, Object uid ) {
 	 
-	 DBCollection coll = db.getCollection("static");
-	 BasicDBObject inQuery = new BasicDBObject( "EventID", id );
+	 DBCollection coll = db.getCollection("shared_links");
+	 BasicDBObject inQuery = new BasicDBObject( "evtid", id );
 	 inQuery.put( "lon", lon );
 	 inQuery.put( "lat", lat );
 	 inQuery.put( "zoom", zoom );
 	 inQuery.put( "timestamp", new Date() );
-	 inQuery.put( "user", uid );
+	 inQuery.put( "userid", uid );
 	 
 	 coll.insert( inQuery );
 	 ObjectId objId = (ObjectId) inQuery.get( "_id" );
@@ -1844,7 +1844,7 @@ public class Services {
 		 return jsfailure();
 	 }
 	 
-	 DBCollection coll = db.getCollection("static");
+	 DBCollection coll = db.getCollection("shared_links");
 	 BasicDBObject inQuery = new BasicDBObject( "_id", objId );
 	 
 	 DBCursor cursor = coll.find( inQuery );
@@ -1853,7 +1853,7 @@ public class Services {
 		 return jsfailure();
 	 
 	 DBObject lnkObj = cursor.next();
-	 Object evtId = lnkObj.get("EventID");
+	 Object evtId = lnkObj.get("evtid");
 	 
 	 /* store meta data */
 	 User user = signedIn( session );
@@ -1868,7 +1868,7 @@ public class Services {
 	 
 	 DBObject elem = new BasicDBObject( "access", access );
 	 DBObject update = new BasicDBObject( "$push", elem );
-	 db.getCollection("static").findAndModify( inQuery, update );
+	 db.getCollection("shared_links").findAndModify( inQuery, update );
 	 
 	 cursor.close();
 	 	 	 
@@ -2117,7 +2117,7 @@ public class Services {
 }
  
  /* TODO: split params into tokens and encode them separately */
- private String sendPost( String url, String params ) {
+ public static String sendPost( String url, String params ) {
 		
 	HttpURLConnection con = null;
 	

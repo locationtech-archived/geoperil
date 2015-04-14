@@ -5,7 +5,7 @@ import json
 import logging
 import inspect
 import atexit
-import time
+import datetime
 from pymongo import MongoClient, MongoReplicaSetClient
 from pymongo.read_preferences import ReadPreference
 from uuid import UUID, uuid4
@@ -13,11 +13,12 @@ import hashlib
 from base64 import b64encode, b64decode
 from copy import copy, deepcopy
 from bson.objectid import ObjectId
+from bson.objectid import InvalidId
 import configparser
+from urllib.parse import urlparse
 
-os.chdir(os.environ["PWD"])
 config = configparser.ConfigParser()
-config.read("config.cfg")
+config.read(os.path.dirname(os.path.realpath(__file__)) + "/config.cfg")
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,6 +35,8 @@ class JSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, ObjectId):
             return str(o)
+        if isinstance(o, datetime.datetime):
+            return str(o)
         return json.JSONEncoder.default(self, o)
 
 def startapp(app):
@@ -41,7 +44,7 @@ def startapp(app):
         dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority")
         atexit.register(dbe.close)
     else:
-        dbe = MongoClient(config["mongodb"]["url"],w="majority")
+        dbe = MongoClient(config["mongodb"]["url"])
     db = dbe[config["mongodb"]["dbname"]]
     return cherrypy.Application( app( db ) , script_name=None, config=None)
 
@@ -120,3 +123,24 @@ class Base:
             uuid = cherrypy.request.cookie["server_cookie"].value
             return self._db["users"].find_one({"session":uuid})
         return None
+
+    def auth_shared(self, evtId):
+        if "auth_shared" in cherrypy.request.cookie:
+            auth = cherrypy.request.cookie["auth_shared"].value
+            try:
+                objId = ObjectId(auth)
+                return self._db["shared_links"].find({"_id":objId,"evtid":evtId}).count() > 0
+            except InvalidId:
+                return False
+        return False
+
+    def auth_api(self, key, kind):
+        if kind == "user":
+            return self._db["users"].find_one({"apikey":key})
+        if kind == "inst":
+            return self._db["inst"].find_one({"apikey":key})
+        return None
+
+    def get_hostname(self):
+        url = urlparse(cherrypy.url())
+        return url.scheme + "://" + url.hostname

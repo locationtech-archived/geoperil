@@ -165,6 +165,7 @@ function Earthquake(meta) {
 			return;
 		ajax_mt('webguisrv/getjets', {evid:this._id}, (function(result) {
 			/* traverse different EWH levels */
+			if( !result.jets ) return;
 			for (var i = 0; i < result.jets.length; i++) {
 				/* each level contains multiple polygons */
 				var jets = result.jets[i].points;
@@ -187,6 +188,7 @@ function Earthquake(meta) {
 		if( this.cfzs_loaded )
 			return;
 		ajax_mt('webguisrv/getcomp', {evid:this._id, kind:'CFZ'}, (function(result) {
+			if( !result.comp ) return;
 			for( var i = 0; i < result.comp.length; i++ )
 				this.cfzs.insert( new CFZResult(result.comp[i]) );
 			this.cfzs_loaded = true;
@@ -200,6 +202,7 @@ function Earthquake(meta) {
 			return;
 		ajax_mt('webguisrv/gettfps', {evid:this._id}, (function(result) {
 			console.log(result);
+			if( !result.comp ) return;
 			for (var i = 0; i < result.comp.length; i++) {
 				var tfp = new TFP(result.comp[i]);
 				tfp.point = new Point( tfp.lat_real, tfp.lon_real );
@@ -216,6 +219,7 @@ function Earthquake(meta) {
 	this.loadIsos = function() {
 		ajax_mt('webguisrv/getisos', {evid:this._id, arr:this.last_arr}, (function(result) {
 			console.log(result);
+			if( !result.comp ) return;
 			for (var i = 0; i < result.comp.length; i++ ) {
 				var isos = result.comp[i].points;
 				for (var j = 0; j < isos.length; j++ ) {
@@ -6169,7 +6173,10 @@ function checkStaticLink() {
 
 	if (!lnkId || lnkId == "")
 		return;
-
+	
+	/* set cookie that authorizes the access to event specific data */
+	$.cookie('auth_shared', lnkId);
+	
 	/* we need google maps from this point on */
 	load_gmaps();
 	if( typeof global === 'undefined' )
@@ -6756,6 +6763,7 @@ function AdminDialog() {
 			'manage': new HtmlCheckBox('Manage'),
 			'share': new HtmlCheckBox('Share'),
 			'chart': new HtmlCheckBox('Chart'),
+			'intmsg': new HtmlCheckBox('Cloud-Message'),
 		};
 		
 		this.instInputs = {

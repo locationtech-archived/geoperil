@@ -1004,8 +1004,7 @@ pre {
 		background-size: 100%;
 	}
 	
-	#splash .image-0,
-	#splash .image-8 {
+	#splash .image-0 {
 		background: url(img/0.sm.jpg);
 		background-size: 100%;
 	}

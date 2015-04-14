@@ -2,6 +2,10 @@ from base import *
 import time
 import datetime
 import calendar
+import subprocess
+import base64
+import math
+import tempfile
 
 logger = logging.getLogger("MsgSrv")
 
@@ -290,55 +294,317 @@ class WebGuiSrv(Base):
     @cherrypy.expose
     def getcomp(self, evid, kind):
         user = self.getUser()
-        if user is not None:
-           if kind == "CFZ":
-              res = self.getcfzs(evid)
-           else:
-              res = list( self._db["comp"].find({"EventID":evid, "type":kind}) )
-           return jssuccess(comp=res)
+        if user is not None or self.auth_shared(evid):
+            if kind == "CFZ":
+                res = self.getcfzs(evid)
+            else:
+                res = list( self._db["comp"].find({"EventID":evid, "type":kind}) )
+            return jssuccess(comp=res)
         return jsdeny()
 
     def getcfzs(self, evid):
         res = list( self._db["comp"].find({"EventID":evid, "type":"CFZ"}) )
         for r in res:
-           cfz = self._db["cfcz"].find_one({"FID_IO_DIS":r["code"]},{"_COORDS_":0})
-           r.update(cfz)
+            cfz = self._db["cfcz"].find_one({"FID_IO_DIS":r["code"]},{"_COORDS_":0})
+            r.update(cfz)
         return res
 
     @cherrypy.expose
     def getjets(self, evid):
         user = self.getUser()
-        if user is not None:
-           params = self._db["settings"].find({"type":"jet_color"})
-           pmap = dict( (str(p["threshold"]), p["color"]) for p in params )
-           jets = list( self._db["results2"].find({"id":evid}).sort([("ewh",1)]) )
-           for j in jets:
-               j["color"] = pmap[j["ewh"]]
-           return jssuccess(jets = jets)
+        if user is not None or self.auth_shared(evid):
+            params = self._db["settings"].find({"type":"jet_color"})
+            pmap = dict( (str(p["threshold"]), p["color"]) for p in params )
+            jets = list( self._db["results2"].find({"id":evid}).sort([("ewh",1)]) )
+            for j in jets:
+                j["color"] = pmap[j["ewh"]]
+            return jssuccess(jets = jets)
         return jsdeny()
 
     @cherrypy.expose
     def getisos(self, evid, arr):
         user = self.getUser()
-        if user is not None:
-           res = list( self._db["results"].find({"id":evid, "arrT": {"$gt":int(arr)}}) )
-           return jssuccess(comp=res)
+        if user is not None or self.auth_shared(evid):
+            res = list( self._db["results"].find({"id":evid, "arrT": {"$gt":int(arr)}}) )
+            return jssuccess(comp=res)
         return jsdeny()
 
     @cherrypy.expose
     def gettfps(self, evid):
         user = self.getUser()
-        if user is not None:
-           crs = self._db["tfp_comp"].find({"EventID":evid})
-           res = []
-           for tfp in crs:
-              obj = self._db["tfps"].find_one({"_id":ObjectId(tfp["tfp"])})
-              if obj is None:
-                 continue
-              obj["ewh"] = tfp["ewh"]
-              obj["eta"] = tfp["eta"]
-              res.append(obj)
-           return jssuccess(comp=res)
+        if user is not None or self.auth_shared(evid):
+            res = self._gettfps(evid)
+            return jssuccess(comp=res)
         return jsdeny()
-
+    
+    # for internal use
+    def _gettfps(self, evid):
+        crs = self._db["tfp_comp"].find({"EventID":evid})
+        res = []
+        for tfp in crs:
+            obj = self._db["tfps"].find_one({"_id":ObjectId(tfp["tfp"])})
+            if obj is None:
+                continue
+            obj["ewh"] = tfp["ewh"]
+            obj["eta"] = tfp["eta"]
+            res.append(obj)
+        return res
+                
+    # static division into different TFP levels
+    def get_tfp_level(self, tfp):
+        if(tfp["eta"] == -1):
+            return None
+        if(tfp["ewh"] < 0.2):
+            return "INFORMATION"
+        if(tfp["ewh"] < 0.5):
+            return "ADVISORY"
+        return "WATCH"
+    
+    def get_msg_text(self, evid, kind):
+        tfps = self._gettfps(evid)
+        cfzs = self.getcfzs(evid)
+        
+        #get earthquake event
+        eq = self._db["eqs"].find_one({"_id":evid})
+        
+        # define headlines
+        headlen = 0
+        
+        # pick up neccessary data
+        data = {}
+        for tfp in tfps:
+            level = self.get_tfp_level( tfp )
+            if level is None:
+                continue
+            # add new key if not already present
+            if level not in data:
+                data[level] = {}
+            # add new key if not already present
+            if tfp["country"] not in data[level]:
+                data[level][ tfp["country"] ] = []
+            data[level][ tfp["country"] ].append( tfp )
+            headlen = max( headlen, len( tfp["country"] + "-" + tfp["name"] ) )
+                
+        headlines = ("LOCATION-FORECAST POINT".ljust(headlen), "COORDINATES   ", "ARRIVAL TIME", "LEVEL       ")
+        headlen = len( headlines[0] )
+        tfp_txt = "%s %s %s %s\n" % headlines
+        for head in headlines:
+            tfp_txt += "%s " % "".ljust(len(head), '-')
+        tfp_txt += "\n"
+        
+        # iterate levels WATCH and ADVISORY only if available - the sorting is done
+        # using the length of the level names (WATCH, ADVISORY, INFORMATION)
+        for level in sorted(data.keys() & ["WATCH", "ADVISORY"], key=lambda x: len(x) ):
+            # sort items in country lists
+            for country_map in data[level].values():
+                country_map.sort(key=lambda x: x["eta"])
+            # iterate items sorted by country ...
+            for country_map in sorted(data[level].values(), key=lambda x: x[0]["eta"]):
+                # ... and ETA value
+                for item in country_map:
+                    arr_min = math.floor(item["eta"])
+                    arr_sec = math.floor( (item["eta"] % 1) * 60.0 )
+                    arrival = eq["prop"]["date"] + datetime.timedelta( minutes=arr_min, seconds=arr_sec )
+                    
+                    tfp_txt += ("%s %5.2f%c %6.2f%c %s %s\n"
+                        %( (item["country"] + "-" + item["name"]).ljust(headlen),
+                           abs(item["lat_real"]),
+                           "S" if item["lat_real"] < 0 else "N",
+                           abs(item["lon_real"]),
+                           "W" if item["lon_real"] < 0 else "E",
+                           arrival.strftime("%H%MZ %d %b").upper(),
+                           level
+                        )
+                    )
+            tfp_txt += "\n"
+        
+        # remove all CFZs with an ETA value of -1
+        cfzs = [ v for v in cfzs if v["eta"] > -1 ]
+        if cfzs:
+            # get maximal size of zone name
+            v = max( cfzs, key=lambda x: len(x["COUNTRY"] + x["STATE_PROV"]) )
+            headlen = len( v["COUNTRY"] + "-" + v["STATE_PROV"] )
+            headlines = ("LOCATION-FORECAST ZONE".ljust(headlen), "ARRIVAL TIME", "LEVEL       ")
+            headlen = len(headlines[0])
+            # print headlines
+            cfz_txt = "%s %s %s\n" % headlines
+            for head in headlines:
+                cfz_txt += "%s " % "".ljust(len(head), '-')
+            cfz_txt += "\n"
+    
+            for cfz in sorted( cfzs, key=lambda x: x["eta"] ):
+                level = self.get_tfp_level( cfz )
+                arr_min = math.floor(cfz["eta"])
+                arr_sec = math.floor( (cfz["eta"] % 1) * 60.0 )
+                arrival = eq["prop"]["date"] + datetime.timedelta( minutes=arr_min, seconds=arr_sec )
+                cfz_txt += ("%s %s %s\n" %(
+                    (cfz["COUNTRY"] + '-' + cfz["STATE_PROV"]).ljust(headlen),
+                    arrival.strftime("%H%MZ %d %b").upper(),
+                    level
+                ))
+            cfz_txt += "\n"
+        
+        # 
+        applies = {}
+        countries = []
+        for level in sorted(data, key=lambda x: len(x) ):
+            applies[level] = ""
+            for country in sorted(data[level].keys()):
+                if level != "INFORMATION" or country not in countries:
+                    applies[level] += "%s ... " % country
+                    countries.append(country)
+            applies[level] = applies[level][:-5]
+        
+        # get message template
+        template = self._db["settings"].find_one({"type": "msg_template"})
+        
+        # build final message
+        nr = 1
+        msg = template["prolog"] % (nr, "", datetime.datetime.utcnow().strftime("%H%MZ %d %b %Y").upper())
+        # summaries
+        for level in sorted(data, key=lambda x: len(x) ):
+            # TODO: include info only if allowed 
+            if applies[level] != "":
+                msg += template["summary"] %(
+                    "END OF " if kind == "end" else "",
+                    level,
+                    " ONGOING" if nr > 1 else "",
+                    applies[level]
+                )
+        msg += template["advise"]
+        msg += template["params"] % (
+            eq["prop"]["date"].strftime("%H%MZ %d %b %Y").upper(),
+            abs(eq["prop"]["latitude"]),
+            "SOUTH" if eq["prop"]["latitude"] < 0 else "NORTH",
+            abs(eq["prop"]["longitude"]),
+            "WEST" if eq["prop"]["longitude"] < 0 else "EAST",
+            eq["prop"]["depth"],
+            eq["prop"]["region"],
+            eq["prop"]["magnitude"]
+        )    
+        # evaluation of WATCH, ADVISORY and INFORMATION
+        if kind == "info":
+            if nr == 1:
+                msg += template["eval_watch_first"]
+                msg += template["eval_advisory_first"]
+                msg += template["eval_info_first"]
+            else:
+                msg += template["eval_watch_mid"]
+                msg += template["eval_advisory_mid"]
+        elif kind == "end":
+            msg += template["eval_watch_end"]
+            msg += template["eval_advisory_end"]
+        
+        # append table of TFP values if available
+        if "WATCH" in data or "ADVISORY" in data:
+            msg += template["tfps"] % tfp_txt
+        
+        # append table of CFZ values if available
+        if cfzs:
+            msg += cfz_txt
+        
+        # 
+        if kind == "info":
+            msg += template["supplement"]
+        else:
+            msg += template["final"]
+        msg += template["epilog"] % nr
+            
+        return msg
+    
+    # public interface to get all information about an earthquake event
+    @cherrypy.expose
+    def get_event_info(self,apikey,evid):
+        if self.auth_api(apikey, "user") is not None:
+            eq = self._db["eqs"].find_one({"_id":evid})
+            if eq is not None:
+                # set fields explicitly to avoid returning sensible data that may be added later
+                evt = {
+                    "evid": eq["_id"],
+                    "prop": eq["prop"],
+                    "simulation": eq["process"][0],
+                    "image_url": self.get_hostname() + "/webguisrv/get_image/?evtid=" + eq["_id"]
+                }
+                msg = self.get_msg_text(evid, "info")
+                return jssuccess(eq=evt,msg=msg)
+            return jsfail()
+        return jsdeny()
+    
+    # create a shared link and return its ID - internal usage only
+    def _make_shared_link(self, evtid, lon, lat, zoom, userid):
+        obj = {
+            "evtid": evtid,
+            "lon": float(lon),
+            "lat": float(lat),
+            "zoom": int(zoom),
+            "timestamp": datetime.datetime.utcnow(),
+            "userid": userid
+        }
+        # return ID of inserted object 
+        return self._db["shared_links"].insert( obj )
+    
+    # public interface to create a shared link
+    @cherrypy.expose 
+    def make_shared_link(self, evtid, lon, lat, zoom):
+        user = self.getUser()
+        if user is not None:
+            link_id = self._make_shared_link( evtid, lon, lat, zoom, user["_id"] )
+            return jssuccess(key=link_id)
+        return jsdeny()
+    
+    # create a PNG image based on a shared link and return the file as binary data
+    def make_image(self, link_id):
+        # create temporary file
+        tmp = tempfile.NamedTemporaryFile(suffix=".png",delete=False)
+        tmp.close()
+        # call phantomjs to make a snapshot
+        path = os.path.dirname(os.path.realpath(__file__)) + "/phantomjs/"
+        subprocess.call(path + "phantomjs " + path + "snapshot.js http://localhost/?share=" + str(link_id) + " " + tmp.name + " '#mapview'", shell=True)
+        # get binary data of image
+        f = open(tmp.name, 'rb')
+        data = f.read()
+        f.close()
+        # remove temporary file and return binary data
+        os.remove(tmp.name)
+        return data
+    
+    # this method is called by the tomcat-server if the computation
+    # of an earthquake event is completed - just a workaround until
+    # we have everything merged into this python module 
+    @cherrypy.expose
+    def post_compute(self, evtid):
+        evt = self._db["eqs"].find_one({"_id": evtid})
+        # create shared link first
+        link_id = self._make_shared_link(evt["_id"], evt["prop"]["longitude"], evt["prop"]["latitude"], 3, None )
+        # create image
+        img = self.make_image(link_id)
+        # append everything to the earthquake event
+        self._db["eqs"].update({"_id": evtid}, {"$set": {"shared_link": link_id, "image": img}})
+        return jssuccess()
+    
+    # can be used to download the image
+    @cherrypy.expose
+    def get_image(self, evtid):
+        evt = self._db["eqs"].find_one({"_id": evtid})
+        if evt is not None:
+            cd = 'attachment; filename="%s.png"' % evt["_id"]
+            cherrypy.response.headers["Content-Type"] = "application/x-download"
+            cherrypy.response.headers["Content-Disposition"] = cd
+            return evt["image"]
+        return jsfail()
+    
+    @cherrypy.expose
+    def get_events(self):
+        user = self.getUser()
+        if user is not None:
+            events = list( self._db["eqs"].find(
+                {"$or": [
+                    {"user": user["_id"]},
+                    {"user": user["inst"]}
+                ]},
+                {"image": False}
+            ).sort("prop.date", -1))
+            ts = max( events, key=lambda x: x["timestamp"] )["timestamp"]
+        return jssuccess(events=events,ts=ts)
+    
 application = startapp( WebGuiSrv )

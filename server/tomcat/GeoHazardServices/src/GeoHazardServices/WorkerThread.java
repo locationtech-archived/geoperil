@@ -460,6 +460,10 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					/* update the reference event with the new data */
 					colEvents.update( refEvent, event, true, false );
 					
+					if( task.progress == 100.0f ) {
+						pyPostProcess( task );
+					}
+					
 				} else {
 					
 					/* this is the first time after simulation start - insert process entry */
@@ -853,6 +857,12 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			return 1;
 		}
 		
+		return 0;
+	}
+	
+	private int pyPostProcess( TaskParameter task ) {
+		
+		Services.sendPost("http://localhost/webguisrv/post_compute", "evtid=" + task.id.toString());		
 		return 0;
 	}
 	
