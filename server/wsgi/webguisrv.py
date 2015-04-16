@@ -1,4 +1,4 @@
-from base import *
+from basesrv import *
 import time
 import datetime
 import calendar
@@ -9,7 +9,7 @@ import tempfile
 
 logger = logging.getLogger("MsgSrv")
 
-class WebGuiSrv(Base):
+class WebGuiSrv(BaseSrv):
 
     @cherrypy.expose
     def session(self):

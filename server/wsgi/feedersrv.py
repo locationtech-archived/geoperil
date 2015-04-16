@@ -1,10 +1,10 @@
-from base import *
+from basesrv import *
 import time
 jsonlib = json
 
 logger = logging.getLogger("MsgSrv")
 
-class FeederSrv(Base):
+class FeederSrv(BaseSrv):
 
     @cherrypy.expose
     def feed(self, cls="auto", **data):

@@ -1,4 +1,4 @@
-from base import *
+from basesrv import *
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from email.mime.text import MIMEText
@@ -75,7 +75,7 @@ def sendtwilliosms(twisid, twitoken, twifrom, to, text):
             success += succ
         return success, errors
 
-class MsgSrv(Base):
+class MsgSrv(BaseSrv):
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])

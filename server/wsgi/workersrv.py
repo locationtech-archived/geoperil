@@ -1,10 +1,10 @@
-from base import *
+from basesrv import *
 
 logger = logging.getLogger("WorkerSrv")
 
-class WorkerSrv(Base):
+class WorkerSrv(BaseSrv):
     def __init__(self,db):
-        Base.__init__(self,db)
+        BaseSrv.__init__(self,db)
         self._db["workers"].ensure_index("workerid",unique=True)
         self._db["tasks"].ensure_index("taskid",unique=True)
 
