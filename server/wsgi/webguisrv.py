@@ -607,5 +607,9 @@ class WebGuiSrv(BaseSrv):
             ).sort("prop.date", -1))
             ts = max( events, key=lambda x: x["timestamp"] )["timestamp"]
         return jssuccess(events=events,ts=ts)
+
+    @cherrypy.expose
+    def gethazardevents(self,**parameters):
+        return self.get_hazard_event(**parameters)
     
 application = startapp( WebGuiSrv )
