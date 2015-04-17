@@ -51,3 +51,25 @@ class BaseSrv:
                 return jssuccess()
             return jsfail(errors = ["eventid already assigned."])
         return jsfail(errors = ["eventid missing."])
+
+    def get_hazard_event(self, **parameters):
+        parameters = {
+            "margin_x":0.1,
+            "margin_y":0.1,
+            "margin_mag":1,
+            "margin_depth":10,
+        }.update(parameters)
+        query={}
+        for name,value in parameters.items():
+            if not name.startswith("margin_"):
+                try:
+                    value = float(value)
+                    if "margin_"+name in parameters:
+                        margin = float(parameters["margin_"+name])
+                        query[name] = {"$gte":value-margin, "$lte":value+margin}
+                    else:
+                        query[name] = value
+                except ValueError:
+                    query[name] = value
+        events = self._db["hazard_events"].find(query)
+        return jssuccess(hazard_events = list(events))
