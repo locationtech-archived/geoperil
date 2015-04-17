@@ -42,3 +42,12 @@ class BaseSrv:
     def get_hostname(self):
         url = urlparse(cherrypy.url())
         return url.scheme + "://" + url.hostname
+
+    def feed_hazard_event(self,event):
+        if "eventid" in event:
+            ev = self._db["hazard_events"].find_one({"eventid":event["eventid"]})
+            if ev is None:
+                self._db["hazard_events"].insert(event)
+                return jssuccess()
+            return jsfail(errors = ["eventid already assigned."])
+        return jsfail(errors = ["eventid missing."])

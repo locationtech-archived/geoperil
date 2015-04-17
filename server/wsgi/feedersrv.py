@@ -62,6 +62,15 @@ class FeederSrv(BaseSrv):
             return jsfail(errors = ["The following Parameters are mandatory: inst, secret"])
         return jsfail(errors = ["API version not supported."])
 
+    @cherrypy.expose
+    def feedhazardevent(self, apiver, inst, secret, event):
+        if apiver == "1":
+            inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
+            if inst is not None:
+                return self.feed_hazard_event(jsonlib.loads(event))
+            return jsdeny()
+        return jsfail(errors = ["API version not supported."])
+
     def feedsealevel_api1(self, inst, secret, timestamp, value, station, **data):
         inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
         if inst is not None:
