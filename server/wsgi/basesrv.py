@@ -53,12 +53,14 @@ class BaseSrv:
         return jsfail(errors = ["eventid missing."])
 
     def get_hazard_event(self, **parameters):
-        parameters = {
+        default_parameters = {
             "margin_x":0.1,
             "margin_y":0.1,
             "margin_mag":1,
             "margin_depth":10,
-        }.update(parameters)
+        }
+        default_parameters.update(parameters)
+        parameters = default_parameters
         query={}
         for name,value in parameters.items():
             if not name.startswith("margin_"):
