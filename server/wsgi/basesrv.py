@@ -58,6 +58,7 @@ class BaseSrv:
             "margin_y":0.1,
             "margin_mag":1,
             "margin_depth":10,
+            "margin_time":900,
         }
         default_parameters.update(parameters)
         parameters = default_parameters
