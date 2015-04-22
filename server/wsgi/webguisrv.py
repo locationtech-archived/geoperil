@@ -30,7 +30,7 @@ class WebGuiSrv(BaseSrv):
                 if res:
                     # updating login data
                     pwsalt,pwhash = createsaltpwhash(password)
-                    self._db[users].update({"username": user["username"]},{"$set": {"pwsalt": pwsalt, "pwhash": pwhash}})
+                    self._db["users"].update({"username": user["username"]},{"$set": {"pwsalt": pwsalt, "pwhash": pwhash}})
             if res:
                 sessionid = str(uuid4())
                 while self._db["users"].find_one({"session": sessionid}) is not None:
@@ -49,6 +49,7 @@ class WebGuiSrv(BaseSrv):
         user = self.getUser()
         if user is not None:
             self.db["users"].update({"username": user["username"]}, {"$set": {"session": None}})
+            cookie = cherrypy.response.cookie
             cookie['server_cookie'] = ""
             cookie['server_cookie']['path'] = '/'
             cookie['server_cookie']['max-age'] = 0
@@ -522,10 +523,12 @@ class WebGuiSrv(BaseSrv):
                 # set fields explicitly to avoid returning sensible data that may be added later
                 evt = {
                     "evid": eq["_id"],
+                    "geofonid": eq["id"],
                     "prop": eq["prop"],
-                    "simulation": eq["process"][0],
                     "image_url": self.get_hostname() + "/webguisrv/get_image/?evtid=" + eq["_id"]
                 }
+                if "process" in eq:
+                    evt["simulation"] = eq["process"][0]
                 msg = self.get_msg_text(evid, "info")
                 return jssuccess(eq=evt,msg=msg)
             return jsfail()
@@ -595,21 +598,54 @@ class WebGuiSrv(BaseSrv):
         return jsfail()
     
     @cherrypy.expose
-    def get_events(self):
+    def get_events(self, inst=None, limit=200):
         user = self.getUser()
         if user is not None:
+            users = [{"user": user["_id"]}];
+            inst = self._db["institutions"].find_one({"name": inst})
+            if inst is not None:
+                users.append({"user": inst["_id"]})
+            elif "inst" in user:
+                users.append({"user": user["inst"]})
             events = list( self._db["eqs"].find(
-                {"$or": [
-                    {"user": user["_id"]},
-                    {"user": user["inst"]}
-                ]},
+                {"$or": users,
+                 "depr": None
+                },
                 {"image": False}
-            ).sort("prop.date", -1))
-            ts = max( events, key=lambda x: x["timestamp"] )["timestamp"]
-        return jssuccess(events=events,ts=ts)
+            ).sort("prop.date", -1).limit( int(limit) ))
+            if len(events) > 0:
+                ts = max( events, key=lambda x: x["timestamp"] )["timestamp"]
+            else:
+                ts = 0
+            return jssuccess(events=events,ts=ts)
+        return jsdeny()
 
     @cherrypy.expose
     def gethazardevents(self,**parameters):
         return self.get_hazard_event(**parameters)
+    
+    @cherrypy.expose
+    def save_picking(self, evtid, station, data):
+        user = self.getUser()
+        if user is not None:
+            self._db["pickings"].update(
+                {"userid": user["_id"], "evtid": evtid, "station": station},
+                {"$set": {"data": json.loads(data)} },
+                upsert=True
+            )
+            return jssuccess()
+        return jsdeny()
+    
+    @cherrypy.expose
+    def load_picking(self, evtid, station):
+        user = self.getUser()
+        if user is not None:
+            obj = self._db["pickings"].find_one(
+                {"userid": user["_id"], "evtid": evtid, "station": station}
+            )
+            if obj is not None:
+                return jssuccess(data=obj["data"])
+            return jsfail()
+        return jsdeny()
     
 application = startapp( WebGuiSrv )
