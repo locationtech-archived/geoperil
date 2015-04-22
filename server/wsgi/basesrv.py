@@ -48,8 +48,9 @@ class BaseSrv:
             ev = self._db["hazard_events"].find_one({"eventid":event["eventid"]})
             if ev is None:
                 self._db["hazard_events"].insert(event)
-                return jssuccess()
-            return jsfail(errors = ["eventid already assigned."])
+            else:
+                self._db["hazard_events"].update({"eventid":event["eventid"]},event)
+            return jssuccess()
         return jsfail(errors = ["eventid missing."])
 
     def get_hazard_event(self, **parameters):
@@ -58,7 +59,7 @@ class BaseSrv:
             "margin_y":0.1,
             "margin_mag":1,
             "margin_depth":10,
-            "margin_time":900,
+            "margin_time":300,
         }
         default_parameters.update(parameters)
         parameters = default_parameters
