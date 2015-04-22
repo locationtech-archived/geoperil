@@ -518,8 +518,9 @@ class WebGuiSrv(BaseSrv):
     @cherrypy.expose
     def get_event_info(self,apikey,evid):
         if self.auth_api(apikey, "user") is not None:
-            eq = self._db["eqs"].find_one({"_id":evid})
-            if eq is not None:
+            cursor = self._db["eqs"].find({"$or": [{"_id":evid}, {"id":evid}]}).sort("refineId", -1).limit(1)
+            if cursor is not None:
+                eq = cursor[0]
                 # set fields explicitly to avoid returning sensible data that may be added later
                 evt = {
                     "evid": eq["_id"],
@@ -529,7 +530,7 @@ class WebGuiSrv(BaseSrv):
                 }
                 if "process" in eq:
                     evt["simulation"] = eq["process"][0]
-                msg = self.get_msg_text(evid, "info")
+                msg = self.get_msg_text(eq['_id'], "info")
                 return jssuccess(eq=evt,msg=msg)
             return jsfail()
         return jsdeny()
