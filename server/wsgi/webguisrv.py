@@ -526,11 +526,12 @@ class WebGuiSrv(BaseSrv):
                     "evid": eq["_id"],
                     "geofonid": eq["id"],
                     "prop": eq["prop"],
-                    "shared_link": eq["shared_link"],
                     "image_url": self.get_hostname() + "/webguisrv/get_image/?evtid=" + eq["_id"]
                 }
                 if "process" in eq:
                     evt["simulation"] = eq["process"][0]
+                if "shared_link" in eq:
+                    evt["shared_link"] = eq["shared_link"]
                 msg = self.get_msg_text(eq['_id'], "info")
                 return jssuccess(eq=evt,msg=msg)
             return jsfail()
