@@ -526,6 +526,7 @@ class WebGuiSrv(BaseSrv):
                     "evid": eq["_id"],
                     "geofonid": eq["id"],
                     "prop": eq["prop"],
+                    "shared_link": eq["shared_link"],
                     "image_url": self.get_hostname() + "/webguisrv/get_image/?evtid=" + eq["_id"]
                 }
                 if "process" in eq:
