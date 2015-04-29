@@ -559,7 +559,7 @@ if( ! isset( $_GET["id"] ) ) :
 	<?php
 		$file = 'http://kinherd.org/events/'. $eq['geofonid'] .'/report.html';
 		$kinherd = file_get_contents($file);
-		$kinherd = str_replace("=\"work/", "=\"http://kinherd.org/events/gfz2015getx/work/", $kinherd);
+		$kinherd = str_replace("=\"work/", "=\"http://kinherd.org/events/". $eq['geofonid'] ."/work/", $kinherd);
 		preg_match('/<body[^>]*>(.*?)<\/body>/s', $kinherd, $body);
 	?>
 	<h3 id="kinherd">KINHERD
