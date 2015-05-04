@@ -33,10 +33,11 @@ class BaseSrv:
         return False
 
     def auth_api(self, key, kind):
-        if kind == "user":
-            return self._db["users"].find_one({"apikey":key})
-        if kind == "inst":
-            return self._db["inst"].find_one({"apikey":key})
+        if key is not None:
+            if kind == "user":
+                return self._db["users"].find_one({"apikey":key})
+            if kind == "inst":
+                return self._db["institutions"].find_one({"apikey":key})
         return None
 
     def get_hostname(self):

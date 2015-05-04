@@ -600,6 +600,46 @@ class WebGuiSrv(BaseSrv):
             return evt["image"]
         return jsfail()
     
+    # retrieve a UTC timestamp from a given datetime object in UTC
+    def _get_utc_timestamp(self, utc_date):
+        return utc_date.replace(tzinfo=datetime.timezone.utc).timestamp()
+    
+    # retrieve a UCT datetime object from a given UTC timestamp
+    def _get_utc_date(self, utc_timestamp):
+        sec_ms = str(utc_timestamp).split('.')
+        sec = int(sec_ms[0])
+        ms = int(sec_ms[1].ljust(6,'0')) if len(sec_ms) > 1 else 0
+        return datetime.datetime.utcfromtimestamp(sec).replace(microsecond=ms)
+    
+    def _get_events(self, user=None, inst=None, time=0.0, limit=200):
+        query = [];
+        maxtime = 0.0;
+        if user is not None:
+            # TODO: check return values of database query
+            userid = self._db["users"].find_one({"username": user})["_id"]
+            query.append({"user": userid})
+        if inst is not None:
+            # TODO: check return values of database query
+            instid = self._db["institutions"].find_one({"name": inst})["_id"]
+            query.append({"user": instid})
+        events = list( self._db["eqs"].find(
+            {"$or": query,
+             "depr": None,
+             "timestamp": {"$gt": self._get_utc_date(time)}
+            },
+            {"image": False}
+        ).sort("prop.date", -1).limit( int(limit) ))
+        if len(events) > 0:
+            maxtime = self._get_utc_timestamp( max( events, key=lambda x: x["timestamp"] )["timestamp"] )
+        return {"events": events, "maxtime": maxtime}
+    
+    @cherrypy.expose
+    def get_geofon_events(self, time=0.0, limit=200, apikey=None):
+        if self.auth_api(apikey, "inst") is not None:
+            rslt = self._get_events(None, "gfz", time, limit)
+            return jssuccess(**rslt)
+        return jsdeny()
+        
     @cherrypy.expose
     def get_events(self, inst=None, limit=200):
         user = self.getUser()
