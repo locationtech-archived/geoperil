@@ -601,8 +601,8 @@ class WebGuiSrv(BaseSrv):
         return jsfail()
     
     # retrieve a UTC timestamp from a given datetime object in UTC
-    def _get_utc_timestamp(self, utc_date):
-        return utc_date.replace(tzinfo=datetime.timezone.utc).timestamp()
+    def _get_utc_timestamp(self, utc_date): 
+        return (utc_date - datetime.datetime(1970, 1, 1)) / datetime.timedelta(seconds=1)
     
     # retrieve a UCT datetime object from a given UTC timestamp
     def _get_utc_date(self, utc_timestamp):
