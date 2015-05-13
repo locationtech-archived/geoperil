@@ -983,275 +983,7 @@
 	    </div><!-- /.modal-content -->
 	  </div><!-- /.modal-dialog -->
 	</div><!-- /.modal -->
-		
-	<!-- modal email dialog -->
-	<div class="modal fade mail-fade" id="EmailDia" tabindex="-1">
-	  <div class="modal-dialog modal-sm mail-dialog">
-	    <div class="modal-content mail-content">
-	      <div class="modal-header mail-header">
-	        <button type="button" class="close" data-dismiss="modal">&times;</button>
-	        <h4 class="modal-title">Send messages</h4>
-	      </div>
-	      <div class="modal-body mail-body">
-	      	<form class="form-horizontal">
-	      		<div id="msgCloud" class="group">
-	      			<div class="grpHeader">
-	      				<span class="grpHeadline">Cloud addresses</span>
-	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-	      			</div>
-	      			<div class="grpContent">
-		      			<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Cloud users:</span>
-							<input id="intTo" type="text" class="form-control">
-							<span class="input-group-addon mail-right">
-								<span class="glyphicon glyphicon-cloud"></span>
-							</span>
-					  	</div>
-				  	</div>
-	      		</div>
-	      		<div id="msgMail" class="group">
-	      			<div class="grpHeader">
-	      				<span class="grpHeadline">E-mail addresses</span>
-	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-	      			</div>
-	      			<div class="grpContent">
-				  		<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon left-label">From:</span>
-							<span id="mailFrom" class="form-control"></span>
-				  		</div>
-				  		<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">To:</span>
-							<input id="mailTo" type="text" class="form-control">
-							<span class="input-group-addon mail-right">
-								<span class="glyphicon glyphicon-envelope"></span>
-							</span>
-				  		</div>
-				  		<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Cc:</span>
-							<input id="mailCC" type="text" class="form-control">
-							<span class="input-group-addon mail-right">
-								<span class="glyphicon glyphicon-envelope"></span>
-							</span>
-				  		</div>
-			  		</div>
-		  		</div>		  		
-		  		<div id="msgFax" class="group">
-	      			<div class="grpHeader">
-	      				<span class="grpHeadline">Fax addresses</span>
-	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-	      			</div>
-	      			<div class="grpContent">
-				  		<div id="faxGrp" class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Fax numbers:</span>
-							<input id="faxTo" type="text" class="form-control">
-							<span class="input-group-addon mail-right">
-								<span class="glyphicon glyphicon-phone-alt"></span>
-							</span>
-				  		</div>
-				  	</div>
-				</div>
-				<div id="msgFtp" class="group">
-	      			<div class="grpHeader">
-	      				<span class="grpHeadline">FTP / GTS address</span>
-	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-	      			</div>
-	      			<div class="grpContent">
-				  		<div id="ftpGrp" class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Publish on FTP:</span>
-							<span id="ftpChkSpan" class="form-control">
-								<input id="ftpChk" type="checkbox">
-							</span>
-							<span id="ftpTo" class="form-control"></span>
-							<span class="input-group-addon slash">/</span>
-							<input id="ftpToFile" type="text" class="form-control">
-							<span class="input-group-addon mail-right">
-								<span class="glyphicon glyphicon-link"></span>
-							</span>
-				  		</div>
-				  	</div>
-				</div>
-				<div id="msgText" class="group">
-	      			<div class="grpHeader">
-	      				<span class="grpHeadline">Message</span>
-	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-	      			</div>
-	      			<div class="grpContent">
-				  		<span id="mailTemplate">
-				  			<span id="mailProlog">
-				  			TSUNAMI EXERCISE MESSAGE NUMBER <span class="mailNumber"></span><br>
-				  			<span class="mailProvider"></span><br>
-				  			ISSUED AT <span id="mailDate"></span><br><br>
-				  			
-				  			... THIS IS AN EXERCISE ...<br><br>
-				  			</span>
-				  			
-				  			<span id="mailWatchSum">
-				  			... <span class="mailEndOf"></span>TSUNAMI WATCH<span class="mailOngoing"></span> ...
-				  			THIS ALERT APPLIES TO<span id="mailWatchList"></span>
-				  			</span>
-				  							  			
-				  			<span id="mailAdvisorySum">
-				  			... <span class="mailEndOf"></span>TSUNAMI ADVISORY<span class="mailOngoing"></span> ...
-				  			THIS ALERT APPLIES TO<span id="mailAdvisoryList"></span>
-				  			</span>
-				  			
-				  			<span id="mailInfoSum">
-				  			... <span class="mailEndOf"></span>TSUNAMI INFORMATION<span class="mailOngoing"></span> ...
-				  			THIS ALERT APPLIES TO<span id="mailInfoList"></span>
-				  			</span>
-				  			
-				  			<span id="mailApply">
-				  			THIS ALERT APPLIES TO ALL COUNTRIES SUBSCRIBED TO THE SERVICES OF THIS CTWP.
-				  			</span>
-				  			
-				  			<span id="mailAdvice">
-				  			THIS MESSAGE IS ISSUED AS ADVICE TO GOVERNMENT AGENCIES. ONLY NATIONAL AND LOCAL GOVERNMENT AGENCIES HAVE THE AUTHORITY TO MAKE DECISIONS REGARDING THE OFFICIAL STATE OF ALERT IN THEIR AREA AND ANY ACTIONS TO BE TAKEN IN RESPONSE.<br><br>
-							</span>
-				
-							<span id="mailEqParams">
-							AN EARTHQUAKE HAS OCCURRED WITH THESE PRELIMINARY PARAMETERS<br>
-				  			ORIGIN TIME - <span id="mailOriginTime"></span><br>
-							COORDINATES - <span id="mailCoordinates"></span><br>
-							DEPTH       - <span id="mailDepth"></span> KM<br>
-							LOCATION    - <span id="mailLocation"></span><br>
-							MAGNITUDE   - <span id="mailMag"></span><br><br>
-							</span>
-							
-							<span id="mailWaveAct">
-							MEASUREMENTS OR REPORTS OF TSUNAMI WAVE ACTIVITY
-								<span id="mailWaveActData"></span>
-							LAT - LATITUDE (N-NORTH, S-SOUTH)
-							LON - LONGITUDE (E-EAST, W-WEST)
-							TIME - TIME OF THE MEASUREMENT (Z IS UTC TIME)
-							AMPL - TSUNAMI AMPLITUDE MEASURED RELATIVE TO NORMAL SEA LEVEL.
-							IT IS ...NOT... CREST-TO-TROUGH WAVE HEIGHT.
-							VALUES ARE GIVEN IN METERS (M).
-							PER - PERIOD OF TIME IN MINUTES (MIN) FROM ONE WAVE TO THE NEXT.
-							</span>
-														
-							<span id="mailWatchEval1">
-							EVALUATION OF TSUNAMI WATCH
-							IT IS NOT KNOWN THAT A TSUNAMI WAS GENERATED. THIS MESSAGE IS BASED ONLY ON THE EARTHQUAKE EVALUATION. AN EARTHQUAKE OF THIS SIZE HAS THE POTENTIAL TO GENERATE A TSUNAMI THAT CAN STRIKE COASTLINES WITH A WAVE HEIGHT GREATER THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP GREATER THAN 1M. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY. THIS CENTER WILL MONITOR SEA LEVEL DATA FROM GAUGES NEAR THE EARTHQUAKE TO DETERMINE IF A TSUNAMI WAS GENERATED AND ESTIMATE THE SEVERITY OF THE THREAT. A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
-							</span>
-							
-							<span id="mailWatchEvalMid">
-							EVALUATION OF TSUNAMI WATCH
-							SEA LEVEL READINGS INDICATE A TSUNAMI WAS GENERATED. THIS TSUNAMI CAN STRIKE COASTLINES WITH A WAVE HEIGHT GREATER THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP GREATER THAN 1M. THIS CENTER WILL CONTINUE TO MONITOR SEA LEVEL GAUGES NEAREST THE REGION AND REPORT IF ANY ADDITIONAL TSUNAMI WAVE ACTIVITY IS OBSERVED. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY. A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
-							</span>
-							
-							<span id="mailWatchEvalEnd">
-							EVALUATION OF TSUNAMI WATCH
-							SEA LEVEL READINGS INDICATE A TSUNAMI WAS GENERATED. OBSERVATIONS AND MODELS INDICATE THAT NO MORE TSUNAMI WAVES ARE EXPECTED. WHEN NO MAJOR WAVES ARE OBSERVED FOR TWO HOURS AFTER THE ESTIMATED TIME OF ARRIVAL OR DAMAGING WAVES HAVE NOT OCCURRED FOR AT LEAST TWO HOURS THEN LOCAL AUTHORITIES CAN ASSUME THE THREAT IS PASSED. DANGER TO BOATS AND COASTAL STRUCTURES CAN CONTINUE FOR SEVERAL HOURS DUE TO THE CONTINUING SEA LEVEL CHANGES AND RAPID CURRENTS. AS LOCAL CONDITIONS CAN CAUSE A WIDE VARIATION IN TSUNAMI WAVE ACTION THE ALL CLEAR DETERMINATION MUST BE MADE BY LOCAL AUTHORITIES.
-							</span>
-							
-							<span id="mailAdvisoryEval1">
-							EVALUATION OF TSUNAMI ADVISORY
-							IT IS NOT KNOWN THAT A TSUNAMI WAS GENERATED. THIS WATCH IS BASED ONLY ON THE EARTHQUAKE EVALUATION. AN EARTHQUAKE OF THIS SIZE HAS THE POTENTIAL TO GENERATE A TSUNAMI THAT CAN STRIKE COASTLINES WITH A WAVE HEIGHT LESS THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP LESS THAN 1M. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY. THIS CENTER WILL MONITOR SEA LEVEL DATA FROM GAUGES NEAR THE EARTHQUAKE TO DETERMINE IF A TSUNAMI WAS GENERATED AND ESTIMATE THE SEVERITY OF THE THREAT. A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
-							</span>
-							
-							<span id="mailAdvisoryEvalMid">
-							EVALUATION OF TSUNAMI ADVISORY
-							SEA LEVEL READINGS INDICATE A TSUNAMI WAS GENERATED. THIS TSUNAMI CAN STRIKE COASTLINES WITH A WAVE HEIGHT LESS THAN 0.5M AND/OR CAUSE A TSUNAMI RUN-UP LESS THAN 1M. THIS CENTER WILL CONTINUE TO MONITOR SEA LEVEL GAUGES NEAREST THE REGION AND REPORT IF ANY ADDITIONAL TSUNAMI WAVE ACTIVITY IS OBSERVED. AUTHORITIES SHOULD TAKE APPROPRIATE ACTION IN RESPONSE TO THIS POSSIBILITY. A TSUNAMI IS A SERIES OF WAVES AND THE FIRST WAVE MAY NOT BE THE LARGEST. TSUNAMI WAVE HEIGHTS CANNOT BE PREDICTED AND CAN VARY SIGNIFICANTLY ALONG A COAST DUE TO LOCAL EFFECTS. THE TIME FROM ONE TSUNAMI WAVE TO THE NEXT CAN BE FIVE MINUTES TO AN HOUR, AND THE THREAT CAN CONTINUE FOR MANY HOURS AS MULTIPLE WAVES ARRIVE.
-							</span>
-							
-							<span id="mailAdvisoryEvalEnd">
-							EVALUATION OF TSUNAMI ADVISORY
-							SEA LEVEL READINGS INDICATE A TSUNAMI WAS GENERATED. OBSERVATIONS AND MODELS INDICATE THAT NO MORE TSUNAMI WAVES ARE EXPECTED. WHEN NO MAJOR WAVES ARE OBSERVED FOR TWO HOURS AFTER THE ESTIMATED TIME OF ARRIVAL OR DAMAGING WAVES HAVE NOT OCCURRED FOR AT LEAST TWO HOURS THEN LOCAL AUTHORITIES CAN ASSUME THE THREAT IS PASSED. DANGER TO BOATS AND COASTAL STRUCTURES CAN CONTINUE FOR SEVERAL HOURS DUE TO THE CONTINUING SEA LEVEL CHANGES AND RAPID CURRENTS. AS LOCAL CONDITIONS CAN CAUSE A WIDE VARIATION IN TSUNAMI WAVE ACTION THE ALL CLEAR DETERMINATION MUST BE MADE BY LOCAL AUTHORITIES.
-							</span>
-														
-							<span id="mailInfoEval1">
-							EVALUATION OF TSUNAMI INFORMATION
-							BASED ON HISTORICAL EARTHQUAKE AND TSUNAMI MODELLING THERE IS NO THREAT THAT A TSUNAMI HAS BEEN GENERATED THAT CAN CAUSE DAMAGE OR MAJOR EFFECT IN THE REGION. THIS MESSAGE IS FOR INFORMATION ONLY.
-							</span>
-							
-							<span id="mailInfoEvalMid">
-							</span>
-							
-							<span id="mailInfoEvalEnd">
-							</span>
-														
-							<span id="mailTFPs">
-				  			ESTIMATED INITIAL TSUNAMI WAVE ARRIVAL TIMES AT FORECAST POINTS WITHIN THE WATCH AREA AND ADVISORY AREA GIVEN BELOW. ACTUAL ARRIVAL TIMES MAY DIFFER AND THE INITIAL WAVE MAY NOT BE THE LARGEST. A TSUNAMI IS A SERIES OF WAVES AND THE TIME BETWEEN SUCCESSIVE WAVES CAN BE FIVE MINUTES TO ONE HOUR.<br><br>
-				  			
-				  			<span id="mailFCPs"></span><br><br>
-				  			</span>
-				  			
-				  			<span id="mailCFZs"></span><br><br>
-				  			
-				  			<span id="mailSuppl">
-				  			SUPPLEMENT MESSAGES WILL BE ISSUED AS SOON AS NEW DATA AND EVALUATION ALLOWS. THE TSUNAMI ALERT WILL REMAIN IN EFFECT UNTIL AN END OF ALERT IS BROADCAST.
-				  			</span>
-				  			<span id="mailFinal">
-				  			THIS WILL BE THE FINAL MESSAGE ISSUED FOR THIS EVENT UNLESS ADDITIONAL INFORMATION BECOMES AVAILABLE.
-				  			</span><br><br>
-				  			
-				  			<span id="mailEpilog">
-				  			... THIS IS AN EXERCISE ...<br><br>
-		
-							END OF TSUNAMI EXERCISE MESSAGE NUMBER <span class="mailNumber"></span><br>
-							</span>
-						</span>
-						<div class="btn-group btn-group-justified" id="btnGrpText" data-toggle="buttons">
-						  <label class="btn btn-default active"><input name="options" id="btnTextInfo" type="radio">Information/Watch/Advisory</label>
-						  <label class="btn btn-default"><input name="options" id="btnTextEnd" type="radio">End</label>
-						  <label class="btn btn-default"><input name="options" id="btnTextCancel" type="radio">Cancelation</label>
-						</div>
-						<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Subject:</span>
-							<input id="mailSubject" type="text" class="form-control">
-				  		</div>
-				  		<textarea id="mailText" class="form-control inArea" rows="10" spellcheck="false"></textarea>
-				  	</div>
-				</div>
-				<div id="msgSMS" class="group">
-	      			<div class="grpHeader">
-	      				<span class="grpHeadline">SMS</span>
-	      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-	      			</div>
-	      			<div class="grpContent">
-				  		<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Mobile numbers:</span>
-							<input id="smsTo" type="text" class="form-control">
-							<span class="input-group-addon mail-right">
-								<span class="glyphicon glyphicon-phone"></span>
-							</span>
-				  		</div>
-				  		<span class="smsHeadline">SMS-Text (<span id="smsChars"></span> characters):</span>
-				  		<textarea id="smsText" class="form-control inArea" rows="5"></textarea>
-				  	</div>
-				</div>
-				<div id="msgEvents" class="group">
-		   			<div class="grpHeader">
-		   				<span class="grpHeadline">Related events</span>
-		   				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-		   			</div>
-		   			<div class="grpContent">
-		   				<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Event-ID</span>
-							<span id="mailEvent" class="form-control"></span>
-							<span class="input-group-addon mail-right">
-								<span class="glyphicon glyphicon-map-marker"></span>
-							</span>
-		  				</div>
-				  		<div class="input-group input-group-sm mail-label">
-							<span class="input-group-addon">Parent-ID</span>
-							<span id="mailParent" class="form-control"></span>
-							<span class="input-group-addon mail-right">
-								<span class="glyphicon glyphicon-map-marker"></span>
-							</span>
-				  		</div>
-		   			</div>
-				</div>
-			</form>
-	      </div>
-	      <div class="modal-footer mail-footer">
-	      	<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-	        <button type="button" id="mailBtnSend" class="btn btn-primary" >Send</button>
-	      </div>
-	    </div><!-- /.modal-content -->
-	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
-	
+			
 	<!-- modal prop dialog -->
 	<div class="modal fade" id="PropDia" data-keyboard="false" data-backdrop="static" tabindex="-1">
 	  <div class="modal-dialog modal-sm">
@@ -1617,7 +1349,46 @@
 			<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
 		</div>
 	</div>
-				
+	
+	<div class="mail-dialog">
+		<div class="header">
+			<h4 class="modal-title">Send messages</h4><br>
+		</div>
+		<div class="content">
+			<div class="secGroups1"></div>
+			<div class="secFtp">
+				<div class="content">
+					<span class="spnChk form-control"><input type="checkbox"></span>
+					<input class="txtPath form-control" readonly>
+					<span class="spnSlash input-group-addon">/</span>
+					<input type="text" class="txtFile form-control">
+				</div>
+			</div>
+			<div class="secMailText">
+				<div class="content">
+					<div class="btn-group btn-group-justified" data-toggle="buttons">
+					  <label class="btn btn-default active"><input class="btnInfo" name="options" type="radio">Information/Watch/Advisory</label>
+					  <label class="btn btn-default"><input class="btnEnd" name="options" type="radio">End</label>
+					  <label class="btn btn-default"><input class="btnCancel" name="options" type="radio">Cancelation</label>
+					</div>
+					<div class="subject"></div>
+					<textarea class="txtMsg form-control" rows="1" spellcheck="false"></textarea>
+				</div>
+			</div>
+			<div class="secSmsText">
+				<div class="content">
+					<span>SMS-Text (<span class="spnNumChars"></span> characters):</span>
+				  	<textarea class="txtMsg form-control" rows="1" spellcheck="false"></textarea>
+				</div>
+			</div>
+			<div class="secGroups2"></div>
+		</div>
+		<div class="footer">
+			<button type="button" class="btn btn-default btnCancel" data-dismiss="modal">Cancel</button>
+			<button type="button" class="btn btn-primary btnSave">Send</button>
+		</div>
+	</div>
+					
 	<div class="templates">
 		<!-- HtmlTextGroup -->
 		<div class="html-textgroup input-group input-group-sm prop-label">
@@ -1627,7 +1398,7 @@
 				<span class="glyphicon"></span>
 			</span>
  		</div>
- 		
+ 		 		
  		<!-- HtmlInputGroup -->
 		<div class="html-inputgroup input-group input-group-sm prop-label">
 			<span class="html-label input-group-addon"></span>

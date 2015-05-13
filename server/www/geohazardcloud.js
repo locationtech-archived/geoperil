@@ -1,95 +1,5 @@
 var map;
 
-function CustomList(widget, sortFun) {
-
-	this.list = [];
-	this.startIdx = 0;
-	this.endIdx = 19;
-	this.widget = widget;
-
-	this.sortFun = (typeof sortFun === "undefined") ? sort_date.bind(this, 1)
-			: sortFun;
-
-	this.setSortFun = function(sortFun) {
-		this.sortFun = sortFun;
-	};
-
-	this.getElem = function(i) {
-		return this.list[this.list.length - i - 1];
-	};
-
-	this.reset = function() {
-		this.list.length = 0;
-		this.startIdx = 0;
-		this.endIdx = 19;
-
-		$(this.widget).empty();
-	};
-
-	this.getProp = function(obj, prop) {
-
-		var arr = prop.split(".");
-		while (arr.length && (obj = obj[arr.shift()]))
-			;
-
-		return obj;
-	};
-
-	this.push = function(entry) {
-
-		for (var i = 0; i < this.list.length; i++) {
-
-			if (this.sortFun(entry, this.list[i]) == -1) {
-
-				this.list.splice(i, 0, entry);
-				return;
-			}
-
-		}
-
-		this.list.push(entry);
-	};
-
-	this.find = function(baseId) {
-
-		for (var i = 0; i < this.list.length; i++) {
-
-			if (this.list[i]['id'] == baseId) {
-				return this.list[i];
-			}
-		}
-
-		return null;
-	};
-
-	this.remove = function(id, field) {
-
-		for (var i = 0; i < this.list.length; i++) {
-
-			if (this.list[i][field] == id) {
-				this.list.splice(i, 1);
-				break;
-			}
-		}
-	};
-
-	this.removeById = function(baseId) {
-
-		for (var i = 0; i < this.list.length; i++) {
-
-			if (this.list[i]['id'] == baseId) {
-				this.list.splice(i, 1);
-				break;
-			}
-		}
-	};
-
-	this.setSort = function(field) {
-
-		this.sort = field;
-	};
-}
-
 Earthquake.prototype = new ICallbacks();
 
 function Earthquake(meta) {
@@ -131,9 +41,6 @@ function Earthquake(meta) {
 	this.load = function(callback,type) {
 		/* if the following yields true, we already fetched the results from the server */
 		if( this.isLoaded(type) )
-			return true;
-		/* we are already done with loading, if there are no simulation results */
-		if( ! this.process || this.process.length == 0 )
 			return true;
 		
 		if(callback)
@@ -271,6 +178,21 @@ function Earthquake(meta) {
 			var stat = new Station(list[i], this);
 			stat.load();
 			this.stations.insert(stat);
+			
+			/* load picked data for this station */
+			var params = {
+				evtid: this._id,
+				station: stat.name
+			};
+			ajax('webguisrv/load_picking', params, (function(stat,result) {
+				if(result.status == "success") {
+					var data = result.data;
+					/* transform date strings into date objects */
+					data.sliders[1] = new Date(data.sliders[1]);
+					data.sliders[2] = new Date(data.sliders[2]);
+					stat.setPickData(data);
+				}
+			}).bind(this,stat));
 		}
 
 		this.showStations();
@@ -311,6 +233,9 @@ function Earthquake(meta) {
 	};
 
 	this.isLoaded = function(type) {
+		/* we are already done with loading, if there are no simulation results */
+		if( ! this.process || this.process.length == 0 )
+			return true;
 		if( type == 'TFPS' && this.tfps_loaded )
 			return true;
 		if( type == 'CFZS' && this.cfzs_loaded )
@@ -580,6 +505,7 @@ function Station(meta, eq) {
 	};
 
 	this.setPickData = function(pickData) {
+		
 		this.pickData = pickData;
 	};
 
@@ -1115,12 +1041,23 @@ function MainChartDialog(widget) {
 		formData.pick = $('#pickerEnable').prop('checked');
 
 		this.data.setPickData(formData);
+		
+		/* store pickings on server only if an event is selected */
+		if( ! this.data.eq )
+			return;
+		
+		var params = {
+			evtid: this.data.eq._id,
+			station: this.data.name,
+			data: JSON.stringify(formData)
+		};
+		ajax_mt('webguisrv/save_picking', params, null);
 	};
 
 	this.loadFormData = function() {
 		var formData = this.data.pickData;
 		var bounds = this.chart.getAxisBounds();
-
+		
 		if (formData) {
 			for (var i = 0; i < 3; i++)
 				this.chart.setSliderValue(i, formData.sliders[i]);
@@ -1151,7 +1088,7 @@ function MainChartDialog(widget) {
 
 	/* register all handlers used within this dialog */
 	this.dialog.on('shown.bs.modal', this.ready.bind(this));
-	this.dialog.on('hidden.bs.modal', this.onClose.bind(this));
+	this.dialog.on('hide.bs.modal', this.onClose.bind(this));
 	$('#pickerFreq').change(this.onFreqInputChange.bind(this));
 	$('#pickerAmpl').change(this.onAmplInputChange.bind(this));
 	$('#pickerTime').change(this.onTimeChange.bind(this));
@@ -1529,7 +1466,7 @@ function MainChart(widget, width, height) {
 		var trans;
 
 		this.values[idx] = val;
-
+		
 		if (idx == 0)
 			trans = this.dia.getChartLayoutInterface().getYLocation(val);
 		else
@@ -2418,6 +2355,9 @@ function GlobalControl() {
 	// this.map = map;
 	this.filterWidget = new Filter($('#filterWidget'));
 	this.mapProgress = $('.map_progress');
+	
+	/* MailDialog */
+	this.mailDialog = new MailDialog();
 
 	eqlist = new Container(sort_date.bind(this, -1));
 	saved = new Container(sort_timeline);
@@ -2476,7 +2416,7 @@ function GlobalControl() {
 		this.layers.insert( new CFZLayer('CFZ-Layer', map) );
 		this.layers.insert( new JetLayer('Tsunami-Jets', map) );
 		this.layers.insert( new IsoLayer('Isolines', map) );
-		this.layers.insert( new TFPLayer('Isolines', map) );
+		this.layers.insert( new TFPLayer('FTP-Layer', map) );
 		for( var i = 0; i < this.layers.length(); i++ ) {
 			var layer = this.layers.get(i);
 			this.setCallback('select', layer.setData.bind(layer));
@@ -2539,6 +2479,7 @@ function GlobalControl() {
 	/* TODO: refactor */
 	this.info = function(data) {
 		/* TODO: fill */
+		
 	};
 
 	/* TODO: refactor */
@@ -2548,7 +2489,7 @@ function GlobalControl() {
 
 	/* TODO: refactor */
 	this.send = function(data) {
-		showEmailDialog(data);
+		this.mailDialog.show(data);
 	};
 
 	/* TODO: refactor */
@@ -3566,7 +3507,7 @@ function initialize() {
 
 	admin = new AdminDialog();
 	$("#btnAdmin").click(admin.show.bind(admin));
-	
+		
 	$("#btnSignIn").click(drpSignIn);
 	$("#btnSignOut").click(signOut);
 	$("#btnProp").click(showProp);
@@ -3593,8 +3534,6 @@ function initialize() {
 
 	$('#preset > .list-group-item').click(loadPreset);
 	
-	$('#mailBtnSend').click(sendEmail);
-
 	$('#btnSearch').click(searchEvents);
 	$('#inSearch').keyup(function(e) {
 		if (e.keyCode == 13)
@@ -3613,9 +3552,6 @@ function initialize() {
 		$('#inDate').html("");
 	});
 
-	$('#EmailDia').on('shown.bs.modal', dialogOnDisplay);
-	$('#EmailDia :input').val("");
-	$('#btnGrpText .btn').change(changeMsgText);
 	$('.lnkGroup').click(groupOnClick);
 
 	$('#smsText').bind('input propertychange', function() {
@@ -3966,39 +3902,6 @@ function getMarkerIconLink(text, color) {
 	return link;
 }
 
-function getNextMsgNr(entry, callback) {
-
-	var id = entry.root ? entry.root : entry._id;
-
-	var msgnr = 1;
-
-	$.ajax({
-		type : 'POST',
-		url : "srv/getNextMsgNr",
-		data : {
-			"rootid" : id
-		},
-		dataType : 'json',
-		success : function(result) {
-
-			if (result.status == "success") {
-
-				msgnr = result.NextMsgNr;
-
-			} else {
-				console.log("Error: Unable to get next message number.");
-			}
-		},
-		complete : function() {
-
-			if (callback != null)
-				callback(msgnr);
-		}
-	});
-
-	return 0;
-}
-
 function getPoiColor(poi) {
 
 	var color;
@@ -4303,8 +4206,6 @@ function logIn(callback) {
 	shared.clear();
 	checkStaticLink();
 
-	configMailDialog();
-
 	$('#lnkUser').html(curuser.username);
 	if (curuser.inst)
 		$('#lnkUser').append(" &nbsp;&#183;&nbsp; " + curuser.inst.descr);
@@ -4470,348 +4371,9 @@ function fillCustomForm(e) {
 	fillForm(entry);
 }
 
-function mailOnClick(e) {
-
-	var id = $(this).parents(".entry").data("entry")['_id'];
-	var entry = entries.get(id);
-
-	showEmailDialog(entry);
-}
-
 String.prototype.splice = function(idx, str) {
 	return this.slice(0, idx) + str + this.slice(idx);
 };
-
-function showEmailDialog(entry, msgnr) {
-
-	if (!loggedIn) {
-
-		signTarget = showEmailDialog.bind(this, entry);
-		$("#SignInDialog").modal("show");
-		return;
-	}
-	
-	/* check if static data was already loaded and register handler if not */
-	if( entry.load( showEmailDialog.bind(this, entry), 'TFPS' ) == false )
-		return;
-	
-	/* check if static data was already loaded and register handler if not */
-	if( entry.load( showEmailDialog.bind(this, entry), 'CFZS' ) == false )
-		return;
-		
-	if (!msgnr) {
-		getNextMsgNr(entry, showEmailDialog.bind(this, entry));
-		return
-
-	}
-
-	/* generate shared link to embed in message */
-
-	$(".mailNumber").html(zeroPad(msgnr, 3));
-
-	var prop = entry.prop;
-
-	$("#intTo").val("");
-	$("#faxTo").val("");
-	$("#smsTo").val("");
-	$("#ftpChk").prop("checked", false);
-
-	$("#mailFrom").html(curuser.username);
-	$("#mailTo").val("");
-	$("#mailCC").val("");
-	$("#mailSubject").val("Tsunami warning message!");
-
-	if (curuser.properties) {
-		$("#ftpTo").html(
-				curuser.properties.FtpHost + curuser.properties.FtpPath);
-		if (curuser.properties.FtpFile && curuser.properties.FtpFile != "") {
-			$("#ftpToFile").val(curuser.properties.FtpFile);
-		} else {
-			$("#ftpToFile").val(zeroPad(msgnr, 3) + ".txt");
-		}
-	}
-
-	var root = entry.root ? entry.root : entry._id;
-
-	$("#mailEvent").html(root);
-	$("#mailParent").html(entry._id);
-
-	var originTime = new Date(prop.date);
-
-	var prop_lat = Math.abs(prop.latitude).toFixed(2)
-			+ (prop.latitude < 0 ? " SOUTH" : " NORTH");
-	var prop_lon = Math.abs(prop.longitude).toFixed(2)
-			+ (prop.longitude < 0 ? " WEST" : " EAST");
-
-	$("#mailDate").html(toMsgDateFormat(new Date()));
-	$("#mailOriginTime").html(toMsgDateFormat(originTime));
-	$("#mailCoordinates").html(prop_lat + " ");
-	$("#mailCoordinates").append(prop_lon);
-	$("#mailDepth").html(prop.depth);
-	$("#mailLocation").html(prop.region);
-	$("#mailMag").html(prop.magnitude);
-
-	var maxLevel = "";
-
-	var iso_map = {
-		"INFORMATION" : new Array(),
-		"WATCH" : new Array(),
-		"ADVISORY" : new Array()
-	};
-
-	$("#mailFCPs").html("");
-
-	if (entry.tfps.length() > 0) {
-
-		/* previously iterate once to get maximum length of location names */
-		var heads = new Array("LOCATION-FORECAST POINT", "COORDINATES   ",
-				"ARRIVAL TIME",
-				// "EWH ",
-				"LEVEL       ");
-
-		var headlens = new Array(heads.length);
-		for (var i = 0; i < heads.length; i++)
-			headlens[i] = heads[i].length;
-
-		var minlen = heads[0].length;
-		for (var i = 0; i < entry.tfps.length(); i++) {
-
-			var poi = entry.tfps.get(i);
-
-			if (poi.eta == -1)
-				continue;
-
-			var poi_name = poi.country + "-" + poi.name;
-
-			minlen = Math.max(minlen, poi_name.length);
-		}
-
-		headlens[0] = minlen;
-
-		var TFPs = {
-			"INFORMATION" : new Array(),
-			"WATCH" : new Array(),
-			"ADVISORY" : new Array()
-		};
-
-		var tfpvals = {
-			"INFORMATION" : {},
-			"WATCH" : {},
-			"ADVISORY" : {}
-		};
-
-		var maxvals = {
-			"INFORMATION" : new Container(sort_string.bind(this,
-					'eta')),
-			"WATCH" : new Container(sort_string.bind(this, 'eta')),
-			"ADVISORY" : new Container(sort_string.bind(this, 'eta'))
-		};
-
-		var region_map = {
-			"INFORMATION" : new Array(),
-			"WATCH" : new Array(),
-			"ADVISORY" : new Array(),
-			"ALL" : new Array()
-		};
-
-		for (var i = 0; i < entry.tfps.length(); i++) {
-
-			var poi = entry.tfps.get(i);
-
-			if (poi.eta == -1)
-				continue;
-
-			var level = getPoiLevel(poi);
-
-			if (!tfpvals[level][poi.country])
-				tfpvals[level][poi.country] = new Container(sort_string
-						.bind(this, 'eta'));
-
-			/* insert poi sorted according to eta value */
-			tfpvals[level][poi.country].insert(poi);
-
-			/* store item with lowest eta value per country in maxvals list */
-			var poi_head = maxvals[level].getByKey('country', poi.country).item;
-			if (!poi_head || poi_head.eta > poi.eta) {
-				maxvals[level].replace('country', poi);
-			}
-
-			region_map[level].push(poi.country);
-			region_map["ALL"].push(poi.country);
-
-			iso_map[level].push(poi.iso_2);
-		}
-
-		var levels = [ "INFORMATION", "ADVISORY", "WATCH" ];
-		for (var i = 0; i < levels.length; i++) {
-
-			var level = levels[i];
-
-			/* sort list of countries according to eta value */
-			maxvals[level].sort();
-
-			for (var j = 0; j < maxvals[level].length(); j++) {
-
-				var country = maxvals[level].get(j).country;
-				for (var k = 0; k < tfpvals[level][country].length(); k++) {
-
-					var poi = tfpvals[level][country].get(k);
-
-					var poi_name = poi.country + "-" + poi.name;
-					var pretty_station = poi_name
-							+ new Array(minlen - poi_name.length + 1).join(" ");
-					var pretty_lat = charPad(Math.abs(poi.lat_real).toFixed(2),
-							5, ' ');
-					var pretty_lon = charPad(Math.abs(poi.lon_real).toFixed(2),
-							6, ' ');
-					// var pretty_ewh = charPad( poi.ewh.toFixed(2), 5, ' ' );
-
-					var min = Math.floor(poi.eta);
-					var sec = Math.floor((poi.eta % 1) * 60.0);
-
-					var eta_ms = (min * 60 + sec) * 1000;
-					var pretty_eta = toMsgDateFormat(new Date(originTime
-							.getTime()
-							+ eta_ms));
-					pretty_eta = pretty_eta.split(' ', 3).join(' ');
-
-					var txt = "";
-					txt += pretty_station + " ";
-					txt += pretty_lat + (poi.lat_real < 0 ? "S" : "N") + " ";
-					txt += pretty_lon + (poi.lon_real < 0 ? "W" : "E") + " ";
-					txt += withPadding(pretty_eta, headlens[2], " ") + " ";
-					// txt += pretty_ewh + " ";
-					txt += level + "\n<br>";
-
-					TFPs[level].push(txt);
-				}
-			}
-		}
-
-		iso_map["WATCH"].sort();
-		iso_map["ADVISORY"].sort();
-		iso_map["WATCH"] = getUniqueList(iso_map["WATCH"]);
-		iso_map["ADVISORY"] = getUniqueList(iso_map["ADVISORY"]);
-
-		subtract(region_map["INFORMATION"], region_map["WATCH"]);
-		subtract(region_map["INFORMATION"], region_map["ADVISORY"]);
-
-		/* get highest alert level */
-		for (var i = 0; i < levels.length; i++)
-			if (TFPs[levels[i]].length > 0)
-				maxLevel = levels[i];
-
-		if ( /* TFPs["INFORMATION"].length > 0 || */TFPs["WATCH"].length > 0
-				|| TFPs["ADVISORY"].length > 0) {
-
-			for (var k = 0; k < heads.length; k++)
-				$("#mailFCPs").append(
-						withPadding(heads[k], headlens[k], " ") + " ");
-
-			$("#mailFCPs").append("\n<br>");
-			for (var k = 0; k < heads.length; k++) {
-				/* generates as many '-' as there are letters in the head string */
-				$("#mailFCPs").append(withPadding("", headlens[k], "-") + " ");
-			}
-			$("#mailFCPs").append("\n<br>");
-
-			if (TFPs["WATCH"].length > 0)
-				$("#mailFCPs").append(TFPs["WATCH"].join("") + "\n<br>");
-
-			if (TFPs["ADVISORY"].length > 0)
-				$("#mailFCPs").append(TFPs["ADVISORY"].join("") + "\n<br>");
-
-			/*
-			 * if( TFPs["INFORMATION"].length > 0 ) $( "#mailFCPs" ).append(
-			 * TFPs["INFORMATION"].join("") + "\n<br>" );
-			 */
-		}
-
-		printRegionList(getUniqueList(region_map["INFORMATION"]),
-				$("#mailInfoList"));
-		printRegionList(getUniqueList(region_map["WATCH"]), $("#mailWatchList"));
-		printRegionList(getUniqueList(region_map["ADVISORY"]),
-				$("#mailAdvisoryList"));
-	}
-
-	/* CFZ table */
-	var txt = '';
-	var list = entry.cfzs.sortarr( sort_string.bind(this,'eta') );
-	for( var i = 0; i < list.length; i++ ) {
-		var cfz = list[i];
-		if( cfz.eta == -1 )
-			continue;
-		var location = cfz.COUNTRY + '-' + cfz.STATE_PROV;
-		var min = Math.floor(cfz.eta);
-		var sec = Math.floor((cfz.eta % 1) * 60.0);
-		var eta_ms = (min * 60 + sec) * 1000;
-		var pretty_eta = toMsgDateFormat(new Date(originTime.getTime() + eta_ms));
-		    pretty_eta = pretty_eta.split(' ', 3).join(' ');
-		txt += withPadding(location.substr(0,45), 45, ' ') + ' ' + pretty_eta + ' ';
-		txt += getPoiLevel(cfz) + '\n<br>';
-	}
-	if( txt != '' ) {
-		txt = 'LOCATION-FORECAST ZONE                        ARRIVAL TIME LEVEL\n<br>' +
-		      '--------------------------------------------- ------------ ------------\n<br>' +
-		      txt;
-	}
-	$('#mailCFZs').html(txt);
-		
-	/* SMS text */
-	/*
-	 * var short_region = prop.region.length < 27 ? prop.region :
-	 * prop.region.substring( 0, 24 ) + "..."; var smstext = "...THIS IS AN
-	 * EXERCISE...\n\n" + "AN EARTHQUAKE HAS OCCURRED:\n\n " + short_region +
-	 * "\n " + prop.date + "\n " + Math.abs( prop.latitude ).toFixed(2) + (
-	 * prop.latitude < 0 ? "S" : "N" ) + " " + Math.abs( prop.longitude
-	 * ).toFixed(2) + ( prop.longitude < 0 ? "W" : "E" ) + " " + prop.depth +
-	 * "KM\n " + prop.magnitude + " Mw\n\n" + "...EXERCISE...";
-	 * 
-	 * if( smstext.length > 160 ) smstext = smstext.substring( 0, 160 );
-	 */
-
-	var smstext = "*TEST*TSUNAMI EXERCISE MSG;";
-	smstext += "NEAMTWS-GFZ;";
-
-	var alerts = new Array();
-
-	if (maxLevel == "WATCH")
-		alerts = [ "WATCH", "ADVISORY" ];
-
-	if (maxLevel == "ADVISORY")
-		alerts = [ "ADVISORY" ];
-
-	for (var j = 0; j < alerts.length; j++) {
-
-		var level = alerts[j];
-
-		smstext += level + ":";
-
-		var len = iso_map[level].length;
-		for (var i = 0; i < len; i++) {
-			smstext += iso_map[level][i];
-			smstext += i < len - 1 ? " " : ";";
-		}
-	}
-
-	smstext += toMsgDateFormat(originTime, true) + ";";
-	smstext += "EQ Mw" + prop.magnitude + ";";
-	smstext += prop.region + ";";
-	smstext += prop_lat.replace(" NORTH", "N").replace(" SOUTH", "S") + ";";
-	smstext += prop_lon.replace(" WEST", "W").replace(" EAST", "E") + ";";
-	smstext += prop.depth + "KM;";
-	smstext += "*TEST*";
-
-	$('#smsChars').html(smstext.length);
-	$("#smsText").val(smstext);
-
-	/* station data */
-	$('#mailWaveActData').html(getStationData(entry));
-
-	changeMsgText();
-
-	$("#EmailDia").modal("show");
-}
 
 function splitSMS(smstext) {
 
@@ -4833,493 +4395,6 @@ function splitSMS(smstext) {
 	}
 
 	return result;
-}
-
-// TODO: workaround for NEAMWave14
-function getCountry(iso_2) {
-
-	var clist = {
-		"ES" : "SPAIN",
-		"FR" : "FRANCE",
-		"GE" : "UNITED KINGDOM",
-		"GI" : "GIBRALTAR",
-		"GR" : "GREECE",
-		"IE" : "IRELAND",
-		"IT" : "ITALY",
-		"MA" : "MOROCCO",
-		"PT" : "PORTUGAL",
-		"RO" : "ROMANIA",
-		"TR" : "TURKEY",
-		"UA" : "UKRAINE",
-	};
-
-	var country = clist[iso_2];
-
-	if (!country)
-		country = iso_2;
-
-	return country;
-}
-
-function getStationData(eq) {
-
-	var text = "";
-	var headlen2 = "COUNTRY".length; // TODO: workaround for NEAMWave14
-	var headlen = "GAUGE LOCATION".length;
-
-	if (!eq.stations)
-		return "";
-
-	/* iterate once to get the length of the headline */
-	for (var i = 0; i < eq.stations.length(); i++) {
-
-		var stat = eq.stations.get(i);
-		var pickData = stat.pickData;
-
-		if (!pickData || !pickData.pick)
-			continue;
-
-		headlen = Math.max(headlen, stat.name.length);
-
-		var country = getCountry(stat.countryname);
-		headlen2 = Math.max(headlen2, country.length);
-	}
-
-	for (var i = 0; i < eq.stations.length(); i++) {
-
-		var stat = eq.stations.get(i);
-		var pickData = stat.pickData;
-
-		if (!pickData || !pickData.pick)
-			continue;
-
-		var pretty_lat = charPad(Math.abs(stat.lat).toFixed(2), 5, ' ')
-				+ (stat.lat < 0 ? "S" : "N");
-		var pretty_lon = charPad(Math.abs(stat.lon).toFixed(2), 6, ' ')
-				+ (stat.lon < 0 ? "W" : "E");
-		var pretty_time = charPad(pickData.time.replace(/\D/g, ''), 4, '0');
-		var pretty_ampl = charPad(pickData.ampl.toFixed(2), 5, ' ');
-		var pretty_period = charPad(pickData.period.toFixed(2), 6, ' ');
-
-		var country = getCountry(stat.countryname);
-
-		text += withPadding(country, headlen2, " ") + " "
-				+ withPadding(stat.name, headlen, " ") + " " + pretty_lat + " "
-				+ pretty_lon + " " + pretty_time + "Z " + pretty_ampl + "M "
-				+ pretty_period + "MIN\n";
-	}
-
-	var head = withPadding("COUNTRY", headlen2, " ") + " "
-			+ withPadding("GAUGE LOCATION", headlen, " ") + " "
-			+ "LAT    LON     TIME  AMPL   PER      \n"
-			+ withPadding("", headlen2, "-") + " "
-			+ withPadding("", headlen, "-") + " "
-			+ "------ ------- ----- ------ ---------\n";
-
-	if (text != "")
-		text = head + text;
-
-	return text;
-}
-
-function changeMsgText() {
-
-	var kind = "info";
-	kind = $('#btnTextInfo').is(':checked') ? "info" : kind;
-	kind = $('#btnTextEnd').is(':checked') ? "end" : kind;
-	kind = $('#btnTextCancel').is(':checked') ? "cancel" : kind;
-
-	var subject = {
-		"info" : "Tsunami Information/Watch/Advisory",
-		"end" : "Tsunami End",
-		"cancel" : "Tsunami Cancelation"
-	};
-
-	var number = parseInt($(".mailNumber").html(), 10);
-
-	var inst = "";
-
-	if (curuser.inst)
-		inst = curuser.inst.msg_name;
-
-	$("#mailSubject").val(subject[kind]);
-	$(".mailProvider").html(inst);
-
-	$(".mailOngoing").html("");
-	$(".mailEndOf").html("");
-
-	var msgText = "";
-
-	if (kind == "info") {
-
-		if (number > 1)
-			$(".mailOngoing").html(" ONGOING");
-
-		msgText += getPlainText($("#mailProlog"));
-
-		if (!$("#mailWatchList").is(':empty'))
-			msgText += getPlainText($("#mailWatchSum"));
-
-		if (!$("#mailAdvisoryList").is(':empty'))
-			msgText += getPlainText($("#mailAdvisorySum"));
-
-		if (!$("#mailInfoList").is(':empty') && number == 1)
-			msgText += getPlainText($("#mailInfoSum"));
-
-		msgText += getPlainText($("#mailAdvice"));
-		msgText += getPlainText($("#mailEqParams"));
-
-		if (!$("#mailWaveActData").is(':empty'))
-			msgText += getPlainText($("#mailWaveAct"));
-
-		if (!$("#mailWatchList").is(':empty')) {
-			if (number == 1) {
-				msgText += getPlainText($("#mailWatchEval1"));
-			} else {
-				msgText += getPlainText($("#mailWatchEvalMid"));
-			}
-		}
-
-		if (!$("#mailAdvisoryList").is(':empty')) {
-			if (number == 1) {
-				msgText += getPlainText($("#mailAdvisoryEval1"));
-			} else {
-				msgText += getPlainText($("#mailAdvisoryEvalMid"));
-			}
-		}
-
-		if (!$("#mailInfoList").is(':empty') && number == 1)
-			msgText += getPlainText($("#mailInfoEval1"));
-
-		if (!$("#mailFCPs").is(':empty'))
-			msgText += getPlainText($("#mailTFPs"));
-		
-		if (!$("#mailCFZs").is(':empty'))
-			msgText += getPlainText($("#mailCFZs"));
-
-		msgText += getPlainText($("#mailSuppl"));
-		msgText += getPlainText($("#mailEpilog"));
-
-	} else if (kind == "end") {
-
-		$(".mailEndOf").html("END OF ");
-
-		msgText += getPlainText($("#mailProlog"));
-
-		if (!$("#mailWatchList").is(':empty'))
-			msgText += getPlainText($("#mailWatchSum"));
-
-		if (!$("#mailAdvisoryList").is(':empty'))
-			msgText += getPlainText($("#mailAdvisorySum"));
-
-		msgText += getPlainText($("#mailAdvice"));
-		msgText += getPlainText($("#mailEqParams"));
-
-		/* added for NEAMWave14 */
-		if (!$("#mailWaveActData").is(':empty'))
-			msgText += getPlainText($("#mailWaveAct"));
-
-		if (!$("#mailWatchList").is(':empty'))
-			msgText += getPlainText($("#mailWatchEvalEnd"));
-
-		if (!$("#mailAdvisoryList").is(':empty'))
-			msgText += getPlainText($("#mailAdvisoryEvalEnd"));
-
-		msgText += getPlainText($("#mailFinal"));
-		msgText += getPlainText($("#mailEpilog"));
-
-	} else if (kind == "cancel") {
-
-		$(".mailOngoing").html(" CANCELLATION");
-
-		msgText += getPlainText($("#mailProlog"));
-
-		if (!$("#mailWatchList").is(':empty'))
-			msgText += getPlainText($("#mailWatchSum"));
-
-		if (!$("#mailAdvisoryList").is(':empty'))
-			msgText += getPlainText($("#mailAdvisorySum"));
-
-		if (!$("#mailInfoList").is(':empty'))
-			msgText += getPlainText($("#mailInfoSum"));
-
-		msgText += getPlainText($("#mailAdvice"));
-		msgText += getPlainText($("#mailEqParams"));
-
-		if (!$("#mailWatchList").is(':empty'))
-			msgText += getPlainText($("#mailWatchEval"));
-
-		if (!$("#mailAdvisoryList").is(':empty'))
-			msgText += getPlainText($("#mailAdvisoryEval"));
-
-		if (!$("#mailInfoList").is(':empty'))
-			msgText += getPlainText($("#mailInfoEval"));
-
-		msgText += getPlainText($("#mailFinal"));
-		msgText += getPlainText($("#mailEpilog"));
-	}
-
-	/* reset height to 0 and make text-area resize with content */
-	$("#mailText").outerHeight(0);
-	$("#mailText").val(msgText);
-
-	/* set height of text area according to content height */
-	dialogOnDisplay();
-}
-
-function withPadding(text, len, char) {
-
-	if (len - text.length < 0)
-		return text;
-
-	return text + new Array(len - text.length + 1).join(char);
-}
-
-function printRegionList(list, span) {
-
-	span.html("");
-
-	for (var i = 0; i < list.length; i++) {
-		span.append(" " + list[i]);
-		if (i < list.length - 1)
-			span.append(" ...");
-	}
-
-}
-
-/* modifies list in place */
-function subtract(list, sub) {
-
-	var i = list.length - 1;
-
-	while (i-- >= 0) {
-		for ( var j in sub) {
-
-			if (list[i] == sub[j])
-				list.splice(i, 1);
-		}
-	}
-}
-
-function sendEmail() {
-
-	var to = $("#mailTo").val();
-	var cc = $("#mailCC").val();
-	var intTo = $("#intTo").val();
-	var subject = $("#mailSubject").val();
-	var faxTo = $("#faxTo").val();
-	var ftpChk = $("#ftpChk").prop("checked");
-	var ftpFile = $("#ftpToFile").val();
-	var smsTo = $("#smsTo").val();
-	var smsText = $("#smsText").val();
-
-	var parent = $("#mailParent").html();
-	var root = $("#mailEvent").html();
-
-	var msgnr = parseInt($(".mailNumber").html(), 10) + 1;
-
-	var endmsg = $('#btnTextEnd').is(':checked');
-	var cancelmsg = $('#btnTextCancel').is(':checked');
-
-	if (endmsg || cancelmsg)
-		msgnr = 1;
-
-	var text = $("#mailText").val();
-
-	var sent = false;
-
-	if (intTo != "") {
-		// internal message
-		console.log("Sent internal message!");
-		sent = true;
-
-		$.ajax({
-			type : 'POST',
-			url : "msgsrv/intmsg",
-			data : {
-				apiver : 1,
-				to : intTo,
-				subject : subject,
-				text : text,
-				evid : root,
-				parentid : parent,
-				msgnr : msgnr
-			},
-			dataType : 'json',
-			success : function(result) {
-				status = result.status;
-
-				console.log(status);
-			},
-			error : function() {
-				console.log("#error");
-			},
-			complete : function() {
-			}
-		});
-	}
-
-	if (to != "" || cc != "") {
-		// email
-		console.log("Sent email!");
-		sent = true;
-
-		$.ajax({
-			type : 'POST',
-			url : "msgsrv/mail",
-			data : {
-				apiver : 1,
-				to : to,
-				cc : cc,
-				subject : subject,
-				text : text,
-				evid : root,
-				parentid : parent,
-				msgnr : msgnr
-			},
-			dataType : 'json',
-			success : function(result) {
-				status = result.status;
-
-				console.log(status);
-			},
-			error : function() {
-				console.log("#error");
-			},
-			complete : function() {
-			}
-		});
-	}
-
-	if (faxTo != "") {
-		// fax
-		console.log("Sent fax!");
-		sent = true;
-
-		$.ajax({
-			type : 'POST',
-			url : "msgsrv/fax",
-			data : {
-				apiver : 1,
-				to : faxTo,
-				text : text,
-				evid : root,
-				parentid : parent,
-				msgnr : msgnr
-			},
-			dataType : 'json',
-			success : function(result) {
-				status = result.status;
-
-				console.log(status);
-			},
-			error : function() {
-				console.log("#error");
-			},
-			complete : function() {
-			}
-		});
-	}
-
-	if (ftpChk == true) {
-		// ftp
-		console.log("Published on FTP-Server!");
-		sent = true;
-
-		$.ajax({
-			type : 'POST',
-			url : "msgsrv/ftp",
-			data : {
-				apiver : 1,
-				fname : ftpFile,
-				text : text,
-				evid : root,
-				parentid : parent,
-				msgnr : msgnr
-			},
-			dataType : 'json',
-			success : function(result) {
-				status = result.status;
-
-				console.log(status);
-			},
-			error : function() {
-				console.log("#error");
-			},
-			complete : function() {
-			}
-		});
-	}
-
-	if (smsTo != "") {
-		// sms
-		console.log("Sent sms!");
-		sent = true;
-
-		var text = splitSMS(smsText);
-
-		$.ajax({
-			type : 'POST',
-			url : "msgsrv/sms",
-			data : {
-				apiver : 1,
-				to : smsTo,
-				text : text,
-				evid : root,
-				parentid : parent
-			},
-			dataType : 'json',
-			success : function(result) {
-				status = result.status;
-
-				console.log(status);
-			},
-			error : function() {
-				console.log("#error");
-			},
-			complete : function() {
-			}
-		});
-	}
-
-	if (sent == true) {
-
-		$("#tabMessages a").click();
-		$('#EmailDia').modal('hide');
-
-	} else {
-
-		options = {
-			content : "Please specify at least one receiver and click again!",
-			title : "Info",
-			trigger : 'manual',
-			placement : 'top'
-		};
-		$("#mailBtnSend").popover(options);
-		$("#mailBtnSend").popover('show');
-		// $( ".popover-title" ).append('<button type="button" class="close"
-		// aria-hidden="true">&times;</button>');
-		setTimeout(function() {
-			$("#mailBtnSend").popover('hide');
-		}, 3000);
-	}
-}
-
-function getPlainText(span) {
-
-	/*
-	 * get plain text without html markups - remove leading and trailing
-	 * newlines
-	 */
-	var plain = span.text().replace(/^\s+|\s+$/g, '');
-	var lines = plain.split("\n");
-	var text = "";
-
-	/* remove leading and trailing spaces */
-	for (var i = 0; i < lines.length; i++)
-		text += $.trim(lines[i]) + "\n";
-
-	return text + "\n";
 }
 
 function markMsgAsRead(msg) {
@@ -5863,53 +4938,6 @@ function groupOnClick() {
 	arrow.toggleClass('glyphicon-chevron-down');
 }
 
-function configMailDialog() {
-
-	/* hide all groups first */
-	$('#EmailDia .group').css("display", "none");
-	$('#msgEvents').css("display", "block");
-
-	var perm = curuser.permissions;
-
-	if (!perm)
-		return;
-
-	// var fax = perm.fax && prop && prop.InterfaxUsername &&
-	// prop.InterfaxPassword;
-	// var ftp = perm.ftp && prop && prop.FtpUser && prop.FtpHost &&
-	// prop.FtpPath && prop.FtpPassword;
-	// var sms = perm.sms && prop && prop.TwilioSID && prop.TwilioToken &&
-	// prop.TwilioFrom;
-	var fax = checkPerm("fax");
-	var ftp = checkPerm("ftp");
-	var sms = checkPerm("sms");
-
-	if (perm.intmsg)
-		$('#msgCloud').css("display", "block");
-
-	if (perm.mail)
-		$('#msgMail').css("display", "block");
-
-	if (fax)
-		$('#msgFax').css("display", "block");
-
-	if (ftp)
-		$('#msgFtp').css("display", "block");
-
-	if (perm.intmsg || perm.mail || fax || ftp)
-		$('#msgText').css("display", "block");
-
-	if (sms)
-		$('#msgSMS').css("display", "block");
-
-	// set default behavior of mail dialog
-	$('#msgCloud .lnkGroup').click();
-	$('#msgFtp .lnkGroup').click();
-	$('#msgFax .lnkGroup').click();
-	$('#msgSMS .lnkGroup').click();
-	$('#msgEvents .lnkGroup').click();
-}
-
 /* this functions takes a variable number of arguments */
 function checkPermsAny() {
 
@@ -5928,22 +4956,9 @@ function checkPerm(type) {
 		return false;
 
 	var perm = curuser.permissions;
-	var prop = curuser.properties;
 
 	if (!perm)
 		return false;
-
-	if (type == "fax")
-		return perm.fax && prop && checkProp(prop.InterfaxUsername)
-				&& checkProp(prop.InterfaxPassword);
-
-	if (type == "ftp")
-		return perm.ftp && prop && checkProp(prop.FtpUser)
-				&& checkProp(prop.FtpHost) && checkProp(prop.FtpPath);
-
-	if (type == "sms")
-		return perm.sms && prop && checkProp(prop.TwilioSID)
-				&& checkProp(prop.TwilioToken) && checkProp(prop.TwilioFrom);
 
 	if (type == "vsdb")
 		return (curuser.inst && curuser.inst.vsdblink);
@@ -5951,8 +4966,12 @@ function checkPerm(type) {
 	return perm[type];
 }
 
-function checkProp(prop) {
-	return prop && prop != "";
+/* checks whether the property is set and not empty */
+function checkProp(field) {
+	if (!curuser)
+		return false;
+	var prop = curuser.properties;
+	return prop && prop[field] && prop[field] != "";
 }
 
 function propSubmit() {
@@ -6039,7 +5058,6 @@ function propSubmit() {
 
 			if (result.status == "success") {
 				curuser = result.user;
-				configMailDialog();
 
 				/* TODO: generalize and support eq related stations too */
 				if (statChanged)
@@ -6141,23 +5159,6 @@ function getLocalDateString(date) {
 	var timestr = zeroPad(hour, 2) + ":" + zeroPad(minutes, 2);
 
 	return datestr + " &#183; " + timestr;
-}
-
-function toMsgDateFormat(date, short) {
-
-	var months = [ "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG",
-			"SEP", "OCT", "NOV", "DEC" ];
-	var HH = zeroPad(date.getUTCHours(), 2);
-	var mm = zeroPad(date.getUTCMinutes(), 2);
-	var dd = zeroPad(date.getUTCDate(), 2);
-	var MMM = months[date.getUTCMonth()];
-	var yyyy = date.getUTCFullYear();
-
-	var sep = short ? "" : " ";
-
-	var datestr = HH + "" + mm + "Z" + " " + dd + sep + MMM + sep + yyyy;
-
-	return datestr;
 }
 
 // from the MDN
@@ -6307,30 +5308,6 @@ function toggleCloudButton() {
 	}
 }
 
-function dialogOnDisplay() {
-
-	/* we must make the textarea visible first before the height can be read */
-	var display = $('#msgText .grpContent').css("display");
-	$('#msgText .grpContent').css("display", "inline");
-
-	var h = $("#mailText")[0].scrollHeight;
-	$("#mailText").outerHeight(h);
-
-	$('#msgText .grpContent').css("display", display);
-
-	/* we must make the textarea visible first before the height can be read */
-	var hidden = $('#msgSMS .grpContent').css("display") == "none";
-	if (hidden)
-		$('#msgSMS .lnkGroup').click();
-
-	h = $("#smsText")[0].scrollHeight;
-	$("#smsText").outerHeight(h);
-
-	if (hidden)
-		$('#msgSMS .lnkGroup').click();
-
-}
-
 function onResize() {
 
 	/* check if fullscreen */
@@ -6371,24 +5348,6 @@ function getURL() {
 
 function reload() {
 	window.location.href = getURL();
-}
-
-/* list must be sorted */
-function getUniqueList(list) {
-
-	if (list.length == 0)
-		return list;
-
-	var sort = list.sort();
-	var unique = [ sort[0] ];
-
-	for (var i = 1; i < sort.length; i++) {
-		if (sort[i - 1] !== sort[i]) {
-			unique.push(sort[i]);
-		}
-	}
-
-	return unique;
 }
 
 function showSplash(show) {
@@ -6730,6 +5689,270 @@ function Splash() {
 	this.slides.scrollTop(800);
 
 	this.navArrow.click(this.navigate.bind(this));
+}
+
+function MailDialog() {
+	
+	this.init = function() {
+		var grp;
+		this.dialog = new HtmlDialog($('.mail-dialog'));
+		this.secGroups1 = this.dialog.content.find('.secGroups1');
+		this.secFtp = this.dialog.content.find('.secFtp');
+		this.secMailText = this.dialog.content.find('.secMailText');
+		this.secSmsText = this.dialog.content.find('.secSmsText');
+		this.secGroups2 = this.dialog.content.find('.secGroups2');
+		this.btnInfo = this.secMailText.find('.btnInfo');
+		this.btnEnd = this.secMailText.find('.btnEnd');
+		this.btnCancel = this.secMailText.find('.btnCancel');
+		this.mailText = this.secMailText.find('.txtMsg');
+		this.smsText = this.secSmsText.find('.txtMsg');
+		this.btnSave = this.dialog.footer.find('.btnSave');
+		
+		this.txtCloud = new HtmlTextGroup('Cloud users:', 'cloud');
+		grp = new HtmlDynGroup('Cloud addresses');
+		grp.content.append( this.txtCloud.div );
+		this.secGroups1.append(grp.div);
+		this.grpCloud = grp;
+		
+		this.txtFrom = new HtmlTextGroup('From:', null, true);
+		this.txtTo = new HtmlTextGroup('To:', 'envelope');
+		this.txtCc = new HtmlTextGroup('Cc:', 'envelope');
+		grp = new HtmlDynGroup('E-mail addresses');
+		grp.content.append( this.txtFrom.div, this.txtTo.div, this.txtCc.div );
+		grp.expand(true);
+		this.secGroups1.append(grp.div);
+		this.grpMail = grp;
+		
+		this.txtFax = new HtmlTextGroup('Fax numbers:', 'phone-alt');
+		grp = new HtmlDynGroup('Fax addresses');
+		grp.content.append( this.txtFax.div );
+		this.secGroups1.append(grp.div);
+		this.grpFax = grp;
+		
+		this.txtFTP = new HtmlInputGroup('Publish on FTP:', 'link', this.secFtp);		
+		grp = new HtmlDynGroup('FTP / GTS address');
+		grp.content.append( this.txtFTP.div );
+		this.secFtp.append(grp.div);
+		this.txtFtpFile = this.secFtp.find('.txtFile');
+		this.chkFtp = this.secFtp.find('.spnChk > input[type=checkbox]');
+		this.grpFtp = grp;
+		
+		this.txtSubject = new HtmlTextGroup('Subject:');
+		grp = new HtmlDynGroup('Message', this.secMailText);
+		grp.content.find('.subject').html( this.txtSubject.div );
+		grp.expand(true);
+		this.grpMailText = grp;
+		
+		this.txtSMS = new HtmlTextGroup('Mobile numbers:', 'phone');
+		grp = new HtmlDynGroup('SMS', this.secSmsText);
+		grp.content.prepend( this.txtSMS.div );
+		this.grpSmsText = grp;
+		
+		this.txtEvtId = new HtmlTextGroup('Event-ID', 'map-marker', true);
+		this.txtParentId = new HtmlTextGroup('Parent-ID', 'map-marker', true);
+		grp = new HtmlDynGroup('Related events');
+		grp.content.append( this.txtEvtId.div );
+		grp.content.append( this.txtParentId.div );
+		this.secGroups2.append(grp.div);
+		this.grpIds = grp;
+		
+		/* register callback for radio buttons */
+		this.dialog.content.find('.secMailText .btn').change(this.setMsgTexts.bind(this));
+		
+		/* auto resize text areas when the dialog becomes visible */
+		this.dialog.div.on('shown.bs.modal', (function() {
+			this.resize();
+		}).bind(this));
+		
+		/* count and display number of characters in SMS text on change */
+		this.smsText.on('input change', (function() {
+			this.secSmsText.find('.spnNumChars').html( this.smsText.val().length );
+		}).bind(this));
+		
+		/* send message if "save" button has been clicked */
+		this.btnSave.click(this.send.bind(this));
+	};
+	
+	this.show = function(eq) {
+		/* store passed earthquake event for later use */
+		this.eq = eq;
+		/* clear all input fields */
+		this.dialog.content.find(':input').val("");
+		/* set static fields */
+		var root = this.eq.root ? this.eq.root : this.eq._id;
+		this.txtFrom.value(curuser.username);
+		this.txtEvtId.value(root);
+		this.txtParentId.value(this.eq._id);
+		/* set FTP path according to user settings */
+		if( curuser.properties ) {
+			this.secFtp.find('txtPath').html( curuser.properties.FtpHost + curuser.properties.FtpPath );
+			if( curuser.properties.FtpFile && curuser.properties.FtpFile != "") {
+				this.txtFtpFile.val(curuser.properties.FtpFile);
+			}
+		}
+		/* show/hide groups according to user permissions */
+		var showFax = checkPerm('fax') && checkProp('InterfaxUsername')	&& checkProp('InterfaxPassword');
+		var showFtp = checkPerm('ftp') && checkProp('FtpUser') && checkProp('FtpHost') && checkProp('FtpPath');
+		this.grpCloud.show( checkPerm('intmsg') );
+		this.grpMail.show( checkPerm('mail') );
+		this.grpFax.show( showFax );
+		this.grpFtp.show( showFtp );
+		this.grpMailText.show( checkPermsAny('intmsg', 'mail') || showFax || showFtp );
+		this.grpSmsText.show( checkPerm('sms') && checkProp('TwilioSID') && checkProp('TwilioToken') && checkProp('TwilioFrom') );
+		this.grpIds.show(true);
+		
+		this.setMsgTexts();
+		this.dialog.show();
+	};
+	
+	this.setMsgTexts = function() {
+		var kind = "info";
+		kind = this.btnInfo.is(':checked') ? "info" : kind;
+		kind = this.btnEnd.is(':checked') ? "end" : kind;
+		kind = this.btnCancel.is(':checked') ? "cancel" : kind;
+		
+		var subject = {
+			"info" : "Tsunami Information/Watch/Advisory",
+			"end" : "Tsunami End",
+			"cancel" : "Tsunami Cancelation"
+		};
+		
+		this.txtSubject.value(subject[kind]);
+		
+		ajax_mt('webguisrv/get_msg_texts', {evtid: this.eq._id, kind: kind}, (function(result) {
+			this.mailText.val(result.mail);
+			this.smsText.val(result.sms);
+			this.msgnr = result.msgnr;
+			this.smsText.trigger("change");
+			this.resize();
+			/* set FTP file if not already done */
+			if( this.txtFtpFile.val() != "" )
+				this.txtFtpFile.val( zeroPad(this.msgnr, 3) + ".txt");
+		}).bind(this));
+	};
+	
+	this.resize = function() {
+		/* back-up state of groups containing the text areas */
+		var visMail = this.grpMailText.open;
+		var visSms = this.grpSmsText.open;
+		/* make both groups visible to obtain there height */
+		this.grpMailText.expand(true);
+		this.grpSmsText.expand(true);
+		/* adjust height of text areas */
+		this.mailText.innerHeight(0);
+		this.mailText.innerHeight( this.mailText.prop('scrollHeight') );
+		this.smsText.innerHeight( this.smsText.prop('scrollHeight') );
+		/* restore previous state */
+		this.grpMailText.expand(visMail);
+		this.grpSmsText.expand(visSms);
+	};
+	
+	this.send = function() {
+		var sent = false;
+		
+		if( this.btnEnd.is(':checked') || this.btnCancel.is(':checked') )
+			this.msgnr = 0;
+
+		if( this.txtCloud.value() != '' ) {
+			console.log('Sent internal message!');
+			sent = true;
+			ajax_mt(
+				'msgsrv/intmsg',
+				{ apiver: 1,
+				  to: this.txtCloud.value(),
+				  subject : this.txtSubject.value(),
+				  text : this.mailText.val(),
+				  evid : this.txtEvtId.value(),
+				  parentid: this.txtParentId.value(),
+				  msgnr: this.msgnr
+				},
+				function(result) { console.log(result.status); }
+			);
+		}
+		
+		if( this.txtTo.value() != '' || this.txtCc.value() != '' ) {
+			console.log('Sent email!');
+			sent = true;
+			ajax_mt(
+				'msgsrv/mail',
+				{ apiver: 1,
+				  to: this.txtTo.value(),
+				  cc: this.txtCc.value(),
+				  subject : this.txtSubject.value(),
+				  text : this.mailText.val(),
+				  evid : this.txtEvtId.value(),
+				  parentid: this.txtParentId.value(),
+				  msgnr: this.msgnr
+				},
+				function(result) { console.log(result.status); }
+			);
+		}
+		
+		if( this.txtFax.value() != '' ) {
+			console.log('Sent fax!');
+			sent = true;
+			ajax_mt(
+				'msgsrv/fax',
+				{ apiver: 1,
+				  to: this.txtFax.value(),
+				  text : this.mailText.val(),
+				  evid : this.txtEvtId.value(),
+				  parentid: this.txtParentId.value(),
+				  msgnr: this.msgnr
+				},
+				function(result) { console.log(result.status); }
+			);
+		}
+		
+		if( this.chkFtp.is(':checked') && this.txtFtpFile.val() != '' ) {
+			console.log('Published on FTP-Server!');
+			sent = true;
+			ajax_mt(
+				'msgsrv/ftp',
+				{ apiver: 1,
+				  fname : this.txtFtpFile.val(),
+				  text : this.mailText.val(),
+				  evid : this.txtEvtId.value(),
+				  parentid: this.txtParentId.value(),
+				  msgnr: this.msgnr
+				},
+				function(result) { console.log(result.status); }
+			);
+		}
+		
+		if( this.txtSMS.value() != '' ) {
+			console.log('Sent sms!');
+			sent = true;
+			ajax_mt(
+				'msgsrv/sms',
+				{ apiver: 1,
+				  to: this.txtSMS.value(),
+				  text : this.smsText.val(),
+				  evid : this.txtEvtId.value(),
+				  parentid: this.txtParentId.value(),
+				},
+				function(result) { console.log(result.status); }
+			);
+		}
+		
+		if( ! sent ) {
+			var options = {
+				content : "Please specify at least one receiver and click again!",
+				title : "Info",
+				trigger : 'manual',
+				placement : 'top'
+			};
+			this.btnSave.popover(options);
+			this.btnSave.popover('show');
+			setTimeout( (function() {
+				this.btnSave.popover('hide');
+			}).bind(this), 3000);
+		} else {
+			this.dialog.hide();
+		}
+	};
+		
+	this.init();
 }
 
 function AdminDialog() {
@@ -7457,15 +6680,25 @@ function HtmlDropDownAuto() {
 	this.init();
 }
 
-function HtmlTextGroup(label, icon) {
+function HtmlTextGroup(label, icon, readonly) {
 	
 	this.regex = null;
 
-	this.init = function(label, icon) {
+	this.init = function(label, icon, readonly) {
 		this.div = $('.templates > .html-textgroup').clone();
-		this.div.find('> .html-label').html(label);
-		this.div.find('> .html-icon > span').addClass('glyphicon-' + icon);
+		if( label != null ) {
+			this.div.find('> .html-label').html(label);
+		} else {
+			this.div.find('> .html-label').hide();
+		}
+		if( icon ) {
+			this.div.find('> .html-icon > span').addClass('glyphicon-' + icon);
+		} else {
+			this.div.find('> .html-icon').hide();
+		}
 		this.div.find('> .html-text').on('change', this.onChange.bind(this));
+		if( readonly )
+			this.div.find('> .html-text').attr('readonly', true);
 	};
 
 	this.value = function(newValue) {
@@ -7487,20 +6720,25 @@ function HtmlTextGroup(label, icon) {
 		}
 	};
 
-	this.init(label, icon);
+	this.init(label, icon, readonly);
 }
 
-function HtmlInputGroup(label, icon) {
+function HtmlInputGroup(label, icon, box) {
 
-	this.init = function(label, icon) {
+	this.init = function(label, icon, box) {
 
 		this.div = $('.templates > .html-inputgroup').clone();
 		this.div.find('> .html-label').html(label);
 		this.div.find('> .html-icon > span').addClass('glyphicon-' + icon);
 		this.input = this.div.find('> .html-input');
+		
+		if( box ) {
+			this.input.replaceWith( box.find('> .content').children() );
+			box.html(this.div);
+		}
 	};
 
-	this.init(label, icon);
+	this.init(label, icon, box);
 }
 
 function HtmlDynGroup(label,box) {
@@ -7544,6 +6782,10 @@ function HtmlDynGroup(label,box) {
 		this.update();
 	};
 	
+	this.show = function(show) {
+		show ? this.div.show() : this.div.hide();
+	};
+	
 	this.onClick = function() {
 		this.expand(! this.open);
 	};
@@ -7570,6 +6812,10 @@ function HtmlDialog(box) {
 	
 	this.show = function() {
 		this.div.modal('show');
+	};
+	
+	this.hide = function() {
+		this.div.modal('hide');
 	};
 
 	this.init(box);
