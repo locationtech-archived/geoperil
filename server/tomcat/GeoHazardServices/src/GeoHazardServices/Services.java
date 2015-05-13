@@ -297,45 +297,7 @@ public class Services {
 	  
 	  cursor.close();
   }
-    
-  @GET
-  @Path("/addInst")
-  @Produces(MediaType.APPLICATION_JSON)
-  public String addInst(
-		  @Context HttpServletRequest request,
-		  @QueryParam("name") String name,
-		  @QueryParam("secret") String secret) {
-	  
-	  Object[] required = { name, secret };
-	  	  
-	  /* this is maybe not reliable! */
-	  String ip = request.getHeader("X-FORWARDED-FOR");
-	  	  
-	  /* allow access only from localhost */
-	  if( ip == null || ! ip.equals( "127.0.0.1" ) )
-		  return jsdenied();
-	  	  
-	  if( ! checkParams( request, required ) )
-		  return jsfailure();
-	  
-	  DBCollection coll = db.getCollection("institutions");
-	  
-	  BasicDBObject obj = new BasicDBObject( "name", name );
-	  
-	  /* check if the institution already exist */
-	  if( coll.find( obj ).hasNext() )
-		  return jsfailure();
-	  
-	  obj.put( "secret", secret );
-	  
-	  Inst inst = new Inst( obj );
-	  institutions.put( inst.name, inst );
-	  
-	  coll.insert( obj );
-	  
-	  return jssuccess();
-  }
-  
+      
   private boolean checkParams( HttpServletRequest request, Object[] list ) {
 
 	  for( Object o: list ) {
@@ -817,50 +779,7 @@ public class Services {
 		  }
 	  }
   }
-    
-  @GET
-  @Path("/register")
-  @Produces(MediaType.APPLICATION_JSON)
-  public String register(
-		  @Context HttpServletRequest request,
-		  @QueryParam("username") String username,
-		  @QueryParam("password") String password,
-		  @QueryParam("key") String key ) {
-	  
-	  /* check if this is an authorized request */
-	  if( key == null ||  ! key.equals("Malaga2014") )
-		  return "Denied";
-	  
-	  DBCollection coll = db.getCollection("users");
-	  	  
-	  if( username == null || password == null || username.length() < 3 || password.length() < 6 )
-		  return "Error";
-	  	  
-	  if( coll.find( new BasicDBObject("username", username) ).count() > 0 )
-		  return "Error";
-	  
-	  MessageDigest sha256;
-	  
-	  try {
-		sha256 = MessageDigest.getInstance("SHA-256");
-	  } catch (NoSuchAlgorithmException e) {
-		return "Internal error";
-	  }
-	  
-	  byte[] hash = sha256.digest( password.getBytes() );
-	  
-	  Base64Codec base64Codec = new Base64Codec();
-	  
-	  BasicDBObject obj = new BasicDBObject();
-	  obj.put( "username", username );
-	  obj.put( "password", base64Codec.encode( hash ) );
-	  obj.put( "session", null );
-	  
-	  coll.insert( obj );
-	  
-	  return "Ok";
-  }
-  
+     
   private String getHash( String password ) {
 	  
 	  MessageDigest sha256;
@@ -947,9 +866,13 @@ public class Services {
 
 			  sessionCookie.setValue( session );
 			  response.addCookie( sessionCookie );
-			  			  
+			  					  
 			  BasicDBObject result = new BasicDBObject("status", "success");
 			  result.put( "user", getUserObj(username) );
+			  
+			  BasicDBObject perm = (BasicDBObject) obj.get("permissions");
+			  if( perm != null && perm.getBoolean("nologin") == true )
+				  return jsdenied( new BasicDBObject("nologin", true) );
 			  
 			  System.out.println( "CLOUD " + new Date() + " SignIn from user " + username );
 			  
@@ -1014,8 +937,13 @@ public class Services {
 	  
 	  if( user != null ) {
 		  
+		  DBObject userObj = getUserObj( user.name );
 		  BasicDBObject result = new BasicDBObject("status", "success");
-		  result.put( "user", getUserObj( user.name ) );
+		  result.put( "user", userObj );
+		  
+		  BasicDBObject perm = (BasicDBObject) userObj.get("permissions");
+		  if( perm != null && perm.getBoolean("nologin") == true )
+			  return jsdenied( new BasicDBObject("nologin", true) );
 		  
 		  System.out.println( "CLOUD " + new Date() + " Resuming session for user " + user.name );
 		  
@@ -1212,6 +1140,8 @@ public class Services {
 					
 		/* walk through the returned entries */
 		for( DBObject obj: cursor ) {
+			
+			obj.removeField("image");
 			
 			/* check if entry belongs to general or user specific list */
 			if( user != null && obj.get("user").equals( user.objId ) ) {
@@ -1412,94 +1342,7 @@ public class Services {
 			
 	return jsonObj.toString();
  }
-  
- @GET
- @Path("/getIsolines")
- @Produces(MediaType.APPLICATION_JSON)
- public String getIsolines(
-		 @Context HttpServletRequest request,
-		 @QueryParam("id") String id, 
-		 @QueryParam("arrT") int arrT ) {
-	 	 	 
-	 DBCollection coll = db.getCollection("results");
-	 
-	 BasicDBObject inQuery = new BasicDBObject();
-	 inQuery.put( "id", id );
-	 inQuery.put( "process", 0 );
-	 inQuery.put( "arrT", new BasicDBObject( "$gt", arrT ) );
-	 	 
-	 DBCursor cursor = coll.find( inQuery );
-	 	 	 
-	 return cursor.toArray().toString();
- }
- 
- @GET
- @Path("/getWaveHeights")
- @Produces(MediaType.APPLICATION_JSON)
- public String getWaveHeights(
-		 @Context HttpServletRequest request,
-		 @QueryParam("id") String id ) {
-	 
-	 ArrayList<DBObject> entries = new ArrayList<DBObject>();
-	 
-	 DBCollection coll = db.getCollection("results2");
-	 
-	 BasicDBObject inQuery = new BasicDBObject();
-	 inQuery.put( "id", id );
-	 inQuery.put( "process", 0 );
-	 	 
-	 DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject( "ewh", 1 ) );
-	 
-	 for( DBObject obj: cursor ) {
-		Double ewh = Double.valueOf( (String) obj.get( "ewh" ) );
-		obj.put( "color", GlobalParameter.jets.get( ewh ) );
-		entries.add( obj );
-	 }
-		
-	 cursor.close();
-	 
-	 String ret = new Gson().toJson( entries );
-	 
-	 return ret;
- }	
- 
- @GET
- @Path("/getPois")
- @Produces(MediaType.APPLICATION_JSON)
- public String getPois(
-		 @Context HttpServletRequest request,
-		 @QueryParam("id") String id ) {
-	 
-//	 DBCollection coll = db.getCollection("pois_results");
-//	 
-//	 BasicDBObject inQuery = new BasicDBObject("id", id);
-//	 BasicDBObject filter = new BasicDBObject("_id", 0);
-//	 DBCursor cursor = coll.find( inQuery, filter );
-	 	 
-	 ArrayList<DBObject> list = new ArrayList<DBObject>();
-	 
-	 DBCollection coll = db.getCollection("tfp_comp");
-	 BasicDBObject inQuery = new BasicDBObject("EventID", id);
-	 DBCursor cursor = coll.find( inQuery );
-	 
-	 for( DBObject obj: cursor ) {
-		 ObjectId objId = new ObjectId( (String) obj.get("tfp") );
-		 DBCursor crs = db.getCollection("tfps").find( new BasicDBObject( "_id", objId ) );
-		 
-		 if( ! crs.hasNext() )
-			 continue;
-		 				 
-		 DBObject tfp = crs.next();
-		 tfp.put( "ewh", (Double) obj.get("ewh") );
-		 tfp.put( "eta", (Double) obj.get("eta") );
-		 
-		 list.add( tfp );
-	 }	 
-	 	 
-	 System.out.println( "getPois - size: " + list.size() );
-	 return list.toString();
- }
- 
+    
  @POST
  @Path("/search")
  @Produces(MediaType.APPLICATION_JSON)
@@ -2019,52 +1862,14 @@ public class Services {
 		 
 		 DBCursor csr = db.getCollection("eqs").find( new BasicDBObject( "_id", msg.get("ParentId") ) );
 		 
-		 if( csr.hasNext() )
-			 msg.put( "parentEvt", csr.next() );
+		 if( csr.hasNext() ) {
+			 DBObject obj = csr.next();
+			 obj.removeField("image");
+			 msg.put( "parentEvt", obj );
+		 }
 	 }
 	 
 	 return result;
- }
- 
- @POST
- @Path("/getNextMsgNr")
- @Produces(MediaType.APPLICATION_JSON)
- public String getNextMsgNr(
-		  @Context HttpServletRequest request,
-		  @FormParam("rootid") String rootid,
-		  @CookieParam("server_cookie") String session ) {
-	 
-	 Object[] required = { rootid };
-
-	 if( ! checkParams( request, required ) )
-		 return jsfailure();
-	 
-	 /* check session key and find out if the request comes from an authorized user */
-	 User user = signedIn( session );
-	 
-	 if( user == null )
-		 return jsdenied();
-	 
-	 DBCollection coll = db.getCollection("messages_sent");
-	 
-	 DBObject msgnr = new BasicDBObject( "$exists", true );
-	 msgnr.put( "$ne", null );
-	 
-	 DBObject query = new BasicDBObject( "EventID", rootid );
-	 query.put( "NextMsgNr", msgnr );
-	 query.put( "SenderID", user.objId );
-	 
-	 DBCursor cursor = coll.find( query ).sort( new BasicDBObject( "CreatedTime", -1 ) );
-	 
-	 int nextNr = 1;
-	 
-	 if( cursor.hasNext() ) {
-		 nextNr = (int) cursor.next().get( "NextMsgNr" );
-	 }
-	 	 
-	 cursor.close();
-	 
-	 return jssuccess( new BasicDBObject( "NextMsgNr", nextNr ) );
  }
  
  @POST
