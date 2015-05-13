@@ -471,26 +471,34 @@ class WebGuiSrv(BaseSrv):
         # get message template
         template = self._db["settings"].find_one({"type": "msg_template"})
         
-        # find next message number
         nr = 1
-        rootid = eq["root"] if eq["root"] else eq["_id"];
-        cursor = self._db["messages_sent"].find({
-            "EventID": rootid,
-            "SenderID": user["_id"],
-            "NextMsgNr": {"$ne": None}
-        }).sort("CreatedTime", -1).limit(1)
-        if cursor.count() > 0:
-            nr = cursor[0]["NextMsgNr"] + 1
+        provider = ""
+        if user is not None:
+            # find next message number
+            rootid = eq["root"] if eq["root"] else eq["_id"];
+            cursor = self._db["messages_sent"].find({
+                "EventID": rootid,
+                "SenderID": user["_id"],
+                "NextMsgNr": {"$ne": None}
+            }).sort("CreatedTime", -1).limit(1)
+            if cursor.count() > 0:
+                nr = cursor[0]["NextMsgNr"] + 1
+            # get tsunami provider from institution settings
+            if "inst" in user:
+                inst = self._db["institutions"].find_one({"_id": user["inst"]})
+                if inst is not None:
+                    provider += inst["msg_name"]
         # build final message
-        msg = template["prolog"] % (nr, "", datetime.datetime.utcnow().strftime("%H%MZ %d %b %Y").upper())
+        msg = template["prolog"] % (nr, provider, datetime.datetime.utcnow().strftime("%H%MZ %d %b %Y").upper())
         # summaries
         for level in sorted(data, key=lambda x: len(x) ):
-            # TODO: include info only if allowed 
+            if level == "INFORMATION" and kind == "end":
+                continue 
             if applies[level] != "":
                 msg += template["summary"] %(
                     "END OF " if kind == "end" else "",
                     level,
-                    " ONGOING" if nr > 1 else "",
+                    " CANCELLATION" if kind == "cancel" else (" ONGOING" if nr > 1 and kind == "info" else ""),
                     applies[level]
                 )
         msg += template["advise"]
@@ -550,8 +558,9 @@ class WebGuiSrv(BaseSrv):
             msg += template["eval_advisory_end"]
         
         # append table of TFP values if available
-        if "WATCH" in data or "ADVISORY" in data:
-            msg += template["tfps"] % tfp_txt
+        if kind == "info":
+            if "WATCH" in data or "ADVISORY" in data:
+                msg += template["tfps"] % tfp_txt
         
         # append table of CFZ values if available
         if cfzs:
@@ -644,7 +653,6 @@ class WebGuiSrv(BaseSrv):
         f.close()
         # remove temporary file and return binary data
         #os.remove(tmp.name)
-        print(tmp.name)
         # provide file for download
         dst = os.path.dirname(os.path.realpath(__file__)) + "/snapshots/" + str(link_id) + '.png'
         subprocess.call(path + "phantomjs " + path + "snapshot.js " + self.get_hostname() + "/?share=" + str(link_id) + " " + dst + " '#mapview'", shell=True)
