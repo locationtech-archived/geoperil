@@ -357,6 +357,7 @@ if( ! isset( $_GET["id"] ) ) :
 	);
 	$ret = ajax($url,$data);
 	$eq = $ret['eq'];
+        $msg = $ret['msg'];
 	$shared_link = '/?share='. $eq['shared_link'];
 ?>
 
@@ -548,7 +549,7 @@ if( ! isset( $_GET["id"] ) ) :
 		<h3>Map</h3>
 		<img src="<?php echo $eq['image_url']; ?>" alt="tsunami-jets" />
 		<h3>Message text</h3>
-		<pre><?php echo $ret['msg']; ?></pre>
+		<pre><?php echo $msg; ?></pre>
 		<?php else:?>
 		<h3>Map</h3>
 		<b>No simulation available.</b>
