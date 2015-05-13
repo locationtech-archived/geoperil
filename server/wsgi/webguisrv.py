@@ -298,13 +298,13 @@ class WebGuiSrv(BaseSrv):
         user = self.getUser()
         if user is not None or self.auth_shared(evid):
             if kind == "CFZ":
-                res = self.getcfzs(evid)
+                res = self._getcfzs(evid)
             else:
                 res = list( self._db["comp"].find({"EventID":evid, "type":kind}) )
             return jssuccess(comp=res)
         return jsdeny()
 
-    def getcfzs(self, evid):
+    def _getcfzs(self, evid):
         res = list( self._db["comp"].find({"EventID":evid, "type":"CFZ"}) )
         for r in res:
             cfz = self._db["cfcz"].find_one({"FID_IO_DIS":r["code"]},{"_COORDS_":0})
@@ -362,18 +362,25 @@ class WebGuiSrv(BaseSrv):
             return "ADVISORY"
         return "WATCH"
     
-    def get_msg_text(self, evid, kind):
+    @cherrypy.expose
+    def get_msg_texts(self, evtid, kind):
+        user = self.getUser()
+        if user is not None:
+            msgs = self._get_msg_texts(evtid, kind, user)
+            return jssuccess(**msgs)
+        return jsdeny()
+        
+    def _get_msg_texts(self, evid, kind, user=None):
         tfps = self._gettfps(evid)
-        cfzs = self.getcfzs(evid)
-        
-        #get earthquake event
+        cfzs = self._getcfzs(evid)
+        # get earthquake event
         eq = self._db["eqs"].find_one({"_id":evid})
-        
         # define headlines
         headlen = 0
-        
+        # ISO-2 map used to build the SMS text later on - initialize given keys with empty sets
+        iso_map = {key: set() for key in ["WATCH", "ADVISORY", "INFORMATION"]}
         # pick up neccessary data
-        data = {}
+        data = {}        
         for tfp in tfps:
             level = self.get_tfp_level( tfp )
             if level is None:
@@ -386,6 +393,8 @@ class WebGuiSrv(BaseSrv):
                 data[level][ tfp["country"] ] = []
             data[level][ tfp["country"] ].append( tfp )
             headlen = max( headlen, len( tfp["country"] + "-" + tfp["name"] ) )
+            # add short ISO-2 country name to set - duplicates are avoided this way
+            iso_map[level].add(tfp["iso_2"])
                 
         headlines = ("LOCATION-FORECAST POINT".ljust(headlen), "COORDINATES   ", "ARRIVAL TIME", "LEVEL       ")
         headlen = len( headlines[0] )
@@ -444,6 +453,8 @@ class WebGuiSrv(BaseSrv):
                     arrival.strftime("%H%MZ %d %b").upper(),
                     level
                 ))
+                # used in SMS generation later on
+                iso_map[level].add(cfz["ISO2"])
             cfz_txt += "\n"
         
         # 
@@ -460,8 +471,17 @@ class WebGuiSrv(BaseSrv):
         # get message template
         template = self._db["settings"].find_one({"type": "msg_template"})
         
-        # build final message
+        # find next message number
         nr = 1
+        rootid = eq["root"] if eq["root"] else eq["_id"];
+        cursor = self._db["messages_sent"].find({
+            "EventID": rootid,
+            "SenderID": user["_id"],
+            "NextMsgNr": {"$ne": None}
+        }).sort("CreatedTime", -1).limit(1)
+        if cursor.count() > 0:
+            nr = cursor[0]["NextMsgNr"] + 1
+        # build final message
         msg = template["prolog"] % (nr, "", datetime.datetime.utcnow().strftime("%H%MZ %d %b %Y").upper())
         # summaries
         for level in sorted(data, key=lambda x: len(x) ):
@@ -483,7 +503,39 @@ class WebGuiSrv(BaseSrv):
             eq["prop"]["depth"],
             eq["prop"]["region"],
             eq["prop"]["magnitude"]
-        )    
+        )
+        # measurements
+        if user is not None and (kind == "info" or kind == "end"):
+            text = ""
+            pickings = list(self._db["pickings"].find({"userid": user["_id"], "evtid": evid, "data.pick": True}))
+            for picking in pickings:
+                picking["station_obj"] = self._db["stations"].find_one({"name": picking["station"]})
+            if pickings:
+                headlines = ["COUNTRY", "GAUGE LOCATION", "LAT   ", "LON    ", "TIME ", "AMPL  ", "PER      "]
+                item = max( pickings, key=lambda x: len(x["station_obj"]["countryname"]) )
+                len_country = max( len(headlines[0]), len(item["station_obj"]["countryname"]) )
+                item = max( pickings, key=lambda x: len(x["station"]) )
+                len_location = max( len(headlines[1]), len(item["station"]) )
+                headlines[0] = headlines[0].ljust(len_country)
+                headlines[1] = headlines[1].ljust(len_location)
+                for head in headlines:
+                    text += head + " "
+                text += "\n"
+                for head in headlines:
+                    text += "%s " % "".ljust(len(head), '-')
+                text += "\n"
+            for picking in pickings:
+                station = picking["station_obj"]
+                text += "%s %s %5.2f%c %6.2f%c %sZ %5.2fM %6.2fMIN\n" % (
+                    station["countryname"].upper().ljust(len_country),
+                    station["name"].ljust(len_location),
+                    abs(station["lat"]), "S" if station["lat"] < 0 else "N",
+                    abs(station["lon"]), "W" if station["lon"] < 0 else "E",
+                    picking["data"]["time"].replace(":",""),
+                    picking["data"]["ampl"], picking["data"]["period"]
+                )
+            if pickings:
+                msg += template["measurements"] % text
         # evaluation of WATCH, ADVISORY and INFORMATION
         if kind == "info":
             if nr == 1:
@@ -511,15 +563,34 @@ class WebGuiSrv(BaseSrv):
         else:
             msg += template["final"]
         msg += template["epilog"] % nr
-            
-        return msg
+        
+        # build SMS text
+        sms = "*TEST*TSUNAMI EXERCISE MSG;"
+        # TODO: make dynamic?
+        sms += "NEAMTWS-GFZ;"
+        for level in ["WATCH", "ADVISORY"]:
+            if not iso_map[level]:
+                continue
+            sms += level + ":"
+            for iso in iso_map[level]:
+                sms += iso + " "
+            sms = sms[:-1] + ";"
+        sms += "%s;EQ Mw%.1f;%s;%.2f%c;%.2f%c;%uKM;*TEST*" %(
+            eq["prop"]["date"].strftime("%H%MZ %d%b%Y").upper(),
+            eq["prop"]["magnitude"],
+            eq["prop"]["region"],
+            abs(eq["prop"]["latitude"]), "S" if eq["prop"]["latitude"] < 0 else "N",
+            abs(eq["prop"]["longitude"]), "W" if eq["prop"]["longitude"] < 0 else "E",
+            eq["prop"]["depth"],
+        )  
+        return {"mail": msg, "sms": sms, "msgnr": nr}
     
     # public interface to get all information about an earthquake event
     @cherrypy.expose
     def get_event_info(self,apikey,evid):
         if self.auth_api(apikey, "user") is not None:
             cursor = self._db["eqs"].find({"$or": [{"_id":evid}, {"id":evid}]}).sort("refineId", -1).limit(1)
-            if cursor is not None:
+            if cursor.count() > 0:
                 eq = cursor[0]
                 # set fields explicitly to avoid returning sensible data that may be added later
                 evt = {
@@ -532,7 +603,7 @@ class WebGuiSrv(BaseSrv):
                     evt["simulation"] = eq["process"][0]
                 if "shared_link" in eq:
                     evt["shared_link"] = eq["shared_link"]
-                msg = self.get_msg_text(eq['_id'], "info")
+                msg = self._get_msg_texts(eq['_id'], "info")["mail"]
                 return jssuccess(eq=evt,msg=msg)
             return jsfail()
         return jsdeny()
@@ -572,7 +643,11 @@ class WebGuiSrv(BaseSrv):
         data = f.read()
         f.close()
         # remove temporary file and return binary data
-        os.remove(tmp.name)
+        #os.remove(tmp.name)
+        print(tmp.name)
+        # provide file for download
+        dst = os.path.dirname(os.path.realpath(__file__)) + "/snapshots/" + str(link_id) + '.png'
+        subprocess.call(path + "phantomjs " + path + "snapshot.js " + self.get_hostname() + "/?share=" + str(link_id) + " " + dst + " '#mapview'", shell=True)
         return data
     
     # this method is called by the tomcat-server if the computation
