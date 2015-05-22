@@ -4,10 +4,8 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -34,11 +32,9 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
-import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 
@@ -197,7 +193,7 @@ public class Services {
 	  loadInstitutions();
 	  
 	  gson = new Gson();
-	  
+	  	  
 	  Listener.registerService( this );
   }
   
@@ -235,6 +231,9 @@ public class Services {
 		  System.out.println("Tsunami-Jet-Threshold " + threshold + ": " + color);
 	  }
 	  cursor.close();
+	  
+	  DBObject urls = coll.findOne(new BasicDBObject("type", "urls"));
+	  GlobalParameter.wsgi_url = (String) urls.get("wsgi");
 	  
 	  int j = 0;
 	  
@@ -635,7 +634,7 @@ public class Services {
 	  }
 	  
 	  /* set refinement and compound Ids */
-	  CompId compId = new CompId( instObj.name, id, refineId );
+	  final CompId compId = new CompId( instObj.name, id, refineId );
 	  obj.put( "_id", compId.toString() );
 	  obj.put( "refineId", refineId );
 	  event.put( "id", compId.toString() );
@@ -650,136 +649,23 @@ public class Services {
 	  
 	  Object[] reqComp = { inst, secret, id, lon, lat, mag, depth, dip, strike, rake };
 	  boolean simulate = comp != null && checkParams( request, reqComp );
-	  
-	  if( inst.equals("gfz") )
-		  //notifyUsers( compId.toString(), name, lat, lon, mag );
-		  notifyUsers( obj, entry, simulate );
-	  
+	  	  
 	  /* insert new event into 'events'-collection */
 	  db.getCollection("events").insert( event );
 	  	  
 	  if( simulate )
 		  computeById( request, inst, secret, id, refineId, comp, accel );
+	  else
+		  /* run request in a separate thread to avoid blocking */
+		  new Thread() {
+		  	public void run() {
+		  		sendPost(GlobalParameter.wsgi_url + "webguisrv/post_compute", "evtid=" + compId.toString());
+		  	}
+		  }.start();
 			 
 	  return jssuccess( new BasicDBObject( "refineId", refineId ) );
   }
-  
-  //private void notifyUsers( String id, String name, double lat, double lon, double mag ) {
-  private void notifyUsers( DBObject newObj, DBObject prevObj, Boolean simAvail ) {
-	  
-	  Inst instObj = institutions.get( "gfz" );
-	  DBCursor cursor = db.getCollection("users").find();
-	  
-	  DBObject newProp = (DBObject) newObj.get("prop");
-	  Double newMag = (Double) newProp.get("magnitude");
-	  Double newLat = (Double) newProp.get("latitude");
-	  Double newLon = (Double) newProp.get("longitude");
-	  Double magDiff = 0.0;
-	  boolean mtAvail = (
-			  newMag != null &&
-  			  newLat != null &&
-  			  newLon != null &&
-  			  newProp.get("depth") != null &&
-  			  newProp.get("dip") != null && 
-  			  newProp.get("strike") != null &&
-  			  newProp.get("rake") != null );
-	  	  
-	  if( newMag == null ) newMag = 0.0;
-	  
-	  if( prevObj != null ) {
-		  
-		  /* UPDATE */
-		  DBObject prevProp = (DBObject) prevObj.get("prop");
-		  Double prevMag = (Double) prevProp.get("magnitude");
-		  
-		  if( prevMag == null ) prevMag = 0.0;
-		  
-		  magDiff = Math.abs( newMag - prevMag );	  
-	  }
-		  
-	  String sharedLnk = "";
-	  if( simAvail )
-		  sharedLnk = "http://trideccloud.gfz-potsdam.de/?share="
-				  	+ static_int( (String)newObj.get("_id"), newLon, newLat, 5.0, null );
-	  
-	  for( DBObject user: cursor ) {
-		  		  		  
-		  DBObject notify = (DBObject) user.get("notify");		  
-		  if( notify == null )
-			  continue;
-		  
-		  boolean sendMsg = false;
-		  
-		  /* check if we should notify about an update */
-		  if( prevObj != null ) {
-			  
-			  /* UPDATE */
-			  Number magChange = (Number) notify.get("onMagChange");
-			  Boolean onSim = (Boolean)  notify.get("onSim");
-			  Boolean onMT = (Boolean)  notify.get("onMT");
-			  
-			  if( magChange != null && magDiff >= magChange.doubleValue() )
-				  sendMsg = true;
-			  
-			  if( onSim != null && onSim && simAvail )
-				  sendMsg = true;
-			  
-			  if( onMT != null && onMT && mtAvail )
-				  sendMsg = true;
-			  
-		  } else {
-			  
-			  Number magThreshold = (Number) notify.get("onMag");
-			  
-			  if( magThreshold != null && newMag >= magThreshold.doubleValue() ) {
-				  sendMsg = true;
-			  }
-		  }  		  
-		  
-		  if( sendMsg ) {
-			
-			  String username = (String) user.get("username");
-			  
-			  String text = "AN EARTHQUAKE HAS OCCURRED AT " + (String) newProp.get("region")
-					      + " WITH MAGNITUDE OF " + Double.toString(newMag) + "\n"
-					  	  + "Visit the TRIDEC CLOUD platform for detailed information.";
-			  
-			  String base = "apiver=1" +
-					  		"&inst="   + instObj.name + 
-					  		"&secret=" + instObj.secret;
-			  
-			  /* notify user about earthquake */
-			  String sms = (String) notify.get("sms");
-			  if( sms != null && ! sms.equals("") ) {
-				  String params = base;
-				  params += "&username=" + username;
-				  /* TODO: move this into the sendPost method */
-				  try {
-					params += "&to="     + URLEncoder.encode( sms, "UTF-8" );
-				  } catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-				  }
-				  params += "&text="     + text;
-				  String ret = sendPost( "http://trideccloud.gfz-potsdam.de/msgsrv/instsms", params );
-				  
-				  System.out.println("CLOUD SMS-Notification: " + username + ", " + sms + ", " + ret);
-			  }
-			  
-			  String mail = (String) notify.get("mail");
-			  if( mail != null && ! mail.equals("") ) {
-				  String params = base;
-				  params += "&fromaddr=" + "tridec-cloud-noreply@gfz-potsdam.de";
-				  params += "&toaddr=" 	 + mail;
-				  params += "&subject="	 + "TRIDEC CLOUD Notification";
-				  params += "&text="     + text + "\n\n" + sharedLnk;
-				  String ret = sendPost( "http://trideccloud.gfz-potsdam.de/msgsrv/instmail", params );
-				  
-				  System.out.println("CLOUD Mail-Notification: " + username + ", " + mail + ", " + ret);
-			  }
-		  }
-	  }
-  }
-     
+       
   private String getHash( String password ) {
 	  
 	  MessageDigest sha256;

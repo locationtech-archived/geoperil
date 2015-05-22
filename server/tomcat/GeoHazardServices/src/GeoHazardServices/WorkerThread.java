@@ -862,7 +862,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	
 	private int pyPostProcess( TaskParameter task ) {
 		
-		Services.sendPost("http://localhost/webguisrv/post_compute", "evtid=" + task.id.toString());		
+		Services.sendPost(GlobalParameter.wsgi_url + "webguisrv/post_compute", "evtid=" + task.id.toString());		
 		return 0;
 	}
 	

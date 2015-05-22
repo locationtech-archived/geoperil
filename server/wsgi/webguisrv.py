@@ -1,4 +1,5 @@
 from basesrv import *
+from msgsrv import sendmail, sendtwilliosms
 import time
 import datetime
 import calendar
@@ -646,7 +647,7 @@ class WebGuiSrv(BaseSrv):
         tmp.close()
         # call phantomjs to make a snapshot
         path = os.path.dirname(os.path.realpath(__file__)) + "/phantomjs/"
-        subprocess.call(path + "phantomjs " + path + "snapshot.js http://localhost/?share=" + str(link_id) + " " + tmp.name + " '#mapview'", shell=True)
+        subprocess.call(path + "phantomjs " + path + "snapshot.js " + self.get_hostname() + "/?share=" + str(link_id) + " " + tmp.name + " '#mapview'", shell=True)
         # get binary data of image
         f = open(tmp.name, 'rb')
         data = f.read()
@@ -664,13 +665,79 @@ class WebGuiSrv(BaseSrv):
     @cherrypy.expose
     def post_compute(self, evtid):
         evt = self._db["eqs"].find_one({"_id": evtid})
-        # create shared link first
-        link_id = self._make_shared_link(evt["_id"], evt["prop"]["longitude"], evt["prop"]["latitude"], 3, None )
-        # create image
-        img = self.make_image(link_id)
-        # append everything to the earthquake event
-        self._db["eqs"].update({"_id": evtid}, {"$set": {"shared_link": link_id, "image": img}})
+        link_id = None
+        # create shared link and image only if a computation was performed
+        if "process" in evt:
+            # create shared link first
+            link_id = self._make_shared_link(evt["_id"], evt["prop"]["longitude"], evt["prop"]["latitude"], 5, None )
+            # create image
+            img = self.make_image(link_id)
+            # append everything to the earthquake event
+            self._db["eqs"].update({"_id": evtid}, {"$set": {"shared_link": link_id, "image": img}})
+        # notify users only if this an official GEOFON event
+        inst = self._db["institutions"].find_one({"_id": evt["user"]})
+        if inst is not None and inst["name"] == "gfz":
+            self._notify_users(evtid, link_id)
         return jssuccess()
+    
+    def _notify_users(self, evtid, link_id=None):
+        template = self._db["settings"].find_one({"type": "notify_template"})
+        evt = self._db["eqs"].find_one({"_id": evtid})
+        cursor = self._db["eqs"].find({"id": evt["id"]}).sort("refineId", -1).skip(1).limit(1)
+        old_evt = None
+        if cursor.count(with_limit_and_skip=True) > 0:
+            # refinement
+            old_evt = cursor[0]
+            mag_diff = abs( evt["prop"]["magnitude"] - old_evt["prop"]["magnitude"] )
+            now_has_mt = old_evt["prop"]["dip"] is None and evt["prop"]["dip"] is not None
+            now_has_sim = "process" not in old_evt and "process" in evt
+        # walk through all users and notify them if conditions are met
+        for user in self._db["users"].find({"notify": {"$ne": None}}):
+            if old_evt is not None:
+                # refinement - check update parameter          
+                if user["notify"].get("onSim") and now_has_sim:
+                    kind = "SIM-NOC"
+                elif user["notify"].get("onMT") and now_has_mt:
+                    kind = "MT-NOC"
+                elif user["notify"].get("onMagChange") is not None and mag_diff > user["notify"]["onMagChange"]:
+                    kind = "M-NOC"
+                else:
+                    continue
+            else:
+                # new event - check initial conditions
+                if user["notify"].get("onMag") is not None and evt["prop"]["magnitude"] >= user["notify"]["onMag"]:
+                    kind = "NMSG"
+                else:
+                    continue
+            if user["notify"].get("sms"):
+                twisid = user["properties"].get("TwilioSID","")
+                twitoken = user["properties"].get("TwilioToken","")
+                twifrom = user["properties"].get("TwilioFrom","")
+                to = user["notify"]["sms"]
+                text = template["sms_text"] % (
+                    kind, 
+                    evt["prop"]["region"],
+                    evt["prop"]["magnitude"],
+                    "OFF SHORE" if evt["prop"]["sea_area"] is not None else "INLAND",
+                    evt["id"]
+                )
+                ret = sendtwilliosms(twisid, twitoken, twifrom, to, text)
+                print("CLOUD SMS-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))
+            if user["notify"].get("mail"):
+                to = user["notify"]["mail"]
+                subject = "TRIDEC CLOUD Notification: %s (%s)" %(evt["id"], kind)
+                text = template["mail_text"] % (
+                    evt["prop"]["region"],
+                    evt["prop"]["magnitude"],
+                    "OFF SHORE" if evt["prop"]["sea_area"] is not None else "INLAND"
+                )
+                if "process" in evt:
+                    text += template["mail_text_sim"] % link_id
+                if user["notify"].get("includeMsg"):
+                    text += template["mail_text_msg"] % self._get_msg_texts(evtid,"info")["mail"]
+                ret = sendmail("tridec-cloud-noreply@gfz-potsdam.de", to, subject, text)
+                print("CLOUD Mail-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))        
+        return
     
     # can be used to download the image
     @cherrypy.expose

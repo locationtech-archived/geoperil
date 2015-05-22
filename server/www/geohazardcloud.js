@@ -4870,6 +4870,7 @@ function showProp(e, activeTab) {
 			$('#propNotifyChangeChk').prop('checked', notify.onMagChange);
 			$('#propNotifySim').prop('checked', notify.onSim);
 			$('#propNotifyMT').prop('checked', notify.onMT);
+			$('#propNotifyPreMsg').prop(':checked', notify.includeMsg);
 		}
 
 		$('#propTabNotify').show();
@@ -5006,7 +5007,8 @@ function propSubmit() {
 				'#propNotifyChangeVal').val())
 				: null,
 		"onSim" : $('#propNotifySim').is(':checked'),
-		"onMT" : $('#propNotifyMT').is(':checked')
+		"onMT" : $('#propNotifyMT').is(':checked'),
+		"includeMsg": $('#propNotifyPreMsg').is(':checked')
 	};
 
 	$('#propStatus').html("");
