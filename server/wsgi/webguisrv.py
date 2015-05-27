@@ -489,6 +489,8 @@ class WebGuiSrv(BaseSrv):
                 inst = self._db["institutions"].find_one({"_id": user["inst"]})
                 if inst is not None:
                     provider += inst["msg_name"]
+        else:
+            provider = template["mail_provider"]
         # build final message
         msg = template["prolog"] % (nr, provider, datetime.datetime.utcnow().strftime("%H%MZ %d %b %Y").upper())
         # summaries
@@ -688,55 +690,54 @@ class WebGuiSrv(BaseSrv):
         if cursor.count(with_limit_and_skip=True) > 0:
             # refinement
             old_evt = cursor[0]
-            mag_diff = abs( evt["prop"]["magnitude"] - old_evt["prop"]["magnitude"] )
+            #mag_diff = abs( evt["prop"]["magnitude"] - old_evt["prop"]["magnitude"] )
             now_has_mt = old_evt["prop"]["dip"] is None and evt["prop"]["dip"] is not None
             now_has_sim = "process" not in old_evt and "process" in evt
         # walk through all users and notify them if conditions are met
         for user in self._db["users"].find({"notify": {"$ne": None}}):
-            if old_evt is not None:
-                # refinement - check update parameter          
-                if user["notify"].get("onSim") and now_has_sim:
-                    kind = "SIM-NOC"
-                elif user["notify"].get("onMT") and now_has_mt:
-                    kind = "MT-NOC"
-                elif user["notify"].get("onMagChange") is not None and mag_diff > user["notify"]["onMagChange"]:
-                    kind = "M-NOC"
+            kind = None
+            if user["notify"].get("onMag") is not None and evt["prop"]["magnitude"] >= user["notify"]["onMag"]:
+                if old_evt is not None:
+                    # refinement - check update parameter
+                    if user["notify"].get("onSim") and now_has_sim:
+                        kind = "SIM-NOC"
+                    elif user["notify"].get("onMT") and now_has_mt:
+                        kind = "MT-NOC"
+                    #elif user["notify"].get("onMagChange") is not None and mag_diff > user["notify"]["onMagChange"]:
+                    #    kind = "M-NOC"
                 else:
-                    continue
-            else:
-                # new event - check initial conditions
-                if user["notify"].get("onMag") is not None and evt["prop"]["magnitude"] >= user["notify"]["onMag"]:
-                    kind = "NMSG"
-                else:
-                    continue
-            if user["notify"].get("sms"):
-                twisid = user["properties"].get("TwilioSID","")
-                twitoken = user["properties"].get("TwilioToken","")
-                twifrom = user["properties"].get("TwilioFrom","")
-                to = user["notify"]["sms"]
-                text = template["sms_text"] % (
-                    kind, 
-                    evt["prop"]["region"],
-                    evt["prop"]["magnitude"],
-                    "OFF SHORE" if evt["prop"]["sea_area"] is not None else "INLAND",
-                    evt["id"]
-                )
-                ret = sendtwilliosms(twisid, twitoken, twifrom, to, text)
-                print("CLOUD SMS-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))
-            if user["notify"].get("mail"):
-                to = user["notify"]["mail"]
-                subject = "TRIDEC CLOUD Notification: %s (%s)" %(evt["id"], kind)
-                text = template["mail_text"] % (
-                    evt["prop"]["region"],
-                    evt["prop"]["magnitude"],
-                    "OFF SHORE" if evt["prop"]["sea_area"] is not None else "INLAND"
-                )
-                if "process" in evt:
-                    text += template["mail_text_sim"] % link_id
-                if user["notify"].get("includeMsg"):
-                    text += template["mail_text_msg"] % self._get_msg_texts(evtid,"info")["mail"]
-                ret = sendmail("tridec-cloud-noreply@gfz-potsdam.de", to, subject, text)
-                print("CLOUD Mail-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))        
+                    # new event - check initial conditions
+                    kind = "NMSG"        
+            if kind is not None:
+                location = "OFF SHORE" if evt["prop"]["sea_area"] is not None else "INLAND"
+                if user["notify"].get("sms"):
+                    twisid = user["properties"].get("TwilioSID","")
+                    twitoken = user["properties"].get("TwilioToken","")
+                    twifrom = user["properties"].get("TwilioFrom","")
+                    to = user["notify"]["sms"]
+                    text = template["sms_text"] % (
+                        kind, 
+                        evt["prop"]["region"],
+                        evt["prop"]["magnitude"],
+                        location,
+                        evt["id"]
+                    )
+                    ret = sendtwilliosms(twisid, twitoken, twifrom, to, text)
+                    print("CLOUD SMS-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))
+                if user["notify"].get("mail"):
+                    to = user["notify"]["mail"]
+                    subject = "TRIDEC CLOUD %s: %s (%s)" %(kind, evt["id"], location )
+                    text = template["mail_text"] % (
+                        evt["prop"]["region"],
+                        evt["prop"]["magnitude"],
+                        location
+                    )
+                    if "process" in evt:
+                        text += template["mail_text_sim"] % link_id
+                    if user["notify"].get("includeMsg"):
+                        text += template["mail_text_msg"] % self._get_msg_texts(evtid,"info")["mail"]
+                    ret = sendmail("tridec-cloud-noreply@gfz-potsdam.de", to, subject, text)
+                    print("CLOUD Mail-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))        
         return
     
     # can be used to download the image
