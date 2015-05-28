@@ -4870,7 +4870,8 @@ function showProp(e, activeTab) {
 			$('#propNotifyChangeChk').prop('checked', notify.onMagChange);
 			$('#propNotifySim').prop('checked', notify.onSim);
 			$('#propNotifyMT').prop('checked', notify.onMT);
-			$('#propNotifyPreMsg').prop(':checked', notify.includeMsg);
+			$('#propNotifyPreMsg').prop('checked', notify.includeMsg);
+			$('#propNotifyOffshore').prop('checked', notify.offshore);
 		}
 
 		$('#propTabNotify').show();
@@ -4880,7 +4881,7 @@ function showProp(e, activeTab) {
 		$('#propNotifySms').val("");
 		$('#propNotifyMail').val("");
 		$('#propNotifyMag').val("");
-
+		
 		$('#propTabNotify').hide();
 	}
 
@@ -5008,7 +5009,8 @@ function propSubmit() {
 				: null,
 		"onSim" : $('#propNotifySim').is(':checked'),
 		"onMT" : $('#propNotifyMT').is(':checked'),
-		"includeMsg": $('#propNotifyPreMsg').is(':checked')
+		"includeMsg": $('#propNotifyPreMsg').is(':checked'),
+		"offshore": $('#propNotifyOffshore').is(':checked')
 	};
 
 	$('#propStatus').html("");
@@ -5821,6 +5823,9 @@ function MailDialog() {
 		
 		this.txtSubject.value(subject[kind]);
 		
+		/* lock dialog */
+		this.dialog.lock();
+		
 		ajax_mt('webguisrv/get_msg_texts', {evtid: this.eq._id, kind: kind}, (function(result) {
 			this.mailText.val(result.mail);
 			this.smsText.val(result.sms);
@@ -5830,6 +5835,8 @@ function MailDialog() {
 			/* set FTP file if not already done */
 			if( this.txtFtpFile.val() != "" )
 				this.txtFtpFile.val( zeroPad(this.msgnr, 3) + ".txt");
+			/* unlock dialog */
+			this.dialog.unlock();
 		}).bind(this));
 	};
 	
@@ -5837,6 +5844,8 @@ function MailDialog() {
 		/* back-up state of groups containing the text areas */
 		var visMail = this.grpMailText.open;
 		var visSms = this.grpSmsText.open;
+		/* back-up scroll position */
+		var sPos = this.dialog.div.scrollTop();
 		/* make both groups visible to obtain there height */
 		this.grpMailText.expand(true);
 		this.grpSmsText.expand(true);
@@ -5847,6 +5856,8 @@ function MailDialog() {
 		/* restore previous state */
 		this.grpMailText.expand(visMail);
 		this.grpSmsText.expand(visSms);
+		/* restore scroll position */
+		this.dialog.div.scrollTop( sPos );
 	};
 	
 	this.send = function() {
@@ -5997,7 +6008,8 @@ function AdminDialog() {
 			'secret': new HtmlTextGroup('Secret', 'user')
 		};
 		
-		this.user_pwd = new HtmlTextGroup('Password', 'user');
+		this.user_pwd = new HtmlPasswordGroup('Password', 'user');
+		this.user_pwd.validate("^....+$");
 		
 		this.drpInst = new HtmlDropDown();
 		this.drpInst.setSource(this.instlist);
@@ -6158,7 +6170,7 @@ function AdminDialog() {
 		this.btnSave.hide();
 		this.btnModify.hide();
 		this.btnDelete.hide();
-		
+						
 		var sel = this.autoUsers.select();
 		if( sel < 0 ) {
 			/* New user */
@@ -6175,6 +6187,8 @@ function AdminDialog() {
 				
 		var idx = Math.max( this.instlist.getByKey('_id', user.inst).idx, 0 );
 		var modified = this.drpInst.select() != idx;
+		
+		modified = modified || this.user_pwd.valid();
 						
 		for (var attr in this.inputs)
 			modified = modified || (this.inputs[attr].value() != prop[attr]);
@@ -6279,9 +6293,13 @@ function AdminDialog() {
 		
 		for (var attr in this.permInputs)
 			user.permissions[attr] = this.permInputs[attr].value();
+		
+		user.password = this.user_pwd.value();
 
 		ajax('webguisrv/saveuser/', { userobj : JSON.stringify(user) },
 		( function(result) {
+			user.password = '';
+			this.user_pwd.value('');
 			if( result.status == 'success' ) {
 				if( ! this.userlist.getByKey('username', result.user.username).item ) {
 					this.userlist.insert(result.user);
@@ -6394,38 +6412,6 @@ function AdminDialog() {
 	};
 	
 	this.init();
-}
-
-function HtmlTextField(div) {
-
-	this.div;
-	this.regex = null;
-
-	if (div) {
-		this.div = div;
-	} else {
-		/* create new text field */
-	}
-
-	this.validate = function(regex) {
-
-		this.regex = new RegExp(regex);
-	};
-
-	this.valid = function() {
-		return this.regex.test(this.div.val());
-	};
-
-	this.onChange = function() {
-
-		if (this.regex && !this.valid()) {
-			this.div.css('color', 'red');
-		} else {
-			this.div.css('color', '');
-		}
-	};
-
-	this.div.change(this.onChange.bind(this));
 }
 
 HtmlCheckBox.prototype = new ICallbacks();
@@ -6682,7 +6668,19 @@ function HtmlDropDownAuto() {
 	this.init();
 }
 
+HtmlPasswordGroup.prototype = new HtmlTextGroup();
+
+function HtmlPasswordGroup(label, icon, readonly) {
+	
+	HtmlTextGroup.apply(this, arguments);
+	this.div.find('> .html-text').prop('type', 'password');
+}
+
+HtmlTextGroup.prototype = new ICallbacks();
+
 function HtmlTextGroup(label, icon, readonly) {
+	
+	ICallbacks.call(this);
 	
 	this.regex = null;
 
@@ -6698,31 +6696,37 @@ function HtmlTextGroup(label, icon, readonly) {
 		} else {
 			this.div.find('> .html-icon').hide();
 		}
-		this.div.find('> .html-text').on('change', this.onChange.bind(this));
 		if( readonly )
 			this.div.find('> .html-text').attr('readonly', true);
+		this.div.find('> .html-text').on('change', this.onChange.bind(this));
 	};
 
 	this.value = function(newValue) {
 		if (arguments.length > 0)
 			this.div.find('> .html-text').val(newValue);
-
 		return this.div.find('> .html-text').val();
 	};
 
 	this.validate = function(regex) {
 		this.regex = new RegExp(regex);
 	};
-
-	this.onChange = function() {
-		if (this.regex && !this.regex.test(this.value())) {
-			this.div.find('> .html-text').css("color", "red");
-		} else {
-			this.div.find('> .html-text').css("color", "");
-		}
+	
+	this.valid = function() {
+		if( ! this.regex )
+			return true;
+		return this.regex.test(this.value());
 	};
 
-	this.init(label, icon, readonly);
+	this.onChange = function() {
+		if( ! this.valid() ) {
+			this.div.find('> .html-text').css('color', 'red');
+		} else {
+			this.div.find('> .html-text').css('color', '');
+		}
+		this.notifyOn('change', this.value());
+	};
+	
+	this.init.apply(this, arguments);
 }
 
 function HtmlInputGroup(label, icon, box) {
@@ -6810,6 +6814,7 @@ function HtmlDialog(box) {
 			this.footer.append(box.find('> .footer'));
 			box.html(this.div);
 		}
+		this.unlock();
 	};
 	
 	this.show = function() {
@@ -6819,7 +6824,17 @@ function HtmlDialog(box) {
 	this.hide = function() {
 		this.div.modal('hide');
 	};
-
+	
+	this.unlock = function() {
+		this.div.find('> .modal-status').hide();
+		this.div.find('.modal-content > .modal-overlay').hide();
+	};
+	
+	this.lock = function() {
+		this.div.find('> .modal-status').show();
+		this.div.find('.modal-content > .modal-overlay').show();
+	};
+	
 	this.init(box);
 }
 

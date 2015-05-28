@@ -1185,6 +1185,31 @@ pre {
 	display: none;
 }
 
+.html-dialog .modal-content > .modal-overlay {
+	position: absolute;
+	top: 0px;
+	bottom: 0px;
+	left: 0px;
+	right: 0px;
+	background-color: gray;
+	z-index: 100;
+	opacity: 0.1;
+}
+
+.html-dialog > .modal-status {
+	position: fixed;
+	margin: auto;
+	top: 0px;
+	bottom: 0px;
+	left: 0px;
+	right: 0px;
+	height: 2em;
+	width: 2em;
+	font-size: 2em;
+	z-index: 10000;
+	color: #428bca;
+}
+
 /* HtmlDynGroup */
 
 .html-dyngroup {

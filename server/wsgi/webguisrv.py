@@ -696,6 +696,8 @@ class WebGuiSrv(BaseSrv):
         # walk through all users and notify them if conditions are met
         for user in self._db["users"].find({"notify": {"$ne": None}}):
             kind = None
+            if user["notify"].get("offshore") and evt["prop"]["sea_area"] is None:
+                continue
             if user["notify"].get("onMag") is not None and evt["prop"]["magnitude"] >= user["notify"]["onMag"]:
                 if old_evt is not None:
                     # refinement - check update parameter
