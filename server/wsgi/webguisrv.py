@@ -490,7 +490,7 @@ class WebGuiSrv(BaseSrv):
                 if inst is not None:
                     provider += inst["msg_name"]
         else:
-            provider = template["mail_provider"]
+            provider = template["provider"]
         # build final message
         msg = template["prolog"] % (nr, provider, datetime.datetime.utcnow().strftime("%H%MZ %d %b %Y").upper())
         # summaries
