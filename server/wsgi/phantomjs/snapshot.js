@@ -3,8 +3,24 @@ function wait() {
   var ret = page.evaluate(function () {
      for( var key in entries.map ) {
         var eq = entries.get(key);
-        if( eq.isLoaded() )
+        if( eq.isLoaded() ) {
+            /* Disable all control elements on the map. */
+            map.setOptions({
+                panControl: false,
+                zoomControl: false,
+                mapTypeControl: false,
+                scaleControl: false,
+                streetViewControl: false,
+                overviewMapControl: false
+            });
+            /* Set map mode. */
+            map.setMapTypeId( google.maps.MapTypeId.TERRAIN );
+            /* Adjust color of isolines. */
+            for( var i = 0; i < eq.isos.length(); i++ ) {
+                eq.isos.get(i).poly.setOptions({strokeColor: '#00589C'});
+            }
            return true;
+        }
      }
      return false;
   });
