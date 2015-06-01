@@ -35,15 +35,10 @@ function do_post_request($url, $data)
 
 $ret = ajax('http://'. $_SERVER['SERVER_NAME'] .'/srv/session', array() );
 
-if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
-	/* auto-login with special user provided for cases outside the cloud */
-	$data = array(
-		'user' => 'nologin',
-		'password' => '123456'
-	);
+if( $ret['status'] != 'success' ) {
 	/* redirect to login form - it is important to use the absolute url here,
 	 * because the server will deliver PHP code otherwise !!! */
-	echo do_post_request('http://' . $_SERVER['SERVER_NAME'] . '/eqinfo/login.php', $data);
+	echo do_post_request('http://' . $_SERVER['SERVER_NAME'] . '/embed-data/login.php', $data);
 	die();
 }
 
@@ -310,8 +305,7 @@ if( ! isset( $_GET["id"] ) ) :
 	);
 	$ret = ajax($url,$data);
 	$eq = $ret['eq'];
-        $msg = $ret['msg'];
-	$shared_link = '/?share='. $eq['shared_link'];
+	$msg = $ret['msg'];
 ?>
 
 <div>
@@ -348,7 +342,7 @@ if( ! isset( $_GET["id"] ) ) :
 
 	<h3 id="trideccloud">TRIDEC Cloud
 		<?php if( ! empty($eq['simulation']) ) : ?>
-			<a href="http://trideccloud.gfz-potsdam.de<?php echo $shared_link;?>">Go to source</a>
+			<a href="<?php echo $eq['simulation']['shared_link'];?>">Go to source</a>
 		<?php endif; ?>
 	</h3>
 	<div class="sec trideccloud">
@@ -404,7 +398,7 @@ if( ! isset( $_GET["id"] ) ) :
 		<?php endif;?>
 		<?php if( ! empty($eq['simulation']) ) : ?>
 		<h3>Map</h3>
-		<img src="<?php echo $eq['image_url']; ?>" alt="tsunami-jets" />
+		<img src="<?php echo $eq['simulation']['image_url']; ?>" alt="tsunami-jets" />
 		<h3>Message text</h3>
 		<pre><?php echo $msg; ?></pre>
 		<?php else:?>

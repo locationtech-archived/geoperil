@@ -609,12 +609,13 @@ class WebGuiSrv(BaseSrv):
                     "evid": eq["_id"],
                     "geofonid": eq["id"],
                     "prop": eq["prop"],
-                    "image_url": self.get_hostname() + "/webguisrv/get_image/?evtid=" + eq["_id"]
                 }
                 if "process" in eq:
                     evt["simulation"] = eq["process"][0]
-                if "shared_link" in eq:
-                    evt["shared_link"] = eq["shared_link"]
+                    if "shared_link" in eq:
+                        evt["simulation"]["shared_link"] = self.get_hostname() + "/?share=" + str(eq["shared_link"]) 
+                        evt["simulation"]["image_url"] = self.get_hostname() + "/snapshots/" + str(eq["shared_link"]) + ".png"
+                    
                 msg = self._get_msg_texts(eq['_id'], "info")["mail"]
                 return jssuccess(eq=evt,msg=msg)
             return jsfail()
@@ -644,22 +645,11 @@ class WebGuiSrv(BaseSrv):
     
     # create a PNG image based on a shared link and return the file as binary data
     def make_image(self, link_id):
-        # create temporary file
-        tmp = tempfile.NamedTemporaryFile(suffix=".png",delete=False)
-        tmp.close()
         # call phantomjs to make a snapshot
         path = os.path.dirname(os.path.realpath(__file__)) + "/phantomjs/"
-        subprocess.call(path + "phantomjs " + path + "snapshot.js " + self.get_hostname() + "/?share=" + str(link_id) + " " + tmp.name + " '#mapview'", shell=True)
-        # get binary data of image
-        f = open(tmp.name, 'rb')
-        data = f.read()
-        f.close()
-        # remove temporary file and return binary data
-        #os.remove(tmp.name)
         # provide file for download
         dst = os.path.dirname(os.path.realpath(__file__)) + "/snapshots/" + str(link_id) + '.png'
         subprocess.call(path + "phantomjs " + path + "snapshot.js " + self.get_hostname() + "/?share=" + str(link_id) + " " + dst + " '#mapview'", shell=True)
-        return data
     
     # this method is called by the tomcat-server if the computation
     # of an earthquake event is completed - just a workaround until
@@ -673,9 +663,9 @@ class WebGuiSrv(BaseSrv):
             # create shared link first
             link_id = self._make_shared_link(evt["_id"], evt["prop"]["longitude"], evt["prop"]["latitude"], 5, None )
             # create image
-            img = self.make_image(link_id)
+            self.make_image(link_id)
             # append everything to the earthquake event
-            self._db["eqs"].update({"_id": evtid}, {"$set": {"shared_link": link_id, "image": img}})
+            self._db["eqs"].update({"_id": evtid}, {"$set": {"shared_link": link_id}})
         # notify users only if this an official GEOFON event
         inst = self._db["institutions"].find_one({"_id": evt["user"]})
         if inst is not None and inst["name"] == "gfz":

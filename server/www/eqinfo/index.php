@@ -357,8 +357,7 @@ if( ! isset( $_GET["id"] ) ) :
 	);
 	$ret = ajax($url,$data);
 	$eq = $ret['eq'];
-        $msg = $ret['msg'];
-	$shared_link = '/?share='. $eq['shared_link'];
+	$msg = $ret['msg'];
 ?>
 
 <div>
@@ -491,7 +490,7 @@ if( ! isset( $_GET["id"] ) ) :
 
 	<h3 id="trideccloud">TRIDEC Cloud
 		<?php if( ! empty($eq['simulation']) ) : ?>
-			<a href="http://trideccloud.gfz-potsdam.de<?php echo $shared_link;?>">Go to source</a>
+			<a href="<?php echo $eq['simulation']['shared_link'];?>">Go to source</a>
 		<?php endif; ?>
 	</h3>
 	<div class="sec trideccloud">
@@ -547,7 +546,7 @@ if( ! isset( $_GET["id"] ) ) :
 		<?php endif;?>
 		<?php if( ! empty($eq['simulation']) ) : ?>
 		<h3>Map</h3>
-		<img src="<?php echo $eq['image_url']; ?>" alt="tsunami-jets" />
+		<img src="<?php echo $eq['simulation']['image_url']; ?>" alt="tsunami-jets" />
 		<h3>Message text</h3>
 		<pre><?php echo $msg; ?></pre>
 		<?php else:?>
