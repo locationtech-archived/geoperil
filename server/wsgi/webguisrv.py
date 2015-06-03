@@ -185,9 +185,9 @@ class WebGuiSrv(BaseSrv):
                         userobj.pop("password",None)
                 self._db["users"].update({"_id":userid},{"$set":userobj})
                 userobj = self._db["users"].find_one({"_id":userid})
-                userobj.pop("password")
-                userobj.pop("pwsalt")
-                userobj.pop("pwhash")
+                userobj.pop("password",None)
+                userobj.pop("pwsalt",None)
+                userobj.pop("pwhash",None)
                 return jssuccess(user = userobj)
             return jsfail(errors = ["User not found."])
         return jsdeny()
@@ -718,7 +718,10 @@ class WebGuiSrv(BaseSrv):
                     print("CLOUD SMS-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))
                 if user["notify"].get("mail"):
                     to = user["notify"]["mail"]
-                    subject = "TRIDEC CLOUD %s: %s (%s)" %(kind, evt["id"], location )
+                    subject = "[TC] %s: %.1f, %uKM, %s, %s, %s" % ( 
+                        kind, evt["prop"]["magnitude"], evt["prop"]["depth"],
+                        location, evt["id"], evt["prop"]["region"]
+                    )
                     text = template["mail_text"] % (
                         evt["prop"]["region"],
                         evt["prop"]["magnitude"],
@@ -728,10 +731,10 @@ class WebGuiSrv(BaseSrv):
                         text += template["mail_text_sim"] % link_id
                     if user["notify"].get("includeMsg"):
                         text += template["mail_text_msg"] % self._get_msg_texts(evtid,"info")["mail"]
-                    ret = sendmail("tridec-cloud-noreply@gfz-potsdam.de", to, subject, text)
+                    ret = sendmail("TRIDEC CLOUD <tridec-cloud-noreply@gfz-potsdam.de>", to, subject, text)
                     print("CLOUD Mail-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))        
         return
-    
+
     # can be used to download the image
     @cherrypy.expose
     def get_image(self, evtid):
