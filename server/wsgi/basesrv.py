@@ -78,3 +78,14 @@ class BaseSrv:
                     query[name] = value
         events = self._db["hazard_events"].find(query)
         return jssuccess(hazard_events = list(events))
+
+    def html2pdf(self,html):
+        if type(html) not in [bytes,bytearray]:
+            html = bytes(html,"utf-8")
+        p = subprocess.Popen(
+            ["weasyprint","-f","pdf","-","-"], 
+            stdin=subprocess.PIPE, 
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        return p.communicate(html)[0]

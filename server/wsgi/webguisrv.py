@@ -684,7 +684,7 @@ class WebGuiSrv(BaseSrv):
             now_has_mt = old_evt["prop"]["dip"] is None and evt["prop"]["dip"] is not None
             now_has_sim = "process" not in old_evt and "process" in evt
         # walk through all users and notify them if conditions are met
-        for user in self._db["users"].find({"notify": {"$ne": None}}):
+        for user in self._db["users"].find({"notify": {"$ne": None}, "permissions.notify": True}):
             kind = None
             if user["notify"].get("offshore") and evt["prop"]["sea_area"] is None:
                 continue
