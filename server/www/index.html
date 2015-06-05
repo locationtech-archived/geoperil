@@ -1362,42 +1362,45 @@
 		</div>
 	</div>
 	
-	<div class="mail-dialog">
-		<div class="header">
-			<h4 class="modal-title">Send messages</h4><br>
-		</div>
-		<div class="content">			
-			<div class="secGroups1"></div>
-			<div class="secFtp">
-				<div class="content">
-					<span class="spnChk form-control"><input type="checkbox"></span>
-					<input class="txtPath form-control" readonly>
-					<span class="spnSlash input-group-addon">/</span>
-					<input type="text" class="txtFile form-control">
-				</div>
+	<div class="dialog-templates">
+
+		<div class="mail-dialog">
+			<div class="header">
+				<h4 class="modal-title">Send messages</h4><br>
 			</div>
-			<div class="secMailText">
-				<div class="content">
-					<div class="btn-group btn-group-justified" data-toggle="buttons">
-					  <label class="btn btn-default active"><input class="btnInfo" name="options" type="radio">Information/Watch/Advisory</label>
-					  <label class="btn btn-default"><input class="btnEnd" name="options" type="radio">End</label>
-					  <label class="btn btn-default"><input class="btnCancel" name="options" type="radio">Cancelation</label>
+			<div class="content">			
+				<div class="secGroups1"></div>
+				<div class="secFtp">
+					<div class="content">
+						<span class="spnChk form-control"><input type="checkbox"></span>
+						<input class="txtPath form-control" readonly>
+						<span class="spnSlash input-group-addon">/</span>
+						<input type="text" class="txtFile form-control">
 					</div>
-					<div class="subject"></div>
-					<textarea class="txtMsg form-control" rows="1" spellcheck="false"></textarea>
 				</div>
-			</div>
-			<div class="secSmsText">
-				<div class="content">
-					<span>SMS-Text (<span class="spnNumChars"></span> characters):</span>
-				  	<textarea class="txtMsg form-control" rows="1" spellcheck="false"></textarea>
+				<div class="secMailText">
+					<div class="content">
+						<div class="btn-group btn-group-justified" data-toggle="buttons">
+						  <label class="btn btn-default active"><input class="btnInfo" name="options" type="radio">Information/Watch/Advisory</label>
+						  <label class="btn btn-default"><input class="btnEnd" name="options" type="radio">End</label>
+						  <label class="btn btn-default"><input class="btnCancel" name="options" type="radio">Cancelation</label>
+						</div>
+						<div class="subject"></div>
+						<textarea class="txtMsg form-control" rows="1" spellcheck="false"></textarea>
+					</div>
 				</div>
+				<div class="secSmsText">
+					<div class="content">
+						<span>SMS-Text (<span class="spnNumChars"></span> characters):</span>
+					  	<textarea class="txtMsg form-control" rows="1" spellcheck="false"></textarea>
+					</div>
+				</div>
+				<div class="secGroups2"></div>
 			</div>
-			<div class="secGroups2"></div>
-		</div>
-		<div class="footer">
-			<button type="button" class="btn btn-default btnCancel" data-dismiss="modal">Cancel</button>
-			<button type="button" class="btn btn-primary btnSave">Send</button>
+			<div class="footer">
+				<button type="button" class="btn btn-default btnCancel" data-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-primary btnSave">Send</button>
+			</div>
 		</div>
 	</div>
 					

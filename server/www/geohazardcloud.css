@@ -1176,7 +1176,7 @@ pre {
 	padding-bottom: 0px;
 }
 
-.templates {
+.templates, .dialog-templates {
 	display: none;
 }
 

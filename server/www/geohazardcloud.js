@@ -2358,6 +2358,7 @@ function GlobalControl() {
 	
 	/* MailDialog */
 	this.mailDialog = new MailDialog();
+	$('.dialog-templates').show();
 
 	eqlist = new Container(sort_date.bind(this, -1));
 	saved = new Container(sort_timeline);
@@ -6000,6 +6001,7 @@ function AdminDialog() {
 			'share': new HtmlCheckBox('Share'),
 			'chart': new HtmlCheckBox('Chart'),
 			'intmsg': new HtmlCheckBox('Cloud-Message'),
+			'notify': new HtmlCheckBox('Notifications')
 		};
 		
 		this.instInputs = {
