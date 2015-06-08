@@ -850,6 +850,7 @@ class WebGuiSrv(BaseSrv):
                 # analogous for notifications
                 user["notify"] = user.get("notify",{});
                 user["notify"].update( json.loads(notify) )
+                inst = json.loads(inst)
                 api = json.loads(api)
                 # override stations
                 if stations is not None:
@@ -863,16 +864,13 @@ class WebGuiSrv(BaseSrv):
                 if newpwd == "":
                     return jsfail(error="The new password is empty.")
                 user["password"] = b64encode(hashlib.new("sha256",bytes(newpwd,"utf-8")).digest()).decode("ascii")
-            if inst is not None:
-                if not user["permissions"].get("manage",False):
-                    return jsdeny()
+            if user["permissions"].get("manage",False):
                 # load JSON input and remove attributes that are not allowed to change
-                inst = json.loads(inst)
                 inst.pop("_id", None)
                 inst.pop("name", None)
                 self._db["institutions"].update({"_id": user["inst"]}, {"$set": inst})
             # make sure that given API-key is valid
-            if api is not None:
+            if user["permissions"].get("api",False):
                 if re.compile("^[0-9a-f]{32}$").match(api["key"]) is None:
                     return jsfail(error="Invalid API-key given.")
                 if self._db["users"].find_one({"api.key": api["key"], "username": {"$ne": user["username"]}}) is not None:
