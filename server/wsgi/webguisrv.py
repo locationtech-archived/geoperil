@@ -6,7 +6,8 @@ import calendar
 import subprocess
 import base64
 import math
-import tempfile
+import re
+import binascii
 
 logger = logging.getLogger("MsgSrv")
 
@@ -600,7 +601,7 @@ class WebGuiSrv(BaseSrv):
     # public interface to get all information about an earthquake event
     @cherrypy.expose
     def get_event_info(self,apikey,evid):
-        if self.auth_api(apikey, "user") is not None:
+        if self.auth_api(apikey) is not None:
             cursor = self._db["eqs"].find({"$or": [{"_id":evid}, {"id":evid}]}).sort("refineId", -1).limit(1)
             if cursor.count() > 0:
                 eq = cursor[0]
@@ -836,5 +837,87 @@ class WebGuiSrv(BaseSrv):
                 return jssuccess(data=obj["data"])
             return jsfail()
         return jsdeny()
+    
+    @cherrypy.expose
+    def saveusersettings(self, props, inst, notify, api, stations=None, curpwd=None, newpwd=None):
+        user = self.getUser()
+        if user is not None:
+            try:
+                # inititalize sub object if not present
+                user["properties"] = user.get("properties",{});
+                # update object with given attributes
+                user["properties"].update( json.loads(props) )
+                # analogous for notifications
+                user["notify"] = user.get("notify",{});
+                user["notify"].update( json.loads(notify) )
+                api = json.loads(api)
+                # override stations
+                if stations is not None:
+                    user["countries"] = json.loads(stations)
+            except ValueError:
+                return jsfail(error = "Invalid JSON input.")
+            # TODO: we should find a uniform way of password handling
+            if curpwd is not None and newpwd is not None:
+                if user["password"] != b64encode(hashlib.new("sha256",bytes(curpwd,"utf-8")).digest()).decode("ascii"):
+                    return jsfail(error="The current password does not match.")
+                if newpwd == "":
+                    return jsfail(error="The new password is empty.")
+                user["password"] = b64encode(hashlib.new("sha256",bytes(newpwd,"utf-8")).digest()).decode("ascii")
+            if inst is not None:
+                if not user["permissions"].get("manage",False):
+                    return jsdeny()
+                # load JSON input and remove attributes that are not allowed to change
+                inst = json.loads(inst)
+                inst.pop("_id", None)
+                inst.pop("name", None)
+                self._db["institutions"].update({"_id": user["inst"]}, {"$set": inst})
+            # make sure that given API-key is valid
+            if api is not None:
+                if re.compile("^[0-9a-f]{32}$").match(api["key"]) is None:
+                    return jsfail(error="Invalid API-key given.")
+                if self._db["users"].find_one({"api.key": api["key"], "username": {"$ne": user["username"]}}) is not None:
+                    return jsfail(error="Invalid API-key given.")
+                if self._db["institutions"].find_one({"api.key": api["key"]}) is not None:
+                    return jsfail(error="Invalid API-key given.")
+                user["api"] = api;
+            # update user entry - we need to remove the "_id" attribute to make pymongo happy
+            user.pop("_id", None)
+            self._db["users"].update({"username": user["username"]}, {"$set": user})
+            return jssuccess(user=self._get_user_obj(user))
+        return jsdeny()
+    
+    # this method collects all the user data that should be delivered to the client -
+    # sensible information need to be removed
+    def _get_user_obj(self, user):
+        user["inst"] = self._db["institutions"].find_one({"_id": user["inst"]})
+        user["inst"].pop("_id", None)
+        user["inst"].pop("secret", None)
+        user["inst"].pop("apikey", None)
+        inst_name = user["inst"].get("name", "gfz_ex_test")
+        if inst_name == "gfz":
+            inst_name = "gfz_ex_test"
+        pipeline = [
+            { "$match": { "$and": [
+                {"$or": [{"sensor": "rad"},{"sensor": "prs"},{"sensor": "pr1"},{"sensor": "flt"},{"sensor": None}]},
+                {"inst": inst_name}
+            ]}},
+            {"$group": {"_id": "$country", "count": {"$sum": 1}}},
+            {"$sort": {"_id": 1}}
+        ]
+        res = self._db["stations"].aggregate(pipeline)
+        for r in res["result"]:
+            r["on"] = (r["_id"] in user.get("countries",[])) == True
+        user["countries"] = res["result"]
+        # TODO: better include wanted fields explicitly instead of removing irrelevant ones
+        user.pop("password", None)
+        user.pop("pwhash", None)
+        user.pop("pwsalt", None)
+        user.pop("session", None)
+        return user
+    
+    # generates a random key of 32 hexadecimal characters 
+    @cherrypy.expose
+    def generate_apikey(self):
+        return jssuccess(key=binascii.b2a_hex(os.urandom(16)).decode("ascii"))
     
 application = startapp( WebGuiSrv )

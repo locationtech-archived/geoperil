@@ -52,7 +52,6 @@ import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoException;
 import com.mongodb.util.Base64Codec;
-import com.mongodb.util.JSON;
 
 class User {
 	
@@ -856,6 +855,7 @@ public class Services {
 	  userObj.put( "permissions", obj.get("permissions") );
 	  userObj.put( "properties", obj.get("properties") );
 	  userObj.put( "notify", obj.get("notify") );
+	  userObj.put( "api", obj.get("api") );
 	  
 	  ObjectId instId = (ObjectId) obj.get("inst");
 	  
@@ -1393,110 +1393,7 @@ public class Services {
 	 
 	 return jsfailure();
  }
- 
- @POST
- @Path("/changeProp")
- @Produces(MediaType.APPLICATION_JSON)
- public String changeProp(
-		  @Context HttpServletRequest request,
-		  @FormParam("curpwd") String curPass,
-		  @FormParam("newpwd") String newPass,
-		  @FormParam("prop") String prop,
-		  @FormParam("inst") String inst,
-		  @FormParam("notify") String notify,
-		  @FormParam("stations") String stations,
-		  @CookieParam("server_cookie") String session ) {
-	 	 	 	 
-	 /* check session key and find out if the request comes from an authorized user */
-	 User user = signedIn( session );
-	 
-	 if( user == null )
-		 return jsdenied();
-	 	 	 
-	 DBCollection coll = db.getCollection("users");
-	 BasicDBObject inQuery = new BasicDBObject( "_id", user.objId );
-	 
-	 DBCursor cursor = coll.find( inQuery );
-	 
-	 if( ! cursor.hasNext() )
-		 return jsfailure();
-	 
-	 DBObject newObj = cursor.next();
-	 DBObject curProp = (DBObject) newObj.get("properties");
-	 DBObject perm = (DBObject) newObj.get("permissions");
-	 	 
-	 DBObject propObj = (DBObject) JSON.parse( prop );
-	 
-	 if( propObj != null ) {
-	 
-		 if( curProp == null )
-			 curProp = new BasicDBObject();
-		 
-		 curProp.putAll( propObj );
-		 
-		 newObj.put( "properties", curProp );
-	 }
-	 
-	 if( curPass != null && newPass != null ) {
-		 
-		 if( ! checkPassword( user.name, curPass ) )
-			 return jsdenied( new BasicDBObject( "error", "The current password does not match." ) );
-
-		 if( newPass.equals("") )
-			 return jsfailure( new BasicDBObject( "error", "The new password is empty." ) );
-		 		 
-		 String newHash = getHash( newPass );
-		 
-		 if( newHash == null )
-			 return jsfailure();
-		 
-		 newObj.put( "password", newHash );
-	 }
-	 
-	 DBObject instObj = (DBObject) JSON.parse( inst );
-	 
-	 if( instObj != null ) {
-		 
-		 ObjectId instRef = (ObjectId) newObj.get( "inst" );
-		 boolean perm_manage = (perm != null) && (perm.get("manage") != null) && ( (Boolean) perm.get("manage") == true );
-		 
-		 if( perm_manage && instRef != null ) {
-			 
-			 /* remove fields that are not allowed to change */
-			 instObj.removeField("_id");
-			 instObj.removeField("name");
-			 
-			 db.getCollection("institutions").update( new BasicDBObject( "_id", instRef ), new BasicDBObject( "$set", instObj ) );
-		 }
-	 }
-	 
-	 DBObject notifyObj = (DBObject) JSON.parse( notify );
-	 
-	 if( notifyObj != null ) {
-	 
-		 DBObject curNotify = (DBObject) newObj.get("notify");
-		 
-		 if( curNotify == null )
-			 curNotify = new BasicDBObject();
-		 		 
-		 curNotify.putAll( notifyObj );
-		 
-		 newObj.put( "notify", curNotify );
-	 }
-	 
-	 /* stations */
-	 BasicDBList statObj = (BasicDBList) JSON.parse( stations );
-	 
-	 /* simply override the array containing the desired country codes */
-	 if( statObj != null ) {
-		 newObj.put( "countries", statObj );
-	 }
-	 
-	 coll.update( inQuery, newObj );
-	 	 
-	 return jssuccess( new BasicDBObject( "user", getUserObj( user.name ) ) );
- }
- 
+  
  @POST
  @Path("/staticLnk")
  @Produces(MediaType.APPLICATION_JSON)

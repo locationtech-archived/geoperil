@@ -1096,7 +1096,7 @@ pre {
     overflow-y: auto;
 }
 
-#propNotify input[type='checkbox'] {
+#propNotify input[type='checkbox'], #propGeneral input[type='checkbox'] {
 	margin-right: 10px;
 	margin-left: 15px;
 	margin-top: 10px;
@@ -1174,6 +1174,20 @@ pre {
 	width: 5%;
 	padding-top: 0px;
 	padding-bottom: 0px;
+}
+
+.info-dialog .source-template dl {
+	margin-left: 25px;
+}
+
+.info-dialog .source-template dd {
+	margin-left: 25px;
+	padding-bottom: 10px;
+}
+
+.info-dialog .source-template h3 img {
+	height: 1.5em;
+	padding-right: 0.8em;
 }
 
 .templates, .dialog-templates {

@@ -2358,6 +2358,9 @@ function GlobalControl() {
 	
 	/* MailDialog */
 	this.mailDialog = new MailDialog();
+	/* InfoDialog */
+	this.infoDialog = new InfoDialog();
+	/* make dialogs visible if initialization is finished */
 	$('.dialog-templates').show();
 
 	eqlist = new Container(sort_date.bind(this, -1));
@@ -2480,7 +2483,7 @@ function GlobalControl() {
 	/* TODO: refactor */
 	this.info = function(data) {
 		/* TODO: fill */
-		
+		//this.infoDialog.show(data);
 	};
 
 	/* TODO: refactor */
@@ -2847,7 +2850,7 @@ function EQWidget(data, marker) {
 				this.notifyOn.bind(this, 'clk_timeline', this.data));
 		this.div.find('.lnkCopy').click(
 				this.notifyOn.bind(this, 'clk_copy', this.data));
-		this.div.find('.info a').click(
+		this.div.find('.lnkLearn').click(
 				this.notifyOn.bind(this, 'clk_info', this.data));
 		this.div.find('.lnkEdit').click(
 				this.notifyOn.bind(this, 'clk_edit', this.data));
@@ -3520,6 +3523,13 @@ function initialize() {
 	$("#diaSignIn").click(diaSignIn);
 	$("#splashSignIn").click(diaSignIn);
 	$("#propBtnSubmit").click(propSubmit);
+	$("#propBtnApiKey").click( function() {
+		$("#propBtnSubmit").prop('disabled', true);
+		ajax_mt('webguisrv/generate_apikey', {}, function(result) {
+			$('#propApiKey').val( result.key );
+			$("#propBtnSubmit").prop('disabled', false);
+		});
+	});
 
 	$("#custom").find("input").blur(checkInput);
 
@@ -4805,12 +4815,23 @@ function showProp(e, activeTab) {
 	var prop = curuser.properties;
 	var perm = curuser.permissions;
 	var notify = curuser.notify;
+	var api = curuser.api;
 
 	/* clear all input fields to avoid displaying old data from another user! */
 	$('#PropDia :input').val("");
 
 	$('#propUser').html(curuser.username);
 
+	if( checkPerm('api') ) {
+		if( api ) {
+			$('#propApiKey').val( api.key );
+			$('#propApiEnabled').prop('checked',api.enabled);
+		}
+		$('#propApi').show();
+	} else {
+		$('#propApi').hide();
+	}
+	
 	if (perm && (perm.fax || perm.ftp || perm.sms)) {
 
 		/* hide all groups first */
@@ -4904,7 +4925,7 @@ function showProp(e, activeTab) {
 
 	if (activeTab)
 		$(activeTab + ' a').click();
-
+	
 	$('#PropDia').modal('show');
 }
 
@@ -5013,6 +5034,11 @@ function propSubmit() {
 		"includeMsg": $('#propNotifyPreMsg').is(':checked'),
 		"offshore": $('#propNotifyOffshore').is(':checked')
 	};
+	
+	var api = {
+		"key": $('#propApiKey').val(),
+		"enabled": $('#propApiEnabled').is(':checked')
+	};
 
 	$('#propStatus').html("");
 
@@ -5022,9 +5048,10 @@ function propSubmit() {
 	}
 
 	var data = {
-		prop : JSON.stringify(prop),
+		props : JSON.stringify(prop),
 		inst : JSON.stringify(inst),
 		notify : JSON.stringify(notify),
+		api: JSON.stringify(api)
 	};
 
 	/* stations */
@@ -5053,32 +5080,19 @@ function propSubmit() {
 	$('#propBtnSubmit')
 			.html(
 					'<i class="fa fa-spinner fa-spin fa-lg"></i><span class="pad-left">Save</span>');
-
-	$.ajax({
-		type : 'POST',
-		url : "srv/changeProp",
-		data : data,
-		dataType : 'json',
-		success : function(result) {
-
-			if (result.status == "success") {
-				curuser = result.user;
-
-				/* TODO: generalize and support eq related stations too */
-				if (statChanged)
-					getStationList(addGlobalStations);
-
-				$('#PropDia').modal("hide");
-			} else {
-				$('#propStatus').html("Error: " + result.error);
-			}
-		},
-		error : function() {
-		},
-		complete : function() {
+	
+	ajax_mt('webguisrv/saveusersettings', data, function(result) {
+		if (result.status == "success") {
+			curuser = result.user;
+			/* TODO: generalize and support eq related stations too */
+			if (statChanged)
+				getStationList(addGlobalStations);
+			$('#PropDia').modal("hide");
+		} else {
+			$('#propStatus').html("Error: " + result.error);
 		}
 	});
-
+	
 	$('#propBtnSubmit').html('<span>Save</span>');
 }
 
@@ -6001,7 +6015,8 @@ function AdminDialog() {
 			'share': new HtmlCheckBox('Share'),
 			'chart': new HtmlCheckBox('Chart'),
 			'intmsg': new HtmlCheckBox('Cloud-Message'),
-			'notify': new HtmlCheckBox('Notifications')
+			'notify': new HtmlCheckBox('Notifications'),
+			'api': new HtmlCheckBox('API')
 		};
 		
 		this.instInputs = {
@@ -6411,6 +6426,45 @@ function AdminDialog() {
 	
 	this.show = function() {
 		this.load();
+	};
+	
+	this.init();
+}
+
+function InfoDialog() {
+	this.init = function() {
+		this.dialog = new HtmlDialog($('.info-dialog'));
+		this.tabOthers = this.dialog.div.find('#info-dialog-tab-others');
+		this.sourceTemplate = this.tabOthers.find('.source-template');
+	};
+		
+	this.show = function(evt) {
+		console.log(evt);
+		/* load other sources */
+		var data = {
+			eventtype: 'EQ',
+			y: evt.prop.latitude,
+			x: evt.prop.longitude,
+			time: new Date(evt.prop.date).getTime() / 1000
+		};
+		ajax_mt('gethazardevents', data, (function(result) {
+			var hazards = result.hazard_events;
+			this.tabOthers.html("");
+			for( var i = 0; i < hazards.length; i++ ) {
+				var form = this.sourceTemplate.clone();
+				form.find('.source-provider > img').attr("src", "embed-data/logos/" + hazards[i].provider + ".png");
+				form.find('.source-provider > img').attr("alt", "logo-" + hazards[i].provider);
+				form.find('.source-provider > span').html( hazards[i].providername );
+				form.find('.source-region').html( hazards[i].region );
+				form.find('.source-evt-type').html( hazards[i].eventtype );
+				form.find('.source-coords').html('Lat: ' + hazards[i].y + '&deg;, Lon: ' + hazards[i].x + '&deg;' );
+				form.find('.source-magnitude').html( hazards[i].mag + ' ' + hazards[i].magtype );
+				form.find('.source-depth').html( hazards[i].depth + ' km' );
+				this.tabOthers.append( form );
+			}
+		}).bind(this));
+		
+		this.dialog.show();
 	};
 	
 	this.init();

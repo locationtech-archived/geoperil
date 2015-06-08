@@ -1019,6 +1019,22 @@
 						<span class="input-group-addon">Confirm password:</span>
 						<input id="propConfPwd" type="password" class="form-control">
 		  			</div>
+		  			<div id="propApi">
+			  			<div class="prop-label pad-top">API Key:</div>
+			  			<div class="input-group input-group-sm prop-label">
+	  						<span class="input-group-addon">Key:</span>
+	  						<input id="propApiKey" type="text" class="form-control" readonly>
+	  						<span class="input-group-btn">
+								<button id="propBtnApiKey" type="button" class="btn btn-default">
+									<span class="glyphicon glyphicon-refresh"></span>
+								</button>
+							</span>
+	  					</div>
+	  					<div class="input-group input-group-sm">
+			  				<input id="propApiEnabled" type="checkbox">
+			  				<span>Enable API</span>
+			  			</div>
+		  			</div>
 		  		</div>
 		  		<div class="tab-pane" id="propMsgs">
 		  			<div id="propGrpFax" class="group">
@@ -1327,7 +1343,8 @@
 	</div>
 		
 	<canvas id="canvas-line"></canvas>
-	
+				
+	<!-- AdminDialog -->
 	<div class="admin">
 		<div class="header">
 			<h4 class="modal-title">Admin-Interface</h4><br>
@@ -1361,9 +1378,10 @@
 			<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
 		</div>
 	</div>
-	
+
 	<div class="dialog-templates">
 
+		<!-- MailDialog -->
 		<div class="mail-dialog">
 			<div class="header">
 				<h4 class="modal-title">Send messages</h4><br>
@@ -1402,9 +1420,62 @@
 				<button type="button" class="btn btn-primary btnSave">Send</button>
 			</div>
 		</div>
-	</div>
+		
+		<div class="info-dialog">
+			<div class="header">
+				<h4 class="modal-title">Information</h4><br>
+				<ul class="nav nav-tabs">
+					<li class="active"><a href="#info-dialog-tab-info" data-toggle="tab">Info</a></li>
+					<li><a href="#info-dialog-tab-geofon" data-toggle="tab">GEOFON</a></li>
+					<li><a href="#info-dialog-tab-tridec" data-toggle="tab">TRIDEC Cloud</a></li>
+					<li><a href="#info-dialog-tab-others" data-toggle="tab">Other Sources</a></li>
+				</ul>
+			</div>
+			<div class="content tab-content">
+				<div id="info-dialog-tab-info" class="tab-pane active">
+					<span class="learn">
+						Currently, we use a rough and simple threshold mechanism to identify the tsunami potential
+						of an earthquake. If the location of the earthquake is inland, deeper than 100km, or has
+						a magnitude less than 5.5 then we don't consider the earthquake for any wave propagation
+						computation. However, if you think the earthquake is relevant for computation then you can
+						do so by using 'Modify and reprocess'. <br><br>Anyhow, in the near future we plan to use an
+						improved mechanism by adopting region dependent decision matrices defined by the UNESCO-IOC
+						ICGs, that is ICG/NEAMTWS, ICG/IOTWS, ICG/PTWS, and ICG/CARIBE EWS.
+					</span>
+				</div>
+				<div id="info-dialog-tab-geofon" class="tab-pane">
 					
+				</div>
+				<div id="info-dialog-tab-tridec" class="tab-pane">
+					
+				</div>
+				<div id="info-dialog-tab-others" class="tab-pane">
+					<div class="source-template">
+						<h3 class="source-provider"><img src="" alt=""/><span></span></h3>
+						<dl>
+							<dt>Region</dt>
+							<dd class="source-region"></dd>
+							<dt>Event type</dt>
+							<dd class="source-evt-type"></dd>
+							<dt>Coordinates</dt>
+							<dd class="source-coords"></dd>
+							<dt>Magnitude</dt>
+							<dd class="source-magnitude"></dd>
+							<dt>Depth</dt>
+							<dd class="source-depth"></dd>
+						</dl>
+					</div>
+				</div>
+			</div>
+			<div class="footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+			</div>
+		</div>
+	
+	</div>
+							
 	<div class="templates">
+		
 		<!-- HtmlTextGroup -->
 		<div class="html-textgroup input-group input-group-sm prop-label">
 			<span class="html-label input-group-addon"></span>

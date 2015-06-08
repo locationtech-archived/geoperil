@@ -32,12 +32,14 @@ class BaseSrv:
                 return False
         return False
 
-    def auth_api(self, key, kind):
+    def auth_api(self, key, kind=None):
         if key is not None:
-            if kind == "user":
-                return self._db["users"].find_one({"apikey":key})
-            if kind == "inst":
-                return self._db["institutions"].find_one({"apikey":key})
+            user = self._db["users"].find_one({"api.key": key, "api.enabled": True})
+            inst = self._db["institutions"].find_one({"api.key": key, "api.enabled": True})
+            if user is not None and (kind == "user" or kind is None):
+                return user if user["permissions"].get("api",False) else None
+            if inst is not None and (kind == "inst" or kind is None):
+                return inst
         return None
 
     def get_hostname(self):
