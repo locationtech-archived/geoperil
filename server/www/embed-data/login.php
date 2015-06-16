@@ -1,5 +1,5 @@
-<?php 
-	$user = $_POST['user'];	
+<?php
+	$user = $_POST['user'];
 	$password = $_POST['password'];
 ?>
 <!DOCTYPE html>
@@ -31,22 +31,26 @@
 				}
 	    	});
  		}
- 		
+
  		function submit() {
  			signin( $('#txt_user').val(), $('#txt_password').val() );
  		}
- 		
+
  		window.onload = function() {
- 		
+
+			/* accept enter key on splash screen to log in */
+        		$('#txt_password, #txt_user').keypress(function(e) {
+                	if (e.which == 13)
+                        	$('#btn_signin').click();
+        		});
+
 	 		var user = <?php echo "\"$user\""; ?>;
 	 		var password = <?php echo "\"$password\""; ?>;
-	 			 		
+
 	 		if( user && password )
 	 			signin( user, password );
-	 			 		
 	 		$('#btn_signin').click( submit );
  		};
- 		
     </script>
     <style type="text/css">
     	.outside, .wrapper, .border {
@@ -88,7 +92,7 @@
 	<div class="wrapper">
 	<div class="border">
 	<div class="container fullsize">
-	
+
 		<div class="row gfz-head">
   			<img class="gfz-logo pull-left" alt="GFZ Logo" src="../img/logo_gfz_en.gif">
   			<img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="../img/wordmark_gfz_en.gif">
@@ -108,9 +112,8 @@
 	  		<ul class="clear"></ul>
 	  	</div> <!-- end of headline -->
 		<hr>
-		
 		<div class="row content" id="content">
-			
+
 			<div class="login">
 	  			<h3 class="form">Welcome to <b>EQ Info</b></h3>
 	  			<h4 class="form">Sign in with your TRIDEC Cloud account</h4>
@@ -129,9 +132,9 @@
 			  		<a href="mailto:tridec-cloud-support@gfz-potsdam.de?subject=Need%20more%20information%20on%20TRIDEC%20Cloud&amp;body=Hello%20you%2C%0D%0A%0D%0AI%20am%20totally%20excited%20about%20EQ%20Info%20and%20would%20like%20to%20get%20more%20information%2E%0D%0A%0D%0ACheers">Mail Us</a>
 			  	</span>
   			</div>
-			
+
 		</div>
-		
+
 	</div>
 	</div>
 	</div>
