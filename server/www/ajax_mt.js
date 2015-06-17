@@ -1,9 +1,9 @@
 function getUri( jsobj ) {
-	var uri = '&';
+	var uri = '';
 	for ( var key in jsobj ) {
-	    uri += key + '=' + jsobj[key] + "&";
+	    uri += key + '=' + encodeURIComponent(jsobj[key]) + "&";
 	}
-	return encodeURI(uri.slice(0,-1));
+	return uri.slice(0,-1);
 }
 
 onmessage = function(e) {
@@ -11,7 +11,7 @@ onmessage = function(e) {
 	var ajaxObj = e.data;
 	http.onload = complete;
 	http.open("POST", ajaxObj.url, true);
-	http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');	
+	http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 	http.send( getUri(ajaxObj.data) );
 };
 
