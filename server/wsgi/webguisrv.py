@@ -870,7 +870,7 @@ class WebGuiSrv(BaseSrv):
                 inst.pop("name", None)
                 self._db["institutions"].update({"_id": user["inst"]}, {"$set": inst})
             # make sure that given API-key is valid
-            if user["permissions"].get("api",False):
+            if user["permissions"].get("api",False) and api["key"] != "":
                 if re.compile("^[0-9a-f]{32}$").match(api["key"]) is None:
                     return jsfail(error="Invalid API-key given.")
                 if self._db["users"].find_one({"api.key": api["key"], "username": {"$ne": user["username"]}}) is not None:
