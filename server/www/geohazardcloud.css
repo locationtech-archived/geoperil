@@ -372,6 +372,12 @@ html, body {
 	padding-right: 0.3em;
 }
 
+.entry .lnkReport {
+	padding-right: 0.3em;
+	margin-top: -0.08em;
+	display: none;
+}
+
 .entry .lnkDelete {
 	margin-right: 0.7em;
 	display: none;

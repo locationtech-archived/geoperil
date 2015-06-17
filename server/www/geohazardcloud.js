@@ -2893,7 +2893,7 @@ function EQWidget(data, marker) {
 		options.placement = 'top';
 		options.title = 'Modify and reprocess';
 		this.div.find('.lnkEdit').tooltip(options);
-
+		
 		options.title = 'Learn more';
 		this.div.find('.lnkLearn').tooltip(options);
 
@@ -2906,6 +2906,10 @@ function EQWidget(data, marker) {
 		options.title = 'Show timeline';
 		this.div.find('.lnkTimeline').tooltip(options);
 
+		options.title = 'Download report';
+		this.div.find('.lnkReport').tooltip(options);
+		this.div.find('.lnkReport').attr('href', 'webguisrv/generate_report?evtid=' + this.data._id);
+		
 		options.title = 'Copy to my list';
 		this.div.find('.lnkCopy').tooltip(options);
 		
@@ -3042,6 +3046,9 @@ function EQWidget(data, marker) {
 
 			if (checkPerm('timeline'))
 				this.div.find('.lnkTimeline').show();
+			
+			if (checkPerm('report'))
+				this.div.find('.lnkReport').show();
 
 		} else {
 
@@ -6016,7 +6023,8 @@ function AdminDialog() {
 			'chart': new HtmlCheckBox('Chart'),
 			'intmsg': new HtmlCheckBox('Cloud-Message'),
 			'notify': new HtmlCheckBox('Notifications'),
-			'api': new HtmlCheckBox('API')
+			'api': new HtmlCheckBox('API'),
+			'report': new HtmlCheckBox('Report')
 		};
 		
 		this.instInputs = {

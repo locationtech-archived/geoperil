@@ -918,4 +918,29 @@ class WebGuiSrv(BaseSrv):
     def generate_apikey(self):
         return jssuccess(key=binascii.b2a_hex(os.urandom(16)).decode("ascii"))
     
+    @cherrypy.expose
+    def generate_report(self, evtid):
+        msg = self._get_msg_texts(evtid, "info")["mail"]
+        evt = self._db["eqs"].find_one({"_id": evtid})
+        sec = ""
+        if "shared_link" in evt:
+            url = self.get_hostname() + "/snapshots/" + str(evt["shared_link"]) + ".png"
+            lnk = self.get_hostname() + "/?share=" +  str(evt["shared_link"])
+            sec = '''
+                <br>
+                <img style="width: 600px;" src="%s"></img>
+                <br><br>
+                <a href="%s">Visit shared map at the TRIDEC CLOUD platform</a>
+            ''' % (url, lnk)
+        txt = '''
+        <html>
+            <body>
+                <pre style="font-family: monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 0.8em;">%s</pre>
+                %s
+            </body>
+        </html>''' % (msg, sec)
+        cherrypy.response.headers['Content-Type'] = "application/pdf"
+        cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="report_%s.pdf"' % evtid   
+        return self.html2pdf(txt)
+    
 application = startapp( WebGuiSrv )
