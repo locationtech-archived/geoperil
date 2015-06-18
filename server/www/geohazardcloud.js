@@ -2360,6 +2360,8 @@ function GlobalControl() {
 	this.mailDialog = new MailDialog();
 	/* InfoDialog */
 	this.infoDialog = new InfoDialog();
+	/* PropDialog*/
+	this.propDialog = new PropDialog();
 	/* make dialogs visible if initialization is finished */
 	$('.dialog-templates').show();
 
@@ -4932,7 +4934,7 @@ function showProp(e, activeTab) {
 
 	if (activeTab)
 		$(activeTab + ' a').click();
-	
+		
 	$('#PropDia').modal('show');
 }
 
@@ -6436,6 +6438,21 @@ function AdminDialog() {
 		this.load();
 	};
 	
+	this.init();
+}
+
+/* TODO: This is just a wrapper to use some new functionality in deprecated code. To be continued... */
+function PropDialog() {
+	this.init = function() {
+		this.txtSMS = new HtmlTextGroup('SMS', 'phone');
+		this.txtSMS.validate('^(\\+[1-9][0-9]*){0,1}$');
+		this.txtSMS.div.find('input').attr('id', 'propNotifySms');
+		this.txtSMS.setCallback('change', this.onChange.bind(this));
+		$('#PropDia #propNotify .propNotifySmsTemplate').html(this.txtSMS.div);
+	};
+	this.onChange = function() {
+		$('#propBtnSubmit').prop('disabled', ! this.txtSMS.valid());
+	};
 	this.init();
 }
 

@@ -516,6 +516,14 @@ html, body {
 	width: 10%;
 }
 
+.prop-info {
+	padding-left: 1.5em;
+	padding-top: 0.25em;
+	padding-bottom: 0.5em;
+	font-size: 0.9em;
+	color: #555555;
+}
+
 #inRootId, #inParentId, #inDate {
 	width: 50%;
 	background-color: #f8f8f8;
