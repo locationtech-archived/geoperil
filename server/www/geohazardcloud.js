@@ -960,7 +960,7 @@ function MainChartDialog(widget) {
 	};
 
 	this.onAmplSliderChange = function() {
-		$('#pickerAmpl').val(this.chart.getSliderValue(0).toFixed(2));
+		$('#pickerAmpl').val( parseFloat(this.chart.getSliderValue(0)).toFixed(2) );
 		this.updatePreview();
 	};
 
@@ -1401,13 +1401,13 @@ function MainChart(widget, width, height) {
 			var cli = this.dia.getChartLayoutInterface();
 			var box = cli.getChartAreaBoundingBox();
 			var ampl = cli.getYLocation(0);
-
-			this.slider.push(new Slider(false, box.left - 50, box.width + 50,
-					ampl, box.top, box.top + box.height, widget));
-			this.slider.push(new Slider(true, box.top, box.height + 50,
-					box.left, box.left, box.left + box.width, widget));
-			this.slider.push(new Slider(true, box.top, box.height + 50,
-					box.left + box.width, box.left, box.left + box.width,
+			
+			this.slider.push(new Slider(false, box.left - 30, box.width + 50,
+					ampl, box.top + this.div.position().top, box.top + this.div.position().top + box.height - 1, widget));
+			this.slider.push(new Slider(true, box.top + 57, box.height + 40,
+					box.left, box.left + this.div.position().left, box.left + this.div.position().left + box.width - 1, widget));
+			this.slider.push(new Slider(true, box.top + 57, box.height + 40,
+					box.left + box.width, box.left + this.div.position().left, box.left + this.div.position().left + box.width - 1,
 					widget));
 
 			for (var i = 0; i < this.slider.length; i++) {
@@ -1445,14 +1445,13 @@ function MainChart(widget, width, height) {
 	this.onControlChange = function(idx, val) {
 
 		var val = this.slider[idx].pos.middle;
-
-		if (idx == 0)
-			this.values[idx] = this.dia.getChartLayoutInterface()
-					.getVAxisValue(val);
-		else
-			this.values[idx] = this.dia.getChartLayoutInterface()
-					.getHAxisValue(val);
-
+		
+		if (idx == 0) {
+			this.values[idx] = this.dia.getChartLayoutInterface().getVAxisValue(val - this.div.position().top);
+		} else {
+			this.values[idx] = this.dia.getChartLayoutInterface().getHAxisValue(val - this.div.position().left);
+		}
+			
 		if (this.handler[idx])
 			this.handler[idx](this.values[idx]);
 	};
@@ -1467,11 +1466,12 @@ function MainChart(widget, width, height) {
 
 		this.values[idx] = val;
 		
-		if (idx == 0)
-			trans = this.dia.getChartLayoutInterface().getYLocation(val);
-		else
-			trans = this.dia.getChartLayoutInterface().getXLocation(val);
-
+		if (idx == 0) {
+			trans = this.dia.getChartLayoutInterface().getYLocation(val) + this.div.position().top;
+		} else {
+			trans = this.dia.getChartLayoutInterface().getXLocation(val) + this.div.position().left;
+		}
+				
 		this.slider[idx].setValue(trans);
 
 		if (this.handler[idx])
