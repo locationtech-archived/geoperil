@@ -2485,7 +2485,7 @@ function GlobalControl() {
 	/* TODO: refactor */
 	this.info = function(data) {
 		/* TODO: fill */
-		//this.infoDialog.show(data);
+		this.infoDialog.show(data);
 	};
 
 	/* TODO: refactor */
@@ -2889,8 +2889,8 @@ function EQWidget(data, marker) {
 			animation : false
 		};
 
-		options.content = $('.popovers .learn').html();
-		this.div.find('.lnkLearn').popover(options);
+		/*options.content = $('.popovers .learn').html();
+		this.div.find('.lnkLearn').popover(options);*/
 
 		options.placement = 'top';
 		options.title = 'Modify and reprocess';
@@ -6459,12 +6459,14 @@ function PropDialog() {
 function InfoDialog() {
 	this.init = function() {
 		this.dialog = new HtmlDialog($('.info-dialog'));
+		this.tabGeofon = this.dialog.div.find('#info-dialog-tab-geofon');
 		this.tabOthers = this.dialog.div.find('#info-dialog-tab-others');
 		this.sourceTemplate = this.tabOthers.find('.source-template');
 	};
 		
 	this.show = function(evt) {
-		console.log(evt);
+		/* load iframe */
+		this.tabGeofon.find('iframe').attr('src','geofon.php?id=' + evt.id);
 		/* load other sources */
 		var data = {
 			eventtype: 'EQ',
@@ -6472,7 +6474,7 @@ function InfoDialog() {
 			x: evt.prop.longitude,
 			time: new Date(evt.prop.date).getTime() / 1000
 		};
-		ajax_mt('gethazardevents', data, (function(result) {
+		ajax_mt('/webguisrv/gethazardevents', data, (function(result) {
 			var hazards = result.hazard_events;
 			this.tabOthers.html("");
 			for( var i = 0; i < hazards.length; i++ ) {

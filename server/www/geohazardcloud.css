@@ -1199,6 +1199,13 @@ pre {
 	padding-bottom: 10px;
 }
 
+.info-dialog #info-dialog-tab-geofon iframe {
+	width: 100%;
+	height: 830px;
+	border: none;
+	margin-bottom: -20px;
+}
+
 .info-dialog .source-template h3 img {
 	height: 1.5em;
 	padding-right: 0.8em;
