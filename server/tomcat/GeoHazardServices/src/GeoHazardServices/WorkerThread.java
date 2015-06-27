@@ -331,13 +331,13 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 		String inst = task.user.inst;
 		
-		if( inst == null || inst.equals("gfz") )
+		if( inst == null || inst.equals("gfz") || inst.equals("tdss15") )
 			inst = "gfz_ex_test";
 			
 		andList.add( new BasicDBObject( "inst", inst ) );
 		
 		query = new BasicDBObject( "$and", andList );
-		
+				
 		if( query != null ) {
 			cursor = dbclient.getDB( "easywave" ).getCollection("stations").find( query );
 		}

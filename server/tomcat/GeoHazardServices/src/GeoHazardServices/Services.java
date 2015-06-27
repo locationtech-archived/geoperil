@@ -664,45 +664,7 @@ public class Services {
 			 
 	  return jssuccess( new BasicDBObject( "refineId", refineId ) );
   }
-       
-  private String getHash( String password ) {
-	  
-	  MessageDigest sha256;
-	  
-	  try {
-		sha256 = MessageDigest.getInstance("SHA-256");
-	  } catch (NoSuchAlgorithmException e) {
-		return null;
-	  }
-	  
-	  Base64Codec base64Codec = new Base64Codec();
-	  		  
-	  return base64Codec.encode( sha256.digest( password.getBytes() ) );
-  }
-  
-  private boolean checkPassword( String username, String password ) {
-	  
-	  DBCollection coll = db.getCollection("users");
-  	  
-	  DBCursor cursor = coll.find( new BasicDBObject("username", username) );
-	  
-	  if( ! cursor.hasNext() )
-		  return false;
-		  		  
-	  DBObject obj = cursor.next();
-	  String hash1 = (String) obj.get( "password" );
-	  
-	  String hash2 = getHash( password );
-	  
-	  if( hash1 == null || hash2 == null )
-		  return false;
-	  	  		  
-	  if( hash1.equals( hash2 ) )
-		  return true;
-	  
-	  return false;
-  }
-  
+           
   @POST
   @Path("/signin")
   @Produces(MediaType.APPLICATION_JSON)
@@ -990,14 +952,27 @@ public class Services {
 	users.add( user );
 	
 	if( user != null ) {
-								
+					
 		if( user.inst != null ) {
 			users.add( institutions.get( user.inst ) );
 		} else {
-			users.add( institutions.get("gfz") );
+			users.add( institutions.get("gfz") );	
+		}
+		
+		DBCursor csr = db.getCollection("users").find(
+			new BasicDBObject("username",user.name).append("provider", new BasicDBObject("$ne", null))
+		);
+		if( csr.hasNext() ) {
+			for( Object p: (BasicDBList) csr.next().get("provider") ) {
+				DBObject inst = db.getCollection("institutions").findOne(
+					new BasicDBObject("_id", p)
+				);
+				if( inst != null)
+					users.add( institutions.get(inst.get("name")) );	
+			}
 		}
 	}
-	
+		
 	/* return only entries that are older than 'delay' minutes */
 	Date upperTimeLimit = new Date( System.currentTimeMillis() - delay * 60 * 1000 );
 	
@@ -1028,7 +1003,7 @@ public class Services {
 		for( DBObject obj: cursor ) {
 			
 			obj.removeField("image");
-			
+						
 			/* check if entry belongs to general or user specific list */
 			if( user != null && obj.get("user").equals( user.objId ) ) {
 				ulist.add( obj );
@@ -1046,12 +1021,12 @@ public class Services {
 		/* clean up query */
 		cursor.close();
 	}
-		
+			
 	/* create new JSON object that can be used directly within JavaScript */
 	JsonObject jsonObj = new JsonObject();	
 	jsonObj.add( "main", gson.toJsonTree( mlist ) );	
 	jsonObj.add( "user", gson.toJsonTree( ulist ) );
-	
+		
 	if( user != null ) {
 		
 		List<DBObject> msglist = msg( limit, user );
@@ -1122,6 +1097,15 @@ public class Services {
 			users.add( new BasicDBObject( "user", institutions.get( user.inst ).objId ) );
 		} else {
 			users.add( new BasicDBObject( "user", institutions.get("gfz").objId ) );
+		}
+		
+		DBCursor csr = db.getCollection("users").find(
+			new BasicDBObject("username",user.name).append("provider", new BasicDBObject("$ne", null))
+		);
+		if( csr.hasNext() ) {
+			for( Object p: (BasicDBList) csr.next().get("provider") ) {
+				users.add( new BasicDBObject( "user", p ) );
+			}
 		}
 	}
 	
@@ -1275,7 +1259,6 @@ public class Services {
 	 
 	 BasicDBObject sort = new BasicDBObject("timestamp", -1);
 	 sort.put("prop.date", -1);
-	 System.out.println(inQuery);
 	 DBCursor cursor = coll.find( inQuery ).sort( sort );
 	 	 
 	 List<DBObject> results = new ArrayList<DBObject>();

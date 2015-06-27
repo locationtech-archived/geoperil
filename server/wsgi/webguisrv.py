@@ -669,7 +669,7 @@ class WebGuiSrv(BaseSrv):
             self._db["eqs"].update({"_id": evtid}, {"$set": {"shared_link": link_id}})
         # notify users only if this an official GEOFON event
         inst = self._db["institutions"].find_one({"_id": evt["user"]})
-        if inst is not None and inst["name"] == "gfz":
+        if inst is not None and (inst["name"] == "gfz" or inst["name"] == "tdss15"):
             self._notify_users(evtid, link_id)
         return jssuccess()
     
@@ -685,7 +685,11 @@ class WebGuiSrv(BaseSrv):
             now_has_mt = old_evt["prop"]["dip"] is None and evt["prop"]["dip"] is not None
             now_has_sim = "process" not in old_evt and "process" in evt
         # walk through all users and notify them if conditions are met
-        for user in self._db["users"].find({"notify": {"$ne": None}, "permissions.notify": True}):
+        for user in self._db["users"].find({
+              "$or": [{ "inst": evt["user"]},
+                      { "provider": evt["user"]}],
+              "notify": {"$ne": None},
+              "permissions.notify": True} ):
             kind = None
             if user["notify"].get("offshore") and evt["prop"]["sea_area"] is None:
                 continue

@@ -338,7 +338,7 @@ function Container(sortFun) {
 				break;
 			
 			if (this.sortFun(item, this.list[i]) == -1) {
-
+				
 				this.list.splice(i, 0, item);
 				return;
 			}
@@ -2022,7 +2022,7 @@ function sort_dist(lat, lon, a, b) {
 function sort_date(dir, a, b) {
 
 	if (new Date(a.prop.date) < new Date(b.prop.date))
-		return dir;
+		return -dir;
 	else if (new Date(a.prop.date) > new Date(b.prop.date))
 		return dir;
 
@@ -3625,7 +3625,7 @@ function getEvents(callback) {
 			var mlist = data['main'];
 			var ulist = data['user'];
 			var msglist = data['msg'];
-
+			
 			for (var i = mlist.length - 1; i >= 0; i--) {
 
 				var entry = entries.getOrInsert(new Earthquake(mlist[i]));
@@ -3707,9 +3707,10 @@ function getUpdates(timestamp) {
 
 					if (id == active)
 						show = true;
-
+					
 					entries.get(id).process = obj.process;
 					entries.get(id).notifyOn('update');
+					entries.get(id).notifyOn('progress');
 
 				} else if (obj['event'] == 'update') {
 
@@ -3723,8 +3724,7 @@ function getUpdates(timestamp) {
 					madd = true;
 
 					if (parent && parent.selected) {
-						entry.selected = true;
-						entry.notifyOn('select');
+						global.vis(entry);
 					}
 
 					if (searched(entry)) {
