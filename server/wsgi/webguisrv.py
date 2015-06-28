@@ -896,7 +896,7 @@ class WebGuiSrv(BaseSrv):
         user["inst"].pop("secret", None)
         user["inst"].pop("apikey", None)
         inst_name = user["inst"].get("name", "gfz_ex_test")
-        if inst_name == "gfz":
+        if inst_name == "gfz" or inst_name == "tdss15":
             inst_name = "gfz_ex_test"
         pipeline = [
             { "$match": { "$and": [
@@ -946,5 +946,22 @@ class WebGuiSrv(BaseSrv):
         cherrypy.response.headers['Content-Type'] = "application/pdf"
         cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="report_%s.pdf"' % evtid   
         return self.html2pdf(txt)
+    
+    @cherrypy.expose
+    def delete_event(self, inst, secret, evtid):
+        inst = self._db["institutions"].find_one({"name": inst, "secret": secret})
+        if inst is not None:
+            if self._db["eqs"].find_one({"user": inst["_id"], "_id": evtid}) is not None:
+                self._db["results"].remove({"id":evtid})
+                self._db["results2"].remove({"id":evtid})
+                self._db["comp"].remove({"EventID":evtid})
+                self._db["tfp_comp"].remove({"EventID":evtid})
+                self._db["simsealeveldata"].remove({"evid":evtid})
+                self._db["eqs"].remove({"_id":evtid})
+                self._db["events"].remove({"id":evtid})
+                self._db["shared_links"].remove({"evtid":evtid})
+                return jssuccess()
+            return jsfail()
+        return jsdeny()
     
 application = startapp( WebGuiSrv )

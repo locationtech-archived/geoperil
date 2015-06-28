@@ -836,7 +836,7 @@ public class Services {
 	  	  
 	  cursor.close();
 	  
-	  if( instName == null || instName.equals("gfz") )
+	  if( instName == null || instName.equals("gfz") || instName.equals("tdss15") )
 		  instName = "gfz_ex_test";
 	  
 	  /* get all available country codes and count elements in each group */
