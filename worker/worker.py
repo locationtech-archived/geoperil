@@ -173,6 +173,11 @@ class EasywaveWorker():
                 task["simtime"],
             )
 
+def usage():
+    print("Usage:")
+    print("    %s <config> register <url> <inst> <secret> [<priority>]" % sys.argv[0])
+    print("    %s <config> update" % sys.argv[0])
+
 if __name__ == "__main__":
     if len(sys.argv) > 2:
         config = configparser.ConfigParser()
@@ -188,4 +193,9 @@ if __name__ == "__main__":
                     worker.updateenv()
                 else:
                     print("Class missing for Worker %s." % wid)
+
+        else:
+            usage()
+    else:
+        usage()
             
