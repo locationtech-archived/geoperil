@@ -5813,7 +5813,7 @@ function MailDialog() {
 		this.txtParentId.value(this.eq._id);
 		/* set FTP path according to user settings */
 		if( curuser.properties ) {
-			this.secFtp.find('txtPath').html( curuser.properties.FtpHost + curuser.properties.FtpPath );
+			this.secFtp.find('.txtPath').val( curuser.properties.FtpHost + curuser.properties.FtpPath );
 			if( curuser.properties.FtpFile && curuser.properties.FtpFile != "") {
 				this.txtFtpFile.val(curuser.properties.FtpFile);
 			}
@@ -5857,7 +5857,7 @@ function MailDialog() {
 			this.smsText.trigger("change");
 			this.resize();
 			/* set FTP file if not already done */
-			if( this.txtFtpFile.val() != "" )
+			if( this.txtFtpFile.val() == "" )
 				this.txtFtpFile.val( zeroPad(this.msgnr, 3) + ".txt");
 			/* unlock dialog */
 			this.dialog.unlock();
