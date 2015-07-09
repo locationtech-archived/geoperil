@@ -2889,14 +2889,11 @@ function EQWidget(data, marker) {
 			animation : false
 		};
 
-		/*options.content = $('.popovers .learn').html();
-		this.div.find('.lnkLearn').popover(options);*/
-
 		options.placement = 'top';
 		options.title = 'Modify and reprocess';
 		this.div.find('.lnkEdit').tooltip(options);
 		
-		options.title = 'Learn more';
+		options.title = 'Inspect event';
 		this.div.find('.lnkLearn').tooltip(options);
 
 		options.title = 'Send message';
@@ -6472,6 +6469,7 @@ function InfoDialog() {
 			eventtype: 'EQ',
 			y: evt.prop.latitude,
 			x: evt.prop.longitude,
+			mag: evt.prop.magnitude,
 			time: new Date(evt.prop.date).getTime() / 1000
 		};
 		ajax_mt('/webguisrv/gethazardevents', data, (function(result) {

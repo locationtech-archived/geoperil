@@ -402,34 +402,36 @@ if( ! isset( $_GET["id"] ) ) :
 	<?php if( check_ip() ):	?>
 	<h3 id="equator2">Equator II
 		<?php if( ! empty( $div[1] ) ) : ?>
-			<a href="http://kinherd.org:8081/#/events/<?php echo $eq['geofonid'];?>/">Go to source</a>
+			<a href="http://eq.gfz-potsdam.de/#/events/<?php echo $eq['geofonid'];?>/">Go to source</a>
 		<?php endif;?>
 	</h3>
 	<div class="sec">
+            <b>Re-integration implemented soon.</b>
+            <?php if( false ): ?>
             <?php
-            $url = "http://kinherd.org:8081/events/".$eq['geofonid'];
+            $url = "http://eq.gfz-potsdam.de/events/".$eq['geofonid'];
             if (! file_get_contents($url)) {
                 post_url($url,'{"eid":"'.$eq['geofonid'].'"}',"application/json");
                 echo "<b>Computation startet. Please reload in 60 seconds.</b>";
             } else {
             ?>
             <h3>Epicenter and source mechanism</h3>
-            <img src="http://kinherd.org:8081/events/<?php echo $eq['geofonid'];?>/maps/location.png">
+            <img src="http://eq.gfz-potsdam.de/events/<?php echo $eq['geofonid'];?>/maps/location.png">
             <h4>Description</h4>
             <p>
             <?php
-                $ret = get_url("http://kinherd.org:8081/comments/".$eq['geofonid']."/location");
+                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/location");
                 usort($ret, "array_time_sort");
                 $ret = array_pop($ret);
                 echo $ret ? $ret['text'] : "No data available.";
             ?>
             </p>
             <h3>Seismotectonics</h3>
-            <img src="http://kinherd.org:8081/events/<?php echo $eq['geofonid'];?>/maps/region.png">
+            <img src="http://eq.gfz-potsdam.de/events/<?php echo $eq['geofonid'];?>/maps/region.png">
             <h4>Plate boundaries, faults, geology</h4>
             <p>
             <?php
-                $ret = get_url("http://kinherd.org:8081/comments/".$eq['geofonid']."/region_geology");
+                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/region_geology");
                 usort($ret, "array_time_sort");
                 $ret = array_pop($ret);
                 echo $ret ? $ret['text'] : "No data available.";
@@ -438,7 +440,7 @@ if( ! isset( $_GET["id"] ) ) :
             <h4>Regional seismicity and zones</h4>
             <p>
             <?php
-                $ret = get_url("http://kinherd.org:8081/comments/".$eq['geofonid']."/region_seismicity");
+                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/region_seismicity");
                 usort($ret, "array_time_sort");
                 $ret = array_pop($ret);
                 echo $ret ? $ret['text'] : "No data available.";
@@ -447,18 +449,18 @@ if( ! isset( $_GET["id"] ) ) :
             <h4>Historical earthquakes</h4>
             <p>
             <?php
-                $ret = get_url("http://kinherd.org:8081/comments/".$eq['geofonid']."/region_historical");
+                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/region_historical");
                 usort($ret, "array_time_sort");
                 $ret = array_pop($ret);
                 echo $ret ? $ret['text'] : "No data available.";
             ?>
             </p>
             <h3>Hazard</h3>
-            <img src="http://kinherd.org:8081/events/<?php echo $eq['geofonid'];?>/maps/gshap.png">
+            <img src="http://eq.gfz-potsdam.de/events/<?php echo $eq['geofonid'];?>/maps/gshap.png">
             <h4>GSHAP map description</h4>
             <p>
             <?php
-                $ret = get_url("http://kinherd.org:8081/comments/".$eq['geofonid']."/hazard_description");
+                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/hazard_description");
                 usort($ret, "array_time_sort");
                 $ret = array_pop($ret);
                 echo $ret ? $ret['text'] : "No data available.";
@@ -467,7 +469,7 @@ if( ! isset( $_GET["id"] ) ) :
             <h4>Statistical hazard</h4>
             <p>
             <?php
-                $ret = get_url("http://kinherd.org:8081/comments/".$eq['geofonid']."/hazard_statistics");
+                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/hazard_statistics");
                 usort($ret, "array_time_sort");
                 $ret = array_pop($ret);
                 echo $ret ? $ret['text'] : "No data available.";
@@ -476,7 +478,7 @@ if( ! isset( $_GET["id"] ) ) :
             <h4>Damage</h4>
             <p>
             <?php
-                $ret = get_url("http://kinherd.org:8081/comments/".$eq['geofonid']."/hazard_damage");
+                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/hazard_damage");
                 usort($ret, "array_time_sort");
                 $ret = array_pop($ret);
                 echo $ret ? $ret['text'] : "No data available.";
@@ -485,6 +487,7 @@ if( ! isset( $_GET["id"] ) ) :
             <?php
             }
             ?>
+            <?php endif; ?>
 	</div>
 	<?php endif; ?>
 
@@ -582,6 +585,7 @@ if( ! isset( $_GET["id"] ) ) :
 			'eventtype' => 'EQ',
 			'y' => $eq['prop']['latitude'],
 			'x' => $eq['prop']['longitude'],
+                        'mag' => $eq['prop']['magnitude'],
 			'time' => strtotime($eq['prop']['date'] . 'UTC')
 		);
 		$ret = ajax($url,$data);

@@ -13,14 +13,15 @@
 		text-align: center;
 	}
 	.sections > h3 {
-		background-color: #00589C;
+		background-color: white;
 		color: white;
  		padding: 0.5em;
+                margin: 0px;
 		font-weight: bold;
 		width: calc(100%-1em);
 	}
 	.sections > h3 a {
-		color: white;
+		color: #428bca;
 		text-align: right;
  		font-size: 14px;
 		float: right;

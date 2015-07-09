@@ -417,6 +417,7 @@ if( ! isset( $_GET["id"] ) ) :
 			'eventtype' => 'EQ',
 			'y' => $eq['prop']['latitude'],
 			'x' => $eq['prop']['longitude'],
+                        'mag' => $eq['prop']['magnitude'],
 			'time' => strtotime($eq['prop']['date'] . 'UTC')
 		);
 		$ret = ajax($url,$data);
