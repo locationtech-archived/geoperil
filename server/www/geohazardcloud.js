@@ -6487,6 +6487,7 @@ function InfoDialog() {
 				form.find('.source-coords').html('Lat: ' + hazards[i].y + '&deg;, Lon: ' + hazards[i].x + '&deg;' );
 				form.find('.source-magnitude').html( hazards[i].mag + ' ' + hazards[i].magtype );
 				form.find('.source-depth').html( hazards[i].depth + ' km' );
+				form.find('.source-link').attr('href', hazards[i].url );
 				this.tabOthers.append( form );
 			}
 		}).bind(this));
@@ -7485,7 +7486,6 @@ function ajax_mt(url, data, callback) {
 	
 	var worker = new Worker('ajax_mt.js');
 	worker.onmessage = function(msg) {
-		console.log(msg);
 		if( callback )
 			callback( msg.data );
 	};
