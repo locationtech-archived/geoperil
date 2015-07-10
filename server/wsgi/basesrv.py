@@ -58,8 +58,8 @@ class BaseSrv:
 
     def get_hazard_event(self, **parameters):
         default_parameters = {
-            "margin_x":0.1,
-            "margin_y":0.1,
+            "margin_x":0.2,
+            "margin_y":0.2,
             "margin_mag":1,
             "margin_depth":10,
             "margin_time":300,
