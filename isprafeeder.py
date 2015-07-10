@@ -329,8 +329,8 @@ def feedevent(event):
         "lat":event["y"],
         "mag":event["mag"],
         "depth":event["depth"],
-#        "date":time.strftime("%Y-%m-%dT%H:%M:%S.00Z",time.gmtime(event["time"])),
-        "date":time.strftime("%Y-%m-%dT%H:%M:%S.00Z",time.gmtime(time.time()-30)),
+        "date":time.strftime("%Y-%m-%dT%H:%M:%S.00Z",time.gmtime(event["time"])),
+#        "date":time.strftime("%Y-%m-%dT%H:%M:%S.00Z",time.gmtime(time.time()-30)),
     }
     s = []
     for k,v in params.items():
@@ -345,8 +345,8 @@ if __name__=="__main__":
         f.close()
     except:
         lastevents = []
-    for e in parseispra(requests.get("http://trideccloud.gfz-potsdam.de/TRIDEC.xml").content):
-#    for e in parseispra(requests.get("http://webcritech.jrc.ec.europa.eu/tdss/TRIDEC.xml").content):
+#    for e in parseispra(requests.get("http://trideccloud.gfz-potsdam.de/TRIDEC.xml").content):
+    for e in parseispra(requests.get("http://webcritech.jrc.ec.europa.eu/tdss/TRIDEC.xml").content):
         e["provider"] = "ispra"
         if e["eventid"] not in lastevents:
             feedevent(e)

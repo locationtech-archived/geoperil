@@ -273,10 +273,15 @@ def parsequakeml(data,idprefix=""):
     xml=fromstring(data)
     for e in xml.iter("{http://quakeml.org/xmlns/bed/1.2}event"):
         event={"eventtype":"EQ"}
-        event["eventid"]=idprefix+e.get("publicID").partition("=")[2]
+        event["eventid"]=e.get("catalog:eventid","")
+        if event["eventid"] == "":
+            event["eventid"]=e.get("publicID").partition("=")[2]
+        if event["eventid"] == "":
+            event["eventid"]=e.get("publicID").rpartition("/")[2].replace(".quakeml","")
+        event["eventid"] = idprefix + event["eventid"]
         event["region"]=e.find("{http://quakeml.org/xmlns/bed/1.2}description").findtext("{http://quakeml.org/xmlns/bed/1.2}text")
         o=e.find("{http://quakeml.org/xmlns/bed/1.2}origin")
-        event["time"]=calendar.timegm(time.strptime(o.find("{http://quakeml.org/xmlns/bed/1.2}time").findtext("{http://quakeml.org/xmlns/bed/1.2}value"),'%Y-%m-%dT%H:%M:%S.%f'))
+        event["time"]=calendar.timegm(time.strptime(o.find("{http://quakeml.org/xmlns/bed/1.2}time").findtext("{http://quakeml.org/xmlns/bed/1.2}value").rstrip('Z'),'%Y-%m-%dT%H:%M:%S.%f'))
         event["x"]=float(o.find("{http://quakeml.org/xmlns/bed/1.2}longitude").findtext("{http://quakeml.org/xmlns/bed/1.2}value"))
         event["y"]=float(o.find("{http://quakeml.org/xmlns/bed/1.2}latitude").findtext("{http://quakeml.org/xmlns/bed/1.2}value"))
         event["depth"]=float(o.find("{http://quakeml.org/xmlns/bed/1.2}depth").findtext("{http://quakeml.org/xmlns/bed/1.2}value"))
@@ -365,7 +370,9 @@ if __name__=="__main__":
         e["providername"] = "Natural Resources Canada"
         feedevent(e)
 
-    for e in parseusgs(requests.get("http://earthquake.usgs.gov/earthquakes/feed/atom/all/day").content):
+    for e in parsequakeml(requests.get("http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.quakeml").content,"USGS-"):
+        if "depth" in e:
+            e["depth"] = e["depth"] / 1000
         e["provider"] = "usgs"
         e["providerurl"] = "http://www.usgs.gov"
         e["providername"] = "United States Geological Survey"
