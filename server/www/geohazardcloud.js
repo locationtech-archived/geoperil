@@ -3501,7 +3501,7 @@ function initialize() {
 
 	if (loaded < 2)
 		return;
-
+	
 	dialogs = {
 		chart : new MainChartDialog($('#chartDia'))
 	};
@@ -6041,6 +6041,7 @@ function AdminDialog() {
 				
 		this.tabUser = $('#adminTabUser');
 		this.tabInst = $('#adminTabInst');
+		this.tabStats = $('#adminTabStats');
 		this.secProp = this.dialog.content.find('.secProp');
 		this.secPerm = this.dialog.content.find('.secPerm');
 		
@@ -6139,14 +6140,26 @@ function AdminDialog() {
 		this.tabInst.find('.html-text').change(this.controlInst.bind(this));
 		this.autoInst.setCallback('select', this.onInstSelect.bind(this));
 		this.autoInst.setCallback('change', this.onInstSelect.bind(this));
+		
+		/* statistics tab */
+		this.loginTempl = this.tabStats.find('.user-logins').clone();
+		this.grpLogins = new HtmlDynGroup('User Activity');
+		this.grpLogins.expand(true);
+		this.tabStats.html(this.grpLogins.div);
 	};
 	
 	this.load = function() {
 		this.control();
 		this.controlInst();
+		/* Prepare date that is passed to 'get_stats'. */
+		var date = new Date();
+		date.setDate( date.getDate() - 30 );
+		var time = date.getTime() / 1000;
 		ajaxCascade( 
 			getAjax('webguisrv/userlist/', null, this.getUsers.bind(this)),
-			getAjax('webguisrv/instlist/', null, this.getInsts.bind(this)) );
+			getAjax('webguisrv/instlist/', null, this.getInsts.bind(this)),
+			getAjax('webguisrv/get_stats/', {time: time}, this.getStats.bind(this,time))
+		);
 	};
 
 	this.getUsers = function(result) {
@@ -6181,6 +6194,30 @@ function AdminDialog() {
 		this.instlist.notifyOn('change');
 						
 		this.dialog.show();
+	};
+	
+	this.getStats = function(time, result) {
+		this.grpLogins.content.empty();
+		for(var i = 0; i < result.users.length; i++) {
+			var user = result.users[i];
+			var view = new HtmlActivityView(30);
+			var row = this.loginTempl.clone();
+			for(var j = 0; j < user.logins.length; j++ ) {
+				var login = user.logins[j];				
+				var date = new Date( Date.UTC(login.year, login.month-1, login.day) );
+				var day_diff = Math.ceil( (date.getTime() / 1000 - time) / (3600 * 24) );
+				var title = 'Logins on ' + date.toISOString().slice(0,10) + ':  ' + login.count;
+				/* determine color for given login count */
+				var color = '#d6e685';
+				if( login.count >= 2 ) color = '#8cc665';
+				if( login.count >= 4 ) color = '#44a340';
+				if( login.count >= 6 ) color = '#1e6823';
+				view.setField(day_diff-1, color, title);
+				row.find('.user').html(user.user);
+				row.find('.logins').html(view.div);
+			}
+			this.grpLogins.content.append(row);
+		}
 	};
 	
 	this.onUserSelect = function() {
@@ -7467,6 +7504,24 @@ function InfoWindow(html) {
 	};
 
 	this.init(html);
+}
+
+function HtmlActivityView(num_fields) {
+	
+	this.init = function(num_fields) {
+		this.div = $('.templates > .html-activity-view').clone();
+		for(var i = 0; i < num_fields; i++) {
+			this.div.find('tr').append('<td></td>');
+		}
+	};
+	
+	this.setField = function(idx, color, title) {
+		var field = this.div.find('td').eq(idx);
+		field.css('background-color', color);
+		field.attr('title', title);
+	};
+		
+	this.init(num_fields);
 }
 
 /* real mutlithreaded ajax call */

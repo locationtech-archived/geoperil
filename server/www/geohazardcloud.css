@@ -1335,6 +1335,25 @@ pre {
 	border: 2px solid #cccccc;
 }
 
+.html-activity-view table {
+	border-spacing: 0.2em;
+	border-collapse: separate;
+}
+
+.html-activity-view td {
+	width: 0.8em;
+	height: 0.8em;
+	background-color: gray;
+}
+.html-activity-view td:hover {
+	border: 1px solid black;
+}
+
+#adminTabStats .user-logins .input-group-addon {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+}
+
 /* */
 #layer-switcher {
 	position: absolute;

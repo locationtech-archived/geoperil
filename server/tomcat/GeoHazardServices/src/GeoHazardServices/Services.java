@@ -722,6 +722,8 @@ public class Services {
 				  return jsdenied( new BasicDBObject("nologin", true) );
 			  
 			  System.out.println( "CLOUD " + new Date() + " SignIn from user " + username );
+			  DBObject login = new BasicDBObject("date", new Date()).append("user", username);
+			  db.getCollection("logins").insert(login);
 			  
 			  return gson.toJson( result );
 		  }

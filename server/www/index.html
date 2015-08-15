@@ -1507,6 +1507,7 @@
 			<ul class="nav nav-tabs">
 				<li class="active"><a href="#adminTabUser" data-toggle="tab">Users</a></li>
 				<li><a href="#adminTabInst" data-toggle="tab">Institutions</a></li>
+				<li><a href="#adminTabStats" data-toggle="tab">Statistics</a></li>
 			</ul>
 		</div>
 		<div class="content tab-content">
@@ -1527,6 +1528,14 @@
 					<button type="button" class="btn btn-success pull-right btnSave">Save new institution</button>
 					<button type="button" class="btn btn-primary pull-right btnModify">Modify institution</button>
 					<button type="button" class="btn btn-danger pull-right btnDelete">Delete institution</button>
+				</div>
+			</div>
+			<div id="adminTabStats" class="tab-pane">
+				<div class="user-logins input-group input-group-sm prop-label">
+					<span class="input-group-addon">
+						<span class="user pull-left"></span>
+						<span class="logins pull-right"></span>
+					</span>
 				</div>
 			</div>
 		</div>
@@ -1648,7 +1657,7 @@
 			</span>
  		</div>
  		
- 		<!--  HtmlBlock -->
+ 		<!-- HtmlBlock -->
  		<div class="html-block"></div>
  		
  		<!-- HtmlButton -->
@@ -1709,10 +1718,12 @@
 		  </div><!-- /.modal-dialog -->
 		</div><!-- /.modal -->
 		
-		<div class="html-range-slider">
-			
+		<div class="html-range-slider"></div>
+		
+		<div class="html-activity-view">
+			<table><tr></tr></table>
 		</div>
- 				
+		 				
 	</div>
 		
 </body>

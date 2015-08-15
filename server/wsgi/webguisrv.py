@@ -964,4 +964,43 @@ class WebGuiSrv(BaseSrv):
             return jsfail()
         return jsdeny()
     
+    @cherrypy.expose
+    def get_stats(self, time):
+        aggr = [
+            # include all records since given time 
+            { "$match": { 
+                "date": { "$gte": self._get_utc_date(time) }
+            }},
+            # group records of same day and same user together; add count
+            {"$group": {
+                "_id": {
+                    "year": { "$year": "$date" },
+                    "month": { "$month": "$date" },
+                    "day": { "$dayOfMonth": "$date" },
+                    "user": "$user"
+                },
+                "count": { "$sum": 1 }
+            }},
+            # second group: now combine the list of days per user
+            {"$group": {
+                "_id": "$_id.user",
+                "logins": { 
+                    "$push": { 
+                        "year": "$_id.year",
+                        "month": "$_id.month",
+                        "day": "$_id.day",
+                        "count": "$count"
+                    }
+                } 
+            }},
+            # rename and hide some fields
+            {"$project": {
+                "user": "$_id",
+                "_id": 0,
+                "logins": 1
+            }}
+        ]
+        res = self._db["logins"].aggregate(aggr)          
+        return jssuccess(users=res["result"])
+    
 application = startapp( WebGuiSrv )
