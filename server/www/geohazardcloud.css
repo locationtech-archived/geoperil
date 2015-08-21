@@ -756,8 +756,7 @@ pre {
 }
 
 #propStations .countries {
-	margin-top: 1em;
-	margin-left: 2em;
+	margin-left: 1em;
 }
 
 #propStations .country-code {
@@ -767,11 +766,27 @@ pre {
 
 #propStations .clear {
 	clear: both;
-	margin-bottom: 1em;
 }
 
 #propStations .warn {
 	color: red;
+}
+
+#propStations .header {
+	margin-top: 1em;
+	margin-left: 1em;
+	margin-right: 1em;
+}
+
+#propStations hr {
+	margin-top: 0.3em;
+	margin-bottom: 0.6em;
+	border-color: #bbb;
+}
+
+#propStations h4 {
+	width: 95%;
+	margin-bottom: 0px;
 }
 
 /**** splash screen ****/

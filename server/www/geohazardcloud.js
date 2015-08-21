@@ -4915,17 +4915,24 @@ function showProp(e, activeTab) {
 
 	/* stations */
 	if (curuser.countries) {
-		var widget = $('#propStations .countries');
-		widget.empty();
+		var widgets = $('#propStations .countries');
+		widgets.empty();
 		for (var i = 0; i < curuser.countries.length; i++) {
+			var region = getRegion(curuser.countries[i]._id);
+			var div = $('#propStations .countries-' + region);
 			var span = $('<span class="country-code"><input type="checkbox">'
 					+ curuser.countries[i]._id + ' ('
 					+ curuser.countries[i].count + ')</span>');
 			var checkbox = span.find('input');
 			checkbox.prop('checked', curuser.countries[i].on);
+			checkbox.attr('id', 'cc-' + curuser.countries[i]._id);
 			checkbox.change(onCountrySelect);
-			widget.append(span);
+			div.append(span);
 		}
+		$('#propStations .check').change(function() {
+			$(this).closest('.header').find('.countries input').prop('checked', $(this).prop('checked'));
+			onCountrySelect();
+		});
 		onCountrySelect();
 	}
 
@@ -4935,15 +4942,44 @@ function showProp(e, activeTab) {
 	$('#PropDia').modal('show');
 }
 
+function getRegion(country) {
+	var regions = {
+		IO: ['TAN','THA','IDN','IND','AUS','SRL','IRN','SEY','OMA','PAK','KEN','MDV',
+		     'MLS','MOZ','MTS','MYA','BSH','COM','MAD','SAF','SGP','YEM'],
+		NEAM: ['BEL','CYP','EGY','ESP','HEL','ISR','ITA','POR','UKR','ROM','ANT','CBV',
+		       'DEU','DMK','EIR','FRA','GRB','ISL','KNA','MLT','MNC','MRT','NOR','SEN','SVE'],
+		CARIBE: ['BAH','BAR','CAI','COL','CRC','CUW','DOM','GRD','GUA','HAI',
+		         'JAM','MEX','MTQ','NIC','PAN','PRC','RDO','SVG','TRT'],
+		P: ['ANT','CAN','CHL','CKI','ECU','FIJ','FIL','HAW','HKG','JAP','KIR','KRS',
+		    'MIC','MSI','NWZ','PAI','PER','PNG','POF','RUS','SOI','SVD','TON','TVI',
+		    'USA','VAN','VNM','WSA'],
+		S: ['ARG','BRA','CGO','NAM','STH']
+	};
+	for( var reg in regions ) {
+		if( regions[reg].indexOf(country) > -1 )
+			return reg;
+	}
+	return 'unassigned';
+}
+
 function onCountrySelect() {
 
-	var chkBoxes = $('#propStations .countries').find('input');
-	var sum = 0;
-
-	for (var i = 0; i < chkBoxes.length; i++) {
-		if (chkBoxes.eq(i).is(':checked'))
-			sum += curuser.countries[i].count;
+	var sum = 0;	
+	for( var i = 0; i < curuser.countries.length; i++ ) {
+		var country = curuser.countries[i];
+		if( $('#propStations #cc-' + country._id).is(':checked') )
+			sum += country.count;
 	}
+	
+	/* Set select-all checkbox for each section. */
+	$.each( $('#propStations .countries'), function(idx, val) {
+		var all_checked = $(val).find("input:not(:checked)").length == 0;
+		$(val).closest('.header').find('h4 > input').prop('checked', all_checked);
+	});
+	
+	/* Hide unassigned section if all countries are assigned. */
+	if( $('#propStations .countries-unassigned input').length == 0 )
+		$('#propStations .countries-unassigned').parent().hide();
 
 	$('#propStations .count').html("Selected stations in total: " + sum);
 
@@ -5067,11 +5103,12 @@ function propSubmit() {
 		var clist = [];
 
 		for (var i = 0; i < curuser.countries.length; i++) {
-			var checked = widget.find('input').eq(i).is(':checked');
-			if (checked != curuser.countries[i].on)
+			var country = curuser.countries[i];
+			var checked = widget.find('#cc-' + country._id).is(':checked');
+			if (checked != country.on)
 				statChanged = true;
 			if (checked == true)
-				clist.push(curuser.countries[i]._id);
+				clist.push(country._id);
 		}
 
 		if (statChanged)
