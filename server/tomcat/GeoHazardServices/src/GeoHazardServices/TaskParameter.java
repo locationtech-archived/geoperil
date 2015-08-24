@@ -13,6 +13,7 @@ public class TaskParameter {
 	public User user;
 	public int duration;
 	public int accel;
+	public int gridres;
 	
 	public int status;
 	public float progress;
@@ -22,6 +23,8 @@ public class TaskParameter {
 		this.status = STATUS_WAIT;
 		this.progress = 0;
 		this.accel = 1;
+		/* Default to a 2 arc-minute grid = 120 arc-seconds. */
+		this.gridres = 120;
 	}
 	
 	public TaskParameter( EQParameter eqp, String id, User user, int duration, int accel ) {
@@ -30,5 +33,11 @@ public class TaskParameter {
 		this.user = user;
 		this.duration = duration;
 		this.accel = accel;
+	}
+	
+	public TaskParameter( EQParameter eqp, String id, User user, int duration, int accel, Integer gridres ) {
+		this(eqp, id, user, duration, accel);
+		if( gridres != null )
+			this.gridres = gridres;
 	}
 }

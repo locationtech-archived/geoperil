@@ -192,11 +192,18 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	
 	private int writeFault( EQParameter eqp ) {
 		
-		String fault = 	"-mw " + eqp.mw +
-						" -location " + eqp.lon + " " + eqp.lat + " " + eqp.depth +
-						" -strike " + eqp.strike +
-						" -dip " + eqp.dip +
-						" -rake " + eqp.rake;
+		String fault;
+		
+		if( eqp.mw != 0 ) {
+			fault =	"-mw " + eqp.mw;
+		} else {
+			fault =	String.format("-slip %s -size %s %s", eqp.slip, eqp.length, eqp.width);
+		}
+		
+		fault += " -location " + eqp.lon + " " + eqp.lat + " " + eqp.depth +
+				 " -strike " + eqp.strike +
+				 " -dip " + eqp.dip +
+				 " -rake " + eqp.rake;
 	
 		if( remote ) {
 			
@@ -364,10 +371,11 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		Process p = null;
 		int simTime = task.duration + 10;
 		
-		String cmdParams = " -grid ../gridtwo.grd -poi ftps.inp -poi_dt_out 30 -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
+		String cmdParams = " -grid ../grid_" + task.gridres + ".grd -poi ftps.inp -poi_dt_out 30 -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
 			
 		System.out.println( "Thread " + this.thread.getId() + " processes the request." );
-		
+		System.out.println("-grid ../grid_" + task.gridres + ".grd -poi ftps.inp -poi_dt_out 30 -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu" ); 
+				
 		try {
 			
 			BufferedReader reader = null;
@@ -483,7 +491,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 						BasicDBObject dbObject = new BasicDBObject();
 						dbObject.put( "progress", 0.0 );
 						dbObject.put( "grid_dim", (BasicDBObject) JSON.parse("{ lonMin: " + lonMin + ", lonMax: " + lonMax + ", latMin: " + latMin + ", latMax: " + latMax + " }" ) );
-						dbObject.put( "resolution", 2 );
+						dbObject.put( "resolution", task.gridres / 60.0 );
 						dbObject.put( "simTime", task.duration );
 						dbObject.put( "curSimTime", 0.0 );
 						dbObject.put( "calcTime", 0.0 );

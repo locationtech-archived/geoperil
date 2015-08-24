@@ -58,20 +58,23 @@ class User {
 	public String name;
 	public Object objId;
 	public String inst;
-	
+		
 	public User( DBObject obj ) {
-		this( obj, null );
+		this( obj, (DBObject) null );
+	}
+	
+	public User( DBObject obj, String inst ) {
+		this( obj );
+		this.inst = inst;
 	}
 	
 	public User( DBObject obj, DBObject instObj ) {
-		
 		this.objId = (Object) obj.get( "_id" );
 		this.name = (String) obj.get( "username" );
 		
 		if( instObj != null )
 			inst = (String) instObj.get( "name" );
 	}
-	
 }
 
 class Inst extends User {
@@ -306,6 +309,44 @@ public class Services {
 	  return true;
   }
   
+  private String _computeById(User user, String evtid, Integer dur, Integer accel, Integer gridres) {
+	  DBObject eq = db.getCollection("eqs").findOne( new BasicDBObject( "_id", evtid ) );
+	  if( eq == null )
+		  return jsfailure();
+	  
+	  BasicDBObject process = new BasicDBObject( "process", new BasicDBList() );
+	  BasicDBObject set = new BasicDBObject( "$set", process );
+	  db.getCollection("eqs").update( eq, set );
+	  
+	  /* extract properties to pass them to the request method */
+	  BasicDBObject prop = (BasicDBObject) eq.get("prop");
+	  double lat = prop.getDouble("latitude");
+	  double lon = prop.getDouble("longitude");
+	  double dip = prop.getDouble("dip");
+	  double strike = prop.getDouble("strike");
+	  double rake = prop.getDouble("rake");
+	  double depth = prop.getDouble("depth");
+	  Date date = prop.getDate("date");
+	  
+	  double mag = 0.0;
+	  double slip = 0.0;
+	  double length = 0.0;
+	  double width = 0.0;
+	  if( prop.get("magnitude") == null ) {
+		  slip = prop.getDouble("slip");
+		  length = prop.getDouble("length");
+		  width = prop.getDouble("width");
+	  } else {
+		  mag = prop.getDouble("magnitude");
+	  }
+	
+	  if( accel == null )
+		  accel = 1;
+	  
+	  /* prepare the simulation for execution */
+	  return request( lon, lat, mag, depth, dip, strike, rake, evtid, user, dur, date, accel, gridres, slip, length, width );
+  }
+  
   @POST
   @Path("/computeById")
   @Produces(MediaType.APPLICATION_JSON)
@@ -316,7 +357,8 @@ public class Services {
 		  @FormParam("id") String id,
 		  @FormParam("refineId") Long refineId,
 		  @FormParam("dur") Integer dur,
-		  @FormParam("accel") Integer accel ) {
+		  @FormParam("accel") Integer accel,
+		  @FormParam("apikey") String apikey ) {
 	  	  		
 	  Object[] required = { inst, secret, id, refineId, dur };
 	  
@@ -367,12 +409,22 @@ public class Services {
   }
 
   private String request( double lon, double lat, double mag, double depth, double dip,
-		  				 double strike, double rake, String id, User user, int dur,
-		  				 Date date, int accel ) {
-	  	  
-	  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
-	  TaskParameter task = new TaskParameter( eqp, id, user, dur, accel );
-	  		  
+						  double strike, double rake, String id, User user, int dur,
+						  Date date, int accel ) {
+	  return request(lon, lat, mag, depth, dip, strike, rake, id, user, dur, date, accel, null, 0, 0, 0);
+  }
+  
+  private String request( double lon, double lat, double mag, double depth, double dip,
+		  				  double strike, double rake, String id, User user, int dur,
+		  				  Date date, int accel, Integer gridres, double slip, double length, double width ) {
+	  EQParameter eqp;
+	  if( mag != 0 ) {
+		  eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
+	  } else {
+		  eqp = new EQParameter(lon, lat, slip, length, width, depth, dip, strike, rake, date);
+	  }
+	  TaskParameter task = new TaskParameter( eqp, id, user, dur, accel, gridres );
+	  
 	  if( queue.offer( task ) == false ) {
 		  System.err.println("Work queue is full");
 		  return jsfailure();
@@ -516,7 +568,28 @@ public class Services {
 	  /* start request */
 	  return request( lon, lat, mag, depth, dip, strike, rake, id, user, dur, date, accel );
   }
-    
+  
+  private DBObject auth_api(String key, String kind) {
+	  if( key == null )
+		  return null;
+	  BasicDBObject query = new BasicDBObject("api.key", key).append("api.enabled", true);
+	  DBObject inst = db.getCollection("institutions").findOne(query);
+	  DBObject user = db.getCollection("users").findOne(query.append("permissions.api",true));
+	  if( user != null && ( kind == null || kind.equals("user") ) )
+		  return user;
+	  if( inst != null && ( kind == null || kind.equals("inst") ) )
+		  return inst;
+	  return null;
+  }
+  
+  private String getInst(DBObject userObj) {
+	  ObjectId instId = (ObjectId) userObj.get("inst");
+	  DBObject instObj = db.getCollection("institutions").findOne( new BasicDBObject("_id", instId) );
+	  if( instObj == null )
+		  return null;
+	  return (String) instObj.get("name");
+  }
+  
   @POST
   @Path("/data_insert")
   @Produces(MediaType.APPLICATION_JSON)
@@ -529,6 +602,9 @@ public class Services {
 		  @FormParam("lon") Double lon,
 		  @FormParam("lat") Double lat,
 		  @FormParam("mag") Double mag,
+		  @FormParam("slip") Double slip,
+		  @FormParam("length") Double length,
+		  @FormParam("width") Double width,
 		  @FormParam("depth") Double depth,
 		  @FormParam("dip") Double dip,
 		  @FormParam("strike") Double strike,
@@ -538,25 +614,61 @@ public class Services {
 		  @FormParam("root") String root,
 		  @FormParam("parent") String parent,
 		  @FormParam("comp") Integer comp,
-		  @FormParam("accel") Integer accel) {
+		  @FormParam("accel") Integer accel,
+		  @FormParam("gridres") Integer gridres,
+		  @FormParam("apikey") String apikey) {
+	  	  
+	  /* Check for invalid parameter configurations. */
+	  if( (inst != null || secret != null) && apikey != null )
+		  return jsfailure("Don't mix 'apikey' and 'secret'.");
 	  
-	  Object[] required = { inst, secret, id, name, dateStr };
-	  	  	  	  
-	  System.out.println(id);
+	  if( mag != null && (slip != null || length != null || width != null) )
+		  return jsfailure("Don't mix 'mag' with 'slip', 'length' and 'width'.");
+	  
+	  /* Support 'inst' and 'secret' for compatibility reasons. */
+	  if( inst != null && secret != null ) {
+		  /* Obtain the 'apikey' and pretend a call to the new api. */
+		  DBObject query = new BasicDBObject("name", inst).append("secret", secret);
+		  DBObject tmp_inst = db.getCollection("institutions").findOne( query );
+		  if( tmp_inst == null )
+			  return jsdenied();
+		  apikey = (String)((DBObject) tmp_inst.get("api")).get("key");
+		  if( apikey == null )
+			  return jsfailure("No 'apikey' set for this institution!");
+	  }
+	  
+	  /* Continue with the new API. */
+	  Object[] required = { apikey, id, name, dateStr };
 	  
 	  if( ! checkParams( request, required ) )
 	  	  return jsfailure();
+	  
+	  DBObject db_user = auth_api(apikey, "user");
+	  DBObject db_inst = auth_api(apikey, "inst");
 	  	  		  	  	  
 	  /* check if we got a valid institution and the correct secret */
-	  Inst instObj = institutions.get( inst );
-	  if( instObj == null || ! instObj.secret.equals( secret ) )
+	  ObjectId user_id;
+	  String user_name;
+	  User user;
+	  if( db_user != null ) {
+		  user_id = (ObjectId) db_user.get("_id");
+		  user_name = (String) db_user.get("username");
+		  user = new User(db_user, getInst(db_user));
+	  } else if( db_inst != null ) {
+		  user_id = (ObjectId) db_inst.get("_id");
+		  user_name = (String) db_inst.get("name");
+		  user = new Inst(db_inst);
+	  } else {
 		  return jsdenied();
+	  }
+	  
+	  System.out.println(user.name + " - " + user.inst);
 	
 	  /* get Date object from date string */
 	  System.out.println( dateStr );
 	  Date date = parseIsoDate( dateStr );
 	  if( date == null )
-		  return jsfailure();
+		  return jsfailure("Invalid date format.");
 	  
 	  System.out.println(id);
 	  
@@ -570,6 +682,9 @@ public class Services {
 	  sub.put( "latitude", lat );
 	  sub.put( "longitude", lon );
 	  sub.put( "magnitude", mag );
+	  sub.put( "slip", slip );
+	  sub.put( "length", length );
+	  sub.put( "width", width );
 	  sub.put( "depth", depth );
 	  sub.put( "dip", dip );
 	  sub.put( "strike", strike );
@@ -582,16 +697,17 @@ public class Services {
 	  /* create new DB object that should be added to the eqs collection */
 	  BasicDBObject obj = new BasicDBObject();
 	  obj.put( "id", id );
-	  obj.put( "user", instObj.objId );
+	  obj.put( "user", user_id );
 	  obj.put( "timestamp", timestamp );
 	  obj.put( "prop", sub );
 	  obj.put( "root", root );
 	  obj.put( "parent", parent );
 	  obj.put( "accel", accel );
+	  //obj.put( "gridres", gridres );
 	  
 	  /* create a new event */
 	  BasicDBObject event = new BasicDBObject();
-	  event.put( "user", instObj.objId );
+	  event.put( "user", user_id );
 	  event.put( "timestamp", timestamp );
 	  event.put( "event", "new" );
 	  
@@ -600,7 +716,7 @@ public class Services {
 	  /* get earthquake collection */
 	  DBCollection coll = db.getCollection("eqs");
 	  /* search for given id */
-	  BasicDBObject inQuery = new BasicDBObject( "id", id );	  
+	  BasicDBObject inQuery = new BasicDBObject( "id", id ).append("user", user_id);	  
 	  DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("refineId", -1) );
 	
 	  BasicDBObject entry = null;
@@ -633,7 +749,7 @@ public class Services {
 	  }
 	  
 	  /* set refinement and compound Ids */
-	  final CompId compId = new CompId( instObj.name, id, refineId );
+	  final CompId compId = new CompId( user_name, id, refineId );
 	  obj.put( "_id", compId.toString() );
 	  obj.put( "refineId", refineId );
 	  event.put( "id", compId.toString() );
@@ -646,14 +762,18 @@ public class Services {
 	  	  
 	  System.out.println(obj);
 	  
-	  Object[] reqComp = { inst, secret, id, lon, lat, mag, depth, dip, strike, rake };
-	  boolean simulate = comp != null && checkParams( request, reqComp );
+	  Object[] reqComp1 = { id, lon, lat, mag, depth, dip, strike, rake };
+	  Object[] reqComp2 = { id, lon, lat, slip, length, width, depth, dip, strike, rake };
+	  boolean simulate = comp != null && ( checkParams( request, reqComp1 ) || checkParams( request, reqComp2 ) );
 	  	  
 	  /* insert new event into 'events'-collection */
 	  db.getCollection("events").insert( event );
-	  	  
+	  
+	  System.out.println(simulate);
+	  
 	  if( simulate )
-		  computeById( request, inst, secret, id, refineId, comp, accel );
+		  //computeById( request, null, null, id, refineId, comp, accel, apikey );
+		  _computeById(user, compId.toString(), comp, accel, gridres);
 	  else
 		  /* run request in a separate thread to avoid blocking */
 		  new Thread() {
@@ -662,7 +782,7 @@ public class Services {
 		  	}
 		  }.start();
 			 
-	  return jssuccess( new BasicDBObject( "refineId", refineId ) );
+	  return jssuccess( new BasicDBObject( "refineId", refineId ).append("evtid", compId.toString()) );
   }
            
   @POST
@@ -1747,6 +1867,10 @@ public class Services {
  
  private String jsfailure() {
 	 return "{ \"status\": \"failure\" }";
+ }
+ 
+ private String jsfailure(String msg) {
+	 return jsfailure(new BasicDBObject("msg",msg));
  }
  
  private String jsfailure( DBObject obj ) {
