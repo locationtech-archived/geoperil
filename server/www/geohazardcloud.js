@@ -3704,10 +3704,13 @@ function getUpdates(timestamp) {
 
 					if (id == active)
 						show = true;
-					
-					entries.get(id).process = obj.process;
-					entries.get(id).notifyOn('update');
-					entries.get(id).notifyOn('progress');
+				        
+                                        /* Update progress only if the event was already loaded. */
+                                        if( entries.get(id) ) {
+					    entries.get(id).process = obj.process;
+					    entries.get(id).notifyOn('update');
+					    entries.get(id).notifyOn('progress');
+                                        }
 
 				} else if (obj['event'] == 'update') {
 
@@ -3751,6 +3754,23 @@ function getUpdates(timestamp) {
 					 * a manual recomputation - thus select it here */
 					/* TODO: remove dependency to global instance */
 					global.vis(entry);
+
+                                } else if (obj['event'] == 'update') {
+
+                                        var entry = entries.add(new Earthquake(obj));
+                                        var parent = eqlist.getByKey('id',entry.id).item;
+                                        saved.replace('id',entry);
+                                        
+                                        uadd = true;
+                                        
+                                        if (parent && parent.selected) {
+                                            global.vis(entry);
+                                        }
+                                        
+                                        if (searched(entry)) {
+                                            timeline.insert(entry);
+                                            sadd = true;
+                                        }
 					
 				} else if (obj['event'] == 'progress') {
 
@@ -3760,10 +3780,13 @@ function getUpdates(timestamp) {
 					 */
 					if (id == active)
 						show = true;
-
-					entries.get(id).process = obj.process;
-					entries.get(id).notifyOn('update');
-					entries.get(id).notifyOn('progress');
+                                        
+                                        /* Update progress only if the event was already loaded. */
+                                        if( entries.get(id) ) {
+					    entries.get(id).process = obj.process;
+					    entries.get(id).notifyOn('update');
+					    entries.get(id).notifyOn('progress');
+                                        }
 
 				} else if (obj['event'] == 'msg_sent'
 						|| obj['event'] == 'msg_recv') {
