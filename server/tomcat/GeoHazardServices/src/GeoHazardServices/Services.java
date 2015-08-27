@@ -163,7 +163,6 @@ public class Services {
   private PriorityBlockingQueue<WorkerThread> workerQueue;
   private final int capacity = 3000;
   private ArrayList<WorkerThread> worker;
-  private final int numWorker = 6;
   
   private MongoClient mongoClient;
   private DB db;
@@ -203,9 +202,8 @@ public class Services {
  	
  	 mongoClient.close();
  	
- 	 for( int i = 0; i < numWorker; i++ ) {
- 		 worker.get(i).stop();
- 	 }
+ 	 for( WorkerThread w: worker )
+ 		 w.stop();
   }
   
   private void loadSettings() {

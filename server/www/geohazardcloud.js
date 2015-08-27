@@ -2944,6 +2944,10 @@ function EQWidget(data, marker) {
 		var dip = prop.dip ? prop.dip + '&deg;' : 'n/a';
 		var strike = prop.strike ? prop.strike + '&deg;' : 'n/a';
 		var rake = prop.rake ? prop.rake + '&deg;' : 'n/a';
+		
+		var slip = prop.slip ? prop.slip + ' m' : 'n/a';
+		var length = prop.length ? prop.length + ' km' : 'n/a';
+		var width = prop.width ? prop.width + ' km' : 'n/a';
 
 		this.div.find('.region').text(prop.region);
 		this.div.find('.mag').text(prop.magnitude);
@@ -2957,6 +2961,10 @@ function EQWidget(data, marker) {
 				'Dip ' + dip + ' &#183; Strike ' + strike + ' &#183; Rake '
 						+ rake);
 		this.div.find('.marker').attr('src', this.marker.link);
+		
+		/* show length, width and slip if available */
+		if( prop.slip )
+			this.div.find('.slip').html('Length ' + length + ' &#183; Width ' + width + ' &#183; Slip ' + slip);
 		
 		/* check if id starts with 'gfz' and thus comes from geofon */
 		if( (/^gfz/).test(this.data._id) && this.data.hasCompParams() ) {
@@ -3738,7 +3746,7 @@ function getUpdates(timestamp) {
 
 				var obj = ulist[i];
 				var id = obj['_id'];
-
+				
 				if (obj['event'] == 'new') {
 
 					var entry = entries.getOrInsert(new Earthquake(obj));

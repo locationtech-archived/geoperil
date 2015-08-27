@@ -157,7 +157,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			task.status = TaskParameter.STATUS_ERROR;
 			return 0;
 		}
-										
+								
+		saveRawData( task );
 		task.status = TaskParameter.STATUS_DONE;
 		
 		return 0;
@@ -866,6 +867,21 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		}
 		
 		return 0;
+	}
+	
+	private void saveRawData( TaskParameter task ) {
+		if( ! remote )
+			throw new UnsupportedOperationException("saveRawData() not yet available as local version.");		
+		
+		DBObject dirs = dbclient.getDB("easywave").getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
+		String resdir = (String) dirs.get("results");
+		String mkdir = String.format("mkdir -p %s/events/%s", resdir, task.id);
+		String mv = String.format("mv * %s/events/%s/", resdir, task.id);
+		
+		sshCon[1].out.println(mkdir);
+		sshCon[1].out.println(mv);
+		sshCon[1].out.println("echo '\004'");
+		sshCon[1].out.flush();
 	}
 	
 	private int pyPostProcess( TaskParameter task ) {
