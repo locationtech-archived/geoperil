@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
 import cherrypy
+from cherrypy.lib.static import serve_file
+from cherrypy._cperror import HTTPError
 import json
 import logging
 import inspect
