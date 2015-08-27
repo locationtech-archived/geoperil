@@ -49,6 +49,26 @@ def startapp(app):
     db = dbe[config["mongodb"]["dbname"]]
     return cherrypy.Application( app( db ) , script_name=None, config=None)
 
+def recursivelistdir(d):
+    files = []
+    for f in os.listdir(d):
+        f = os.path.join(d,f)
+        if os.path.isdir(f):
+            files.extend(recursivelistdir(f))
+        else:
+            files.append(f)
+    return files
+
+def hashfile(filename):
+    h = hashlib.new("sha256")
+    f = open(filename, "rb")
+    buf = f.read(4096)
+    while len(buf)>0:
+        h.update(buf)
+        buf = f.read(4096)
+    f.close()
+    return h.hexdigest()
+
 def checkpassword(password,pwsalt,pwhash):
     return pwhash == createsaltpwhash(password,pwsalt)[1]
 

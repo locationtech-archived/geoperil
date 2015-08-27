@@ -2,7 +2,7 @@ from basesrv import *
 import time
 jsonlib = json
 
-logger = logging.getLogger("MsgSrv")
+logger = logging.getLogger("FeederSrv")
 
 class FeederSrv(BaseSrv):
 

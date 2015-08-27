@@ -20,7 +20,7 @@ class WorkerSrv(BaseSrv):
                     "inst":inst["name"],
                     "name":name,
                     "priority":int(priority),
-                    "providedsims":[s.strip() for s in providedsims.split(",")],
+                    "providedsimtypes":[s.strip() for s in providedsims.split(",")],
                     "state":"offline",
                     "lastcontact":time.time(),
                     "task":None,
@@ -40,26 +40,37 @@ class WorkerSrv(BaseSrv):
         self._db["workers"].update({"workerid":workerid},{"$set":{"lastcontact":time.time()}})
 
         def handler(self,workerid):
-            while True:
+            n = 0
+            while n < 60:
                 self._db["workers"].update({"lastcontact":{"$lt":time.time()-60}},{"$set":{"state":"offline"}})
                 task = self._db["tasks"].find_and_modify(
                     {"state":"queued"}, update={"$set":{"state":"pending"}}, sort=[("created",1)], new=True
                 )
                 if task is not None:
-                    worker = self._db["workers"].find_and_modify(
-                        {"state":"idle","providedsimtypes":{"$all":[task["simtype"]]}},
-                        update={"$set":{"state":"chosen","task":task["taskid"]}}, sort=[("priority",1)]
-                    )
-                    if worker is None:
-                        self._db["tasks"].update({"_id":task["_id"]},{"$set":{"state":"queued"}})
+                    if set(task.keys()).issuperset(set(["taskid","simtype","created","state"])):
+                        print("queued task %s" % task["taskid"])
+                        worker = self._db["workers"].find_and_modify(
+                            {"state":"idle","providedsimtypes":{"$all":[task["simtype"]]}},
+                            update={"$set":{"state":"chosen","task":task["taskid"]}}, sort=[("priority",1)]
+                        )
+                        if worker is None:
+                            self._db["tasks"].update({"_id":task["_id"]},{"$set":{"state":"queued"}})
+                        else:
+                            print("queued for worker %s" % worker["workerid"])
+                    else:
+                        self._db["tasks"].update({"_id":task["_id"]},{"$set":{"state":"missing_parameter"}})
+                        
 
                 worker = self._db["workers"].find_one({"workerid":workerid})
                 if worker is not None and worker["task"] is not None:
-                    return bytes(json.dumps({"taskid":worker["task"]},cls=JSONEncoder),"utf-8")
+                    yield bytes(json.dumps({"taskid":worker["task"]},cls=JSONEncoder),"utf-8")
+                    return
+                elif worker is not None and worker["state"] == "offline":
+                    return
                 else:
                     yield("\n")
-                    self._db["workers"].update({"workerid":workerid},{"$set":{"lastcontact":time.time()}})
                     time.sleep(1)
+                    n += 1
 
         return handler(self,workerid)
     waitforwork._cp_config = {'response.stream': True}
@@ -72,5 +83,64 @@ class WorkerSrv(BaseSrv):
                 {"$set":{"state":state,"progress":progress,"task":task,"lastcontact":time.time()}})
             return jssuccess()
         return jsdeny()
+
+    @cherrypy.expose
+    def gettask(self,workerid,taskid):
+        worker = self._db["workers"].find_one({"workerid":workerid})
+        if worker is not None:
+            task = self._db["tasks"].find_one({"taskid":taskid})
+            if task is not None:
+                return jssuccess(task=task)
+            else:
+                return jsfail()
+        return jsdeny()
+
+    @cherrypy.expose
+    def getenv(self,workerid):
+        worker = self._db["workers"].find_one({"workerid":workerid})
+        if worker is not None:
+            env = list(self._db["envfiles"].find())
+            for e in env:
+                e.pop("_id")
+            return jssuccess(env=env)
+        return jsdeny()
+
+    @cherrypy.expose
+    def getenvfile(self,workerid,kind,name):
+        worker = self._db["workers"].find_one({"workerid":workerid})
+        if worker is not None:
+            f = self._db["envfiles"].find_one({"kind":kind,"name":name})
+            if f is not None:
+                fname = os.path.abspath(os.path.join(config["simenv"]["envdir"],f["fname"]))
+                return serve_file(fname,"application/octet-stream",'attachment',name)
+            raise HTTPError("404 Not Found")
+        raise HTTPError("403 Forbidden")
+
+
+    @cherrypy.expose
+    def scanenv(self,username=None,password=None):
+        if username == None and password == None:
+            user = self.getUser()
+        else:
+            user = self._db["users"].find_one({"username":username})
+            if user is not None:
+                if "pwsalt" in user and "pwhash" in user:
+                    if not checkpassword(password, user["pwsalt"], user["pwhash"]):
+                        user = None
+        if user is not None and user["permissions"].get("admin",False):
+            self._db["envfiles"].remove()
+            for f in recursivelistdir(config["simenv"]["envdir"]):
+                e = {
+                    "fname": os.path.relpath(f,config["simenv"]["envdir"]),
+                    "hash": hashfile(f),
+                    "size": os.stat(f).st_size,
+                }
+                e["name"] = os.path.basename(e["fname"])
+                e["kind"] = os.path.dirname(e["fname"])
+                self._db["envfiles"].insert(e)
+            return jssuccess(files=list(self._db["envfiles"].find()))
+        return jsdeny()
+
+        
 
 application = startapp( WorkerSrv )
