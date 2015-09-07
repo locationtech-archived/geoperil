@@ -321,7 +321,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		BasicDBList andList = new BasicDBList();
 		
 		cursor = dbclient.getDB( "easywave" ).getCollection("users").find( userObj );
-		/* check if a real users requests this computation */
+		/* check if a real user requests this computation */
 		if( cursor.hasNext() ) {
 			
 			DBObject obj = cursor.next();
@@ -372,10 +372,9 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		Process p = null;
 		int simTime = task.duration + 10;
 		
-		String cmdParams = " -grid ../grid_" + task.gridres + ".grd -poi ftps.inp -poi_dt_out 30 -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
+		String cmdParams = " -grid ../grid_" + task.gridres + ".grd -poi ftps.inp -poi_dt_out 30 -source fault.inp -propagation " + task.dt_out + " -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
 			
 		System.out.println( "Thread " + this.thread.getId() + " processes the request." );
-		System.out.println("-grid ../grid_" + task.gridres + ".grd -poi ftps.inp -poi_dt_out 30 -source fault.inp -propagation 10 -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu" ); 
 				
 		try {
 			
@@ -434,7 +433,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					}
 					
 					/* check if a new process entry was inserted previously - return otherwise */
-					if( processIndex < 0 ) {
+					if( processIndex < 0 && task.raw == 0 ) {
 						System.err.println( "Error: Invalid index into process array!" );
 						return 1;
 					}
@@ -443,10 +442,12 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					BasicDBObject obj = new BasicDBObject("_id", task.id );
 					
 					/* create sub-object that is used to update the current progress */
-					BasicDBObject setter = new BasicDBObject();
-					setter.put( "process." + processIndex + ".progress", task.progress );
-					setter.put( "process." + processIndex + ".curSimTime", totalMin );
-					setter.put( "process." + processIndex + ".calcTime", calcTime );
+					BasicDBObject setter = new BasicDBObject("raw_progress",  task.progress);
+					if( task.raw == 0 ) {
+						setter.put( "process." + processIndex + ".progress", task.progress );
+						setter.put( "process." + processIndex + ".curSimTime", totalMin );
+						setter.put( "process." + processIndex + ".calcTime", calcTime );
+					}
 					
 					/* build update query */
 					BasicDBObject update = new BasicDBObject( "$set", setter );
@@ -454,22 +455,24 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					/* update the DB entry with the given ID*/
 					coll.update( obj, update );
 												
-					/* create DB object that holds all event data */
-					BasicDBObject event = new BasicDBObject();
-					event.append( "id", task.id );
-					event.append( "user", task.user.objId );
-					event.append( "timestamp", new Date() );
-					event.append( "event", "progress" );
-					event.append( "progress", task.progress );
-										
-					/* create reference event that should be updated */
-					BasicDBObject refEvent = new BasicDBObject("id", task.id );
-					refEvent.put( "event", "progress" );
+					if( task.raw == 0 ) {
+						/* create DB object that holds all event data */
+						BasicDBObject event = new BasicDBObject();
+						event.append( "id", task.id );
+						event.append( "user", task.user.objId );
+						event.append( "timestamp", new Date() );
+						event.append( "event", "progress" );
+						event.append( "progress", task.progress );
+											
+						/* create reference event that should be updated */
+						BasicDBObject refEvent = new BasicDBObject("id", task.id );
+						refEvent.put( "event", "progress" );
+						
+						/* update the reference event with the new data */
+						colEvents.update( refEvent, event, true, false );
+					}
 					
-					/* update the reference event with the new data */
-					colEvents.update( refEvent, event, true, false );
-					
-					if( task.progress == 100.0f ) {
+					if( task.progress == 100.0f && task.raw == 0 ) {
 						pyPostProcess( task );
 					}
 					
@@ -477,7 +480,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					
 					/* this is the first time after simulation start - insert process entry */
 					matcher = Pattern.compile( "range: (.*) (.*) (.*) (.*)" ).matcher( line );
-					if( matcher.find() ) {
+					if( matcher.find() && task.raw == 0 ) {
 						
 						/* get region boundaries */
 						double lonMin = Double.valueOf( matcher.group(1) );
@@ -531,7 +534,11 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	}
 	
 	private int createVectorFile( int time, String id ) {
-				
+		
+		/* Nothing to do if a raw computation was requested. */
+		if( task.raw > 0 )
+			return 0;
+		
 		Process p;
 				
 		/* TODO: adapt EasyWave to really get arrivals for the specific time and not for time - 1 */
@@ -609,6 +616,10 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	
 	private int getWaveHeights( String id, String ewh ) {
 		
+		/* Nothing to do if a raw computation was requested. */
+		if( task.raw > 0 )
+			return 0;
+		
 		Process p;
 				
 		String gdal = String.format( "gdal_contour -f kml -fl %s eWave.2D.sshmax heights.%s.kml", ewh, ewh);
@@ -684,7 +695,11 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	}
 	
 	private int addPoiResults( String id ) {
-						
+		
+		/* Nothing to do if a raw computation was requested. */
+		if( task.raw > 0 )
+			return 0;
+		
 		try {
 				
 			/* copy remote POI file to local worker instance */
@@ -774,6 +789,10 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	}
 	
 	private int addStationResults( TaskParameter task ) {
+		
+		/* Nothing to do if a raw computation was requested. */
+		if( task.raw > 0 )
+			return 0;
 		
 		try {
 		
@@ -876,9 +895,11 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		DBObject dirs = dbclient.getDB("easywave").getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
 		String resdir = (String) dirs.get("results");
 		String mkdir = String.format("mkdir -p %s/events/%s", resdir, task.id);
+		String rm = String.format("rm %s/events/%s/*", resdir, task.id);
 		String mv = String.format("mv * %s/events/%s/", resdir, task.id);
 		
 		sshCon[1].out.println(mkdir);
+		sshCon[1].out.println(rm);
 		sshCon[1].out.println(mv);
 		sshCon[1].out.println("echo '\004'");
 		sshCon[1].out.flush();

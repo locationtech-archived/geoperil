@@ -169,6 +169,9 @@ public class Services {
   private Gson gson;
   
   private Map<String,Inst> institutions;
+  
+  private final int STATUS_FAILED = -1;
+  private final int STATUS_NO_COMP = -2;
 	
   public Services() {
 	  
@@ -356,36 +359,77 @@ public class Services {
 		  @FormParam("refineId") Long refineId,
 		  @FormParam("dur") Integer dur,
 		  @FormParam("accel") Integer accel,
-		  @FormParam("apikey") String apikey ) {
+		  @FormParam("apikey") String apikey,
+		  @FormParam("evtid") String evtid,
+		  @FormParam("raw") @DefaultValue("0") Integer raw,
+		  @FormParam("gridres") @DefaultValue("120") Integer gridres,
+		  @FormParam("dt_out") @DefaultValue("10") Integer dt_out ) {
 	  	  		
-	  Object[] required = { inst, secret, id, refineId, dur };
+	  /* Check for invalid parameter configurations. */
+	  if( (inst != null || secret != null) && apikey != null )
+		  return jsfailure("Don't mix 'apikey' and 'secret'.");
 	  
-	  /* check required parameters */
-	  if( ! checkParams( request, required ) )
-		  return jsfailure();
+	  /* Support 'inst' and 'secret' for compatibility reasons. */
+	  if( inst != null && secret != null ) {
+		  /* Obtain the 'apikey' and pretend a call to the new api. */
+		  DBObject query = new BasicDBObject("name", inst).append("secret", secret);
+		  DBObject tmp_inst = db.getCollection("institutions").findOne( query );
+		  if( tmp_inst == null )
+			  return jsdenied();
+		  apikey = (String)((DBObject) tmp_inst.get("api")).get("key");
+		  if( apikey == null )
+			  return jsfailure("No 'apikey' set for this institution!");
+	  }
 	  
-	  /* check if we got a valid institution and the correct secret */
-	  Inst instObj = institutions.get( inst );
-	  if( instObj == null || ! instObj.secret.equals( secret ) )
+	  /* Authenticate user. */
+	  DBObject db_user = auth_api(apikey, "user");
+	  DBObject db_inst = auth_api(apikey, "inst");
+	  
+	  User user;
+	  if( db_user != null ) {
+		  user = new User(db_user, getInst(db_user));
+	  } else if( db_inst != null ) {
+		  user = new Inst(db_inst);
+	  } else {
 		  return jsdenied();
-	  	  	
+	  }
+	  
+	  /* Check for invalid parameter configurations. */
+	  if( (id != null || refineId != null) && evtid != null )
+		  return jsfailure("Don't mix 'id' and 'evtid'.");
+	  
+	  if( evtid == null )
+		  evtid = new CompId( inst, id, refineId ).toString();
+	  
+	  /* Check for missing parameters */
+	  if( evtid == null || dur == null  )
+		  return jsfailure("Missing parameter.");
+	  	  	  	
 	  /* search for given id */
-	  CompId compId = new CompId( inst, id, refineId );
-	  BasicDBObject query = new BasicDBObject( "_id", compId.toString() );
-	  DBCursor cursor = db.getCollection("eqs").find( query );
-	  	  
+	  BasicDBObject query = new BasicDBObject( "_id", evtid ).append("user", user.objId);
+	  DBObject entry = db.getCollection("eqs").findOne( query );
+	  
 	  /* return if id not found */
-	  if( cursor.count() != 1 )
-		  return jsfailure();
+	  if( entry == null )
+		  return jsfailure("Event ID not found.");
+	  
+	  /* check if already computed */
+	  Integer progress = _status(evtid, raw);
+	  if( progress != STATUS_NO_COMP ) {
+		  if( raw == 0 )
+			  return jsfailure("Re-computation not allowed.");
+		  if( progress != 100 )
+			  return jsfailure("A computation is currently running.");
+	  }
 	
 	  /* get properties of returned entry */
-	  BasicDBObject entry = (BasicDBObject) cursor.next();
 	  BasicDBObject prop = (BasicDBObject) entry.get("prop");
-	
-	  /* clean up query */
-	  cursor.close();
-	  	  	  
-	  BasicDBObject process = new BasicDBObject( "process", new BasicDBList() );
+	  	  
+	  BasicDBObject process = new BasicDBObject( "raw_progress", 0 );
+	  if( raw == 0 ) {
+		  process.append( "process", new BasicDBList() );
+	  }
+	  
 	  BasicDBObject set = new BasicDBObject( "$set", process );
 	  db.getCollection("eqs").update( entry, set );
 	  	  
@@ -403,9 +447,13 @@ public class Services {
 		  accel = 1;
 	  
 	  /* prepare the simulation for execution */
-	  return request( lon, lat, mag, depth, dip, strike, rake, compId.toString(), instObj, dur, date, accel );
+	  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
+	  TaskParameter task = new TaskParameter( eqp, evtid, user, dur, accel, gridres);
+	  task.raw = raw;
+	  task.dt_out = dt_out;
+	  return request(evtid, task);
   }
-
+  
   private String request( double lon, double lat, double mag, double depth, double dip,
 						  double strike, double rake, String id, User user, int dur,
 						  Date date, int accel ) {
@@ -421,13 +469,15 @@ public class Services {
 	  } else {
 		  eqp = new EQParameter(lon, lat, slip, length, width, depth, dip, strike, rake, date);
 	  }
-	  TaskParameter task = new TaskParameter( eqp, id, user, dur, accel, gridres );
-	  
+	  TaskParameter task = new TaskParameter( eqp, id, user, dur, accel, gridres );	  
+	  return request(id, task);
+  }
+  
+  private String request(String id, TaskParameter task) {
 	  if( queue.offer( task ) == false ) {
 		  System.err.println("Work queue is full");
 		  return jsfailure();
 	  }
-	  	  
 	  return jssuccess( new BasicDBObject( "_id", id ) );
   }
       
@@ -782,7 +832,58 @@ public class Services {
 			 
 	  return jssuccess( new BasicDBObject( "refineId", refineId ).append("evtid", compId.toString()) );
   }
-           
+  
+  private Integer _status(String evtid, Integer raw) {
+	  /* Check if event exists. */
+	  DBCollection eqs = db.getCollection("eqs");
+	  BasicDBObject query = new BasicDBObject("_id", evtid);
+	  DBObject event = eqs.findOne( query );
+	  if( event == null )
+		  return null;
+	  /* Check if computation has been initiated. */
+	  Integer p;
+	  if( raw > 0 ) {
+		  query.append("raw_progress", new BasicDBObject("$ne", null));
+		  event = eqs.findOne( query );
+		  if( event == null )
+			  return STATUS_NO_COMP;
+		  p = ((BasicDBObject) event).getInt("raw_progress");
+	  } else {
+		  query.append("process", new BasicDBObject("$ne", null));
+		  if( eqs.findOne( query ) == null )
+			  return STATUS_NO_COMP;
+		  /* Check if computation was started successfully. */
+		  query.append("process", new BasicDBObject("$size", 1));
+		  if( eqs.findOne( query ) == null )
+			  return STATUS_FAILED;
+		  /* Extract the progress from the database object with this clear command ;) */
+		  p = ((BasicDBObject)((BasicDBList) event.get("process")).get(0)).getInt("progress");	  
+	  }  
+	  return p;
+  }
+  
+  @POST
+  @Path("/status")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String status(
+		  @Context HttpServletRequest request,
+		  @FormParam("apikey") String apikey,
+		  @FormParam("evtid") String evtid,
+		  @FormParam("raw") @DefaultValue("0") Integer raw ) {
+	  /* Validate API-key. For now, it is possible to query foreign events. */
+	  if( auth_api(apikey, null) == null )
+		  return jsdenied();
+	  Integer progress = _status(evtid, raw);
+	  if( progress == null )
+		  return jsfailure("Event not found.");
+	  if( progress == STATUS_NO_COMP )
+		  return jssuccess( new BasicDBObject("comp", "none") );
+	  if( progress == STATUS_FAILED )
+		  return jssuccess( new BasicDBObject("comp", "failed") );
+	  String comp = progress == 100 ? "success" : "pending";
+	  return jssuccess( new BasicDBObject("comp", comp).append("progress", progress.toString()) );
+  }
+  
   @POST
   @Path("/signin")
   @Produces(MediaType.APPLICATION_JSON)
