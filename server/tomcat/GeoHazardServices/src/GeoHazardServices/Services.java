@@ -310,6 +310,25 @@ public class Services {
 	  return true;
   }
   
+  private Object getField(DBObject obj, String field) {
+	  String[] parts = field.split("\\.");
+	  Object sub = obj;
+	  for( String p: parts ) {
+		  if( sub == null )
+			  return null;
+		  if( ! p.matches("d+") ) {
+			  sub = ((DBObject) sub).get(p);
+		  } else {
+			  try {
+				  sub = ((BasicDBList) sub).get(Integer.valueOf(p));
+			  } catch(IndexOutOfBoundsException e) {
+				  return null;
+			  }
+		  }
+	  }
+	  return sub;
+  }
+  
   private String _computeById(User user, String evtid, Integer dur, Integer accel, Integer gridres) {
 	  DBObject eq = db.getCollection("eqs").findOne( new BasicDBObject( "_id", evtid ) );
 	  if( eq == null )
@@ -362,7 +381,7 @@ public class Services {
 		  @FormParam("apikey") String apikey,
 		  @FormParam("evtid") String evtid,
 		  @FormParam("raw") @DefaultValue("0") Integer raw,
-		  @FormParam("gridres") @DefaultValue("120") Integer gridres,
+		  @FormParam("gridres") Integer gridres,
 		  @FormParam("dt_out") @DefaultValue("10") Integer dt_out ) {
 	  	  		
 	  /* Check for invalid parameter configurations. */
@@ -402,7 +421,7 @@ public class Services {
 		  evtid = new CompId( inst, id, refineId ).toString();
 	  
 	  /* Check for missing parameters */
-	  if( evtid == null || dur == null  )
+	  if( evtid == null )
 		  return jsfailure("Missing parameter.");
 	  	  	  	
 	  /* search for given id */
@@ -412,7 +431,7 @@ public class Services {
 	  /* return if id not found */
 	  if( entry == null )
 		  return jsfailure("Event ID not found.");
-	  
+	  	  
 	  /* check if already computed */
 	  Integer progress = _status(evtid, raw);
 	  if( progress != STATUS_NO_COMP ) {
@@ -420,6 +439,20 @@ public class Services {
 			  return jsfailure("Re-computation not allowed.");
 		  if( progress != 100 )
 			  return jsfailure("A computation is currently running.");
+	  }
+	  
+	  /* Use same duration as in original simulation if available. */
+	  if( dur == null ) {
+		  dur = (Integer) getField(entry, "process.0.simTime");
+		  /* Duration could not be determined. */
+		  if( dur == null )
+			  return jsfailure("Missing parameter.");
+	  }
+	  
+	  /* Use grid resolution of original computation or default to 120 seconds. */
+	  if( gridres == null ) {
+		  Double res = (Double) getField(entry, "process.0.resolution");
+		  gridres = res == null ? 120 : (int)(res * 60);
 	  }
 	
 	  /* get properties of returned entry */
