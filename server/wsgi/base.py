@@ -3,6 +3,7 @@ import os
 import cherrypy
 from cherrypy.lib.static import serve_file
 from cherrypy._cperror import HTTPError
+import time
 import json
 import logging
 import inspect
@@ -21,7 +22,11 @@ from urllib.parse import urlparse
 import subprocess
 
 config = configparser.ConfigParser()
-config.read(os.path.dirname(os.path.realpath(__file__)) + "/config.cfg")
+
+def loadconfig(cfgfile):
+    config.read(os.path.dirname(os.path.realpath(__file__)) + "/" + cfgfile)
+
+loadconfig("config.cfg")
 
 logging.basicConfig(level=logging.INFO)
 
@@ -44,9 +49,11 @@ class JSONEncoder(json.JSONEncoder):
 
 def startapp(app):
     if config["mongodb"].getboolean('replicaset'):
+        print("Connecting to MongoDB ReplicaSet: %s" % config["mongodb"]["url"])
         dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority")
         atexit.register(dbe.close)
     else:
+        print("Connecting to MongoDB: %s" % config["mongodb"]["url"])
         dbe = MongoClient(config["mongodb"]["url"])
     db = dbe[config["mongodb"]["dbname"]]
     return cherrypy.Application( app( db ) , script_name=None, config=None)
@@ -124,4 +131,16 @@ def checkargs(args,*req,**reqv):
             if r not in args or args[r] != v:
                 return False
     return True
+
+def intdef(s,default=0):
+    try:
+        return int(s)
+    except (ValueError,TypeError):
+        return default
+
+def floatdef(s,default=0.0):
+    try:
+        return float(s)
+    except (ValueError,TypeError):
+        return default
 
