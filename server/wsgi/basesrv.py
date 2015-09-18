@@ -90,4 +90,6 @@ class BaseSrv:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-        return p.communicate(html)[0]
+        out,err = p.communicate(html)
+        print(err.decode("utf-8"))
+        return out

@@ -651,7 +651,17 @@ class WebGuiSrv(BaseSrv):
         # provide file for download
         dst = os.path.dirname(os.path.realpath(__file__)) + "/snapshots/" + str(link_id) + '.png'
         subprocess.call(path + "phantomjs " + path + "snapshot.js " + self.get_hostname() + "/?share=" + str(link_id) + " " + dst + " '#mapview'", shell=True)
-    
+   
+    @cherrypy.expose
+    def create_missing_images(self):
+        events = self._db["eqs"].find({"shared_link": { "$ne": None }})
+        for evt in events:
+            dst = os.path.dirname(os.path.realpath(__file__)) + "/snapshots/" + str(evt["shared_link"]) + '.png'
+            if not os.path.isfile(dst):
+                print("CLOUD: create_missing_image for event " + str(evt["_id"]) + " (" + str(evt["shared_link"]) + ")")
+                self.make_image(str(evt["shared_link"]))
+        return jssuccess()
+
     # this method is called by the tomcat-server if the computation
     # of an earthquake event is completed - just a workaround until
     # we have everything merged into this python module 
