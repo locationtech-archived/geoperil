@@ -201,7 +201,7 @@ html, body {
 	padding-left: 1em;
 }
     
-#sidebarTab, #saved, #custom, #timeline, #messages, #static {
+#sidebarTab, #saved, #custom, #timeline, #messages, #static, #evtsets, #evtsetcomp {
 	position: absolute;
 	top: 3em;
 	left: 0px;
@@ -209,7 +209,7 @@ html, body {
 	right: 0px;
 }
 
-#sidebar, #saved, #custom, #timeline-data, #messages, #static {
+#sidebar, #saved, #custom, #timeline-data, #messages, #static, #evtsets, #evtsetcomp {
 	overflow-y: auto;
 }
 
@@ -1292,6 +1292,11 @@ pre {
 	float: right;
 }
 
+/* HtmlRangeGroup */
+.html-rangegroup .html-label-colon {
+	width: 0.3em;
+}
+
 /* HtmlCheckBox */
 .html-checkbox {
 	margin-right: 0.5em;
@@ -1412,4 +1417,38 @@ pre {
     color: white;
     font-size: 2em;
     display: none;
+}
+
+/* Event Set Compose Tab */
+#evtsetcomp .html-label {
+	width: 7em;
+}
+
+#evtsetcomp .prop-right {
+	width: 4em;
+}
+
+#evtsetcomp .input-group {
+	margin-bottom: 0.5em;
+}
+
+#evtsetcomp .btn {
+	margin-top: 1em;
+	position: absolute;
+	width: 30%;
+}
+
+#evtsetcomp .btn-clear {
+	left: 15%;
+}
+
+#evtsetcomp .btn-start {
+	right: 15%;
+}
+
+#evtsetcomp .status {
+	width: 100%;
+	text-align: center;
+	color: red;
+	margin-top: 1em;
 }

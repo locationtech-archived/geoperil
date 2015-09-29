@@ -3,7 +3,7 @@ package GeoHazardServices;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 
-public class WorkScheduler implements Runnable {
+public class WorkScheduler implements IScheduler {
 	
 	PriorityBlockingQueue<WorkerThread> workerQueue;
 	BlockingQueue<TaskParameter> taskQueue;
@@ -13,6 +13,18 @@ public class WorkScheduler implements Runnable {
 		
 		this.workerQueue = workerQueue;
 		this.taskQueue = taskQueue;
+	}
+	
+	public void submit(WorkerThread worker) {
+		this.workerQueue.offer(worker);
+	}
+	
+	public void submit(TaskParameter task) {
+		this.taskQueue.offer(task);
+	}
+	
+	public TaskParameter getTask(String id) {
+		return null;
 	}
 	
 	@Override

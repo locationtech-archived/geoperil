@@ -12,6 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -21,9 +22,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
 
 import javax.inject.Singleton;
 import javax.servlet.http.Cookie;
@@ -159,9 +157,7 @@ class DateComparator implements Comparator<DBObject> {
 @Singleton /* Use one global instance of this class instead of creating a new one for each request */
 public class Services {
 
-  private BlockingQueue<TaskParameter> queue;
-  private PriorityBlockingQueue<WorkerThread> workerQueue;
-  private final int capacity = 3000;
+  private IScheduler scheduler;
   private ArrayList<WorkerThread> worker;
   
   private MongoClient mongoClient;
@@ -172,12 +168,12 @@ public class Services {
   
   private final int STATUS_FAILED = -1;
   private final int STATUS_NO_COMP = -2;
+  private final int STATUS_ABORT = -3;
 	
   public Services() {
 	  
 	  System.out.println("Constructor");
-	  queue = new ArrayBlockingQueue<TaskParameter>(capacity);
-	  workerQueue = new PriorityBlockingQueue<WorkerThread>(100);
+	  scheduler = new FairScheduler();
 	  worker = new ArrayList<WorkerThread>();
 	  	  	  
 	  try {
@@ -192,7 +188,8 @@ public class Services {
 	  
 	  loadSettings();
 	  
-	  new Thread( new WorkScheduler( queue, workerQueue ) ).start();
+	  /* Start scheduler thread. */
+	  new Thread( scheduler ).start();
 	  	  
 	  loadInstitutions();
 	  
@@ -252,7 +249,8 @@ public class Services {
 		  Integer count = ((Long) obj.get("count")).intValue();
 		  int priority = ((Long) obj.get("priority")).intValue();
 		  boolean remote = (boolean) obj.get("remote");
-		  		  
+		  int slots[] = getSlots(obj.get("slots"), count);
+		  
 		  if( count == null )
 			  count = 1;
 		  
@@ -265,7 +263,7 @@ public class Services {
 			  
 			  WorkerThread thread;
 			  try {
-				  thread = new WorkerThread( workerQueue, GlobalParameter.map.get("localdir") + "/w" + j );
+				  thread = new WorkerThread( scheduler, GlobalParameter.map.get("localdir") + "/w" + j );
 			  } catch (IOException e) {
 				  System.err.println("Error: Could not create worker thread.");
 				  e.printStackTrace();
@@ -275,6 +273,7 @@ public class Services {
 			  thread.setRemote( user, host, dir + i );
 			  thread.setHardware(hardware);
 			  thread.setPriority(priority);
+			  thread.setSlot(slots[i]);
 			  
 			  worker.add( thread );
 			  thread.start();
@@ -282,6 +281,20 @@ public class Services {
 		  
 	  }
 	  cursor.close();
+  }
+  
+  /* Input: Either integer object with single slot value or an array of values. */
+  private int[] getSlots(Object obj, int count) {
+	  int[] slots = new int[count];
+	  if( obj instanceof Number ) {
+		  Arrays.fill(slots, ((Number) obj).intValue());
+	  } else if(obj instanceof ArrayList<?>) {
+		  int idx = 0;
+		  for( Object slot: (ArrayList<?>) obj) {
+			  slots[idx++] = ((Number)slot).intValue();
+		  }
+	  }
+	  return slots;
   }
   
   private void loadInstitutions() {
@@ -329,10 +342,25 @@ public class Services {
 	  return sub;
   }
   
+  private boolean checkPerm(User user, String perm) {
+	  if( user == null )
+		  return false;
+	  DBObject obj = db.getCollection("users").findOne( new BasicDBObject("_id", user.objId ));
+	  if( obj == null )
+		  return false;
+	  DBObject permObj = (DBObject) obj.get("permissions");
+	  if( permObj == null )
+		  return false;
+	  Boolean set = (Boolean) permObj.get(perm);
+	  if( set == null || set == false )
+		  return false;
+	  return true;
+  }
+  
   private String _computeById(User user, String evtid, Integer dur, Integer accel, Integer gridres) {
 	  DBObject eq = db.getCollection("eqs").findOne( new BasicDBObject( "_id", evtid ) );
 	  if( eq == null )
-		  return jsfailure();
+		  return null;
 	  
 	  BasicDBObject process = new BasicDBObject( "process", new BasicDBList() );
 	  BasicDBObject set = new BasicDBObject( "$set", process );
@@ -484,15 +512,10 @@ public class Services {
 	  TaskParameter task = new TaskParameter( eqp, evtid, user, dur, accel, gridres);
 	  task.raw = raw;
 	  task.dt_out = dt_out;
-	  return request(evtid, task);
+	  String ret_id = request(evtid, task);
+	  return jssuccess( new BasicDBObject( "_id", ret_id ) );
   }
-  
-  private String request( double lon, double lat, double mag, double depth, double dip,
-						  double strike, double rake, String id, User user, int dur,
-						  Date date, int accel ) {
-	  return request(lon, lat, mag, depth, dip, strike, rake, id, user, dur, date, accel, null, 0, 0, 0);
-  }
-  
+    
   private String request( double lon, double lat, double mag, double depth, double dip,
 		  				  double strike, double rake, String id, User user, int dur,
 		  				  Date date, int accel, Integer gridres, double slip, double length, double width ) {
@@ -507,30 +530,284 @@ public class Services {
   }
   
   private String request(String id, TaskParameter task) {
-	  if( queue.offer( task ) == false ) {
-		  System.err.println("Work queue is full");
-		  return jsfailure();
-	  }
-	  return jssuccess( new BasicDBObject( "_id", id ) );
+	  scheduler.submit( task );
+	  return id;
   }
       
   String newRandomId( String username ) {
 	  
 	  Random rand = new Random();
 	  String id;
+	  DBObject obj1, obj2;
 	  
-	  DBCollection coll = db.getCollection("eqs");
-	  
-	  while ( true ) {
-		  
+	  do {
 		  Integer nr = rand.nextInt( 90000 ) + 10000;
 		  id = username + nr.toString(); 
-		
-		  if( coll.find( new BasicDBObject("_id", id) ).count() == 0 )
-			  break;
-	  }
+		  obj1 = db.getCollection("eqs").findOne( new BasicDBObject("_id", id) );
+		  obj2 = db.getCollection("evtsets").findOne( new BasicDBObject("_id", id) );
+
+	  } while( obj1 != null || obj2 != null);
 	  
 	  return id;
+  }
+  
+  private List<Double> range_values(Double min, Double step, Double max) {
+	  List<Double> values = new ArrayList<Double>();
+	  if( min == null || step == null || max == null )
+		  return null;
+	  int count = (int)( (max - min) / step) + 1;
+	  if( count <= 0 || count > 30 )
+		  return null;
+	  for( int i = 0; i < count; i++ ) {
+		  values.add( min + i * step );
+	  }
+	  return values;
+  }
+  
+  @POST
+  @Path("/evtset_comp")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String evtset_comp(
+		  @Context HttpServletRequest request,
+		  @FormParam("apikey") String apikey,
+		  @FormParam("name") @DefaultValue("Custom Event Set") String name,
+		  @FormParam("lon") Double lon,
+		  @FormParam("lat") Double lat,
+		  @FormParam("mag") Double mag,
+		  @FormParam("depth_min") Double depth_min,
+		  @FormParam("depth_step") Double depth_step,
+		  @FormParam("depth_max") Double depth_max,
+		  @FormParam("dip_min") Double dip_min,
+		  @FormParam("dip_step") Double dip_step,
+		  @FormParam("dip_max") Double dip_max,
+		  @FormParam("strike_min") Double strike_min,
+		  @FormParam("strike_step") Double strike_step,
+		  @FormParam("strike_max") Double strike_max,
+		  @FormParam("rake_min") Double rake_min,
+		  @FormParam("rake_step") Double rake_step,
+		  @FormParam("rake_max") Double rake_max,
+		  @FormParam("dur") @DefaultValue("180") Integer dur,
+		  @CookieParam("server_cookie") String session) {
+	  	  
+	  /* Authenticate user. */
+	  User user = auth(apikey, session);
+	  if( user == null ) {
+		  return jsdenied();
+	  }
+	  
+	  if( ! checkPerm(user, "evtset") )
+		  return jsdenied();
+	  
+	  if( lon == null || lat == null || mag == null )
+		  return jsfailure("Missing parameters.");
+	  
+	  List<Double> depths = range_values(depth_min, depth_step, depth_max);
+	  List<Double> dips = range_values(dip_min, dip_step, dip_max);
+	  List<Double> strikes = range_values(strike_min, strike_step, strike_max);
+	  List<Double> rakes = range_values(rake_min, rake_step, rake_max);
+	  if( depths == null || dips == null || strikes == null || rakes == null )
+		  return jsfailure("Invalid range given.");
+	  
+	  int count = depths.size() * dips.size() * strikes.size() * rakes.size();
+	  if( count > 50 )
+		  return jsfailure("To many combinations. At most 50 are allowed.");
+	  	  
+	  String setid = newRandomId(user.name);
+	  EventSet evtset = new EventSet(setid, count, count*(dur+10));
+	  Date date = new Date();
+	  List<String> evtids = new ArrayList<String>();
+	  int i = 0;
+	  for( Double depth: depths ) {
+		  for( Double dip: dips ) {
+			  for( Double strike: strikes ) {
+				  for( Double rake: rakes ) {
+					  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
+					  String retid = _compute(eqp, user, name + " " + i, null, null, dur, evtset );
+					  evtids.add(retid);
+					  i++;
+				  }
+			  }
+		  }
+	  }
+	  BasicDBObject prop = new BasicDBObject("latitude", lat);
+	  prop.append("longitude", lon);
+	  prop.append("magnitude", mag);
+	  prop.append("depth_min", depth_min);
+	  prop.append("depth_step", depth_step);
+	  prop.append("depth_max", depth_max);
+	  prop.append("dip_min", dip_min);
+	  prop.append("dip_step", dip_step);
+	  prop.append("dip_max", dip_max);
+	  prop.append("strike_min", strike_min);
+	  prop.append("strike_step", strike_step);
+	  prop.append("strike_max", strike_max);
+	  prop.append("rake_min", rake_min);
+	  prop.append("rake_step", rake_step);
+	  prop.append("rake_max", rake_max);
+	  BasicDBObject set = new BasicDBObject("_id", setid);
+	  set.append("evtids", evtids);
+	  set.append("timestamp", date);
+	  set.append("name", name);
+	  set.append("duration", dur);
+	  set.append("prop", prop);
+	  set.append("user", user.objId);
+	  set.append("progress", 0.0);
+	  db.getCollection("evtsets").insert(set);
+	  
+	  /* create a new event */
+	  BasicDBObject event = new BasicDBObject();
+	  event.put("id", setid);
+	  event.put("user", user.objId);
+	  event.put("timestamp", date);
+	  event.put("event", "new_evtset");
+	  db.getCollection("events").insert( event );
+	  
+	  return jssuccess( new BasicDBObject("setid", setid) );
+  }
+  
+  @POST
+  @Path("/evtset_abort")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String evtset_abort(
+		  @Context HttpServletRequest request,
+		  @FormParam("apikey") String apikey,
+		  @FormParam("setid") String setid) {
+	  
+	  User user = auth_api(apikey);
+	  if( user == null )
+		  return jsdenied();
+	  DBObject query = new BasicDBObject("_id", setid).append("user", user.objId);
+	  DBObject evtset = db.getCollection("evtsets").findOne( query );
+	  if( evtset == null )
+		  return jsfailure("Event-Set not found.");
+	  
+	  /* Get events and abort one task after the other. */
+	  boolean aborted = false;
+	  BasicDBList evtids = (BasicDBList) evtset.get("evtids");
+	  for(Object evtid: evtids) {
+		  aborted |= _abortEvent( (String)evtid );
+	  }
+	  if( ! aborted )
+		  return jsfailure("Computation cannot be aborted.");
+	  
+	  /* Update earthquake in database. */
+	  DBObject set = new BasicDBObject("$set", new BasicDBObject("abort", true));
+	  db.getCollection("evtsets").update(new BasicDBObject("_id", setid), set);
+	  
+	  /* Create a new event. */
+	  BasicDBObject event = new BasicDBObject();
+	  event.put("id", setid);
+	  event.put("user", user.objId);
+	  event.put("timestamp", new Date());
+	  event.put("event", "abort");
+	  db.getCollection("events").insert( event );
+	  return jssuccess();
+  }
+  
+  @POST
+  @Path("/evt_abort")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String evt_abort(
+		  @Context HttpServletRequest request,
+		  @FormParam("apikey") String apikey,
+		  @FormParam("evtid") String evtid) {
+
+	  User user = auth_api(apikey);
+	  if( user == null )
+		  return jsdenied();
+	  DBObject query = new BasicDBObject("_id", evtid).append("user", user.objId);
+	  DBObject evt = db.getCollection("eqs").findOne( query );
+	  if( evt == null )
+		  return jsfailure("Event not found.");
+	  if( !_abortEvent(evtid) )
+		  return jsfailure("Computation cannot be aborted.");
+	  
+	  /* Update earthquake in database. */
+	  DBObject set = new BasicDBObject("$set", new BasicDBObject("abort", true));
+	  db.getCollection("eqs").update(new BasicDBObject("_id", evtid), set);
+	  
+	  /* Create a new event. */
+	  BasicDBObject event = new BasicDBObject();
+	  event.put("id", evtid);
+	  event.put("user", user.objId);
+	  event.put("timestamp", new Date());
+	  event.put("event", "abort");
+	  db.getCollection("events").insert( event );
+	  return jssuccess();
+  }
+  
+  private boolean _abortEvent(String evtid) {
+	  TaskParameter task = scheduler.getTask(evtid);
+	  if( task == null )
+		  return false;
+	  return task.markAsAbort();
+  }
+  
+  private String _compute(EQParameter eqp, User user, String name, 
+		  String parent, String root, Integer dur, EventSet evtSet) {
+	  	  	  
+	  /* create an unique ID that is not already present in the DB */
+	  String id = newRandomId(user.name);
+	  
+	  DBObject parentObj = db.getCollection("eqs").findOne( new BasicDBObject("_id", parent) );
+	  int accel = 1;
+	  if( parentObj != null ) {
+		  Integer val = (Integer) parentObj.get("accel");
+		  if( val != null )
+			  accel = val;
+	  }
+	  
+	  /* get current timestamp */
+	  Date timestamp = new Date();
+	  	  
+	  /* create new sub object that stores the properties */
+	  BasicDBObject sub = new BasicDBObject();
+	  sub.put( "date", eqp.date );
+	  sub.put( "region", name );
+	  sub.put( "latitude", eqp.lat );
+	  sub.put( "longitude", eqp.lon );
+	  sub.put( "magnitude", eqp.mw );
+	  sub.put( "depth", eqp.depth );
+	  sub.put( "dip", eqp.dip );
+	  sub.put( "strike", eqp.strike );
+	  sub.put( "rake", eqp.rake );
+	  	  
+	  /* create new DB object that should be added to the earthquake collection */
+	  BasicDBObject obj = new BasicDBObject();
+	  obj.put( "_id", id );
+	  obj.put( "id", id );
+	  obj.put( "user", user.objId );
+	  obj.put( "timestamp", timestamp );
+	  obj.put( "process", new ArrayList<>() );
+	  obj.put( "prop", sub );
+	  obj.put( "root", root );
+	  obj.put( "parent", parent );
+	  obj.put( "accel", accel );
+	  
+	  if( evtSet != null )
+		  obj.put( "evtset", evtSet.setid );
+	  
+	  /* insert object into collection */
+	  db.getCollection("eqs").insert( obj );
+	  
+	  /* create a new event */
+	  BasicDBObject event = new BasicDBObject();
+	  event.put( "id", id );
+	  event.put( "user", user.objId );
+	  event.put( "timestamp", timestamp );
+	  event.put( "event", "new" );
+	  
+	  /* insert new event into 'events'-collection */
+	  db.getCollection("events").insert( event );
+	  
+	  /* start request */
+	  TaskParameter task = new TaskParameter(eqp, id, user, dur, accel);
+	  task.evtset = evtSet;
+	  if( evtSet == null )
+		  task.setSlots(IScheduler.SLOT_NORMAL, IScheduler.SLOT_EXCLUSIVE);
+	  else
+		  task.setSlots(IScheduler.SLOT_NORMAL);
+	  return request( id, task );
   }
   
   @POST
@@ -592,62 +869,9 @@ public class Services {
 	  if( parent != null && parent.equals("") )
 		  parent = null;
 		  
-	  /* get collection that stores the earthquake entries */
-	  DBCollection coll = db.getCollection("eqs");
-	  
-	  /* create an unique ID that is not already present in the DB */
-	  String id = newRandomId(user.name);
-	  
-	  DBCursor cursor = coll.find( new BasicDBObject("_id", parent) );
-	  int accel = 1;
-	  if( cursor.hasNext() ) {
-		  Integer val = (Integer) cursor.next().get("accel");
-		  if( val != null )
-			  accel = val;
-	  }
-	  
-	  /* get current timestamp */
-	  Date timestamp = new Date();
-	  	  	  	  
-	  /* create new sub object that stores the properties */
-	  BasicDBObject sub = new BasicDBObject();
-	  sub.put( "date", date );
-	  sub.put( "region", name );
-	  sub.put( "latitude", lat );
-	  sub.put( "longitude", lon );
-	  sub.put( "magnitude", mag );
-	  sub.put( "depth", depth );
-	  sub.put( "dip", dip );
-	  sub.put( "strike", strike );
-	  sub.put( "rake", rake );
-	  	  
-	  /* create new DB object that should be added to the earthquake collection */
-	  BasicDBObject obj = new BasicDBObject();
-	  obj.put( "_id", id );
-	  obj.put( "id", id );
-	  obj.put( "user", user.objId );
-	  obj.put( "timestamp", timestamp );
-	  obj.put( "process", new ArrayList<>() );
-	  obj.put( "prop", sub );
-	  obj.put( "root", root );
-	  obj.put( "parent", parent );
-	  obj.put( "accel", accel );
-	  
-	  /* insert object into collection */
-	  coll.insert( obj );
-	  
-	  /* create a new event */
-	  BasicDBObject event = new BasicDBObject();
-	  event.put( "id", id );
-	  event.put( "user", user.objId );
-	  event.put( "timestamp", timestamp );
-	  event.put( "event", "new" );
-	  
-	  /* insert new event into 'events'-collection */
-	  db.getCollection("events").insert( event );
-	  
-	  /* start request */
-	  return request( lon, lat, mag, depth, dip, strike, rake, id, user, dur, date, accel );
+	  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
+	  String ret_id = _compute(eqp, user, name, parent, root, dur, null);
+	  return jssuccess( new BasicDBObject("_id", ret_id) );
   }
   
   private DBObject auth_api(String key, String kind) {
@@ -661,6 +885,26 @@ public class Services {
 	  if( inst != null && ( kind == null || kind.equals("inst") ) )
 		  return inst;
 	  return null;
+  }
+  
+  private User auth_api(String key) {
+	  DBObject db_user = auth_api(key, "user");
+	  DBObject db_inst = auth_api(key, "inst");
+	  User user = null;
+	  if( db_user != null ) {
+		  user = new User(db_user, getInst(db_user));
+	  } else if( db_inst != null ) {
+		  user = new Inst(db_inst);
+	  }
+	  return user;
+  }
+  
+  private User auth(String key, String session) {
+	  User user = auth_api(key);
+	  if( user != null )
+		  return user;
+	  user = signedIn(session);
+	  return user;
   }
   
   private String getInst(DBObject userObj) {
@@ -895,6 +1139,21 @@ public class Services {
 	  return p;
   }
   
+  private Integer _evtset_status(String setid) {
+	  /* Check if event-set exists. */
+	  DBCollection evtsets = db.getCollection("evtsets");
+	  BasicDBObject query = new BasicDBObject("_id", setid);
+	  DBObject evtset = evtsets.findOne( query );
+	  if( evtset == null )
+		  return null;
+	  if( evtset.get("abort") != null )
+		  return STATUS_ABORT;
+	  Double progress = (Double) getField(evtset, "progress");
+	  if( progress == null )
+		  return STATUS_NO_COMP;
+	  return progress.intValue();
+  }
+  
   @POST
   @Path("/status")
   @Produces(MediaType.APPLICATION_JSON)
@@ -913,6 +1172,28 @@ public class Services {
 		  return jssuccess( new BasicDBObject("comp", "none") );
 	  if( progress == STATUS_FAILED )
 		  return jssuccess( new BasicDBObject("comp", "failed") );
+	  String comp = progress == 100 ? "success" : "pending";
+	  return jssuccess( new BasicDBObject("comp", comp).append("progress", progress.toString()) );
+  }
+  
+  @POST
+  @Path("/evtset_status")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String evtset_status(
+		  @Context HttpServletRequest request,
+		  @FormParam("apikey") String apikey,
+		  @FormParam("setid") String setid,
+		  @CookieParam("server_cookie") String session) {
+	  /* Validate API-key. For now, it is possible to query foreign events. */
+	  if( auth_api(apikey, null) == null && signedIn(session) == null )
+		  return jsdenied();
+	  Integer progress = _evtset_status(setid);
+	  if( progress == null )
+		  return jsfailure("Event-set not found.");
+	  if( progress == STATUS_ABORT )
+		  return jssuccess( new BasicDBObject("comp", "abort") );
+	  if( progress == STATUS_NO_COMP )
+		  return jssuccess( new BasicDBObject("comp", "none") );
 	  String comp = progress == 100 ? "success" : "pending";
 	  return jssuccess( new BasicDBObject("comp", comp).append("progress", progress.toString()) );
   }
@@ -1246,6 +1527,7 @@ public class Services {
 			inQuery.append( "prop.date", new BasicDBObject( "$lt", upperTimeLimit ) );
 				
 		inQuery.append( "depr", new BasicDBObject( "$ne", true ) );
+		inQuery.append( "evtset", null );
 		
 		/* query DB, sort the results by date and limit the number of returned entries */
 		DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("prop.date", -1) );
@@ -1298,9 +1580,17 @@ public class Services {
 		
 		jsonObj.add( "msg", gson.toJsonTree( new ArrayList<DBObject>() ) );
 	}
-		
+	
+	List<DBObject> evtsets = new ArrayList<DBObject>();
+	if( user != null ) {
+		BasicDBObject query = new BasicDBObject("user", user.objId);
+		query.append("timestamp", new BasicDBObject("$lte", maxTimestamp));
+		DBCursor cursor = db.getCollection("evtsets").find(query).sort( new BasicDBObject("timestamp", -1) ).limit(100);
+		evtsets = cursor.toArray();
+	}
+	jsonObj.add("evtsets", gson.toJsonTree(evtsets));
+	
 	jsonObj.addProperty("ts", sdf.format( maxTimestamp ) );
-						
 	return jsonObj.toString();
  }
  	
@@ -1319,6 +1609,7 @@ public class Services {
 	/* create lists for general and user specific earthquake entries */
 	ArrayList<DBObject> mlist = new ArrayList<DBObject>();
 	ArrayList<DBObject> ulist = new ArrayList<DBObject>();
+	ArrayList<DBObject> evtsets = new ArrayList<DBObject>();
 	 
 	/* used to convert to desired time format used by MongoDB */
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
@@ -1390,29 +1681,35 @@ public class Services {
 			if( delay > 0 )
 				objQuery.put( "prop.date", new BasicDBObject( "$lt", upperTimeLimit ) );
 			
-			DBCursor cursor2;
+			DBObject obj2;
 					
 			if( obj.get("event").equals( "msg_sent" ) ) {
 				
 				objQuery.put( "Message-ID", id );
-				cursor2 = db.getCollection("messages_sent").find( objQuery );
+				obj2 = db.getCollection("messages_sent").findOne( objQuery );
 							
 			} else if( obj.get("event").equals( "msg_recv" ) ) {
 				
 				objQuery.put( "Message-ID", id );
-				cursor2 = db.getCollection("messages_received").find( objQuery );
+				obj2 = db.getCollection("messages_received").findOne( objQuery );
+				
+			} else if( obj.get("event").equals( "new_evtset" ) ) {
+				
+				objQuery.put( "_id", id );
+				obj2 = db.getCollection("evtsets").findOne( objQuery );
 				
 			} else {
 				
 				objQuery.put( "_id", id );
-				cursor2 = db.getCollection("eqs").find( objQuery );
+				obj2 = db.getCollection("eqs").findOne( objQuery );
+				if( obj2 == null )
+					obj2 = db.getCollection("evtsets").findOne( objQuery );
 			}
 				
 			/*  */
-			if( cursor2.hasNext() ) {
+			if( obj2 != null ) {
 				
 				/* add event type to entry */
-				DBObject obj2 = cursor2.next();
 				String event = (String) obj.get("event");
 				obj2.put( "event", event );
 							
@@ -1431,11 +1728,15 @@ public class Services {
 						 obj2.put( "parentEvt", csrParent.next() );
 				}
 				
-				/* check if entry belongs to general or user specific list */
-				if( user != null && obj.get("user").equals( user.objId ) ) {
-					ulist.add( obj2 );
+				if( event.equals("new_evtset") ) {
+					evtsets.add(obj2);
 				} else {
-					mlist.add( obj2 );
+					/* check if entry belongs to general or user specific list */
+					if( user != null && obj.get("user").equals( user.objId ) ) {
+						ulist.add( obj2 );
+					} else {
+						mlist.add( obj2 );
+					}
 				}
 				
 				/* update timestamp */
@@ -1447,9 +1748,6 @@ public class Services {
 					}
 				}
 			}
-			
-			/* clean up query */
-			cursor2.close();
 		}
 		
 		/* clean up query */
@@ -1463,6 +1761,7 @@ public class Services {
 	jsonObj.addProperty( "ts", sdf.format( timestamp ) );
 	jsonObj.add( "main", gson.toJsonTree( mlist ) );
 	jsonObj.add( "user", gson.toJsonTree( ulist ) );
+	jsonObj.add( "evtsets", gson.toJsonTree( evtsets ) );
 			
 	return jsonObj.toString();
  }

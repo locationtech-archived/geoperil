@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,7 +29,7 @@ import com.mongodb.util.JSON;
 
 public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 
-	private PriorityBlockingQueue<WorkerThread> workerQueue;
+	private IScheduler scheduler;
 	private File workdir;
 	
 	private boolean remote;
@@ -42,16 +41,17 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	private String hardware;
 	
 	private Integer priority;
+	private int slot = IScheduler.SLOT_NORMAL;
 	private Object lock;
 	private TaskParameter task;
 	
 	private HashMap<String, DBObject> tfps;
 	private HashMap<String, DBObject> tsps;
 	
-	public WorkerThread( PriorityBlockingQueue<WorkerThread> queue,
+	public WorkerThread( IScheduler scheduler,
 						 String workdir ) throws IOException {
 		
-		this.workerQueue = queue;
+		this.scheduler = scheduler;
 		this.lock = new Object();
 		this.priority = new Integer( 0 );
 		
@@ -94,6 +94,15 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	public void setPriority( int priority ) {
 		this.priority = priority;
 	}
+	
+	public void setSlot( int slot ) {
+		this.slot = slot;
+	}
+	
+	public int getSlot() {
+		return this.slot;
+	}
+	
 		
 	public void start() {
 		thread = new Thread( this );
@@ -134,6 +143,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 			try {
 				params = getWork();
+				System.out.println("Thread " + this.thread.getId() + " computes event " + params.id );
 				handleRequest( params );
 								
 			} catch (InterruptedException e) {
@@ -144,23 +154,17 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	}
 	
 	private int handleRequest( TaskParameter task ) {
-				
-		task.status = TaskParameter.STATUS_RUN;
 		
 		checkSshConnection();
-		
 		writeFault( task.eqparams );
-		
 		writeTFPs( task );
 		
 		if( startEasyWave( task ) != 0 ) {
-			task.status = TaskParameter.STATUS_ERROR;
+			task.markAsError();
 			return 0;
 		}
-								
-		saveRawData( task );
-		task.status = TaskParameter.STATUS_DONE;
 		
+		task.markAsDone();
 		return 0;
 	}
 	
@@ -373,9 +377,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		int simTime = task.duration + 10;
 		
 		String cmdParams = " -grid ../grid_" + task.gridres + ".grd -poi ftps.inp -poi_dt_out 30 -source fault.inp -propagation " + task.dt_out + " -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
-			
-		System.out.println( "Thread " + this.thread.getId() + " processes the request." );
-				
+							
 		try {
 			
 			BufferedReader reader = null;
@@ -398,12 +400,15 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			
 			DBCollection coll = dbclient.getDB( "easywave" ).getCollection("eqs");
 			DBCollection colEvents = dbclient.getDB( "easywave" ).getCollection("events");
+			DBCollection colEvtSets = dbclient.getDB( "easywave" ).getCollection("evtsets");
 						
 			int processIndex = -1;
+			int totalMinPrev = 0;
+			task.progress = 0;
 			
 			String line = reader.readLine();			
 			while (line != null && ! line.equals("\004")) {
-								
+													
 				/* check if output line contains progress report */
 				Matcher matcher = Pattern.compile( "(\\d\\d):(\\d\\d):(\\d\\d).*elapsed: (\\d*) msec" ).matcher( line );
 
@@ -419,6 +424,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					
 					/* calculate current progress in percentage */
 					task.progress = ( (float)totalMin / (float)simTime ) * 100.0f;
+					int totalMinRel = totalMin - totalMinPrev;
+					totalMinPrev = totalMin;
 					
 					/* create a kml file if at least 10 minutes of simulation are done */
 					if( totalMin > 10 )
@@ -430,6 +437,10 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					
 						addPoiResults( task.id );
 						addStationResults( task );
+						saveRawData(task);
+						if( task.evtset != null ) {
+							task.evtset.addTask(task);
+						}
 					}
 					
 					/* check if a new process entry was inserted previously - return otherwise */
@@ -454,7 +465,25 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					
 					/* update the DB entry with the given ID*/
 					coll.update( obj, update );
-												
+					
+					/* Update Event-Set progress. */
+					if( task.evtset != null && task.raw == 0 ) {
+						BasicDBObject set = new BasicDBObject("_id", task.evtset.setid );
+						float progress;
+						synchronized(task.evtset) {
+							progress = task.evtset.incOverallProgress(totalMinRel);
+							if( progress != 100.0f )
+								colEvtSets.update(set, new BasicDBObject("$set", new BasicDBObject("progress", progress)));
+						}
+						if( progress == 100.0f ) {
+							/* This worker thread is the last one and must process the output for the entire event set. */
+							System.out.println("Thread " + thread.getId() + " is the last one.");
+							evtset_post(task.evtset);
+							System.out.println("Update progress");
+							colEvtSets.update(set, new BasicDBObject("$set", new BasicDBObject("progress", progress)));
+						}
+					}
+										
 					if( task.raw == 0 ) {
 						/* create DB object that holds all event data */
 						BasicDBObject event = new BasicDBObject();
@@ -650,11 +679,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 				
 				reader = new BufferedReader(new InputStreamReader( p.getInputStream() ) );
 			}
-	  		  
-			String line = reader.readLine();			
-			while (line != null && ! line.equals("\004")) {
-				line = reader.readLine();
-			}
+	  		
+			sshCon[1].complete();
 			
 			if( remote ) {
 				sshCon[1].out.println( "cat " + kml_file );
@@ -680,7 +706,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			
 			reader = new BufferedReader(new InputStreamReader( p.getInputStream() ) );
 			  
-			line = reader.readLine();
+			String line = reader.readLine();
 			while (line != null) {
 				line = reader.readLine();
 			}
@@ -894,15 +920,50 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 		DBObject dirs = dbclient.getDB("easywave").getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
 		String resdir = (String) dirs.get("results");
-		String mkdir = String.format("mkdir -p %s/events/%s", resdir, task.id);
+		String mkdir = String.format("mkdir -p -m 0777 %s/events/%s", resdir, task.id);
 		String rm = String.format("rm %s/events/%s/*", resdir, task.id);
 		String mv = String.format("mv * %s/events/%s/", resdir, task.id);
+		String chmod = String.format("chmod 0666 %s/events/%s/*", resdir, task.id);
 		
 		sshCon[1].out.println(mkdir);
 		sshCon[1].out.println(rm);
 		sshCon[1].out.println(mv);
+		sshCon[1].out.println(chmod);
 		sshCon[1].out.println("echo '\004'");
 		sshCon[1].out.flush();
+		sshCon[1].complete();
+	}
+	
+	private int evtset_post(EventSet evtset) {
+		DBObject dirs = dbclient.getDB("easywave").getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
+		String resdir = (String) dirs.get("results");
+		List<TaskParameter> tasks = evtset.getTasks();
+		System.out.println(tasks);
+		/* At least one task should be part of the event set. */
+		if( tasks.size() < 1 )
+			throw new IllegalArgumentException("Something went wrong!");
+		for(int i = 0; i < tasks.size(); i++) {
+			String task_file = String.format(" %s/events/%s/eWave.2D.sshmax", resdir, tasks.get(i).id);
+			if( i == 0) {
+				/* Copy data of first task directly to output file. */
+				sshCon[1].out.println("cp " + task_file + " eWave.2D.sshmax_0" );
+			} else {
+				String gdalbuildvrt = String.format("gdalbuildvrt -separate combined.vrt eWave.2D.sshmax_%d %s", i-1, task_file);
+				String gdal_calc = String.format("gdal_calc.py -A combined.vrt --A_band=1 -B combined.vrt --B_band=2"
+								 			   + " --calc=\"maximum(A,B)\" --overwrite --format=GSBG --outfile eWave.2D.sshmax_%d", i);
+				sshCon[1].out.println(gdalbuildvrt);
+				sshCon[1].out.println(gdal_calc);
+			}
+		}
+		sshCon[1].out.println(String.format("cp eWave.2D.sshmax_%d eWave.2D.sshmax", tasks.size()-1));
+		sshCon[1].out.println("rm eWave.2D.sshmax_* combined.vrt");
+		sshCon[1].out.println("echo '\004'");
+		sshCon[1].complete();
+		System.out.println("create jets...");
+		for( Double ewh: GlobalParameter.jets.keySet() )
+			getWaveHeights(evtset.setid, ewh.toString());
+		
+		return 0;
 	}
 	
 	private int pyPostProcess( TaskParameter task ) {
@@ -920,7 +981,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 		synchronized( lock ) {
 						
-			workerQueue.offer( this );
+			scheduler.submit( this );
 			task = null;
 			
 			while( task == null )

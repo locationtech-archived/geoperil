@@ -109,6 +109,8 @@
 							  	<li id="tabTimeline" class="tab-private"><a href="#timeline" id="hrefTimeline" data-toggle="tab">Timeline</a></li>
 							  	<li id="tabMessages" class="tab-private"><a href="#messages" data-toggle="tab">Messages</a></li>
 							  	<li id="tabStatic"><a href="#static" data-toggle="tab">Shared</a></li>
+							  	<li id="tabEvtSets"><a href="#evtsets" data-toggle="tab">Event Sets</a></li>
+							  	<li id="tabEvtSetComp"><a href="#evtsetcomp" data-toggle="tab">Event Set Compose</a></li>
 							</ul>
 						</div>
 	  				</div>
@@ -259,6 +261,15 @@
 	  				</div>
 		  			<div class="col-md-12 tab-pane" id="messages"></div>
 		  			<div class="col-md-12 tab-pane" id="static"></div>
+		  			<div class="col-md-12 tab-pane" id="evtsets"></div>
+		  			<div class="col-md-12 tab-pane" id="evtsetcomp">
+		  				<div class="evtset-form"></div>
+		  				<div class="status"></div>
+		  				<div class="form-group input-group-sm">
+				  			<button type="button" class="btn-clear btn btn-default btn-lg">Clear</button>
+				  			<button type="button" class="btn-start btn btn-primary btn-lg">Start</button>
+				  		</div>
+		  			</div>
 	  			</div>
 	  		</div>
 	  		
@@ -1062,6 +1073,63 @@
 		</div>
 	</div>
 	
+	<!-- sidebar event-set template -->
+	<div class="row evtset-entry entry">
+		<div class="col-md-12" >
+			<div class="row row-subject">
+				<div class="col-md-2"></div>
+				<div class="col-md-10">
+					<div class="row">
+						<a href="#" class="big subject"></a>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-2">
+					<div class="row row-marker">
+						<img class="marker" alt="" src="javascript:void(0);">
+					</div>
+					<div class="row">
+						<h4 class="mag"></h4>
+					</div>
+				</div>
+				<div class="col-md-10">
+					<div class="row">
+						<div class="col-md-10">
+							<div class="row">
+								<span class="small timestamp"></span>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<span class="small latlon"></span>
+					</div>
+					<div class="row">
+						<span class="small depth"></span>
+					</div>
+					<div class="row">
+						<span class="small dip"></span>
+					</div>
+					<div class="row">
+						<span class="small strike"></span>
+					</div>
+					<div class="row">
+						<span class="small rake"></span>
+					</div>
+					<div class="row process">
+						<div class="progress">
+							<div class="progress-bar"></div>
+						</div>
+						<span class="medium status"></span>
+					</div>
+					<div class="row">
+						<span class="small dur"></span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
 	<div class="popovers">
 		<span class="learn">
 			Currently, we use a rough and simple threshold mechanism to identify the tsunami potential
@@ -1737,6 +1805,17 @@
 			<span class="html-icon input-group-addon prop-right">
 				<span class="glyphicon"></span>
 			</span>
+ 		</div>
+ 		 		
+ 		<!-- HtmlRangeGroup -->
+		<div class="html-rangegroup input-group input-group-sm prop-label">
+			<span class="html-label input-group-addon"></span>
+			<input class="html-text1 form-control" type="text">
+			<span class="html-label-colon input-group-addon">:</span>
+			<input class="html-text2 form-control" type="text">
+			<span class="html-label-colon input-group-addon">:</span>
+			<input class="html-text3 form-control" type="text">
+			<span class="html-label-right input-group-addon prop-right"></span>
  		</div>
  		
  		<!-- HtmlBlock -->

@@ -31,6 +31,7 @@ function Earthquake(meta) {
 	};
 	
 	this.select = function() {
+		console.log("select()");
 		if( this.selected ) {
 			this.loadStations();
 			this.load();
@@ -39,9 +40,10 @@ function Earthquake(meta) {
 		
 	/* TODO: check if the type handling is suitable */
 	this.load = function(callback,type) {
+		console.log("load()");
 		/* if the following yields true, we already fetched the results from the server */
 		if( this.isLoaded(type) )
-			return true;
+			return true;		
 		
 		if(callback)
 			this.setCallback(type?'loaded_'+type:'loaded',callback);
@@ -70,7 +72,9 @@ function Earthquake(meta) {
 	this.loadTsunamiJets = function() {
 		if( this.jets_loaded )
 			return;
+		console.log("loadTsunamiJets()");
 		ajax_mt('webguisrv/getjets', {evid:this._id}, (function(result) {
+			console.log(result);
 			/* traverse different EWH levels */
 			if( !result.jets ) return;
 			for (var i = 0; i < result.jets.length; i++) {
@@ -251,6 +255,45 @@ function Earthquake(meta) {
 		this.notifyOn('update');
 		if( this.isLoaded() )
 			this.notifyOn('loaded');
+	};
+	
+	this.init(meta);
+}
+
+EventSet.prototype = new Earthquake();
+function EventSet(meta) {
+	Earthquake.call(this,meta);
+	this.init = function(meta) {
+		/* add all attributes to this object */
+		$.extend(this, meta);
+		this.check_progress();
+	};
+	
+	this.check_progress = function() {
+		ajax_mt('srv/evtset_status', {setid:this._id}, (function(result) {
+			console.log("progress: ", result.progress);
+			this.progress = result.progress;
+			this.notifyOn('update');
+			/* Check progress again if computation is still running. */
+			if( result.comp == 'pending' ) {
+				setTimeout(this.check_progress.bind(this), 3000);
+			}
+		}).bind(this));
+	};
+	
+	this.loadStations = function() {console.log("Skip loadStations()");};
+	this.showStations = function() {console.log("Skip showStations()");};
+	
+	this.load = function(callback,type) {
+		console.log("load(): ", callback);
+		if( this.isLoaded(type) )
+			return true;
+		this.loadTsunamiJets();
+		return false;
+	};
+	
+	this.isLoaded = function(type) {
+		return this.jets_loaded;
 	};
 	
 	this.init(meta);
@@ -2370,6 +2413,7 @@ function GlobalControl() {
 	timeline = new Container(sort_timeline);
 	messages = new Container(sort_date.bind(this, -1));
 	shared = new Container(sort_date.bind(this, -1));
+	evtsets = new Container(sort_timeline);
 	
 	this.layers = new Container(sort_string.bind(this,'name'));
 		
@@ -2387,6 +2431,10 @@ function GlobalControl() {
 			'clk_delete' : this.remove.bind(this),
 			'clk_show' : this.show.bind(this),
 		};
+		
+		/* register jquery event handlers */
+		$('.main-tabs > li').click(this.tabChanged.bind(this));
+		$('#btnDeselect').click(this.deselect.bind(this));
 		
 		var w;
 		this.widgets = {};
@@ -2414,9 +2462,14 @@ function GlobalControl() {
 		w.create();
 		this.widgets['tabStatic'] = w;
 		
-		/* register jquery event handlers */
-		$('.main-tabs > li').click(this.tabChanged.bind(this));
-		$('#btnDeselect').click(this.deselect.bind(this));
+		w = new ListWidget($('#evtsets'), evtsets, map, callbacks);
+		w.create();
+		this.widgets['tabEvtSets'] = w;
+		
+		w = new EvtSetComposeForm($('#evtsetcomp'));
+		w.setCallback('started', (function() {
+			$("#tabEvtSets > a").click();
+		}).bind(this));
 		
 		/* add layers */
 		this.layers.insert( new CFZLayer('CFZ-Layer', map) );
@@ -2572,6 +2625,94 @@ function Marker(lat, lon, label, color, map) {
 	this.init(lat, lon, label, color, map);
 }
 
+EvtSetComposeForm.prototype = new ICallbacks();
+
+function EvtSetComposeForm(div) {
+	ICallbacks.call(this);
+	
+	this.init = function(div) {
+		this.div = div;
+		this.form = div.find('.evtset-form');
+		this.status = div.find('.status');
+		this.btnClear = div.find('.btn-clear');
+		this.btnStart = div.find('.btn-start');
+		this.txtName = new HtmlTextGroup('Name:');
+		this.txtLat = new HtmlTextGroup('Latitude:').setRLabel('&deg;');
+		this.txtLat.text.validate_numeric(0, 90);
+		this.txtLon = new HtmlTextGroup('Longitude:').setRLabel('&deg;');
+		this.txtLon.text.validate_numeric(-180, 180);
+		this.txtMag = new HtmlTextGroup('Magnitude:').setRLabel('Mw');
+		this.txtMag.text.validate_numeric(0, 11);
+		this.rngDepth = new HtmlRangeGroup('Depth:', 'km');
+		this.rngDepth.validate_numeric(0, 1000);
+		this.rngDip = new HtmlRangeGroup('Dip:', '&deg;');
+		this.rngDip.validate_numeric(0, 90);
+		this.rngStrike = new HtmlRangeGroup('Strike:', '&deg;');
+		this.rngStrike.validate_numeric(0, 360);
+		this.rngRake = new HtmlRangeGroup('Rake:', '&deg;');
+		this.rngRake.validate_numeric(-180, 180);
+		this.txtDur = new HtmlTextGroup('Duration:').setRLabel('min');
+		this.txtDur.text.validate_numeric(0, 600);
+		this.form.append(this.txtName.div);
+		this.form.append(this.txtLat.div);
+		this.form.append(this.txtLon.div);
+		this.form.append(this.txtMag.div);
+		this.form.append(this.rngDepth.div);
+		this.form.append(this.rngDip.div);
+		this.form.append(this.rngStrike.div);
+		this.form.append(this.rngRake.div);
+		this.form.append(this.txtDur.div);
+		/*  */
+		this.form.find('input').on('change', this.check.bind(this));
+		this.btnClear.click(this.clear.bind(this));
+		this.btnStart.click(this.start.bind(this));
+	};
+	
+	this.check = function() {
+		
+	};
+	
+	this.clear = function() {
+		this.status.html('');
+		this.form.find('input').val('');
+	};
+	
+	this.start = function() {
+		this.status.html('');
+		var data = {
+			name: this.txtName.value(),
+			lat: this.txtLat.value(),
+			lon: this.txtLon.value(),
+			mag: this.txtMag.value(),
+			depth_min: this.rngDepth.text1.value(),
+			depth_step: this.rngDepth.text2.value(),
+			depth_max: this.rngDepth.text3.value(),
+			dip_min: this.rngDip.text1.value(),
+			dip_step: this.rngDip.text2.value(),
+			dip_max: this.rngDip.text3.value(),
+			strike_min: this.rngStrike.text1.value(),
+			strike_step: this.rngStrike.text2.value(),
+			strike_max: this.rngStrike.text3.value(),
+			rake_min: this.rngRake.text1.value(),
+			rake_step: this.rngRake.text2.value(),
+			rake_max: this.rngRake.text3.value(),
+			dur: this.txtDur.value()
+		};
+		ajax_mt('srv/evtset_comp', data, (function(result) {
+			if( result.status == 'success' ) {
+				this.status.css('color', 'green');
+				this.status.html('Computation started successfully.');
+				this.notifyOn('started');
+			} else if( result.status == 'failure' ) {
+				this.status.css('color', 'red');
+				this.status.html( result.msg );
+			}
+		}).bind(this));
+	};
+	
+	this.init.apply(this, arguments);
+}
+
 /* Widget Interface */
 Widget.prototype = new ICallbacks();
 
@@ -2642,7 +2783,7 @@ function ListWidget(div, data, map, callbacks) {
 
 		if (elem instanceof Message) {
 			eqwidget = new MsgWidget(elem);
-		} else {
+		} else if(elem instanceof Earthquake) {
 
 			var prop = elem.prop;
 			var color = this.getMarkerColor(prop.magnitude);
@@ -2651,7 +2792,13 @@ function ListWidget(div, data, map, callbacks) {
 			if(this.visible)
 				marker.show();
 
-			eqwidget = new EQWidget(elem, marker);
+			if(elem instanceof EventSet) {
+				eqwidget = new EvtSetWidget(elem, marker);
+			} else {
+				eqwidget = new EQWidget(elem, marker);
+			}
+		} else {
+			return console.log("Unknown data tpye in ListWidget.");
 		}
 		
 		elem.setCallback('delete', this.create.bind(this));
@@ -2976,8 +3123,14 @@ function EQWidget(data, marker) {
 		} else {
 			this.div.find('.beach').hide();
 		}
-				
-		if (!this.data.process) {
+			
+		if( this.data.abort ) {
+			
+			status = 'Simulation aborted.';
+			this.div.find('.status').html(status);
+			this.div.find('.status').show();
+			
+		} else if (!this.data.process) {
 
 			var status;
 
@@ -3275,6 +3428,75 @@ function MsgWidget(data) {
 		this.init(data);
 }
 
+EvtSetWidget.prototype = new EQWidget();
+
+function EvtSetWidget(data, marker) {
+
+	//EQWidget.call(this, data, marker);
+	
+	this.init = function(data, marker) {
+		this.div = $('.evtset-entry').clone();
+		this.div.removeClass('evtset-entry');
+		this.div.show();
+		/* store a reference to the EventSet object */
+		this.data = data;
+		this.marker = marker;
+		/* register callbacks */
+		this.data.setCallback('update', this.update.bind(this));
+		this.data.setCallback('select', this.setSelect.bind(this));
+		this.div.find('.subject').click(this.notifyOn.bind(this, 'clk_entry', this.data));
+		this.update();
+	};
+	
+	this.update = function() {
+		var date = new Date(this.data.timestamp);
+		var year = date.getUTCFullYear();
+		var month = date.getUTCMonth() + 1;
+		var day = date.getUTCDate();
+		var hour = date.getUTCHours();
+		var minutes = date.getUTCMinutes();
+		var datestr = year + '/' + zeroPad(month, 2) + '/' + zeroPad(day, 2);
+		var timestr = zeroPad(hour, 2) + ':' + zeroPad(minutes, 2);
+		var prop = this.data.prop;
+		
+		this.div.find('.timestamp').html(datestr + ' &#183; ' + timestr + ' UTC' + ' &#183; ' + this.data._id);
+		this.div.find('.subject').html(this.data.name);
+		this.div.find('.mag').text(prop.magnitude);
+		this.div.find('.latlon').html('Lat ' + prop.latitude + '&deg; &#183; Lon ' + prop.longitude + '&deg;');
+		this.div.find('.depth').html('Depth min: ' + prop.depth_min + ' km &#183; step ' + prop.depth_step + ' km &#183; max ' + prop.depth_max + ' km');
+		this.div.find('.dip').html('Dip min: ' + prop.dip_min + '&deg; &#183; step ' + prop.dip_step + '&deg; &#183; max ' + prop.dip_max + '&deg;');
+		this.div.find('.strike').html('Strike min: ' + prop.strike_min + '&deg; &#183; step ' + prop.strike_step + '&deg; &#183; max ' + prop.strike_max + '&deg;');
+		this.div.find('.rake').html('Rake min: ' + prop.rake_min + '&deg; &#183; step ' + prop.rake_step + '&deg; &#183; max ' + prop.rake_max + '&deg;');
+		this.div.find('.dur').html('SimDuration ' + this.data.duration + ' min');
+		this.div.find('.marker').attr('src', this.marker.link);
+		
+		if( this.data.abort ) {
+			this.div.find('.progress').hide();
+			this.div.find('.status').html('Computation aborted.');
+			this.div.find('.status').show();
+		} else if( ! this.data.progress ) {
+			this.div.find('.progress').hide();
+			this.div.find('.status').html("Computation initiated");
+			this.div.find('.status').show();
+		} else if( this.data.progress == 100 ) {
+			this.div.find('.progress').hide();
+			this.div.find('.status').html("Computation finished");
+			this.div.find('.status').show();
+		} else {
+			this.div.find('.progress-bar').css('width', this.data.progress + '%');
+			this.div.find('.status').hide();
+			this.div.find('.progress').show();
+		}
+		
+		this.div.mouseover(this.highlight.bind(this, true));
+		this.div.mouseout(this.highlight.bind(this, false));
+		
+		this.setSelect();
+	};
+		
+	this.init(data, marker);
+}
+
 Message.prototype = new ICallbacks();
 
 function Message(meta) {
@@ -3331,7 +3553,7 @@ function ICallbacks() {
 	};
 	
 	this.delCallback = function(action,cid) {
-		if( cid )
+		if( cid !== undefined )
 			delete this.callbacks[action][cid];
 	};
 
@@ -3406,6 +3628,7 @@ var saved;
 var timeline;
 var messages;
 var shared;
+var evtsets;
 
 var entries = new EntryMap();
 
@@ -3630,7 +3853,8 @@ function getEvents(callback) {
 			var mlist = data['main'];
 			var ulist = data['user'];
 			var msglist = data['msg'];
-			
+			var sets = data['evtsets'];
+						
 			for (var i = mlist.length - 1; i >= 0; i--) {
 
 				var entry = entries.getOrInsert(new Earthquake(mlist[i]));
@@ -3650,7 +3874,12 @@ function getEvents(callback) {
 				if (entry.parentEvt)
 					entry.parentEvt = entries.getOrInsert(new Earthquake(entry.parentEvt));
 			}
-
+			
+			for(var i = sets.length - 1; i >= 0; i--) {
+				var entry = entries.getOrInsert(new EventSet(sets[i]));
+				evtsets.insert(entry);
+			}
+			
 			eqlist.notifyOn('change');
 
 			if (ulist.length > 0) {
@@ -3659,6 +3888,9 @@ function getEvents(callback) {
 
 			if (msglist.length > 0)
 				messages.notifyOn('change');
+			
+			if(sets.length > 0)
+				evtsets.notifyOn('change');
 
 			getUpdates(timestamp);
 
@@ -3669,7 +3901,7 @@ function getEvents(callback) {
 }
 
 function getUpdates(timestamp) {
-
+	
 	$.ajax({
 		url : "srv/update",
 		type : 'POST',
@@ -3683,6 +3915,7 @@ function getUpdates(timestamp) {
 			timestamp = result['ts'];
 			var mlist = result['main'];
 			var ulist = result['user'];
+			var sets = result['evtsets'];
 
 			serverTime = new Date(result['serverTime']);
 
@@ -3691,16 +3924,17 @@ function getUpdates(timestamp) {
 			var sadd = false;
 			var msgadd = false;
 			var show = false;
-
+			
 			for (var i = mlist.length - 1; i >= 0; i--) {
 
 				var obj = mlist[i];
 				var id = obj['_id'];
 
 				if (obj['event'] == 'new') {
-
+					
 					var entry = entries.getOrInsert(new Earthquake(obj));
-					eqlist.insert(entry);
+					if( ! entry.evtset )
+						eqlist.insert(entry);
 					madd = true;
 
 					if (searched(entry)) {
@@ -3713,12 +3947,12 @@ function getUpdates(timestamp) {
 					if (id == active)
 						show = true;
 				        
-                                        /* Update progress only if the event was already loaded. */
-                                        if( entries.get(id) ) {
+                    /* Update progress only if the event was already loaded. */
+                    if( entries.get(id) ) {
 					    entries.get(id).process = obj.process;
 					    entries.get(id).notifyOn('update');
 					    entries.get(id).notifyOn('progress');
-                                        }
+                    }
 
 				} else if (obj['event'] == 'update') {
 
@@ -3739,6 +3973,12 @@ function getUpdates(timestamp) {
 						timeline.insert(entry);
 						sadd = true;
 					}
+				} else if (obj['event'] == 'abort') {
+					if( entries.get(id) ) {
+						entries.get(id).abort = true;
+						entries.get(id).notifyOn('update');
+						entries.get(id).notifyOn('progress');
+					}
 				}
 			}
 
@@ -3750,7 +3990,8 @@ function getUpdates(timestamp) {
 				if (obj['event'] == 'new') {
 
 					var entry = entries.getOrInsert(new Earthquake(obj));
-					saved.insert(entry);
+					if( ! entry.evtset )
+						saved.insert(entry);
 					uadd = true;
 
 					if (searched(entry)) {
@@ -3761,24 +4002,25 @@ function getUpdates(timestamp) {
 					/* a new custom earthquake event can only arrive after
 					 * a manual recomputation - thus select it here */
 					/* TODO: remove dependency to global instance */
-					global.vis(entry);
+					if( ! entry.evtset )
+						global.vis(entry);
+					
+                } else if (obj['event'] == 'update') {
 
-                                } else if (obj['event'] == 'update') {
-
-                                        var entry = entries.add(new Earthquake(obj));
-                                        var parent = eqlist.getByKey('id',entry.id).item;
-                                        saved.replace('id',entry);
-                                        
-                                        uadd = true;
-                                        
-                                        if (parent && parent.selected) {
-                                            global.vis(entry);
-                                        }
-                                        
-                                        if (searched(entry)) {
-                                            timeline.insert(entry);
-                                            sadd = true;
-                                        }
+                        var entry = entries.add(new Earthquake(obj));
+                        var parent = eqlist.getByKey('id',entry.id).item;
+                        saved.replace('id',entry);
+                        
+                        uadd = true;
+                        
+                        if (parent && parent.selected) {
+                            global.vis(entry);
+                        }
+                        
+                        if (searched(entry)) {
+                            timeline.insert(entry);
+                            sadd = true;
+                        }
 					
 				} else if (obj['event'] == 'progress') {
 
@@ -3789,12 +4031,12 @@ function getUpdates(timestamp) {
 					if (id == active)
 						show = true;
                                         
-                                        /* Update progress only if the event was already loaded. */
-                                        if( entries.get(id) ) {
+                    /* Update progress only if the event was already loaded. */
+                    if( entries.get(id) ) {
 					    entries.get(id).process = obj.process;
 					    entries.get(id).notifyOn('update');
 					    entries.get(id).notifyOn('progress');
-                                        }
+                    }
 
 				} else if (obj['event'] == 'msg_sent'
 						|| obj['event'] == 'msg_recv') {
@@ -3805,8 +4047,27 @@ function getUpdates(timestamp) {
 
 					if (entry.parentEvt)
 						entry.parentEvt = entries.getOrInsert(new Earthquake(entry.parentEvt));
+					
+				} else if (obj['event'] == 'abort') {
+					if( entries.get(id) ) {
+						entries.get(id).abort = true;
+						entries.get(id).notifyOn('update');
+						entries.get(id).notifyOn('progress');
+					}
 				}
 			}
+			
+			var change = false;
+			for (var i = sets.length - 1; i >= 0; i--) {
+				var obj = sets[i];
+				if( obj['event'] == 'new_evtset') {
+					var entry = entries.getOrInsert(new EventSet(obj));
+					evtsets.insert(entry);
+					change = true;
+				}
+			}
+			if( change )
+				evtsets.notifyOn('change');
 
 			if (madd) {
 				eqlist.notifyOn('change');
@@ -4247,6 +4508,14 @@ function logIn(callback) {
 		$('#btnAdmin').show();
 	} else {
 		$('#btnAdmin').hide();
+	}
+	
+	if (checkPerm("evtset")) {
+		$('#tabEvtSets').show();
+		$('#tabEvtSetComp').show();
+	} else {
+		$('#tabEvtSets').hide();
+		$('#tabEvtSetComp').hide();
 	}
 
 	onResize();
@@ -6863,6 +7132,105 @@ function HtmlPasswordGroup(label, icon, readonly) {
 	this.div.find('> .html-text').prop('type', 'password');
 }
 
+HtmlRangeGroup.prototype = new ICallbacks();
+
+function HtmlRangeGroup(label, icon) {
+	ICallbacks.call(this);
+	
+	this.init = function(llabel, rlabel) {
+		this.div = $('.templates > .html-rangegroup').clone();
+		if( llabel != null ) {
+			this.div.find('> .html-label').html(llabel);
+		} else {
+			this.div.find('> .html-label').hide();
+		}
+		if( rlabel ) {
+			this.div.find('> .html-label-right').html(rlabel);
+		} else {
+			this.div.find('> .html-label-right').hide();
+		}
+		this.text1 = new HtmlTextField(this.div.find('> .html-text1'), 'min');
+		this.text2 = new HtmlTextField(this.div.find('> .html-text2'), 'step');
+		this.text3 = new HtmlTextField(this.div.find('> .html-text3'), 'max');
+	};
+	
+	this.validate_numeric = function(min, max) {
+		this.text1.validate_numeric(min, max);
+		this.text2.validate_numeric(min, max);
+		this.text3.validate_numeric(min, max);
+	};
+	
+	this.validate = function(regex) {
+		this.text1.validate(regex);
+		this.text2.validate(regex);
+		this.text3.validate(regex);
+	};
+	
+	this.init.apply(this, arguments);
+}
+
+HtmlTextField.prototype = new ICallbacks();
+
+function HtmlTextField(field, defaultText) {
+	ICallbacks.call(this);
+	
+	this.init = function(field, defaultText) {
+		this.regex = null;
+		this.min = null;
+		this.max = null;
+		this.div = field;
+		if( defaultText )
+			this.div.attr('placeholder', defaultText);
+		this.div.on('change', this.onChange.bind(this));
+	};
+	
+	this.value = function(newValue) {
+		if(newValue !== undefined)
+			this.div.val(newValue);
+		return this.div.val();
+	};
+
+	this.validate_numeric = function(min, max) {
+		this.min = min;
+		this.max = max;
+	};
+
+	this.validate = function(regex) {
+		this.regex = new RegExp(regex);
+	};
+	
+	this.valid_numeric = function() {
+		if( this.min == null || this.max == null )
+			return true;
+		var val = this.value();
+		/* Check if numeric. */
+		if( ! new RegExp('^-?[0-9]+(\\.[0-9]*)?$').test(val) )
+			return false;
+		return (val >= this.min && val <= this.max);
+	};
+	
+	this.valid_regex = function() {
+		if( ! this.regex )
+			return true;
+		return this.regex.test(this.value());
+	};
+	
+	this.valid = function() {
+		return this.valid_numeric() && this.valid_regex();
+	};
+
+	this.onChange = function() {
+		if( ! this.valid() ) {
+			this.div.css('color', 'red');
+		} else {
+			this.div.css('color', '');
+		}
+		this.notifyOn('change', this.value());
+	};
+	
+	this.init.apply(this, arguments);
+}
+
 HtmlTextGroup.prototype = new ICallbacks();
 
 function HtmlTextGroup(label, icon, readonly) {
@@ -6873,6 +7241,7 @@ function HtmlTextGroup(label, icon, readonly) {
 
 	this.init = function(label, icon, readonly) {
 		this.div = $('.templates > .html-textgroup').clone();
+		this.text = new HtmlTextField(this.div.find('> .html-text'));
 		if( label != null ) {
 			this.div.find('> .html-label').html(label);
 		} else {
@@ -6884,33 +7253,25 @@ function HtmlTextGroup(label, icon, readonly) {
 			this.div.find('> .html-icon').hide();
 		}
 		if( readonly )
-			this.div.find('> .html-text').attr('readonly', true);
-		this.div.find('> .html-text').on('change', this.onChange.bind(this));
+			this.text.div.attr('readonly', true);
+	};
+	
+	this.setRLabel = function(text) {
+		this.div.find('> .html-icon > span').html(text);
+		this.div.find('> .html-icon').css('display', '');
+		return this;
 	};
 
 	this.value = function(newValue) {
-		if (arguments.length > 0)
-			this.div.find('> .html-text').val(newValue);
-		return this.div.find('> .html-text').val();
+		return this.text.value(newValue);
 	};
 
 	this.validate = function(regex) {
-		this.regex = new RegExp(regex);
+		return this.text.validate(regex);
 	};
 	
 	this.valid = function() {
-		if( ! this.regex )
-			return true;
-		return this.regex.test(this.value());
-	};
-
-	this.onChange = function() {
-		if( ! this.valid() ) {
-			this.div.find('> .html-text').css('color', 'red');
-		} else {
-			this.div.find('> .html-text').css('color', '');
-		}
-		this.notifyOn('change', this.value());
+		return this.text.valid();
 	};
 	
 	this.init.apply(this, arguments);
@@ -7147,6 +7508,7 @@ function Layer(name, map) {
 			return;
 		/* if data was set previously, we need to deregister the callback and clear the layer */
 		if( this.data ) {
+			console.log("delCallback");
 			this.data.delCallback('update',this.cid);
 			this.clear();
 		}

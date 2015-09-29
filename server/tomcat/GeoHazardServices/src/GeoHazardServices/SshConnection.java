@@ -39,8 +39,18 @@ public class SshConnection {
 		out.println( "echo '\004'" );
 		out.flush();
 		
-		String line;
-		while( (line = in.readLine()) != null && ! line.equals("\004") );
+		complete();
+	}
+	
+	public int complete() {
+		out.flush();
+		try {
+			String line;
+			while( (line = in.readLine()) != null && ! line.equals("\004") );
+		} catch( IOException e ) {
+			return 1;
+		}
+		return 0;
 	}
 	
 	public void close() {
