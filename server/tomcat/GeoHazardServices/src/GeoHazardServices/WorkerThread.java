@@ -967,8 +967,18 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	}
 	
 	private int pyPostProcess( TaskParameter task ) {
-		
-		Services.sendPost(GlobalParameter.wsgi_url + "webguisrv/post_compute", "evtid=" + task.id.toString());		
+		/* Execute in thread (at least for event sets) to speed up the scheduling. */
+		final String id = task.id;
+		if( task.evtset != null ) {
+			/* run request in a separate thread to avoid blocking */
+			new Thread() {
+			  	public void run() {
+			  		Services.sendPost(GlobalParameter.wsgi_url + "webguisrv/post_compute", "evtid=" + id);
+			  	}
+			}.start();
+		} else {
+			Services.sendPost(GlobalParameter.wsgi_url + "webguisrv/post_compute", "evtid=" + task.id.toString());
+		}
 		return 0;
 	}
 	

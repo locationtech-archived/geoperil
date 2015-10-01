@@ -270,7 +270,7 @@ function EventSet(meta) {
 	};
 	
 	this.check_progress = function() {
-		ajax_mt('srv/evtset_status', {setid:this._id}, (function(result) {
+		ajax('srv/evtset_status', {setid:this._id}, (function(result) {
 			console.log("progress: ", result.progress);
 			this.progress = result.progress;
 			this.notifyOn('update');
@@ -3445,6 +3445,13 @@ function EvtSetWidget(data, marker) {
 		this.data.setCallback('update', this.update.bind(this));
 		this.data.setCallback('select', this.setSelect.bind(this));
 		this.div.find('.subject').click(this.notifyOn.bind(this, 'clk_entry', this.data));
+		this.div.find('.chide').hide();
+		this.div.find('.evt-lnk').click((function() {			
+			this.div.find('.evt-lnk .icon').toggleClass('glyphicon-chevron-right');
+			this.div.find('.evt-lnk .icon').toggleClass('glyphicon-chevron-down');
+			this.div.find('.evt-lnk .text').toggle();
+			this.div.find('.evt-list').toggle();
+		}).bind(this));
 		this.update();
 	};
 	
@@ -3486,6 +3493,17 @@ function EvtSetWidget(data, marker) {
 			this.div.find('.progress-bar').css('width', this.data.progress + '%');
 			this.div.find('.status').hide();
 			this.div.find('.progress').show();
+		}
+				
+		this.div.find('.evt-list').empty();
+		for( var evt in this.data.evtids ) {
+			var lnk = $('<div><a href="#">' + this.data.evtids[evt] +'</a></div>');
+			this.div.find('.evt-list').append(lnk);
+			lnk.find('a').click(function () {
+				$('#inSearch').val( $(this).html() );
+				$('#btnSearch').click();		
+				$('#hrefTimeline').click();
+			});
 		}
 		
 		this.div.mouseover(this.highlight.bind(this, true));
