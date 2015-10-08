@@ -948,7 +948,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 				/* Copy data of first task directly to output file. */
 				sshCon[1].out.println("cp " + task_file + " eWave.2D.sshmax_0" );
 			} else {
-				String gdalbuildvrt = String.format("gdalbuildvrt -separate combined.vrt eWave.2D.sshmax_%d %s", i-1, task_file);
+				//String gdalbuildvrt = String.format("gdalbuildvrt -separate combined.vrt eWave.2D.sshmax_%d %s", i-1, task_file);
+				String gdalbuildvrt = String.format("gdal_merge.py -separate -o combined.vrt eWave.2D.sshmax_%d %s", i-1, task_file);
 				String gdal_calc = String.format("gdal_calc.py -A combined.vrt --A_band=1 -B combined.vrt --B_band=2"
 								 			   + " --calc=\"maximum(A,B)\" --overwrite --format=GSBG --outfile eWave.2D.sshmax_%d", i);
 				sshCon[1].out.println(gdalbuildvrt);
@@ -971,13 +972,13 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		final String id = task.id;
 		if( task.evtset != null ) {
 			/* run request in a separate thread to avoid blocking */
-			new Thread() {
+			/*new Thread() {
 			  	public void run() {
 			  		Services.sendPost(GlobalParameter.wsgi_url + "webguisrv/post_compute", "evtid=" + id);
 			  	}
-			}.start();
+			}.start();*/
 		} else {
-			Services.sendPost(GlobalParameter.wsgi_url + "webguisrv/post_compute", "evtid=" + task.id.toString());
+			Services.sendPost(GlobalParameter.wsgi_url + "webguisrv/post_compute", "evtid=" + id);
 		}
 		return 0;
 	}
@@ -990,23 +991,20 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	private TaskParameter getWork() throws InterruptedException {
 		
 		synchronized( lock ) {
-						
-			scheduler.submit( this );
 			task = null;
+			scheduler.submit( this );
 			
 			while( task == null )
 				lock.wait();
 			
+			return task;
 		}
-		
-		return task;
 	}
 	
 	public void putWork( TaskParameter task ) {
 		
-		this.task = task;
-		
 		synchronized( lock ) {
+			this.task = task;
 			lock.notify();
 		}
 		

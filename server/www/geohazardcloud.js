@@ -128,7 +128,7 @@ function Earthquake(meta) {
 	};
 	
 	this.loadIsos = function() {
-		ajax_mt('webguisrv/getisos', {evid:this._id, arr:this.last_arr}, (function(result) {
+		ajax('webguisrv/getisos', {evid:this._id, arr:this.last_arr}, (function(result) {
 			console.log(result);
 			if( !result.comp ) return;
 			for (var i = 0; i < result.comp.length; i++ ) {
@@ -6378,7 +6378,8 @@ function AdminDialog() {
 			'intmsg': new HtmlCheckBox('Cloud-Message'),
 			'notify': new HtmlCheckBox('Notifications'),
 			'api': new HtmlCheckBox('API'),
-			'report': new HtmlCheckBox('Report')
+			'report': new HtmlCheckBox('Report'),
+			'evtset': new HtmlCheckBox('Event Sets')
 		};
 		
 		this.instInputs = {

@@ -26,11 +26,12 @@ public class FairScheduler implements IScheduler {
 			TaskParameter task = taskQueue.poll();
 			if( ! task.markAsRun() ) {
 				/* Task already scheduled. Skip. */
-				System.out.println("## Task not in WAIT mode. Skip.");
+				System.out.println("## Task " + task.id + " not in WAIT mode. Skip.");
 				schedule();
 				return;
 			}
 			WorkerThread worker = workerQueue.poll();
+			System.out.println("## Worker " + worker + " gets task " + task.id + " assigned");
 			worker.putWork( task );
 		}
 	}
@@ -51,6 +52,7 @@ public class FairScheduler implements IScheduler {
 		tasks.put(task.id, task);
 		for( int slot: task.slots) {
 			slots.get(slot).taskQueue.offer(task);
+			System.out.println("## Added task " + task.id + " to slot " + slot);
 		}
 		/* Wake up scheduler to check if work became available. */
 		notify();
@@ -60,6 +62,7 @@ public class FairScheduler implements IScheduler {
 		/* Add worker to its assigned slot. */
 		/* Called by the workers. */
 		slots.get( worker.getSlot() ).workerQueue.offer(worker);
+		System.out.println("## Added worker " + worker + " for slot " + worker.getSlot());
 		/* Wake up scheduler to check if work became available. */
 		notify();
 	}

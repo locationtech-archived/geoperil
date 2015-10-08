@@ -539,10 +539,14 @@ public class Services {
 	  Random rand = new Random();
 	  String id;
 	  DBObject obj1, obj2;
+	  final String alphabet = "0123456789abcdefghijklmnopqrstuvwxyz";
+	  final int N = alphabet.length();
 	  
 	  do {
-		  Integer nr = rand.nextInt( 90000 ) + 10000;
-		  id = username + nr.toString(); 
+		  id = username + ".";
+		  for( int i = 0; i < 5; i++ ) {
+			  id += alphabet.charAt(rand.nextInt(N));
+		  }
 		  obj1 = db.getCollection("eqs").findOne( new BasicDBObject("_id", id) );
 		  obj2 = db.getCollection("evtsets").findOne( new BasicDBObject("_id", id) );
 
@@ -564,6 +568,30 @@ public class Services {
 	  return values;
   }
   
+  private List<Double> list_values(String str) {
+	  List<Double> list = new ArrayList<Double>();
+	  for( String s: str.split(",") ) {
+		  try {
+			  list.add( Double.valueOf(s) );
+		  } catch(NumberFormatException ex) {
+			  return null;
+		  }
+	  }
+	  return list;
+  }
+  private List<Double> get_values(String list, Double min, Double step, Double max) {
+	  if( list != null )
+		  return list_values(list);
+	  return range_values(min, step, max);
+  }
+  
+  private Double get_mean(List<Double> list) {
+	  double mean = 0;
+	  for( Double d: list )
+		  mean += d;
+	  return list.isEmpty() ? 0.0 : mean / list.size(); 
+  }
+  
   @POST
   @Path("/evtset_comp")
   @Produces(MediaType.APPLICATION_JSON)
@@ -573,22 +601,31 @@ public class Services {
 		  @FormParam("name") @DefaultValue("Custom Event Set") String name,
 		  @FormParam("lon") Double lon,
 		  @FormParam("lat") Double lat,
-		  @FormParam("mag") Double mag,
+		  @FormParam("mag") String mag_list,
+		  @FormParam("mag_min") Double mag_min,
+		  @FormParam("mag_step") Double mag_step,
+		  @FormParam("mag_max") Double mag_max,
+		  @FormParam("depth") String depth_list,
 		  @FormParam("depth_min") Double depth_min,
 		  @FormParam("depth_step") Double depth_step,
 		  @FormParam("depth_max") Double depth_max,
+		  @FormParam("dip") String dip_list,
 		  @FormParam("dip_min") Double dip_min,
 		  @FormParam("dip_step") Double dip_step,
 		  @FormParam("dip_max") Double dip_max,
+		  @FormParam("strike") String strike_list,
 		  @FormParam("strike_min") Double strike_min,
 		  @FormParam("strike_step") Double strike_step,
 		  @FormParam("strike_max") Double strike_max,
+		  @FormParam("rake") String rake_list,
 		  @FormParam("rake_min") Double rake_min,
 		  @FormParam("rake_step") Double rake_step,
 		  @FormParam("rake_max") Double rake_max,
 		  @FormParam("dur") @DefaultValue("180") Integer dur,
 		  @CookieParam("server_cookie") String session) {
 	  	  
+	  final int max_value = Integer.MAX_VALUE;
+	  
 	  /* Authenticate user. */
 	  User user = auth(apikey, session);
 	  if( user == null ) {
@@ -598,49 +635,60 @@ public class Services {
 	  if( ! checkPerm(user, "evtset") )
 		  return jsdenied();
 	  
-	  if( lon == null || lat == null || mag == null )
+	  if( lon == null || lat == null )
 		  return jsfailure("Missing parameters.");
 	  
-	  List<Double> depths = range_values(depth_min, depth_step, depth_max);
-	  List<Double> dips = range_values(dip_min, dip_step, dip_max);
-	  List<Double> strikes = range_values(strike_min, strike_step, strike_max);
-	  List<Double> rakes = range_values(rake_min, rake_step, rake_max);
+	  List<Double> mags = get_values(mag_list, mag_min, mag_step, mag_max);
+	  List<Double> depths = get_values(depth_list, depth_min, depth_step, depth_max);
+	  List<Double> dips = get_values(dip_list, dip_min, dip_step, dip_max);
+	  List<Double> strikes = get_values(strike_list, strike_min, strike_step, strike_max);
+	  List<Double> rakes = get_values(rake_list, rake_min, rake_step, rake_max);
 	  if( depths == null || dips == null || strikes == null || rakes == null )
 		  return jsfailure("Invalid range given.");
 	  
-	  int count = depths.size() * dips.size() * strikes.size() * rakes.size();
-	  if( count > 50 )
-		  return jsfailure("To many combinations. At most 50 are allowed.");
+	  int count = mags.size() * depths.size() * dips.size() * strikes.size() * rakes.size();
+	  if( count > max_value )
+		  return jsfailure("Too many combinations. At most " + max_value + " are allowed.");
 	  	  
 	  String setid = newRandomId(user.name);
 	  EventSet evtset = new EventSet(setid, count, count*(dur+10));
 	  Date date = new Date();
 	  List<String> evtids = new ArrayList<String>();
 	  int i = 0;
-	  for( Double depth: depths ) {
-		  for( Double dip: dips ) {
-			  for( Double strike: strikes ) {
-				  for( Double rake: rakes ) {
-					  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
-					  String retid = _compute(eqp, user, name + " " + i, null, null, dur, evtset );
-					  evtids.add(retid);
-					  i++;
+	  for( Double mag: mags ) {
+		  for( Double depth: depths ) {
+			  for( Double dip: dips ) {
+				  for( Double strike: strikes ) {
+					  for( Double rake: rakes ) {
+						  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
+						  String retid = _compute(eqp, user, name + " " + i, null, null, dur, evtset );
+						  evtids.add(retid);
+						  i++;
+					  }
 				  }
 			  }
 		  }
 	  }
 	  BasicDBObject prop = new BasicDBObject("latitude", lat);
 	  prop.append("longitude", lon);
-	  prop.append("magnitude", mag);
+	  prop.append("magnitude", get_mean(mags));
+	  prop.append("mag_list", mags);
+	  prop.append("mag_min", mag_min);
+	  prop.append("mag_step", mag_step);
+	  prop.append("mag_max", mag_max);
+	  prop.append("depth_list", depths);
 	  prop.append("depth_min", depth_min);
 	  prop.append("depth_step", depth_step);
 	  prop.append("depth_max", depth_max);
+	  prop.append("dip_list", dips);
 	  prop.append("dip_min", dip_min);
 	  prop.append("dip_step", dip_step);
 	  prop.append("dip_max", dip_max);
+	  prop.append("strike_list", strikes);
 	  prop.append("strike_min", strike_min);
 	  prop.append("strike_step", strike_step);
 	  prop.append("strike_max", strike_max);
+	  prop.append("rake_list", rakes);
 	  prop.append("rake_min", rake_min);
 	  prop.append("rake_step", rake_step);
 	  prop.append("rake_max", rake_max);
@@ -662,7 +710,7 @@ public class Services {
 	  event.put("event", "new_evtset");
 	  db.getCollection("events").insert( event );
 	  
-	  return jssuccess( new BasicDBObject("setid", setid) );
+	  return jssuccess( new BasicDBObject("setid", setid).append("evtids", evtids) );
   }
   
   @POST
@@ -1789,6 +1837,7 @@ public class Services {
 	 DBCollection coll = db.getCollection("eqs");
 	 DBCollection msgColl = db.getCollection("messages_sent");
 	 DBCollection recvColl = db.getCollection("messages_received");
+	 DBCollection evtsetColl = db.getCollection("evtsets");
 	 	 
 	 List<DBObject> refinements = coll.find( new BasicDBObject( "id", text ) ).toArray();
 	 
@@ -1863,6 +1912,12 @@ public class Services {
 	 }
 	 
 	 cursor.close();
+	 
+	 DBObject evtset = evtsetColl.findOne( new BasicDBObject("_id", text) );
+	 if( evtset != null ) {
+		 List<DBObject> evts = coll.find( new BasicDBObject("id", new BasicDBObject("$in", evtset.get("evtids"))) ).toArray();
+		 results.addAll(evts);
+	 }
 	 
 	 /* returning only cursor.toArray().toString() makes problems with the date fields */
 	 return gson.toJsonTree( results ).toString();
