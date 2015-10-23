@@ -231,7 +231,7 @@ html, body {
 	margin-bottom: 1em;
 }
     	
-#grpSignOut, #tabSaved, #tabCustom, #tabTimeline, #tabMessages, #tabStatic {
+#grpSignOut, #tabSaved, #tabCustom, #tabTimeline, #tabMessages, #tabStatic, #tabEvtSets, #tabEvtSetComp {
 	display: none;
 }
   	

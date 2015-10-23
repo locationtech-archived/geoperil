@@ -24,6 +24,8 @@ function Earthquake(meta) {
 		
 		/* stores the arrival time upon new isolines should be fetch on the next update */
 		this.last_arr = 0;
+		/* count pending calls to loadIsos() - needed to avoid race conditions */
+		this.pending_isos = 0;
 		
 		/* we also want to be notified if the selection status of this event has changed */
 		this.setCallback('select', this.select);
@@ -128,9 +130,13 @@ function Earthquake(meta) {
 	};
 	
 	this.loadIsos = function() {
+		if( this.pending_isos > 0 )
+			return;
+		this.pending_isos = 1;
 		ajax('webguisrv/getisos', {evid:this._id, arr:this.last_arr}, (function(result) {
 			console.log(result);
-			if( !result.comp ) return;
+			this.pending_isos = 0;
+			if( !result.comp || result.comp.length == 0 ) return;
 			for (var i = 0; i < result.comp.length; i++ ) {
 				var isos = result.comp[i].points;
 				for (var j = 0; j < isos.length; j++ ) {
@@ -4625,7 +4631,9 @@ function getParams() {
 
 	var params = {};
 
-	params['name'] = $('#inName').val();
+	if( $('#inName').val() )
+		params['name'] = $('#inName').val();
+	
 	params['lon'] = $('#inLon').val();
 	params['lat'] = $('#inLat').val();
 	params['mag'] = $('#inMag').val();
