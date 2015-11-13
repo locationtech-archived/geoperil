@@ -376,6 +376,7 @@ public class Services {
 	  double depth = prop.getDouble("depth");
 	  Date date = prop.getDate("date");
 	  
+	  EQParameter eqp;
 	  double mag = 0.0;
 	  double slip = 0.0;
 	  double length = 0.0;
@@ -384,15 +385,19 @@ public class Services {
 		  slip = prop.getDouble("slip");
 		  length = prop.getDouble("length");
 		  width = prop.getDouble("width");
+		  eqp = new EQParameter(lon, lat, slip, length, width, depth, dip, strike, rake, date);
 	  } else {
 		  mag = prop.getDouble("magnitude");
+		  eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
 	  }
 	
 	  if( accel == null )
 		  accel = 1;
 	  
-	  /* prepare the simulation for execution */
-	  return request( lon, lat, mag, depth, dip, strike, rake, evtid, user, dur, date, accel, gridres, slip, length, width );
+	  /* start request */
+	  TaskParameter task = new TaskParameter(eqp, evtid, user, dur, accel, gridres);
+	  task.setSlots(IScheduler.SLOT_NORMAL, IScheduler.SLOT_EXCLUSIVE);
+	  return request( evtid, task );
   }
   
   @POST
@@ -515,20 +520,7 @@ public class Services {
 	  String ret_id = request(evtid, task);
 	  return jssuccess( new BasicDBObject( "_id", ret_id ) );
   }
-    
-  private String request( double lon, double lat, double mag, double depth, double dip,
-		  				  double strike, double rake, String id, User user, int dur,
-		  				  Date date, int accel, Integer gridres, double slip, double length, double width ) {
-	  EQParameter eqp;
-	  if( mag != 0 ) {
-		  eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
-	  } else {
-		  eqp = new EQParameter(lon, lat, slip, length, width, depth, dip, strike, rake, date);
-	  }
-	  TaskParameter task = new TaskParameter( eqp, id, user, dur, accel, gridres );	  
-	  return request(id, task);
-  }
-  
+      
   private String request(String id, TaskParameter task) {
 	  scheduler.submit( task );
 	  return id;
@@ -706,7 +698,7 @@ public class Services {
 	  BasicDBObject event = new BasicDBObject();
 	  event.put("id", setid);
 	  event.put("user", user.objId);
-	  event.put("timestamp", date);
+	  event.put("timestamp", new Date());
 	  event.put("event", "new_evtset");
 	  db.getCollection("events").insert( event );
 	  
@@ -851,10 +843,12 @@ public class Services {
 	  /* start request */
 	  TaskParameter task = new TaskParameter(eqp, id, user, dur, accel);
 	  task.evtset = evtSet;
-	  if( evtSet == null )
+	  if( evtSet == null ) {
 		  task.setSlots(IScheduler.SLOT_NORMAL, IScheduler.SLOT_EXCLUSIVE);
-	  else
+	  } else {
 		  task.setSlots(IScheduler.SLOT_NORMAL);
+		  task.dt_out = 0;
+	  }
 	  return request( id, task );
   }
   

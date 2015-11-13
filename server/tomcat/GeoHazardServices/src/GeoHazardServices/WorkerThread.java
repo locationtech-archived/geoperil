@@ -428,7 +428,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					totalMinPrev = totalMin;
 					
 					/* create a kml file if at least 10 minutes of simulation are done */
-					if( totalMin > 10 )
+					if( totalMin > 10 && task.dt_out > 0 )
 						createVectorFile( totalMin, task.id );
 							
 					if( task.progress == 100.0f ) {
@@ -437,7 +437,6 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					
 						addPoiResults( task.id );
 						addStationResults( task );
-						saveRawData(task);
 						if( task.evtset != null ) {
 							task.evtset.addTask(task);
 						}
@@ -472,6 +471,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 						float progress;
 						synchronized(task.evtset) {
 							progress = task.evtset.incOverallProgress(totalMinRel);
+							System.out.println(task.evtset.getOverallProgress() + "/" + task.evtset.total_dur);
 							if( progress != 100.0f )
 								colEvtSets.update(set, new BasicDBObject("$set", new BasicDBObject("progress", progress)));
 						}
@@ -504,6 +504,9 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					if( task.progress == 100.0f && task.raw == 0 ) {
 						pyPostProcess( task );
 					}
+					
+					if( task.progress == 100.0f )
+						saveRawData(task);
 					
 				} else {
 					
@@ -927,6 +930,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 		sshCon[1].out.println(mkdir);
 		sshCon[1].out.println(rm);
+		sshCon[1].out.println("rm range.grd");
 		sshCon[1].out.println(mv);
 		sshCon[1].out.println(chmod);
 		sshCon[1].out.println("echo '\004'");
@@ -949,15 +953,15 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 				sshCon[1].out.println("cp " + task_file + " eWave.2D.sshmax_0" );
 			} else {
 				//String gdalbuildvrt = String.format("gdalbuildvrt -separate combined.vrt eWave.2D.sshmax_%d %s", i-1, task_file);
-				String gdalbuildvrt = String.format("gdal_merge.py -separate -o combined.vrt eWave.2D.sshmax_%d %s", i-1, task_file);
-				String gdal_calc = String.format("gdal_calc.py -A combined.vrt --A_band=1 -B combined.vrt --B_band=2"
-								 			   + " --calc=\"maximum(A,B)\" --overwrite --format=GSBG --outfile eWave.2D.sshmax_%d", i);
+				String gdalbuildvrt = String.format("gdal_merge.py -separate -o combined_%d.vrt eWave.2D.sshmax_%d %s", i, i-1, task_file);
+				String gdal_calc = String.format("gdal_calc.py -A combined_%1$d.vrt --A_band=1 -B combined_%1$d.vrt --B_band=2"
+								 			   + " --calc=\"maximum(A,B)\" --format=GSBG --outfile eWave.2D.sshmax_%1$d", i);
 				sshCon[1].out.println(gdalbuildvrt);
 				sshCon[1].out.println(gdal_calc);
 			}
 		}
 		sshCon[1].out.println(String.format("cp eWave.2D.sshmax_%d eWave.2D.sshmax", tasks.size()-1));
-		sshCon[1].out.println("rm eWave.2D.sshmax_* combined.vrt");
+		sshCon[1].out.println("rm eWave.2D.sshmax_* combined_*.vrt");
 		sshCon[1].out.println("echo '\004'");
 		sshCon[1].complete();
 		System.out.println("create jets...");

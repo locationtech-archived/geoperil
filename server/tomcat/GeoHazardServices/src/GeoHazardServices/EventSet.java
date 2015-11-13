@@ -27,6 +27,10 @@ public class EventSet {
 		return this.tasks;
 	}
 	
+	public int getOverallProgress() {
+		return overall_progress;
+	}
+	
 	public float incOverallProgress(int amount) {
 		synchronized( overall_progress ) {
 			overall_progress += amount;
@@ -36,7 +40,6 @@ public class EventSet {
 	
 	/* Return real progress from 0 - 100. */
 	public float getProgress() {
-		System.out.println(this.overall_progress + ", " + this.total_dur);
 		return (this.overall_progress.floatValue() / (float)this.total_dur) * 100.0f;
 	}
 }
