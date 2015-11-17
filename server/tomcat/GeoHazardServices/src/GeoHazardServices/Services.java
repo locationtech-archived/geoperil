@@ -1237,7 +1237,11 @@ public class Services {
 	  if( progress == STATUS_NO_COMP )
 		  return jssuccess( new BasicDBObject("comp", "none") );
 	  String comp = progress == 100 ? "success" : "pending";
-	  return jssuccess( new BasicDBObject("comp", comp).append("progress", progress.toString()) );
+	  BasicDBObject ret = new BasicDBObject("comp", comp).append("progress", progress.toString());
+	  /* Append runtime information. */
+	  DBObject evtset = db.getCollection("evtsets").findOne(new BasicDBObject("_id", setid));
+	  ret.append("calcTime", getField(evtset, "calcTime"));
+	  return jssuccess(ret);
   }
   
   @POST

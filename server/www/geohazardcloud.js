@@ -279,6 +279,7 @@ function EventSet(meta) {
 		ajax('srv/evtset_status', {setid:this._id}, (function(result) {
 			console.log("progress: ", result.progress);
 			this.progress = result.progress;
+			this.calcTime = result.calcTime;
 			this.notifyOn('update');
 			/* Check progress again if computation is still running. */
 			if( result.comp == 'pending' ) {
@@ -2436,6 +2437,7 @@ function GlobalControl() {
 			'clk_grid': this.grid.bind(this),
 			'clk_delete' : this.remove.bind(this),
 			'clk_show' : this.show.bind(this),
+			'clk_edit_set' : this.edit_set.bind(this),
 		};
 		
 		/* register jquery event handlers */
@@ -2472,8 +2474,8 @@ function GlobalControl() {
 		w.create();
 		this.widgets['tabEvtSets'] = w;
 		
-		w = new EvtSetComposeForm($('#evtsetcomp'));
-		w.setCallback('started', (function() {
+		this.evtsetcomp = new EvtSetComposeForm($('#evtsetcomp'));
+		this.evtsetcomp.setCallback('started', (function() {
 			$("#tabEvtSets > a").click();
 		}).bind(this));
 		
@@ -2550,6 +2552,11 @@ function GlobalControl() {
 	/* TODO: refactor */
 	this.edit = function(data) {
 		fillForm(data);
+	};
+	
+	this.edit_set = function(data) {
+		this.evtsetcomp.load(data);
+		$('#tabEvtSetComp').find('a').trigger('click');
 	};
 
 	/* TODO: refactor */
@@ -2640,15 +2647,16 @@ function EvtSetComposeForm(div) {
 		this.div = div;
 		this.form = div.find('.evtset-form');
 		this.status = div.find('.status');
+		this.preset = div.find('.preset');
 		this.btnClear = div.find('.btn-clear');
 		this.btnStart = div.find('.btn-start');
 		this.txtName = new HtmlTextGroup('Name:');
 		this.txtLat = new HtmlTextGroup('Latitude:').setRLabel('&deg;');
-		this.txtLat.text.validate_numeric(0, 90);
+		this.txtLat.text.validate_numeric(-90, 90);
 		this.txtLon = new HtmlTextGroup('Longitude:').setRLabel('&deg;');
 		this.txtLon.text.validate_numeric(-180, 180);
-		this.txtMag = new HtmlTextGroup('Magnitude:').setRLabel('Mw');
-		this.txtMag.text.validate_numeric(0, 11);
+		this.rngMag = new HtmlRangeGroup('Magnitude:', 'Mw');
+		this.rngMag.validate_numeric(0, 11);
 		this.rngDepth = new HtmlRangeGroup('Depth:', 'km');
 		this.rngDepth.validate_numeric(0, 1000);
 		this.rngDip = new HtmlRangeGroup('Dip:', '&deg;');
@@ -2662,7 +2670,7 @@ function EvtSetComposeForm(div) {
 		this.form.append(this.txtName.div);
 		this.form.append(this.txtLat.div);
 		this.form.append(this.txtLon.div);
-		this.form.append(this.txtMag.div);
+		this.form.append(this.rngMag.div);
 		this.form.append(this.rngDepth.div);
 		this.form.append(this.rngDip.div);
 		this.form.append(this.rngStrike.div);
@@ -2672,15 +2680,66 @@ function EvtSetComposeForm(div) {
 		this.form.find('input').on('change', this.check.bind(this));
 		this.btnClear.click(this.clear.bind(this));
 		this.btnStart.click(this.start.bind(this));
+		this.load_preset();
+		this.check();
+	};
+	
+	this.load_preset = function() {
+		var data = getPreset();		
+		this.preset.empty();
+		for( var i = 0; i < data.length; i++ ) {
+			var prop = data[i];
+			var a = $('<a>', {
+				text: prop.region,
+				href: '#',
+				class: 'list-group-item',
+				click: function() {
+					$(this).data('form').load_eq( $(this).data('prop') );
+				}
+			}).data('prop', {prop: prop}).data('form', this);
+			this.preset.append(a);
+		}
+	};
+	
+	this.load = function(data) {
+		var prop = data.prop;
+		this.txtName.value(data.name);
+		this.txtLat.value(prop.latitude);
+		this.txtLon.value(prop.longitude);
+		this.rngMag.set(prop.mag_min, prop.mag_step, prop.mag_max);
+		this.rngDepth.set(prop.depth_min, prop.depth_step, prop.depth_max);
+		this.rngDip.set(prop.dip_min, prop.dip_step, prop.dip_max);
+		this.rngStrike.set(prop.strike_min, prop.strike_step, prop.strike_max);
+		this.rngRake.set(prop.rake_min, prop.rake_step, prop.rake_max);
+		this.txtDur.value(data.duration);
+		this.check();
+	};
+	
+	this.load_eq = function(data) {
+		var prop = data.prop;
+		this.txtName.value(prop.region);
+		this.txtLat.value(prop.latitude);
+		this.txtLon.value(prop.longitude);
+		this.rngMag.set(prop.magnitude, 1, prop.magnitude);
+		this.rngDepth.set(prop.depth, 1, prop.depth);
+		this.rngDip.set(prop.dip, 1, prop.dip);
+		this.rngStrike.set(prop.strike, 1, prop.strike);
+		this.rngRake.set(prop.rake, 1, prop.rake);
+		this.txtDur.value(180);
 	};
 	
 	this.check = function() {
-		
+		var valid = this.txtLat.valid() && this.txtLon.valid() &&
+					this.rngMag.valid() && this.rngDepth.valid() &&
+					this.rngDip.valid() && this.rngStrike.valid() &&
+					this.rngRake.valid() && this.txtDur.valid();	
+		this.btnStart.prop('disabled', ! valid);
 	};
 	
 	this.clear = function() {
 		this.status.html('');
 		this.form.find('input').val('');
+		this.check();
 	};
 	
 	this.start = function() {
@@ -2689,7 +2748,9 @@ function EvtSetComposeForm(div) {
 			name: this.txtName.value(),
 			lat: this.txtLat.value(),
 			lon: this.txtLon.value(),
-			mag: this.txtMag.value(),
+			mag_min: this.rngMag.text1.value(),
+			mag_step: this.rngMag.text2.value(),
+			mag_max: this.rngMag.text3.value(),
 			depth_min: this.rngDepth.text1.value(),
 			depth_step: this.rngDepth.text2.value(),
 			depth_max: this.rngDepth.text3.value(),
@@ -3458,6 +3519,39 @@ function EvtSetWidget(data, marker) {
 			this.div.find('.evt-lnk .text').toggle();
 			this.div.find('.evt-list').toggle();
 		}).bind(this));
+		
+		this.div.find('.lnkEdit').click(this.notifyOn.bind(this, 'clk_edit_set', this.data));
+		this.div.find('.lnkTimeline').click(this.notifyOn.bind(this, 'clk_timeline', this.data));
+		
+		options.placement = 'top';
+		options.title = 'Modify and reprocess';
+		this.div.find('.lnkEdit').tooltip(options);
+		
+		options.title = 'Show timeline';
+		this.div.find('.lnkTimeline').tooltip(options);
+		
+		options.title = 'Download Data';
+		this.div.find('.lnkRiskData').tooltip(options);
+		
+		if (checkPerm('comp'))
+			this.div.find('.lnkEdit').show();
+		if (checkPerm('timeline'))
+			this.div.find('.lnkTimeline').show();
+		
+		/* create layer switcher */
+		var layers = {			
+			'Wave Jets Accumulated': this.onJetLayer.bind(this),
+			'Risk Map': function(){},
+		};
+		this.chk_boxes = [];
+		this.div.find('.layers').empty();
+		for( attr in layers ) {
+			var cbox = new HtmlCheckBox(attr);
+			cbox.setCallback('change', layers[attr]);
+			this.div.find('.layers').append(cbox.div);
+			this.chk_boxes.push(cbox);
+		}
+		
 		this.update();
 	};
 	
@@ -3480,7 +3574,9 @@ function EvtSetWidget(data, marker) {
 		this.div.find('.dip').html('Dip min: ' + prop.dip_min + '&deg; &#183; step ' + prop.dip_step + '&deg; &#183; max ' + prop.dip_max + '&deg;');
 		this.div.find('.strike').html('Strike min: ' + prop.strike_min + '&deg; &#183; step ' + prop.strike_step + '&deg; &#183; max ' + prop.strike_max + '&deg;');
 		this.div.find('.rake').html('Rake min: ' + prop.rake_min + '&deg; &#183; step ' + prop.rake_step + '&deg; &#183; max ' + prop.rake_max + '&deg;');
-		this.div.find('.dur').html('SimDuration ' + this.data.duration + ' min');
+		this.div.find('.dur').html(' &#183; SimDuration ' + this.data.duration + ' min');
+		this.div.find('.runtime').html(' &#183; Runtime ' + this.data.calcTime / 1000 + ' sec');
+		this.div.find('.simcount').html('SimCount ' + this.data.evtids.length);
 		this.div.find('.marker').attr('src', this.marker.link);
 		
 		if( this.data.abort ) {
@@ -3495,10 +3591,12 @@ function EvtSetWidget(data, marker) {
 			this.div.find('.progress').hide();
 			this.div.find('.status').html("Computation finished");
 			this.div.find('.status').show();
+			this.div.find('.calc_data').show();
 		} else {
 			this.div.find('.progress-bar').css('width', this.data.progress + '%');
 			this.div.find('.status').hide();
 			this.div.find('.progress').show();
+			this.div.find('.calc_data').show();
 		}
 				
 		this.div.find('.evt-list').empty();
@@ -3514,6 +3612,8 @@ function EvtSetWidget(data, marker) {
 		
 		this.div.mouseover(this.highlight.bind(this, true));
 		this.div.mouseout(this.highlight.bind(this, false));
+		
+		this.chk_boxes[0].value( this.data.show_jets );
 		
 		this.setSelect();
 	};
@@ -4920,21 +5020,10 @@ function checkFloat(val) {
 	return true;
 }
 
-function loadPreset() {
-
-	var data = {};
-	var id = $(this).attr('id');
-
-	data.preset1 = {
-		latitude : 38.321,
-		longitude : 142.369,
-		magnitude : 9.0,
-		depth : 24,
-		strike : 193,
-		dip : 14,
-		rake : 81
-	};
-	data.preset2 = {
+function getPreset() {
+	var data = [];
+	data.push({
+		region: "Sumatra 2012 (historic)",
 		latitude : 2.3,
 		longitude : 92.9,
 		magnitude : 8.57,
@@ -4942,98 +5031,19 @@ function loadPreset() {
 		strike : 199,
 		dip : 80,
 		rake : 3
-	};
-	data.preset3 = {
-		latitude : 7.965,
-		longitude : 156.40,
-		magnitude : 8.1,
-		depth : 23,
-		strike : 331,
-		dip : 38,
-		rake : 120
-	};
-	data.preset4 = {
-		latitude : 35,
-		longitude : 29,
-		magnitude : 8.5,
-		depth : 24.1,
-		strike : 260,
-		dip : 42,
-		rake : 95
-	};
-	data.preset5 = {
-		latitude : 35.5,
-		longitude : 31.9,
-		magnitude : 7.3,
-		depth : 15.1,
-		strike : 310,
-		dip : 69,
-		rake : 111
-	};
-	data.preset6 = {
-		latitude : 38.9,
-		longitude : 26.4,
-		magnitude : 6.5,
-		depth : 11.4,
-		strike : 140,
-		dip : 56,
-		rake : -120
-	};
-	data.preset7 = {
-		latitude : 34.5,
-		longitude : 27.1,
-		magnitude : 8,
-		depth : 21.3,
-		strike : 66,
-		dip : 33,
-		rake : 90
-	};
-	data.preset8 = {
-		latitude : 36.574,
-		longitude : -9.890,
-		magnitude : 8.1,
-		depth : 4,
-		strike : 20,
-		dip : 35,
-		rake : 90
-	};
-	data.preset9 = {
-		latitude : 36.665,
-		longitude : -11.332,
-		magnitude : 8.1,
-		depth : 5,
-		strike : 53,
-		dip : 35,
-		rake : 90
-	};
-	data.preset10 = {
-		latitude : 35.796,
-		longitude : -9.913,
-		magnitude : 8.3,
-		depth : 4,
-		strike : 42,
-		dip : 35,
-		rake : 90
-	};
-	data.preset11 = {
-		latitude : 36.314,
-		longitude : -8.585,
-		magnitude : 8,
-		depth : 2.5,
-		strike : 266,
-		dip : 24,
-		rake : 90
-	};
-	data.preset12 = {
-		latitude : 35.407,
-		longitude : -8.059,
-		magnitude : 8.6,
-		depth : 20,
-		strike : 349,
-		dip : 5,
-		rake : 90
-	};
-	data.preset13 = {
+	});
+	data.push({
+		region: "Tohoku 2011 (historic)",
+		latitude : 38.321,
+		longitude : 142.369,
+		magnitude : 9.0,
+		depth : 24,
+		strike : 193,
+		dip : 14,
+		rake : 81
+	});
+	data.push({
+		region: "Mentawai 2010 1. Patch (historic)",
 		latitude : -3.55,
 		longitude : 100.05,
 		magnitude : 7.7,
@@ -5041,8 +5051,9 @@ function loadPreset() {
 		strike : 325,
 		dip : 12,
 		rake : 90
-	};
-	data.preset14 = {
+	});
+	data.push({
+		region: "Mentawai 2010 2. Peak (historic)",
 		latitude : -3.2,
 		longitude : 99.70,
 		magnitude : 7.5,
@@ -5050,8 +5061,19 @@ function loadPreset() {
 		strike : 325,
 		dip : 12,
 		rake : 90
-	};
-	data.preset15 = {
+	});
+	data.push({
+		region: "Solomon 2007 (historic)",
+		latitude : 7.965,
+		longitude : 156.40,
+		magnitude : 8.1,
+		depth : 23,
+		strike : 331,
+		dip : 38,
+		rake : 120
+	});
+	data.push({
+		region: "Crete AD365 (historic)",
 		latitude : 35.2,
 		longitude : 23.4,
 		magnitude : 8.3,
@@ -5059,9 +5081,106 @@ function loadPreset() {
 		strike : 315,
 		dip : 30,
 		rake : 90
-	};
+	});
+	data.push({
+		region: "East Crete 1(hypothetic)",
+		latitude : 34.5,
+		longitude : 27.1,
+		magnitude : 8,
+		depth : 21.3,
+		strike : 66,
+		dip : 33,
+		rake : 90
+	});
+	data.push({
+		region: "East Crete 2 (hypothetic)",
+		latitude : 35,
+		longitude : 29,
+		magnitude : 8.5,
+		depth : 24.1,
+		strike : 260,
+		dip : 42,
+		rake : 95
+	});
+	data.push({
+		region: "West Cyprus (hypothetic)",
+		latitude : 35.5,
+		longitude : 31.9,
+		magnitude : 7.3,
+		depth : 15.1,
+		strike : 310,
+		dip : 69,
+		rake : 111
+	});
+	data.push({
+		region: "West Anatolia  (hypothetic)",
+		latitude : 38.9,
+		longitude : 26.4,
+		magnitude : 6.5,
+		depth : 11.4,
+		strike : 140,
+		dip : 56,
+		rake : -120
+	});
+	data.push({
+		region: "Marques de Pombal Fault (MPF, hypothetic)",
+		latitude : 36.574,
+		longitude : -9.890,
+		magnitude : 8.1,
+		depth : 4,
+		strike : 20,
+		dip : 35,
+		rake : 90
+	});
+	data.push({
+		region: "Gorringe Bank Fault (GBF, hypothetic)",
+		latitude : 36.665,
+		longitude : -11.332,
+		magnitude : 8.1,
+		depth : 5,
+		strike : 53,
+		dip : 35,
+		rake : 90
+	});
+	data.push({
+		region: "Horseshoe Fault (HSF, hypothetic)",
+		latitude : 35.796,
+		longitude : -9.913,
+		magnitude : 8.3,
+		depth : 4,
+		strike : 42,
+		dip : 35,
+		rake : 90
+	});
+	data.push({
+		region: "Portimao Bank Fault (PBF, hypothetic)",
+		latitude : 36.314,
+		longitude : -8.585,
+		magnitude : 8,
+		depth : 2.5,
+		strike : 266,
+		dip : 24,
+		rake : 90
+	});
+	data.push({
+		region: "Cadiz Wedge Fault (CWF, hypothetic)",
+		latitude : 35.407,
+		longitude : -8.059,
+		magnitude : 8.6,
+		depth : 20,
+		strike : 349,
+		dip : 5,
+		rake : 90
+	});
+	return data;
+}
 
-	var prop = data[id];
+function loadPreset() {
+
+	var data = getPreset();
+	var id = $(this).attr('id').replace('preset','');
+
+	var prop = data[id-1];
 	prop.region = $(this).html();
 
 	var entry = {
@@ -7193,6 +7312,16 @@ function HtmlRangeGroup(label, icon) {
 		this.text3.validate(regex);
 	};
 	
+	this.valid = function() {
+		return this.text1.valid() && this.text2.valid() && this.text3.valid();
+	};
+	
+	this.set = function(min, step, max) {
+		this.text1.value(min);
+		this.text2.value(step);
+		this.text3.value(max);
+	};
+	
 	this.init.apply(this, arguments);
 }
 
@@ -7212,8 +7341,10 @@ function HtmlTextField(field, defaultText) {
 	};
 	
 	this.value = function(newValue) {
-		if(newValue !== undefined)
+		if(newValue !== undefined) {
 			this.div.val(newValue);
+			this.div.change();
+		}
 		return this.div.val();
 	};
 

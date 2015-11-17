@@ -278,7 +278,7 @@ html, body {
 	width: 40%;
 }
 
-#labPreset {
+.labPreset {
 	font-size: 1em;
 	font-weight: bold;
 	padding: 0.5em;
@@ -400,6 +400,10 @@ html, body {
 .entry .lnkCopy {
 	margin-right: 0.4em;
 	display: none;
+}
+
+.entry .lnkRiskData {
+	margin-right: 0.2em;
 }
 
 .entry .chk_grid {
@@ -1433,17 +1437,17 @@ pre {
 }
 
 #evtsetcomp .btn {
-	margin-top: 1em;
-	position: absolute;
+	margin-top: 0.5em;
 	width: 30%;
 }
 
 #evtsetcomp .btn-clear {
-	left: 15%;
+	margin-left: 10%;
+	margin-right: 10%;	
 }
 
 #evtsetcomp .btn-start {
-	right: 15%;
+	margin-left: 10%;
 }
 
 #evtsetcomp .status {

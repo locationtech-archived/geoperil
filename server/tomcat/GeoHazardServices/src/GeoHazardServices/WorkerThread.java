@@ -404,6 +404,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 						
 			int processIndex = -1;
 			int totalMinPrev = 0;
+			int calcTime = 0;			
 			task.progress = 0;
 			
 			String line = reader.readLine();			
@@ -417,8 +418,10 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					/* parse current simulation time */
 					int hours = Integer.valueOf( matcher.group(1) );
 					int min = Integer.valueOf( matcher.group(2) );
-					int calcTime = Integer.valueOf( matcher.group(4) );
 					int totalMin = hours * 60 + min;
+					
+					int calcTimePrev = calcTime;
+					calcTime = Integer.valueOf( matcher.group(4) );
 					
 					System.out.println( matcher.group() );
 					
@@ -472,6 +475,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 						synchronized(task.evtset) {
 							progress = task.evtset.incOverallProgress(totalMinRel);
 							System.out.println(task.evtset.getOverallProgress() + "/" + task.evtset.total_dur);
+							colEvtSets.update(set, new BasicDBObject("$inc", new BasicDBObject("calcTime", calcTime-calcTimePrev)));
 							if( progress != 100.0f )
 								colEvtSets.update(set, new BasicDBObject("$set", new BasicDBObject("progress", progress)));
 						}

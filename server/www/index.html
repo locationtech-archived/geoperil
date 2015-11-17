@@ -224,23 +224,23 @@
 					  		</div>
 		  				</form>
 		  				
-		  				<p id="labPreset" class="form-control-static">Load from preset events</p>
+		  				<p class="form-control-static labPreset">Load from preset events</p>
 		  				<div id="preset" class="list-group">
-		  					<a id="preset2" class="list-group-item" href="#">Sumatra 2012 (historic)</a>
-				  			<a id="preset1" class="list-group-item" href="#">Tohoku 2011 (historic)</a>
-	  						<a id="preset13" class="list-group-item" href="#">Mentawai 2010 1. Patch (historic)</a>
-	  						<a id="preset14" class="list-group-item" href="#">Mentawai 2010 2. Peak (historic)</a>
-	  						<a id="preset3" class="list-group-item" href="#">Solomon 2007 (historic)</a>
-	  						<a id="preset15" class="list-group-item" href="#">Crete AD365 (historic)</a>
+		  					<a id="preset1" class="list-group-item" href="#">Sumatra 2012 (historic)</a>
+				  			<a id="preset2" class="list-group-item" href="#">Tohoku 2011 (historic)</a>
+	  						<a id="preset3" class="list-group-item" href="#">Mentawai 2010 1. Patch (historic)</a>
+	  						<a id="preset4" class="list-group-item" href="#">Mentawai 2010 2. Peak (historic)</a>
+	  						<a id="preset5" class="list-group-item" href="#">Solomon 2007 (historic)</a>
+	  						<a id="preset6" class="list-group-item" href="#">Crete AD365 (historic)</a>
 	  						<a id="preset7" class="list-group-item" href="#">East Crete 1(hypothetic)</a>
-	  						<a id="preset4" class="list-group-item" href="#">East Crete 2 (hypothetic)</a>
-	  						<a id="preset5" class="list-group-item" href="#">West Cyprus (hypothetic)</a>
-	  						<a id="preset6" class="list-group-item" href="#">West Anatolia  (hypothetic)</a>
-	  						<a id="preset8" class="list-group-item" href="#">Marques de Pombal Fault (MPF, hypothetic)</a>
-	  						<a id="preset9" class="list-group-item" href="#">Gorringe Bank Fault (GBF, hypothetic)</a>
-	  						<a id="preset10" class="list-group-item" href="#">Horseshoe Fault (HSF, hypothetic)</a>
-	  						<a id="preset11" class="list-group-item" href="#">Portimao Bank Fault (PBF, hypothetic)</a>
-	  						<a id="preset12" class="list-group-item" href="#">Cadiz Wedge Fault (CWF, hypothetic)</a>
+	  						<a id="preset8" class="list-group-item" href="#">East Crete 2 (hypothetic)</a>
+	  						<a id="preset9" class="list-group-item" href="#">West Cyprus (hypothetic)</a>
+	  						<a id="preset10" class="list-group-item" href="#">West Anatolia  (hypothetic)</a>
+	  						<a id="preset11" class="list-group-item" href="#">Marques de Pombal Fault (MPF, hypothetic)</a>
+	  						<a id="preset12" class="list-group-item" href="#">Gorringe Bank Fault (GBF, hypothetic)</a>
+	  						<a id="preset13" class="list-group-item" href="#">Horseshoe Fault (HSF, hypothetic)</a>
+	  						<a id="preset14" class="list-group-item" href="#">Portimao Bank Fault (PBF, hypothetic)</a>
+	  						<a id="preset15" class="list-group-item" href="#">Cadiz Wedge Fault (CWF, hypothetic)</a>
 	  					</div>
 	  				</div>
 	  				<div class="col-md-12 tab-pane" id="timeline">
@@ -269,6 +269,8 @@
 				  			<button type="button" class="btn-clear btn btn-default btn-lg">Clear</button>
 				  			<button type="button" class="btn-start btn btn-primary btn-lg">Start</button>
 				  		</div>
+		  				<p class="form-control-static labPreset">Load from preset events</p>
+		  				<div class="list-group preset"></div>
 		  			</div>
 	  			</div>
 	  		</div>
@@ -1121,9 +1123,19 @@
 							<div class="progress-bar"></div>
 						</div>
 						<span class="medium status"></span>
+						<a class="lnkTimeline pull-right" href="#"><span class="glyphicon glyphicon-sort-by-attributes"></span></a>
+						<a class="lnkEdit pull-right" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
+						<a class="lnkRiskData pull-right" href="#"><span class="glyphicon glyphicon-download-alt"></span></a>
 					</div>
-					<div class="row">
-						<span class="small dur"></span>
+					<div class="calc_data">
+						<div class="row">
+							<span class="small layers"></span>
+						</div>
+						<div class="row">
+							<span class="small simcount"></span>
+							<span class="small dur"></span>
+							<span class="small runtime"></span>
+						</div>
 					</div>
 					<div class="row">
 						<a href="#" class="evt-lnk">
@@ -1133,7 +1145,7 @@
 						</a>
 					</div>
 					<div class="row">
-						<span class="small evt-list chide">T</span>
+						<span class="small evt-list chide"></span>
 					</div>
 				</div>
 			</div>
