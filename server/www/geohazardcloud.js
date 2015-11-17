@@ -3164,7 +3164,7 @@ function EQWidget(data, marker) {
 		var width = prop.width ? prop.width + ' km' : 'n/a';
 
 		this.div.find('.region').text(prop.region);
-		this.div.find('.mag').text(prop.magnitude);
+		this.div.find('.mag').text(+prop.magnitude.toFixed(2));
 		this.div.find('.datetime').html(
 				datestr + ' &#183; ' + timestr + ' UTC' + ' &#183; '
 						+ this.data._id);
@@ -3568,7 +3568,7 @@ function EvtSetWidget(data, marker) {
 		
 		this.div.find('.timestamp').html(datestr + ' &#183; ' + timestr + ' UTC' + ' &#183; ' + this.data._id);
 		this.div.find('.subject').html(this.data.name);
-		this.div.find('.mag').text(prop.magnitude);
+		this.div.find('.mag').text(+prop.magnitude.toFixed(2));
 		this.div.find('.latlon').html('Lat ' + prop.latitude + '&deg; &#183; Lon ' + prop.longitude + '&deg;');
 		this.div.find('.depth').html('Depth min: ' + prop.depth_min + ' km &#183; step ' + prop.depth_step + ' km &#183; max ' + prop.depth_max + ' km');
 		this.div.find('.dip').html('Dip min: ' + prop.dip_min + '&deg; &#183; step ' + prop.dip_step + '&deg; &#183; max ' + prop.dip_max + '&deg;');
