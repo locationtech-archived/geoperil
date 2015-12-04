@@ -551,11 +551,11 @@ public class Services {
 	  List<Double> values = new ArrayList<Double>();
 	  if( min == null || step == null || max == null )
 		  return null;
-	  int count = (int)( (max - min) / step) + 1;
+	  /*int count = (int)( (max - min) / step) + 1;
 	  if( count <= 0 || count > 30 )
-		  return null;
-	  for( int i = 0; i < count; i++ ) {
-		  values.add( min + i * step );
+		  return null;*/
+	  for( Double i = min; i <= max; i+=step ) {
+		  values.add( i );
 	  }
 	  return values;
   }

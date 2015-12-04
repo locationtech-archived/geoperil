@@ -275,7 +275,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 		cursor = dbclient.getDB( "easywave" ).getCollection("tfps").find( tfpQuery );
 		
-		sshCon[0].out.println("rm ftps.inp");
+		sshCon[0].out.println("rm -f ftps.inp");
 				
 		for( DBObject obj: cursor ) {
 			
@@ -384,7 +384,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			
 			if( remote ) {
 								
-				sshCon[0].out.println( "rm eWave.* arrival.* easywave.log error.msg" );
+				sshCon[0].out.println( "rm -f eWave.* arrival.* easywave.log error.msg" );
 				sshCon[0].out.println( "easywave " + cmdParams );
 				sshCon[0].out.println( "echo '\004'" );
 				sshCon[0].out.flush();
@@ -442,6 +442,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 						addStationResults( task );
 						if( task.evtset != null ) {
 							task.evtset.addTask(task);
+							saveRawData(task);
 						}
 					}
 					
@@ -509,7 +510,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 						pyPostProcess( task );
 					}
 					
-					if( task.progress == 100.0f )
+					if( task.progress == 100.0f && task.evtset == null )
 						saveRawData(task);
 					
 				} else {
@@ -928,7 +929,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		DBObject dirs = dbclient.getDB("easywave").getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
 		String resdir = (String) dirs.get("results");
 		String mkdir = String.format("mkdir -p -m 0777 %s/events/%s", resdir, task.id);
-		String rm = String.format("rm %s/events/%s/*", resdir, task.id);
+		String rm = String.format("rm -f %s/events/%s/*", resdir, task.id);
 		String mv = String.format("mv * %s/events/%s/", resdir, task.id);
 		String chmod = String.format("chmod 0666 %s/events/%s/*", resdir, task.id);
 		
