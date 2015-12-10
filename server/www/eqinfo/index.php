@@ -297,6 +297,10 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 	  		<ul class="head-blk head-right">
 				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
 				<li class="divider"><span>|</span></li>
+	                        <?php if( check_ip() ):	?>
+				<li><a href="http://eq.gfz-potsdam.de/" target="_blank">EQUATOR II</a></li>
+				<li class="divider"><span>|</span></li>
+                        	<?php endif; ?>
 				<li><a href="http://trideccloud.gfz-potsdam.de/" target="_blank">TRIDEC Cloud</a></li>
 				<li class="divider"><span>|</span></li>
 				<li><a href="http://kinherd.org" target="_blank">KINHERD</a></li>
@@ -327,7 +331,7 @@ if( ! isset( $_GET["id"] ) ) :
 </tr>
 <?php
 	$ret = ajax(
-		'http://'. $_SERVER['SERVER_NAME'] .'/webguisrv/get_events',
+		'http://'. $_SERVER['SERVER_NAME'] .'/tc/webguisrv/get_events',
 		array( 'limit' => 50, "inst" => "gfz" )
 	);
 	$row = "row-even";
@@ -350,7 +354,7 @@ if( ! isset( $_GET["id"] ) ) :
 
 <?php
 	$evtid = htmlspecialchars( $_GET["id"] );
-	$url = 'http://'. $_SERVER['SERVER_NAME'] .'/webguisrv/get_event_info';
+	$url = 'http://'. $_SERVER['SERVER_NAME'] .'/tc/webguisrv/get_event_info';
 	$data = array(
 			'apikey' => "6fc1358f8d505c34bce1eaa466e1d179",
 			'evid' => $evtid
@@ -406,8 +410,8 @@ if( ! isset( $_GET["id"] ) ) :
 		<?php endif;?>
 	</h3>
 	<div class="sec">
-            <b>Re-integration implemented soon.</b>
-            <?php if( false ): ?>
+<!--            <b>Re-integration implemented soon.</b>-->
+            <?php if( true ): ?>
             <?php
             $url = "http://eq.gfz-potsdam.de/events/".$eq['geofonid'];
             if (! file_get_contents($url)) {
@@ -580,7 +584,7 @@ if( ! isset( $_GET["id"] ) ) :
 	<h3 id="hazards">Other Sources</h3>
 	<div class="sec hazards">
 	<?php
-		$url = 'http://'. $_SERVER['SERVER_NAME'] .'/webguisrv/gethazardevents';
+		$url = 'http://'. $_SERVER['SERVER_NAME'] .'/tc/webguisrv/gethazardevents';
 		$data = array(
 			'eventtype' => 'EQ',
 			'y' => $eq['prop']['latitude'],
