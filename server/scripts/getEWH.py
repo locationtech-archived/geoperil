@@ -2,10 +2,10 @@
 
 import re
 import sys
-from pymongo import MongoClient
+from pymongo import MongoReplicaSetClient
 
-client = MongoClient()
-db = client['easywave']
+client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0", w="majority")
+db = client['trideccloud']
 collection = db['results2']
 
 print 'Parsing kml file...',
@@ -43,5 +43,6 @@ shape = { "id": id,
 collection.insert( shape )
 
 kml.close()
+client.close()
 
 print 'done!'
