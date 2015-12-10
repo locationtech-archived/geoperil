@@ -42,7 +42,6 @@ class BaseSrv:
                 return inst
         return None
 
-    @cherrypy.expose
     def get_hostname(self):
         if "hostname" in config["global"]:
             return config["global"]["hostname"]
