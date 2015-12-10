@@ -435,8 +435,9 @@ class WebGuiSrv(BaseSrv):
         cfzs = [ v for v in cfzs if v["eta"] > -1 ]
         if cfzs:
             # get maximal size of zone name
+            maxsize = 40
             v = max( cfzs, key=lambda x: len(x["COUNTRY"] + x["STATE_PROV"]) )
-            headlen = len( v["COUNTRY"] + "-" + v["STATE_PROV"] )
+            headlen = min( len( v["COUNTRY"] + "-" + v["STATE_PROV"] ), maxsize)
             headlines = ("LOCATION-FORECAST ZONE".ljust(headlen), "ARRIVAL TIME", "LEVEL       ")
             headlen = len(headlines[0])
             # print headlines
@@ -450,7 +451,8 @@ class WebGuiSrv(BaseSrv):
                 arr_min = math.floor(cfz["eta"])
                 arr_sec = math.floor( (cfz["eta"] % 1) * 60.0 )
                 arrival = eq["prop"]["date"] + datetime.timedelta( minutes=arr_min, seconds=arr_sec )
-                cfz_txt += ("%s %s %s\n" %(
+                cfz_txt += ("%.*s %s %s\n" %(
+                    maxsize,
                     (cfz["COUNTRY"] + '-' + cfz["STATE_PROV"]).ljust(headlen),
                     arrival.strftime("%H%MZ %d %b").upper(),
                     level
@@ -677,10 +679,11 @@ class WebGuiSrv(BaseSrv):
             self.make_image(link_id)
             # append everything to the earthquake event
             self._db["eqs"].update({"_id": evtid}, {"$set": {"shared_link": link_id}})
-        # notify users only if this an official GEOFON event
-        inst = self._db["institutions"].find_one({"_id": evt["user"]})
-        if inst is not None and (inst["name"] == "gfz" or inst["name"] == "tdss15"):
-            self._notify_users(evtid, link_id)
+        if "evtset" not in evt:
+            # notify users only if this an official GEOFON event
+            inst = self._db["institutions"].find_one({"_id": evt["user"]})
+            if inst is not None and (inst["name"] == "gfz" or inst["name"] == "tdss15"):
+                self._notify_users(evtid, link_id)
         return jssuccess()
     
     def _notify_users(self, evtid, link_id=None):
