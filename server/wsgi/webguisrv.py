@@ -649,7 +649,7 @@ class WebGuiSrv(BaseSrv):
         # call phantomjs to make a snapshot
         path = os.path.dirname(os.path.realpath(__file__)) + "/phantomjs/"
         # provide file for download
-        dst = os.path.dirname(os.path.realpath(__file__)) + "/snapshots/" + str(link_id) + '.png'
+        dst = os.path.join(config["global"]["snapshotdir"], str(link_id) + '.png')
         subprocess.call(path + "phantomjs " + path + "snapshot.js " + self.get_hostname() + "/?share=" + str(link_id) + " " + dst + " '#mapview'", shell=True)
    
     @cherrypy.expose

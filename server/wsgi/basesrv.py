@@ -42,9 +42,13 @@ class BaseSrv:
                 return inst
         return None
 
+    @cherrypy.expose
     def get_hostname(self):
-        url = urlparse(cherrypy.url())
-        return url.scheme + "://" + url.hostname
+        if "hostname" in config["global"]:
+            return config["global"]["hostname"]
+        else:
+            url = urlparse(cherrypy.url())
+            return url.scheme + "://" + url.hostname
 
     def feed_hazard_event(self,event):
         if "eventid" in event:
