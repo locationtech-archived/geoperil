@@ -3512,13 +3512,6 @@ function EvtSetWidget(data, marker) {
 		this.data.setCallback('update', this.update.bind(this));
 		this.data.setCallback('select', this.setSelect.bind(this));
 		this.div.find('.subject').click(this.notifyOn.bind(this, 'clk_entry', this.data));
-		this.div.find('.chide').hide();
-		this.div.find('.evt-lnk').click((function() {			
-			this.div.find('.evt-lnk .icon').toggleClass('glyphicon-chevron-right');
-			this.div.find('.evt-lnk .icon').toggleClass('glyphicon-chevron-down');
-			this.div.find('.evt-lnk .text').toggle();
-			this.div.find('.evt-list').toggle();
-		}).bind(this));
 		
 		this.div.find('.lnkEdit').click(this.notifyOn.bind(this, 'clk_edit_set', this.data));
 		this.div.find('.lnkTimeline').click(this.notifyOn.bind(this, 'clk_timeline', this.data));
@@ -3570,6 +3563,7 @@ function EvtSetWidget(data, marker) {
 		this.div.find('.subject').html(this.data.name);
 		this.div.find('.mag').text(+prop.magnitude.toFixed(2));
 		this.div.find('.latlon').html('Lat ' + prop.latitude + '&deg; &#183; Lon ' + prop.longitude + '&deg;');
+		this.div.find('.mag-range').html('Magnitude min: ' + prop.mag_min + ' Mw &#183; step ' + prop.mag_step + ' Mw &#183; max ' + prop.mag_max + ' Mw');
 		this.div.find('.depth').html('Depth min: ' + prop.depth_min + ' km &#183; step ' + prop.depth_step + ' km &#183; max ' + prop.depth_max + ' km');
 		this.div.find('.dip').html('Dip min: ' + prop.dip_min + '&deg; &#183; step ' + prop.dip_step + '&deg; &#183; max ' + prop.dip_max + '&deg;');
 		this.div.find('.strike').html('Strike min: ' + prop.strike_min + '&deg; &#183; step ' + prop.strike_step + '&deg; &#183; max ' + prop.strike_max + '&deg;');
@@ -3597,17 +3591,6 @@ function EvtSetWidget(data, marker) {
 			this.div.find('.status').hide();
 			this.div.find('.progress').show();
 			this.div.find('.calc_data').show();
-		}
-				
-		this.div.find('.evt-list').empty();
-		for( var evt in this.data.evtids ) {
-			var lnk = $('<div><a href="#">' + this.data.evtids[evt] +'</a></div>');
-			this.div.find('.evt-list').append(lnk);
-			lnk.find('a').click(function () {
-				$('#inSearch').val( $(this).html() );
-				$('#btnSearch').click();		
-				$('#hrefTimeline').click();
-			});
 		}
 		
 		this.div.mouseover(this.highlight.bind(this, true));
@@ -4641,7 +4624,7 @@ function logIn(callback) {
 		$('#tabEvtSets').hide();
 		$('#tabEvtSetComp').hide();
 	}
-
+	
 	onResize();
 
 	shared.clear();
