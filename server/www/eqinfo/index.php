@@ -1,8 +1,21 @@
 <?php 
 /* checks whether IP is 127.0.0.1 or starts with 139.17. */
 function check_ip() {
-	$ip = $_SERVER['REMOTE_ADDR'];
+        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        	$ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+        } else {
+        	$ip = $_SERVER['REMOTE_ADDR'];
+        }
+
 	return ($ip == '127.0.0.1' || strpos($ip,'139.17.') === 0);
+}
+
+function server_name() {
+        if (isset($_SERVER['HTTP_X_FORWARDED_SERVER'])) {
+                return $_SERVER['HTTP_X_FORWARDED_SERVER'];
+        } else {
+                return $_SERVER['SERVER_NAME'];
+        }
 }
 
 function ajax($url,$data) {
@@ -72,7 +85,7 @@ function do_post_request($url, $data)
 	return $response;
 }
 
-$ret = ajax('http://'. $_SERVER['SERVER_NAME'] .'/srv/session', array() );
+$ret = ajax('http://'. server_name() .'/srv/session', array() );
 
 if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 	$data = null;
@@ -88,7 +101,7 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 	}
 	/* redirect to login form - it is important to use the absolute url here,
 	 * because the server will deliver PHP code otherwise !!! */
-	echo do_post_request('http://' . $_SERVER['SERVER_NAME'] . '/eqinfo/login.php', $data);
+	echo do_post_request('http://' . server_name() . '/eqinfo/login.php', $data);
 	die();
 }
 
@@ -331,7 +344,7 @@ if( ! isset( $_GET["id"] ) ) :
 </tr>
 <?php
 	$ret = ajax(
-		'http://'. $_SERVER['SERVER_NAME'] .'/tc/webguisrv/get_events',
+		'http://'. server_name() .'/webguisrv/get_events',
 		array( 'limit' => 50, "inst" => "gfz" )
 	);
 	$row = "row-even";
@@ -354,7 +367,7 @@ if( ! isset( $_GET["id"] ) ) :
 
 <?php
 	$evtid = htmlspecialchars( $_GET["id"] );
-	$url = 'http://'. $_SERVER['SERVER_NAME'] .'/tc/webguisrv/get_event_info';
+	$url = 'http://'. server_name() .'/webguisrv/get_event_info';
 	$data = array(
 			'apikey' => "6fc1358f8d505c34bce1eaa466e1d179",
 			'evid' => $evtid
@@ -584,7 +597,7 @@ if( ! isset( $_GET["id"] ) ) :
 	<h3 id="hazards">Other Sources</h3>
 	<div class="sec hazards">
 	<?php
-		$url = 'http://'. $_SERVER['SERVER_NAME'] .'/tc/webguisrv/gethazardevents';
+		$url = 'http://'. server_name() .'/webguisrv/gethazardevents';
 		$data = array(
 			'eventtype' => 'EQ',
 			'y' => $eq['prop']['latitude'],
