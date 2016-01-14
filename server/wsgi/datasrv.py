@@ -46,7 +46,7 @@ class DataSrv(BaseSrv):
         raise HTTPError("404 Format %s not available." % format)
 
     @cherrypy.expose
-    def getProperties(self,evid,apikey,format="surferbin"):
+    def getProperties(self,evid,apikey):
         if self.auth_api(apikey) is None:
             raise HTTPError("401 Unauthorized")
         ev = self._db["eqs"].find_one({"id":evid})
@@ -93,6 +93,39 @@ class DataSrv(BaseSrv):
                 s += "<a href='?time=%d&apikey=%s&format=%s'>%d</a><br>" % (t,apikey,format,t)
             return "<html><body>%s</body></html>" % s
 
+    @cherrypy.expose
+    def getSimData(self,evid,apikey=None):
+        if self.auth_api(apikey) is None:
+            raise HTTPError("401 Unauthorized")
+        if self._db["eqs"].find_one({"id":evid}) is None:
+            raise HTTPError("404 Event %s does not exist." % evid)
+        s = ""
+        for f in ["surferbin"]:
+            s += "<h3>Format: %s</h3>" % f
+            s += "<a href='/datasrv/getMaxWaveHeights/%s?apikey=%s&format=%s'>%s</a><br>" % \
+                (evid,apikey,f,evid+"_maxWaveHeights.grd")
+            s += "<a href='/datasrv/getTravelTimes/%s?apikey=%s&format=%s'>%s</a><br>" % \
+                (evid,apikey,f,evid+"_travelTimes.grd")
+            s += "<a href='/datasrv/getWaveHeights/%s?apikey=%s&format=%s'>%s</a><br>" % \
+                (evid,apikey,f,"WaveHeights/")
+        return "<html><body>%s</body></html>" % s
+
+    @cherrypy.expose
+    def getSetData(self,setid,apikey=None):
+        if self.auth_api(apikey) is None:
+            raise HTTPError("401 Unauthorized")
+        evtset = self._db["evtsets"].find_one({"_id":setid})
+        if evtset is None:
+            raise HTTPError("404 EventSet %s does not exist." % setid)
+        s = ""
+        for evid in evtset["evtids"]:
+            evt = self._db["eqs"].find_one({"id":evid})
+            if len(evt["process"]) > 0 and evt["process"][0]["progress"] == 100:
+                s += "<a target='_blank' href='/datasrv/getSimData/%s?apikey=%s'>%s</a><br>" % \
+                    (evid,apikey,evid+"/")
+            else:
+                s += "%s<br>" % (evid+"/")
+        return "<html><body>%s</body></html>" % s
 
     def extractCsvFromGrids(self,evid,csvfile,lat,lon):
         files = glob.glob(os.path.join(config["eventdata"]["eventdatadir"],evid,"eWave.2D.*.ssh"))
@@ -147,7 +180,4 @@ class DataSrv(BaseSrv):
         else:
             raise HTTPError("404 Event %s is faulty." % evid)
         
-config = configparser.ConfigParser()
-config.read(os.path.dirname(os.path.realpath(__file__)) + "/oldconfig.cfg")
-
 application = startapp( DataSrv )

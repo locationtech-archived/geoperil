@@ -720,7 +720,7 @@ class WebGuiSrv(BaseSrv):
     def create_missing_images(self):
         events = self._db["eqs"].find({"shared_link": { "$ne": None }})
         for evt in events:
-            dst = os.path.dirname(os.path.realpath(__file__)) + "/snapshots/" + str(evt["shared_link"]) + '.png'
+            dst = os.path.join(config["global"]["snapshotdir"], str(evt["shared_link"]) + '.png')
             if not os.path.isfile(dst):
                 print("CLOUD: create_missing_image for event " + str(evt["_id"]) + " (" + str(evt["shared_link"]) + ")")
                 self.make_image(str(evt["shared_link"]))
