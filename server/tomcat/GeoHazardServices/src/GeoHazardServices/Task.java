@@ -1,58 +1,29 @@
 package GeoHazardServices;
 
-public class TaskParameter implements Comparable<TaskParameter> {
+import Misc.User;
 
+public class Task implements Comparable<Task> {
+	
 	private static final int STATUS_ERROR = 0;
 	private static final int STATUS_WAIT = 1;
 	private static final int STATUS_RUN = 2;
 	private static final int STATUS_DONE = 3;
 	private static final int STATUS_ABORT = 4;
 	
-	public EQParameter eqparams;
 	public String id;
-	public User user;
-	public int duration;
-	public int accel;
-	public int gridres;
-	public int raw;
-	public int dt_out;
-	public EventSet evtset;
-	
 	public int status;
-	public float progress;
+	public User user;
 	
 	/* Scheduling. */
 	public int slots[];
 	public boolean scheduled;
 	
-	public TaskParameter( EQParameter eqp ) {
-		this.eqparams = eqp;
+	public Task() {
 		this.status = STATUS_WAIT;
-		this.progress = 0;
-		this.accel = 1;
-		/* Default to a 2 arc-minute grid = 120 arc-seconds. */
-		this.gridres = 120;
-		this.raw = 0;
-		this.dt_out = 10;
-		this.evtset = null;
-		this.setSlots(IScheduler.SLOT_NORMAL);
 		this.scheduled = false;
+		this.setSlots(IScheduler.SLOT_NORMAL);
 	}
-	
-	public TaskParameter( EQParameter eqp, String id, User user, int duration, int accel ) {
-		this( eqp );
-		this.id = id;
-		this.user = user;
-		this.duration = duration;
-		this.accel = accel;
-	}
-	
-	public TaskParameter( EQParameter eqp, String id, User user, int duration, int accel, Integer gridres ) {
-		this(eqp, id, user, duration, accel);
-		if( gridres != null )
-			this.gridres = gridres;
-	}
-	
+		
 	public void setSlots(int... slots) {
 		this.slots = slots;
 	}
@@ -87,9 +58,9 @@ public class TaskParameter implements Comparable<TaskParameter> {
 		}
 		return false;
 	}
-
+	
 	@Override
-	public int compareTo(TaskParameter o) {
+	public int compareTo(Task o) {
 		return 0;
 	}
 }

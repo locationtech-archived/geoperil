@@ -201,7 +201,7 @@ html, body {
 	padding-left: 1em;
 }
     
-#sidebarTab, #saved, #custom, #timeline, #messages, #static, #evtsets, #evtsetcomp {
+#sidebarTab, #saved, #custom, #timeline, #messages, #static, #evtsets, #evtsetcomp, #floodcomp, #floodlist {
 	position: absolute;
 	top: 3em;
 	left: 0px;
@@ -209,7 +209,7 @@ html, body {
 	right: 0px;
 }
 
-#sidebar, #saved, #custom, #timeline-data, #messages, #static, #evtsets, #evtsetcomp {
+#sidebar, #saved, #custom, #timeline-data, #messages, #static, #evtsets, #evtsetcomp, #floodcomp, #floodlist {
 	overflow-y: auto;
 }
 
@@ -231,7 +231,7 @@ html, body {
 	margin-bottom: 1em;
 }
     	
-#grpSignOut, #tabSaved, #tabCustom, #tabTimeline, #tabMessages, #tabStatic, #tabEvtSets, #tabEvtSetComp {
+#grpSignOut, #tabSaved, #tabCustom, #tabTimeline, #tabMessages, #tabStatic, #tabEvtSets, #tabEvtSetComp, #tabFloodCompose, #tabFloodList {
 	display: none;
 }
   	
@@ -1373,6 +1373,21 @@ pre {
 	border: 1px solid black;
 }
 
+.html-status .error {
+	color: red;
+	text-align: center;
+}
+
+.html-status .success {
+	color: green;
+	text-align: center;
+}
+
+.html-status .load {
+	width: 100%;
+	text-align: center;
+}
+
 #adminTabStats .user-logins .input-group-addon {
 	border: 1px solid #cccccc;
 	border-radius: 3px;
@@ -1455,4 +1470,63 @@ pre {
 	text-align: center;
 	color: red;
 	margin-top: 1em;
+}
+
+#floodcomp .inner {
+	width: 80%;
+	margin-left: 10%;
+}
+
+#floodcomp .input-group {
+	padding: 0px;
+	margin-top: 1em;
+	margin-bottom: 1em;
+}
+
+#floodcomp input[type="file"] {
+	display: none;
+}
+
+#floodcomp label {
+	display: initial;
+}
+
+#floodcomp .fname {
+	width: 80%;
+}
+
+#floodcomp .points {
+	margin-top: 0.5em;
+	padding-top: 0.5em;
+	border-top: 1px solid black;
+	font-size: 1.2em;
+}
+
+#floodcomp input[type="checkbox"] {
+	transform: scale(1.2);
+	-webkit-transform: scale(1.2);
+}
+
+#floodcomp .flood-location-entry {
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
+    padding-right: 0.5em;
+	padding-left: 0.5em;
+}
+
+.flood-entry .glyphicon {
+	margin-right: 0.3em;
+}
+
+.buildings-dialog .content {
+	height: 500px;
+	overflow: auto;
+}
+
+.buildings-dialog table td, .buildings-dialog table th {
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+	padding-top: 0.2em;
+	padding-bottom: 0.2em;
+	text-align: center;	
 }

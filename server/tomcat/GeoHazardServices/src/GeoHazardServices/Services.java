@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -38,8 +39,16 @@ import javax.ws.rs.core.MediaType;
 
 import org.bson.types.ObjectId;
 
+import FloodPrototype.FloodProvider;
+import FloodPrototype.FloodTask;
+import FloodPrototype.Location;
+import Misc.IDataProvider;
+import Misc.User;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 import com.mongodb.AggregationOutput;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
@@ -49,31 +58,8 @@ import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoException;
+import com.mongodb.ServerAddress;
 import com.mongodb.util.Base64Codec;
-
-class User {
-	
-	public String name;
-	public Object objId;
-	public String inst;
-		
-	public User( DBObject obj ) {
-		this( obj, (DBObject) null );
-	}
-	
-	public User( DBObject obj, String inst ) {
-		this( obj );
-		this.inst = inst;
-	}
-	
-	public User( DBObject obj, DBObject instObj ) {
-		this.objId = (Object) obj.get( "_id" );
-		this.name = (String) obj.get( "username" );
-		
-		if( instObj != null )
-			inst = (String) instObj.get( "name" );
-	}
-}
 
 class Inst extends User {
 	
@@ -169,6 +155,8 @@ public class Services {
   private final int STATUS_FAILED = -1;
   private final int STATUS_NO_COMP = -2;
   private final int STATUS_ABORT = -3;
+  
+  private Map<String,IDataProvider> providers;
 	
   public Services() {
 	  
@@ -177,9 +165,13 @@ public class Services {
 	  worker = new ArrayList<WorkerThread>();
 	  	  	  
 	  try {
-		  
-		mongoClient = new MongoClient();
-		db = mongoClient.getDB( "easywave" );
+		
+		mongoClient = new MongoClient(Arrays.asList(
+		   new ServerAddress("tcnode1", 27017),
+		   new ServerAddress("tcnode2", 27017),
+		   new ServerAddress("tcnode3", 27017))
+		);
+		db = mongoClient.getDB("trideccloud");
 		
 	  } catch (UnknownHostException e) {
 		// TODO Auto-generated catch block
@@ -194,6 +186,10 @@ public class Services {
 	  loadInstitutions();
 	  
 	  gson = new Gson();
+	  
+	  /* TODO: find right place */
+	  providers = new HashMap<String, IDataProvider>();
+	  providers.put("floodsim", new FloodProvider(db));
 	  	  
 	  Listener.registerService( this );
   }
@@ -395,7 +391,7 @@ public class Services {
 		  accel = 1;
 	  
 	  /* start request */
-	  TaskParameter task = new TaskParameter(eqp, evtid, user, dur, accel, gridres);
+	  EQTask task = new EQTask(eqp, evtid, user, dur, accel, gridres);
 	  task.setSlots(IScheduler.SLOT_NORMAL, IScheduler.SLOT_EXCLUSIVE);
 	  return request( evtid, task );
   }
@@ -514,14 +510,14 @@ public class Services {
 	  
 	  /* prepare the simulation for execution */
 	  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
-	  TaskParameter task = new TaskParameter( eqp, evtid, user, dur, accel, gridres);
+	  EQTask task = new EQTask( eqp, evtid, user, dur, accel, gridres);
 	  task.raw = raw;
 	  task.dt_out = dt_out;
 	  String ret_id = request(evtid, task);
 	  return jssuccess( new BasicDBObject( "_id", ret_id ) );
   }
       
-  private String request(String id, TaskParameter task) {
+  private String request(String id, Task task) {
 	  scheduler.submit( task );
 	  return id;
   }
@@ -777,7 +773,7 @@ public class Services {
   }
   
   private boolean _abortEvent(String evtid) {
-	  TaskParameter task = scheduler.getTask(evtid);
+	  Task task = scheduler.getTask(evtid);
 	  if( task == null )
 		  return false;
 	  return task.markAsAbort();
@@ -786,7 +782,7 @@ public class Services {
   private String _compute(EQParameter eqp, User user, String name, 
 		  String parent, String root, Integer dur, EventSet evtSet) {
 	  	  	  
-	  /* create an unique ID that is not already present in the DB */
+	  /* create a unique ID that is not already present in the DB */
 	  String id = newRandomId(user.name);
 	  
 	  DBObject parentObj = db.getCollection("eqs").findOne( new BasicDBObject("_id", parent) );
@@ -841,7 +837,7 @@ public class Services {
 	  db.getCollection("events").insert( event );
 	  
 	  /* start request */
-	  TaskParameter task = new TaskParameter(eqp, id, user, dur, accel);
+	  EQTask task = new EQTask(eqp, id, user, dur, accel);
 	  task.evtset = evtSet;
 	  if( evtSet == null ) {
 		  task.setSlots(IScheduler.SLOT_NORMAL, IScheduler.SLOT_EXCLUSIVE);
@@ -1519,7 +1515,7 @@ public class Services {
 	ArrayList<DBObject> ulist = new ArrayList<DBObject>();
 	
 	/* we want all entries since the beginning of time */
-	Date maxTimestamp = new Date(0);
+	Date maxTimestamp = new Date();
 	
 	/* used to convert to desired time format used by MongoDB */
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
@@ -1636,6 +1632,14 @@ public class Services {
 	}
 	jsonObj.add("evtsets", gson.toJsonTree(evtsets));
 	
+	/* TODO */
+	if( user != null ) {
+		for( Map.Entry<String,IDataProvider> entry : providers.entrySet() ) {
+			List<DBObject> list = entry.getValue().fetch(user, maxTimestamp, limit);
+			jsonObj.add( entry.getKey(), gson.toJsonTree(list) );
+		}
+	}
+	
 	jsonObj.addProperty("ts", sdf.format( maxTimestamp ) );
 	return jsonObj.toString();
  }
@@ -1663,9 +1667,12 @@ public class Services {
 	 
 	/* convert timestamp from String to Date; return on error */
 	Date timestamp;
+	Date maxTimestamp = new Date();
+	Date minTimestamp;
 	
 	try {
 		timestamp = sdf.parse( ts );
+		minTimestamp = sdf.parse( ts );
 	} catch (ParseException e) {
 		e.printStackTrace();
 		return null;
@@ -1800,15 +1807,23 @@ public class Services {
 		cursor.close();
 	
 	}
-						
+	
+	if( timestamp.after(maxTimestamp) )
+		maxTimestamp = timestamp;
+	
 	/* create new JSON object that can be used directly within JavaScript */
 	JsonObject jsonObj = new JsonObject();
 	jsonObj.addProperty( "serverTime", sdf.format( new Date() ) );
-	jsonObj.addProperty( "ts", sdf.format( timestamp ) );
+	jsonObj.addProperty( "ts", sdf.format( maxTimestamp ) );
 	jsonObj.add( "main", gson.toJsonTree( mlist ) );
 	jsonObj.add( "user", gson.toJsonTree( ulist ) );
 	jsonObj.add( "evtsets", gson.toJsonTree( evtsets ) );
 			
+	for( Map.Entry<String, IDataProvider> entry: providers.entrySet() ) {
+		List<DBObject> list = entry.getValue().update(user, minTimestamp, maxTimestamp);
+		jsonObj.add( entry.getKey(), gson.toJsonTree(list) );
+	}
+	
 	return jsonObj.toString();
  }
     
@@ -2387,6 +2402,82 @@ public class Services {
 	 DBCursor cursor = coll.find();
 	 	 	 
 	 return cursor.toArray().toString();
+ }
+ 
+ /* Flood - Prototype */
+ @POST
+ @Path("/flood_compute")
+ @Produces(MediaType.APPLICATION_JSON)
+ public String flood_compute(
+		  @Context HttpServletRequest request,
+		  @FormParam("name") @DefaultValue("Custom") String name,
+		  @FormParam("test") String test,
+		  @CookieParam("server_cookie") String session) {
+	  	  	  
+	  Object[] required = { name };
+	  if( ! checkParams( request, required ) )
+		  return jsfailure();
+	  	  	  
+	  /* check if session is valid and if the user is logged in */
+	  User user = signedIn( session );
+	  if( user == null )
+		  return jsdenied();
+	  
+	  List<Location> locations;
+	  try {
+		  Type listType = new TypeToken<ArrayList<Location>>() {}.getType();
+		  locations = new Gson().fromJson(test, listType);
+	  } catch( JsonSyntaxException e ) {
+		  return jsfailure("Invalid JSON input string.");
+	  }
+	  System.out.println( new Date() + ": User " + user.name + " requested a FLOOD computation." );
+	  
+	  /* upon here, we assume an authorized user */
+	  String ret_id = _flood_compute(user, name, locations);
+	  return jssuccess( new BasicDBObject("_id", ret_id) );
+ }
+ 
+ private String _flood_compute(User user, String name, List<Location> locations) {
+	  	  	  
+	  /* create a unique ID that is not already present in the DB */
+	  String id = newRandomId(user.name);
+	  	  
+	  /* get current timestamp */
+	  Date timestamp = new Date();
+	  	  
+	  /* create new sub object that stores the properties */
+	  BasicDBObject sub = new BasicDBObject();
+	  sub.put( "name", name );
+	  sub.put( "locations", locations.size() );
+	  	  
+	  /* create new DB object that should be added to the earthquake collection */
+	  BasicDBObject obj = new BasicDBObject();
+	  obj.put( "_id", id );
+	  obj.put( "id", id );
+	  obj.put( "user", user.objId );
+	  obj.put( "timestamp", timestamp );
+	  obj.put( "prop", sub );
+	  	  
+	  /* insert object into collection */
+	  db.getCollection("floodsims").insert( obj );
+	  
+	  /* create a new event */
+	  BasicDBObject event = new BasicDBObject();
+	  event.put( "id", id );
+	  event.put( "user", user.objId );
+	  event.put( "timestamp", timestamp );
+	  event.put( "event", "new" );
+	  event.put( "class", "flood" );
+	  
+	  /* insert new event into 'events'-collection */
+	  db.getCollection("events").insert( event );
+	  
+	  System.out.println(locations.size());
+	  
+	  /* start request */
+	  Task task = new FloodTask(id, user, locations);
+	  task.setSlots(IScheduler.SLOT_NORMAL, IScheduler.SLOT_EXCLUSIVE);
+	  return request( id, task );
  }
  
 }

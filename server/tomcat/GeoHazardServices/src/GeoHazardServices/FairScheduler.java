@@ -8,11 +8,11 @@ public class FairScheduler implements IScheduler {
 
 	class Slot {
 		PriorityBlockingQueue<WorkerThread> workerQueue;
-		PriorityBlockingQueue<TaskParameter> taskQueue;
+		PriorityBlockingQueue<Task> taskQueue;
 		
 		public Slot() {
 			workerQueue = new PriorityBlockingQueue<WorkerThread>();
-			taskQueue = new PriorityBlockingQueue<TaskParameter>();
+			taskQueue = new PriorityBlockingQueue<Task>();
 		}
 		
 		public boolean hasWork() {
@@ -23,7 +23,7 @@ public class FairScheduler implements IScheduler {
 			if( ! hasWork() )
 				return;
 			/* Take pair of worker and task. */
-			TaskParameter task = taskQueue.poll();
+			Task task = taskQueue.poll();
 			if( ! task.markAsRun() ) {
 				/* Task already scheduled. Skip. */
 				System.out.println("## Task " + task.id + " not in WAIT mode. Skip.");
@@ -37,16 +37,16 @@ public class FairScheduler implements IScheduler {
 	}
 	
 	private Map<Integer,Slot> slots;
-	private Map<String,TaskParameter> tasks;
+	private Map<String,Task> tasks;
 	
 	public FairScheduler() {
 		slots = new HashMap<Integer,Slot>();
 		slots.put(SLOT_EXCLUSIVE, new Slot());
 		slots.put(SLOT_NORMAL, new Slot());
-		tasks = new HashMap<String, TaskParameter>();
+		tasks = new HashMap<String, Task>();
 	}
 	
-	public synchronized void submit(TaskParameter task) {
+	public synchronized void submit(Task task) {
 		/* Add task to all slots that are given in the object. */
 		/* Called by the web server. */
 		tasks.put(task.id, task);
@@ -87,7 +87,7 @@ public class FairScheduler implements IScheduler {
 		}
 	}
 	
-	public synchronized TaskParameter getTask(String id) {
+	public synchronized Task getTask(String id) {
 		return tasks.get(id);
 	}
 	

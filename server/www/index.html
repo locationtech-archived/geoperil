@@ -16,6 +16,7 @@
     <link href="geohazardcloud.css" rel="stylesheet">
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
     <link href='http://fonts.googleapis.com/css?family=Prosto+One' rel='stylesheet' type='text/css'>
+    <script src="js/proj4.js"></script>
     <script>
 	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
 	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
@@ -109,8 +110,10 @@
 							  	<li id="tabTimeline" class="tab-private"><a href="#timeline" id="hrefTimeline" data-toggle="tab">Timeline</a></li>
 							  	<li id="tabMessages" class="tab-private"><a href="#messages" data-toggle="tab">Messages</a></li>
 							  	<li id="tabStatic"><a href="#static" data-toggle="tab">Shared</a></li>
-							  	<li id="tabEvtSets"><a href="#evtsets" data-toggle="tab">Event Sets</a></li>
-							  	<li id="tabEvtSetComp"><a href="#evtsetcomp" data-toggle="tab">Event Set Compose</a></li>
+							  	<li id="tabEvtSets" class="tab-private"><a href="#evtsets" data-toggle="tab">Event Sets</a></li>
+							  	<li id="tabEvtSetComp" class="tab-private"><a href="#evtsetcomp" data-toggle="tab">Event Set Compose</a></li>
+							  	<li id="tabFloodCompose" class="tab-private"><a href="#floodcomp" data-toggle="tab">Flood Compose</a></li>
+							  	<li id="tabFloodList" class="tab-private"><a href="#floodlist" data-toggle="tab">Flood List</a></li>
 							</ul>
 						</div>
 	  				</div>
@@ -271,6 +274,35 @@
 				  		</div>
 		  				<p class="form-control-static labPreset">Load from preset events</p>
 		  				<div class="list-group preset"></div>
+		  			</div>
+		  			<div class="col-md-12 tab-pane" id="floodcomp">
+		  				<div class="inner">
+		  					<div class="flood-form"></div>
+		  					<div class="sourcepoints-upload">
+		  						<div class="content">		  					
+			  						<label for="file-points" class="file-points-label">
+			  							<span class="fname input-group-addon"></span>
+			  							<span class="btn btn-sm btn-primary input-group-btn">Select</span>
+			  							<input id="file-points" class="file-points input-group-addon" type="file" name="files[]"/>
+			  						</label>
+			  					</div>
+			  				</div>
+			  				<div class="breach-upload">
+		  						<div class="content">		  					
+			  						<label for="file-hydros" class="file-hydros-label">
+			  							<span class="fname input-group-addon"></span>
+			  							<span class="btn btn-sm btn-primary input-group-btn">Select</span>
+			  							<input id="file-hydros" class="file-points input-group-addon" type="file" name="files[]"/>
+			  						</label>
+			  					</div>
+			  				</div>
+			  				<button class="start btn btn-primary pull-right">Start</button>
+			  				<span class="clearfix"></span>
+			  				<span class="status"></span>
+			  				<div class="points"></div>
+		  				</div>
+		  			</div>
+		  			<div class="col-md-12 tab-pane" id="floodlist">
 		  			</div>
 	  			</div>
 	  		</div>
@@ -1144,7 +1176,7 @@
 			</div>
 		</div>
 	</div>
-	
+		
 	<div class="popovers">
 		<span class="learn">
 			Currently, we use a rough and simple threshold mechanism to identify the tsunami potential
@@ -1799,6 +1831,18 @@
 				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 			</div>
 		</div>
+		
+		<div class="buildings-dialog">
+			<div class="header">
+				<h4 class="modal-title">Affected Buildings</h4><br>
+			</div>
+			<div class="content">
+				<table></table>
+			</div>
+			<div class="footer">
+				<button type="button" class="btn btn-default btnClose" data-dismiss="modal">Close</button>
+			</div>
+		</div>
 	
 	</div>
 							
@@ -1896,8 +1940,76 @@
 		
 		<div class="html-range-slider"></div>
 		
+		<!-- HtmlStatusField -->
+		<div class="html-status">
+			<div class="error"></div>
+			<div class="success"></div>
+			<i class="load fa fa-spinner fa-spin fa-lg"></i>
+		</div>
+		
 		<div class="html-activity-view">
 			<table><tr></tr></table>
+		</div>
+		 
+		<!-- Flood - Location - Entry -->
+		<div class="flood-location-entry">
+			<div class="id pull-left"></div>
+			<input class="pull-right" type=checkbox checked>
+			<div class="clearfix"></div>
+		</div>
+		
+		<!-- sidebar flood-entry template -->
+		<div class="row flood-entry entry">
+			<div class="col-md-12" >
+				<div class="row row-subject">
+					<div class="col-md-2"></div>
+					<div class="col-md-10">
+						<div class="row">
+							<a href="#" class="big subject"></a>
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-2">
+						<div class="row row-marker">
+						</div>
+						<div class="row">
+							<h4 class="mag"></h4>
+						</div>
+					</div>
+					<div class="col-md-10">
+						<div class="row">
+							<div class="col-md-10">
+								<div class="row">
+									<span class="small timestamp"></span>
+								</div>
+								<div class="row">
+									<span class="small locations"></span>
+								</div>
+							</div>
+						</div>
+						<div class="row process">
+							<div class="progress">
+								<div class="progress-bar"></div>
+							</div>
+							<span class="medium status"></span>
+							<a class="lnkDownload pull-right" href="#"><span class="glyphicon glyphicon-download-alt"></span></a>
+							<a class="lnkDialog pull-right" href="#"><span class="glyphicon glyphicon-list"></span></a>
+						</div>
+						<div class="calc-data">
+							<div class="row">
+								<span class="small layers"></span>
+							</div>
+							<div class="row">
+								<span class="small resource"></span>
+							</div>
+							<div class="row">
+								<span class="small runtime"></span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
 		 				
 	</div>

@@ -68,9 +68,9 @@ class SurferFile:
         return (self.xmax-self.xmin)/(self.cols-1)
     def getRowHeight(self):
         return (self.ymax-self.ymin)/(self.rows-1)
-    def getValueAt(self,row,col):
+    def getValueAt(self,row,col,default=None):
         if row<0 or col<0 or row>=self.rows or col>=self.cols:
-            return None
+            return default
         else:
             fmt="f"
             fmtsize=struct.calcsize(fmt)
@@ -94,7 +94,12 @@ class SurferFile:
         xpos=round((lon-self.xmin)/self.getColWidth())
         ypos=round((lat-self.ymin)/self.getRowHeight())
         return ypos,xpos
-    def getValueAtLatLon(self,lat,lon):
+    def getValueAtLatLon(self,lat,lon,default=None):
         ypos,xpos=self.getRowColFromLatLon(lat,lon)
-        return self.getValueAt(ypos,xpos)
-
+        return self.getValueAt(ypos,xpos,default)
+    # Returns upper left and lower right.
+    def getBounds(self):
+        (lower, left) = self.getLatLonFromRowCol(0, 0)
+        (upper, right) = self.getLatLonFromRowCol(self.cols-1, self.rows-1)
+        return (lower, left, upper, right)
+        

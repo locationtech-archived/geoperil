@@ -6,9 +6,9 @@ import java.util.concurrent.PriorityBlockingQueue;
 public class WorkScheduler implements IScheduler {
 	
 	PriorityBlockingQueue<WorkerThread> workerQueue;
-	BlockingQueue<TaskParameter> taskQueue;
+	BlockingQueue<Task> taskQueue;
 	
-	public WorkScheduler( BlockingQueue<TaskParameter> taskQueue,
+	public WorkScheduler( BlockingQueue<Task> taskQueue,
 						  PriorityBlockingQueue<WorkerThread> workerQueue ) {
 		
 		this.workerQueue = workerQueue;
@@ -19,11 +19,11 @@ public class WorkScheduler implements IScheduler {
 		this.workerQueue.offer(worker);
 	}
 	
-	public void submit(TaskParameter task) {
+	public void submit(Task task) {
 		this.taskQueue.offer(task);
 	}
 	
-	public TaskParameter getTask(String id) {
+	public Task getTask(String id) {
 		return null;
 	}
 	
@@ -31,7 +31,7 @@ public class WorkScheduler implements IScheduler {
 	public void run() {
 		
 		WorkerThread worker;
-		TaskParameter task;
+		Task task;
 		
 		while( true ) {
 			

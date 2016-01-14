@@ -8,6 +8,8 @@ import base64
 import math
 import re
 import binascii
+import surfer
+import pymongo
 
 logger = logging.getLogger("MsgSrv")
 
@@ -314,6 +316,51 @@ class WebGuiSrv(BaseSrv):
         return res
 
     @cherrypy.expose
+    def getbuildings(self, minx, miny, maxx, maxy, evtid=None):
+        user = self.getUser()
+        if user is not None:
+            return jssuccess(buildings = self._getbuildings(minx, miny, maxx, maxy, evtid))
+        return jsdeny()
+
+    def _getbuildings(self, minx, miny, maxx, maxy, evtid=None):
+        query = {}
+        if maxy is not None:
+            # does not consider the wrap around +180/-180 degree longitude
+            query = {"$and": [
+                {"minx": {"$gt": float(minx)} },
+                {"miny": {"$gt": float(miny)} },
+                {"maxx": {"$lt": float(maxx)} }, 
+                {"maxy": {"$lt": float(maxy)} }
+            ]}
+        total = 0
+        start1 = time.time()
+        res = list( self._db["osm_buildings"].find(query).limit(3000) )
+        if evtid is not None:
+            fgrid = os.path.join(config["eventdata"]["eventdatadir"], evtid, "wstmax_gpu.grid")
+            print(fgrid)
+            if os.path.isfile(fgrid):
+                f = open(fgrid,"rb")
+                sf = surfer.SurferFile(f)
+                start2 = time.time()
+                for building in res:
+                    h = 0
+                    start3 = time.time()
+                    h = max( sf.getValueAtLatLon( building["miny"], building["minx"], 0), h)
+                    h = max( sf.getValueAtLatLon( building["miny"], building["maxx"], 0), h)
+                    h = max( sf.getValueAtLatLon( building["maxy"], building["minx"], 0), h)
+                    h = max( sf.getValueAtLatLon( building["maxy"], building["maxx"], 0), h)
+                    building["height"] = h
+                    total += (time.time() - start3)
+                print( 'Elapsed1:', (time.time() - start1) )
+                print( 'Elapsed2:', (time.time() - start2) )
+                print( 'Total:', total)
+                print( 'has C:', pymongo.has_c() )
+                f.close()
+            else:
+                print("CLOUD: grid file not found!")
+        return res
+
+    @cherrypy.expose
     def getjets(self, evid):
         user = self.getUser()
         if user is not None or self.auth_shared(evid):
@@ -323,6 +370,21 @@ class WebGuiSrv(BaseSrv):
             for j in jets:
                 j["color"] = pmap[j["ewh"]]
             return jssuccess(jets = jets)
+        return jsdeny()
+
+    @cherrypy.expose
+    def getwaterheights(self, evid):
+        user = self.getUser()
+        if user is not None or self.auth_shared(evid):
+            heights = list( self._db["results"].find({"id":evid, "class": "flood"}).sort([("height",1)]) )
+            for h in heights:
+                if h["height"] == "1":
+               	    h["color"] = "#fdfd01"
+                if h["height"] == "3":
+                    h["color"] = "#ff6100"
+                if h["height"] == "5":
+                    h["color"] = "#f50000"
+            return jssuccess(heights = heights)
         return jsdeny()
 
     @cherrypy.expose

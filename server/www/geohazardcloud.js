@@ -330,6 +330,7 @@ function EntryMap() {
 	};
 
 	this.get = function(id) {
+		if( id === null ) return null;
 		return this.map[id];
 	};
 
@@ -456,6 +457,11 @@ function Container(sortFun) {
 		var ret = this.list.slice();
 		ret.sort(fun);
 		return ret;
+	};
+	
+	this.setList = function(list) {
+		this.list = list;
+		this.sort();
 	};
 }
 
@@ -1839,7 +1845,8 @@ function StationView(widget, data) {
 		}
 	};
 
-	this.widget.scroll(this.onScroll.bind(this));
+	if( arguments.length > 0 )
+		this.widget.scroll(this.onScroll.bind(this));
 }
 
 function Symbol(marker, idx, list) {
@@ -2412,6 +2419,8 @@ function GlobalControl() {
 	this.infoDialog = new InfoDialog();
 	/* PropDialog*/
 	this.propDialog = new PropDialog();
+	/* BuildingsDialog */
+	this.buildingsDialog = new BuildingsDialog();
 	/* make dialogs visible if initialization is finished */
 	$('.dialog-templates').show();
 
@@ -2421,11 +2430,14 @@ function GlobalControl() {
 	messages = new Container(sort_date.bind(this, -1));
 	shared = new Container(sort_date.bind(this, -1));
 	evtsets = new Container(sort_timeline);
+	floodsims = new Container(sort_timeline);
 	
 	this.layers = new Container(sort_string.bind(this,'name'));
 		
 	this.main = function() {
 
+		this.active = null;
+		
 		var callbacks = {
 			'clk_entry' : this.vis.bind(this),
 			'clk_timeline' : this.search.bind(this),
@@ -2479,16 +2491,36 @@ function GlobalControl() {
 			$("#tabEvtSets > a").click();
 		}).bind(this));
 		
+		/* Flood - Prototype */
+		this.floodcomp = new FloodComposeTab($('#floodcomp'));
+		
+		w = new ListWidget($('#floodlist'), floodsims, map, callbacks);
+		w.create();
+		this.widgets['tabFloodList'] = w;
+		/* ***************** */
+		
 		/* add layers */
 		this.layers.insert( new CFZLayer('CFZ-Layer', map) );
-		this.layers.insert( new JetLayer('Tsunami-Jets', map) );
-		this.layers.insert( new IsoLayer('Isolines', map) );
-		this.layers.insert( new TFPLayer('FTP-Layer', map) );
+		this.layers.insert( new PolygonLayer('Tsunami-Jets', map,
+				 function(data){ return data.show_jets; },
+				 function(data){ return data.jets; }) );
+		this.layers.insert( new PolygonLayer('Isolines', map,
+				 function(data){ return data.show_isos; },
+				 function(data){ return data.isos; }) );
+		this.layers.insert( new TFPLayer('TFP-Layer', map) );
+		this.layers.insert( new PolygonLayer('Flood-Layer', map,
+				 function(data){ return data.show_waterheights.val; },
+				 function(data){ return data.waterheights; }) );
+		this.layers.insert( new MarkerLayer('Marker-Layer', map) );
+		
+		this.layers.insert( new BuildingsLayer('Buildings', map,
+				function(data){ return data.show_buildings.get(); }) );
+		
 		for( var i = 0; i < this.layers.length(); i++ ) {
 			var layer = this.layers.get(i);
 			this.setCallback('select', layer.setData.bind(layer));
 		}
-		//new LayerSwitcher( $('#layer-switcher'), this.layers );		
+		//new LayerSwitcher( $('#layer-switcher'), this.layers );
 	};
 	
 	this.tabChanged = function(e) {
@@ -2501,11 +2533,19 @@ function GlobalControl() {
 	
 	/* TODO: refactor */
 	this.vis = function(data) {
-		var eq = data;	
+		var eq = data;
 		if( data instanceof Message ) {
 			eq = data.parentEvt;
 			markMsgAsDisplayed(data);	
 		}
+		
+		if(this.active != eq._id) {
+			this.deselect();
+			this.active = eq._id;
+			eq.selected = true;
+			eq.notifyOn('select');
+		}
+		
 		this.notifyOn('select',eq);
 		/* show progress on map until loading of event has finished */
 		if( ! eq.isLoaded() ) {
@@ -2514,13 +2554,25 @@ function GlobalControl() {
 				this.mapProgress.hide();
 			}).bind(this));
 		}
-		visualize(eq);
 	};
 	
 	this.deselect = function() {
+		
+		if(this.active == null)
+			return;
+		
+		var entry = entries.get(this.active);
+		if (entry) {
+			entry.selected = false;
+			entry.notifyOn('select');
+		}
+		
+		/* TODO */
+		stationView.setData(stations);
+		stationSymbols.setData(stations);
+		
+		this.active = null;
 		this.notifyOn('select',null);
-		/* TODO: for compatibility reasons */
-		deselect();
 	};
 
 	/* TODO: refactor */
@@ -2571,7 +2623,30 @@ function GlobalControl() {
 
 	/* TODO: refactor */
 	this.remove = function(data) {
-		deleteEntry(data);
+
+		var id = data._id;
+		var type = '';
+		var eid = id;
+
+		if (data.kind == 'msg') {
+			if (data.Dir == 'in') {
+				id = id.slice(0, -3);
+				type = 'msg_in';
+			} else {
+				type = 'msg_out';
+			}
+			eid = data.ParentId;
+		}
+
+		ajax_mt('srv/delete', {id: id, type: type}, (function(result){
+			if (result.status == 'success') {
+				if (eid == this.active)
+					this.deselect();
+
+				data.deleted = true;
+				data.notifyOn('delete');
+			}
+		}).bind(this) );
 	};
 	
 	/* TODO: refactor */
@@ -2585,6 +2660,22 @@ function GlobalControl() {
 			showGrid(active, data.show_grid);
 	};
 	
+	this.loadBuildings = function(event, minx, miny, maxx, maxy, func) {
+		var params = { minx: minx, miny: miny, maxx: maxx, maxy: maxy };
+		/* Add id of selected event in case there is a selection. */
+		if( event )
+			params.evtid = event._id;
+		/* Retrieve buildings from server. */
+		ajax('webguisrv/getbuildings/', params, (function(result) {
+			console.log(result);
+			/* Walk through list of buildings and create appropriate polygons. */
+			//func(result.buildings);
+			var cont = new Container( function(a,b) { return - sort_string('height', a, b); } );
+			cont.setList( result.buildings );
+			func(cont);
+		}).bind(this));
+	};
+
 	this.main();
 }
 
@@ -2787,15 +2878,57 @@ function Widget() {
 	
 	ICallbacks.call(this);
 	
+	this.init = function(data) {
+		this.data = data;
+		this.data.setCallback('update', this.update.bind(this));
+		this.data.setCallback('select', this.select.bind(this));
+		
+		this.div.mouseover(this.highlight.bind(this, true));
+		this.div.mouseout(this.highlight.bind(this, false));
+	};
+	
 	this.show = function() {};
 	this.hide = function() {};
+	this.update = function() {};
+	
+	this.select = function() {
+		if( this.data.selected ) {
+			this.div.css('border-left', '8px solid #C60000');
+			this.div.css('background-color', '#c3d3e1');
+		} else {
+			this.div.css('background-color', '#fafafa');
+			this.div.css('border-left', '0px');
+		}
+	};
+	
+	this.highlight = function(turnOn) {
+		if( this.data.selected )
+			return;
+		var color = turnOn ? '#c3d3e1' : '#fafafa';		
+		this.div.css('background-color', color);
+	};
+	
+	this.createLayers = function(layers) {
+		/* create layer switcher */
+		this.chk_boxes = [];
+		this.div.find('.layers').empty();
+		for( attr in layers ) {
+			var cbox = new HtmlCheckBox(attr);
+			cbox.setCallback('change', layers[attr]);
+			this.div.find('.layers').append(cbox.div);
+			this.chk_boxes.push(cbox);
+		}
+	};
+	
+	if( arguments.length > 0 )
+		this.init.apply(this, arguments);
 }
 
-ListWidget.prototype = new Widget();
+ListWidget.prototype = new ICallbacks();
 
 function ListWidget(div, data, map, callbacks) {
 
-	Widget.call(this);
+	ICallbacks.call(this);
 		
 	this.init = function(div, data, map, callbacks) {
 
@@ -2843,12 +2976,14 @@ function ListWidget(div, data, map, callbacks) {
 				return false;
 		return true;
 	};
-		
+	
 	this.addEntry = function(elem, idx) {
 
 		var eqwidget;
 
-		if (elem instanceof Message) {
+		if(elem instanceof FloodEvent) {
+			eqwidget = new FloodWidget(elem, marker);
+		} else if (elem instanceof Message) {
 			eqwidget = new MsgWidget(elem);
 		} else if(elem instanceof Earthquake) {
 
@@ -2868,7 +3003,9 @@ function ListWidget(div, data, map, callbacks) {
 			return console.log("Unknown data tpye in ListWidget.");
 		}
 		
+		/* TODO: improve callback handling with uniqe object id */
 		elem.setCallback('delete', this.create.bind(this));
+		//elem.setUniqueCallback('delete', this.create.bind(this), this.uid);
 		
 		eqwidget.inheritCallbacks(this.callbacks);
 
@@ -3042,24 +3179,19 @@ function MyListWidget(div, data, map, callbacks) {
 EQWidget.prototype = new Widget();
 
 function EQWidget(data, marker) {
-
-	Widget.call( this );
+	
+	Widget.call(this);
 	
 	this.init = function(data, marker) {
 		this.div = $('.eq-entry').clone();
 		this.div.removeClass('eq-entry');
 		this.div.show();
+		
+		EQWidget.prototype.init.call( this, data );
 		/* store a reference to the earthquake object */
-		this.data = data;
-		this.data.setCallback('update', this.update.bind(this));
 		this.data.setCallback('copy', this.showCopyInfo.bind(this));
-		this.data.setCallback('select', this.setSelect.bind(this));
 		this.marker = marker;
 		
-		/* set event listener */
-		this.div.mouseover(this.highlight.bind(this, true));
-		this.div.mouseout(this.highlight.bind(this, false));
-
 		this.div.find('.region').click(
 				this.notifyOn.bind(this, 'clk_entry', this.data));
 		this.div.find('.lnkTimeline').click(
@@ -3282,7 +3414,7 @@ function EQWidget(data, marker) {
 			this.div.find('.lnkCopy').show();
 		}
 		
-		this.setSelect();
+		this.select();
 	};
 	
 	this.onGridChange = function(e) {
@@ -3310,17 +3442,7 @@ function EQWidget(data, marker) {
 		info.find('span').html(res);
 		info.show(400);
 	};
-	
-	this.setSelect = function() {
-		if( this.data.selected ) {
-			this.div.css('border-left', '8px solid #C60000');
-			this.div.css('background-color', '#c3d3e1');
-		} else {
-			this.div.css('background-color', '#fafafa');
-			this.div.css('border-left', '0px');
-		}
-	};
-	
+		
 	this.hide = function() {
 		this.marker.hide();
 	};
@@ -3328,13 +3450,10 @@ function EQWidget(data, marker) {
 	this.show = function() {
 		this.marker.show();
 	};
-
+	
 	this.highlight = function(turnOn) {
-		if( this.data.selected )
-			return;
-		var color = turnOn ? '#c3d3e1' : '#fafafa';
+		EQWidget.prototype.highlight.call(this, turnOn);
 		this.marker.setAnimation(turnOn);
-		this.div.css('background-color', color);
 	};
 
 	if (arguments.length == 2)
@@ -3345,14 +3464,14 @@ MsgWidget.prototype = new Widget();
 
 function MsgWidget(data) {
 
-	Widget.call(this);
+	//Widget.call(this, data);
 	
 	this.init = function(data) {
 		this.div = $('.msg-entry').clone();
 		this.div.removeClass('msg-entry');
 		this.div.show();
-		/* store a reference to the earthquake object */
-		this.data = data;
+		
+		MsgWidget.prototype.init.call(this, data, this.div);
 		this.update();
 	};
 
@@ -3509,8 +3628,6 @@ function EvtSetWidget(data, marker) {
 		this.data = data;
 		this.marker = marker;
 		/* register callbacks */
-		this.data.setCallback('update', this.update.bind(this));
-		this.data.setCallback('select', this.setSelect.bind(this));
 		this.div.find('.subject').click(this.notifyOn.bind(this, 'clk_entry', this.data));
 		
 		this.div.find('.lnkEdit').click(this.notifyOn.bind(this, 'clk_edit_set', this.data));
@@ -3598,7 +3715,7 @@ function EvtSetWidget(data, marker) {
 		
 		this.chk_boxes[0].value( this.data.show_jets );
 		
-		this.setSelect();
+		this.select();
 	};
 		
 	this.init(data, marker);
@@ -3639,6 +3756,7 @@ function Message(meta) {
 function ICallbacks() {
 
 	this.callbacks = {};
+	this.uid = ICallbacks.next_uid++;
 
 	this.setCallbacks = function(callbacks) {
 		for( var action in callbacks )
@@ -3653,6 +3771,21 @@ function ICallbacks() {
 		/* create new object for this kind of action if not already done */
 		if(! (action in this.callbacks) )
 			this.callbacks[action] = {cnt: 0};
+		/* get next id that identifies this callback - can be used to deregister later */
+		var cnt = this.callbacks[action].cnt++;
+		this.callbacks[action][cnt] = func;
+		return cnt;
+	};
+	
+	/* TODO: fix! */
+	this.setUniqueCallback = function(action, func, uid) {
+		if( ! (action in this.callbacks) )
+			this.callbacks[action] = {cnt: 0};
+		/* TODO: requires combination of function and uid */
+		for( var i = 0; i < this.callbacks[action].cnt; i++) {
+			if( this.callbacks[action].uid == uid )
+				return;
+		}
 		/* get next id that identifies this callback - can be used to deregister later */
 		var cnt = this.callbacks[action].cnt++;
 		this.callbacks[action][cnt] = func;
@@ -3678,10 +3811,18 @@ function ICallbacks() {
 		
 		for(var i = 0; i < cnt; i++)
 			if( this.callbacks[action][i] ) {
+				/* TODO: Check this part on production system. */
+//				if( vargs.length == 0 ) {
+//					setTimeout( this.callbacks[action][i].bind(this), 0);
+//				} else if ( vargs.length == 1 )
+//					setTimeout( this.callbacks[action][i].bind(this, vargs[0]), 0 );
+//				else if ( vargs.length == 2 )
+//					setTimeout( this.callbacks[action][i].bind(this, vargs[0], vargs[1]), 0 );
 				this.callbacks[action][i].apply(this, vargs);
 			}
 	};
 }
+ICallbacks.next_uid = 1;
 
 function LayerSwitcher(div, layers) {
 	
@@ -3771,8 +3912,7 @@ var simText = defaultText;
 var signTarget = null;
 
 var markers = {
-	compose : null,
-	active : null
+	compose : null
 };
 
 var stations;
@@ -3830,9 +3970,6 @@ function load_gmaps() {
 	markers.compose = createDefaultMarker($('#inLat').val(), $('#inLon').val(),
 			"#E4E7EB");
 	markers.compose.setMap(null);
-	markers.active = createDefaultMarker($('#inLat').val(), $('#inLon').val(),
-			"#5cb85c");
-	markers.active.setMap(null);
 }
 
 function initialize() {
@@ -3961,6 +4098,7 @@ function getEvents(callback) {
 			var ulist = data['user'];
 			var msglist = data['msg'];
 			var sets = data['evtsets'];
+			var floods = data['floodsim'];
 						
 			for (var i = mlist.length - 1; i >= 0; i--) {
 
@@ -3987,6 +4125,11 @@ function getEvents(callback) {
 				evtsets.insert(entry);
 			}
 			
+			for(var i = floods.length - 1; i >= 0; i--) {
+				var entry = entries.getOrInsert(new FloodEvent(floods[i]));
+				floodsims.insert(entry);
+			}
+			
 			eqlist.notifyOn('change');
 
 			if (ulist.length > 0) {
@@ -3998,6 +4141,9 @@ function getEvents(callback) {
 			
 			if(sets.length > 0)
 				evtsets.notifyOn('change');
+			
+			if(floods.length > 0)
+				floodsims.notifyOn('change');
 
 			getUpdates(timestamp);
 
@@ -4025,7 +4171,7 @@ function getUpdates(timestamp) {
 			var sets = result['evtsets'];
 
 			serverTime = new Date(result['serverTime']);
-
+			
 			var madd = false;
 			var uadd = false;
 			var sadd = false;
@@ -4175,6 +4321,28 @@ function getUpdates(timestamp) {
 			}
 			if( change )
 				evtsets.notifyOn('change');
+			
+			change = false;
+			for (var i = result.floodsim.length - 1; i >= 0; i--) {
+				var obj = result.floodsim[i];
+				if( obj['event'] == 'new') {
+					var entry = entries.getOrInsert(new FloodEvent(obj.data));
+					floodsims.insert(entry);
+					console.log(entry);
+					change = true;
+				}
+				if( obj['event'] == 'progress') {
+					var id = obj.id;
+					/* Update progress only if the event was already loaded. */
+                    if( entries.get(id) ) {
+					    entries.get(id).process = obj.process;
+					    console.log( entries.get(id).process );
+					    entries.get(id).notifyOn('update');
+                    }
+				}
+			}
+			if( change )
+				floodsims.notifyOn('change');
 
 			if (madd) {
 				eqlist.notifyOn('change');
@@ -4283,22 +4451,6 @@ function getMarkerColor(mag) {
 	return color;
 }
 
-function visualize(entry) {
-
-	setMarkerPos(markers.active, entry.prop.latitude, entry.prop.longitude);
-	markers.active.setMap(map);
-
-	if (active != entry._id) {
-
-		deselect(active);
-		select(entry);
-
-		showGrid(active, entry['show_grid']);
-	}
-
-	map.panTo(markers.active.getPosition());
-}
-
 function addMarker(lat, lon, icon) {
 
 	// create new marker on selected position
@@ -4395,35 +4547,6 @@ function showGrid(pointer, visible) {
 	});
 
 	entry['rectangle'].setMap(map);
-}
-
-function select(entry) {
-	active = entry._id;	
-	entry.selected = true;
-	entry.notifyOn('select');
-}
-
-function deselect() {
-
-	if (active == null)
-		return;
-
-	showGrid(active, false);
-
-	if (markers.active)
-		markers.active.setMap(null);
-
-	var entry = entries.get(active);
-
-	if (entry) {
-		entry.selected = false;
-		entry.notifyOn('select');
-	}
-
-	stationView.setData(stations);
-	stationSymbols.setData(stations);
-
-	active = null;
 }
 
 function checkSession() {
@@ -4563,7 +4686,7 @@ function logIn(callback) {
 
 	simText = userText;
 
-	deselect();
+	global.deselect();
 
 	delay = 0;
 	eqlist.clear();
@@ -4625,6 +4748,14 @@ function logIn(callback) {
 		$('#tabEvtSetComp').hide();
 	}
 	
+	if( checkPerm("flood") ) {
+		$('#tabFloodCompose').show();
+		$('#tabFloodList').show();
+	} else {
+		$('#tabFloodCompose').hide();
+		$('#tabFloodList').hide();
+	}
+	
 	onResize();
 
 	shared.clear();
@@ -4664,40 +4795,40 @@ function signOut() {
 
 function logOut() {
 
-	loggedIn = false;
-
-	// showSplash( true );
-
-	simText = defaultText;
-
-	$("#btnSignIn").css("display", "block");
-	$("#grpSignOut").css("display", "none");
-
-	$('.tab-private').css("display", "none");
-	onResize();
-
-	$('#tabRecent').find('a').trigger('click');
-
-	deselect();
-	delay = default_delay;
-	eqlist.clear();
-	saved.clear();
-	timeline.clear();
-	messages.clear();
-	entries.reset();
-	getEvents(null);
-
-	shared.clear();
-	checkStaticLink();
-
-	$('#lnkUser').html("");
-	$('#lnkUser').css("display", "none");
-
 	/*
 	 * to avoid caching problems, simply reload the page and start from session
 	 * again
 	 */
 	window.location.reload();
+	
+//	loggedIn = false;
+//
+//	// showSplash( true );
+//
+//	simText = defaultText;
+//
+//	$("#btnSignIn").css("display", "block");
+//	$("#grpSignOut").css("display", "none");
+//
+//	$('.tab-private').css("display", "none");
+//	onResize();
+//
+//	$('#tabRecent').find('a').trigger('click');
+//
+//	global.deselect();
+//	delay = default_delay;
+//	eqlist.clear();
+//	saved.clear();
+//	timeline.clear();
+//	messages.clear();
+//	entries.reset();
+//	getEvents(null);
+//
+//	shared.clear();
+//	checkStaticLink();
+//
+//	$('#lnkUser').html("");
+//	$('#lnkUser').css("display", "none");
 }
 
 function compute() {
@@ -5567,52 +5698,6 @@ function propSubmit() {
 	$('#propBtnSubmit').html('<span>Save</span>');
 }
 
-function deleteEntry(entry) {
-
-	var id = entry._id;
-	var type = '';
-
-	var eid = id;
-
-	if (entry.kind == 'msg') {
-
-		if (entry.Dir == 'in') {
-			id = id.slice(0, -3);
-			type = 'msg_in';
-		} else {
-			type = 'msg_out';
-		}
-
-		eid = entry.ParentId;
-	}
-
-	$.ajax({
-		type : 'POST',
-		url : 'srv/delete',
-		data : {
-			id : id,
-			type : type
-		},
-		dataType : 'json',
-		success : function(result) {
-
-			if (result.status == 'success') {
-
-				if (eid == active)
-					global.deselect();
-
-				entry.deleted = true;
-				entry.notifyOn('delete');
-			}
-		},
-		error : function() {
-		},
-		complete : function() {
-		}
-	});
-
-}
-
 function showMsg(msg) {
 
 	var text = msg.Text;
@@ -5699,7 +5784,7 @@ function checkStaticLink() {
 		success : function(res) {
 
 			if (res.status == "success") {
-				deselect();
+				global.deselect();
 				var entry = entries.getOrInsert(new Earthquake(res.eq));
 				entry.extern = true;
 				shared.insert(entry);
@@ -5793,7 +5878,7 @@ function toggleCloudButton() {
 		$('#btnDeselect span').removeClass('glyphicon-cloud-upload');
 
 		$('#btnDeselect').unbind('click');
-		$('#btnDeselect').click(deselect);
+		$('#btnDeselect').click(global.deselect.bind(global));
 		$('#btnDeselect').data('bs.tooltip').options.title = "Deselect and show map only";
 	}
 }
@@ -6454,6 +6539,70 @@ function MailDialog() {
 	this.init();
 }
 
+function BuildingsDialog() {
+	
+	this.init = function() {
+		this.dialog = new HtmlDialog($('.buildings-dialog'));
+		this.table = this.dialog.content.find('table');
+	};
+	
+	this.updateText = function(buildings) {
+		/* Try to extract known tags. */
+		var tags;
+		tags = [
+			['addr:city', 'City'],
+			['addr:postcode', 'Postcode'],
+			['addr:street', 'Street'],
+			['addr:housenumber', 'Housenumber']
+		];
+		var text = '';
+		text += '<tr>\n';
+		text += '<th>Latitude</th>\n';
+		text += '<th>Longitude</th>\n';
+		for(var j = 0; j < tags.length; j++) {
+			var tag = tags[j][1];
+			text += '<th>' + tag + '</th>\n';
+		}
+		text += '<th>Water Height</th>\n';
+		text += '</tr>\n';
+		for(var i = 0; i < buildings.length(); i++ ) {
+			var b = buildings.get(i);
+			if( ! b.height || b.height == 0 ) continue;
+			var mlat = b.miny + (b.maxy - b.miny) / 2;
+			var mlon = b.minx + (b.maxx - b.minx) / 2;
+			text += '<tr>\n';
+			text += '<td>' + mlat.toFixed(2) + '</td>\n';
+			text += '<td>' + mlon.toFixed(2) + '</td>\n';
+			for(var j = 0; j < tags.length; j++) {
+				var tag = tags[j][0];
+				text += '<td>' +  (! b.tags || ! b.tags[tag] ? ' - ' : b.tags[tag]) + '</td>\n';
+			}
+			text += '<td>' + b.height.toFixed(2) + '</td>\n';
+			text += '</tr>\n';
+		}
+		this.table.html(text);
+	};
+	
+	this.show = function(event) {
+		var bounds = map.getBounds();
+		var ne = bounds.getNorthEast();
+		var sw = bounds.getSouthWest();
+		this.clear();
+		this.dialog.lock();
+		this.dialog.show();
+		global.loadBuildings(event, sw.lng(), sw.lat(), ne.lng(), ne.lat(), (function(buildings) {
+			this.updateText(buildings);
+			this.dialog.unlock();
+		}).bind(this));
+	};
+	
+	this.clear = function() {
+		this.table.html('');
+	};
+	
+	this.init();
+}
+
 function AdminDialog() {
 	
 	this.init = function() {
@@ -7017,6 +7166,7 @@ function HtmlCheckBox(label, checked) {
 	};
 
 	this.value = function(checked,notify) {
+		console.log('Checkbox: ', checked);
 		var curval = this.check.prop('checked');		
 		if(arguments.length < 1)
 			return curval;		
@@ -7032,6 +7182,13 @@ function HtmlCheckBox(label, checked) {
 	
 	this.onChange = function() {
 		this.notifyOn('change',this.value());
+	};
+	
+	/* Input: ActionFlag field */
+	this.bindTo = function(field) {
+		this.setCallback('change', field.set.bind(field));
+		field.setCallback('change', this.value.bind(this));
+		this.value(field.get());
 	};
 	
 	this.init(label, checked);
@@ -7424,10 +7581,17 @@ function HtmlInputGroup(label, icon, box) {
 
 		this.div = $('.templates > .html-inputgroup').clone();
 		this.div.find('> .html-label').html(label);
-		this.div.find('> .html-icon > span').addClass('glyphicon-' + icon);
+
+		if( icon ) {
+			this.div.find('> .html-icon > span').addClass('glyphicon-' + icon);
+		} else {
+			this.div.find('> .html-icon').hide();
+		}
+
 		this.input = this.div.find('> .html-input');
 		
 		if( box ) {
+			console.log(box.find('> .content').children());
 			this.input.replaceWith( box.find('> .content').children() );
 			box.html(this.div);
 		}
@@ -7566,6 +7730,38 @@ function HtmlRangeSlider(min,max,step) {
 	this.init(min,max,step);
 }
 
+function HtmlStatusField(div) {	
+
+	this.init = function(label, callback) {
+		this.div = $('.templates > .html-status');
+		this.divError = this.div.find('.error');
+		this.divSuccess = this.div.find('.success');
+		this.divLoad = this.div.find('.load');
+	};
+
+	this.error = function(msg) {
+		this.clear();
+		this.divError.html(msg);
+	};
+	
+	this.success = function(msg) {
+		this.clear();
+		this.divSuccess.html(msg);
+	};
+	
+	this.clear = function() {
+		this.div.find('*').html('');
+		this.divLoad.hide();
+	};
+	
+	this.load = function() {
+		this.clear();
+		this.divLoad.show();
+	};
+	
+	this.init(div);
+}
+
 /* ajax related framework functions */
 function getAjax(url, data, callback) {
 
@@ -7658,7 +7854,9 @@ function Layer(name, map) {
 		/* register callback and update view */
 		if( this.data ) {
 			this.cid = this.data.setCallback('update',this.update.bind(this));
+			this.dataHasChanged = true;
 			this.update();
+			this.dataHasChanged = false;
 		}
 	};
 		
@@ -7686,52 +7884,6 @@ function Layer(name, map) {
 	
 	if( arguments.length > 0 )
 		this.init(name, map);
-}
-
-JetLayer.prototype = new Layer();
-
-function JetLayer(name,map) {
-	
-	Layer.call(this,name,map);
-			
-	this.update = function() {
-		if( this.data.show_jets )
-			return this.display();
-		return this.clear();
-	};
-	
-	this.display = function() {
-		for (var i = 0; i < this.data.jets.length(); i++)
-			this.data.jets.get(i).show(this.map);
-	};
-	
-	this.clear = function() {
-		for (var i = 0; i < this.data.jets.length(); i++)
-			this.data.jets.get(i).show(null);
-	};
-}
-
-IsoLayer.prototype = new Layer();
-
-function IsoLayer(name,map) {
-	
-	Layer.call(this,name,map);
-			
-	this.update = function() {
-		if( this.data.show_isos )
-			return this.display();
-		return this.clear();
-	};
-	
-	this.display = function() {
-		for (var i = 0; i < this.data.isos.length(); i++)
-			this.data.isos.get(i).show(this.map);
-	};
-	
-	this.clear = function() {
-		for (var i = 0; i < this.data.isos.length(); i++)
-			this.data.isos.get(i).show(null);
-	};
 }
 
 CFZLayer.prototype = new Layer();
@@ -7828,6 +7980,66 @@ function TFPLayer(name,map) {
 	this.init();
 }
 
+MarkerLayer.prototype = new Layer();
+
+function MarkerLayer(name,map) {
+	
+	Layer.call(this,name,map);
+	
+	this.init = function() {
+		this.active_marker = createDefaultMarker(0, 0, "#5cb85c");
+		this.active_marker.setMap(null);
+	};	
+	
+	this.update = function() {
+		/* This layer supports Earthquake objects only. */
+		if( this.data instanceof Earthquake )
+			return this.display();
+	};
+	
+	this.display = function() {
+		setMarkerPos(this.active_marker, this.data.prop.latitude, this.data.prop.longitude);
+		this.active_marker.setMap(map);
+		map.panTo(this.active_marker.getPosition());
+		
+		showGrid(active, this.data.show_grid);
+	};
+	
+	this.clear = function() {
+		this.active_marker.setMap(null);
+		showGrid(active, false);
+	};
+	
+	this.init();
+}
+
+PolygonLayer.prototype = new Layer();
+
+function PolygonLayer(name, map, fun_enabled, fun_data) {
+	
+	Layer.call(this,name,map);
+			
+	this.update = function() {
+		if( fun_enabled(this.data) )
+			return this.display();
+		return this.clear();
+	};
+	
+	this.display = function() {
+		var container = fun_data(this.data);
+		if( ! container ) return;
+		for (var i = 0; i < container.length(); i++)
+			container.get(i).show(this.map);
+	};
+	
+	this.clear = function() {
+		var container = fun_data(this.data);
+		if( ! container ) return;
+		for (var i = 0; i < container.length(); i++)
+			container.get(i).show(null);
+	};
+}
+
 Geometry.LatLon = function() {		
 	if(arguments.length == 2) {
 		this.lat = arguments[0];
@@ -7855,7 +8067,7 @@ function Polygon(coords,color) {
 		}
 	};
 		
-	this.create = function(coords,color) {		
+	this.create = function(coords,color) {
 		this.coords = [];
 		for( var i = 0; i < coords.length; i++ ) {
 			this.coords.push([]);
@@ -8115,3 +8327,1027 @@ function ajax_mt(url, data, callback) {
 	};
 	worker.postMessage(ajaxObj);
 }
+
+/* Flood - Prototype */
+FloodComposeTab.prototype = new ICallbacks();
+
+function FloodComposeTab(div) {
+
+	ICallbacks.call( this );
+	
+	this.init = function() {
+		this.div = div;
+		this.form = div.find('.flood-form');
+		this.filePoints = this.div.find('.file-points-label');
+		this.fileHydros = this.div.find('.file-hydros-label');
+		this.btnStart = this.div.find('.start');
+		this.divPoints = this.div.find('.points');
+		this.status = new HtmlStatusField();
+		
+		this.txtName = new HtmlTextGroup('Name:');
+		this.txtSourcePoints = new HtmlInputGroup('Sourcepoints:', null, $('.sourcepoints-upload'));
+		this.txtBreachLocations = new HtmlInputGroup('Breachlocations:', null, $('.breach-upload'));
+		
+		this.form.append(this.txtName.div);
+		this.form.append(this.txtSourcePoints.div);
+		this.form.append(this.txtBreachLocations.div);
+		
+		this.div.find('.status').html( this.status.div );
+		this.layer = new FloodLocationLayer('Locations', map);
+		
+		this.pointList = null;
+		this.hydroList = null;
+		
+		this.filePoints.change( this.onPointsChange.bind(this) );
+		this.fileHydros.change( this.onHydrosChange.bind(this) );
+		this.btnStart.click( this.onStart.bind(this) );
+		/* disable start button */
+		this.error('');
+	};
+	
+	this.error = function(msg) {
+		this.status.error(msg);
+		this.btnStart.attr('disabled', true);
+	};
+	
+	this.success = function(msg) {
+		this.status.clear();
+		this.btnStart.attr('disabled', false);
+	};
+	
+	this.convertProj = function(op1, op2, reverse) {
+		/* http://spatialreference.org/ref/epsg/32632/proj4/ */
+		var utm32n = '+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs';
+		var wgs84 = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs';
+		if( reverse ) {
+			var utm = proj4(wgs84, utm32n, [op1, op2]);
+			/* prepend leading 32 afterwards */
+			return [ Math.round(Number('32' + utm[0])), Math.round(Number(utm[1])) ];
+		}
+		/* remove leading 32 first */
+		op1 = op1.substring(2);
+		return proj4(utm32n, wgs84, [op1, op2]);
+	};
+	
+	this.onPointsChange = function(evt) {
+		var file = evt.target.files[0];
+		if( ! file ) return;
+		this.divPoints.empty();
+		this.filePoints.find('.fname').html(file.name);
+		var reader = new FileReader();
+		reader.onload = (function(e) {
+			var pattern = /^(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)$/;
+			var lines = e.target.result.split('\n');
+			var size = 0;
+			this.pointList = {};
+			for( var i = 0; i < lines.length; i++ ) {
+				var match = pattern.exec(lines[i]);
+				if( ! match ) continue;
+				var p1 = this.convertProj(match[3], match[4]);
+				var p2 = this.convertProj(match[5], match[6]);
+				var p3 = this.convertProj(match[7], match[8]);
+				var obj = {
+					numbers: match[2],
+					X1: p1[0],
+					Y1: p1[1],
+					X2: p2[0],
+					Y2: p2[1],
+					X3: p3[0],
+					Y3: p3[1]
+				};
+				this.pointList[match[1]] = obj;
+				size++;
+			}
+			this.filePoints.find('.fname').append(' - ' + size);
+			if( size == 0 )
+				this.error('No source points found.');
+			this.addPoints();
+		}).bind(this);
+		
+		this.status.load();
+	    reader.readAsText(file);
+	};
+	
+	this.onHydrosChange = function(evt) {
+		var file = evt.target.files[0];
+		if( ! file ) return;
+		this.divPoints.empty();
+		this.fileHydros.find('.fname').html(file.name);
+		var reader = new FileReader();
+		reader.onload = (function(e) {			
+			var lines = e.target.result.split('\n');
+			console.log(lines.length);
+			var num = /^(\d+)$/.exec(lines[0]);
+			var list = lines[2].trim().split(/\s+/);			
+			this.hydroList = new Container(sort_string.bind(this,'id'));
+			for( var i = 2; i < list.length; i++ ) {
+				this.hydroList.insert( new FloodLocation(list[i]) );
+			}
+			for( var i = 3; i < lines.length; i++ ) {
+				/* Skip empty lines. */
+				if( /^\s*$/.test(lines[i]) )
+					continue;
+				var values = lines[i].trim().split(/\s+/);
+				if( values.length - 2 != this.hydroList.length() ) {
+					this.error('Unexpected format for breach hydrographs.');
+					return;
+				}
+				var j = 0;
+				for( var k = 2; k < values.length; k++ ) {
+					var year = values[0];
+					var hour = values[1];
+					this.hydroList.get(j++).addValue(year, hour, values[k]);
+				}
+			}
+			this.fileHydros.find('.fname').append(' - ' + this.hydroList.length());
+			if( this.hydroList.length() == 0 )
+				this.error('No breach hydrographs found.');
+			this.addPoints();
+		}).bind(this);
+		
+		this.status.load();
+		reader.readAsText(file);
+	};
+	
+	this.addPoints = function() {
+		if( ! this.pointList || ! this.hydroList ) {
+			this.success('');
+			return;
+		}
+		this.divPoints.empty();
+		this.pairs = new Container();
+		this.geoObjs = new Container();
+		for( var i = 0; i < this.hydroList.length(); i++ ) {
+			var point = this.hydroList.get(i);
+			var obj = this.pointList[point.id];
+			if( ! obj ) {
+				this.error('Source points and breach hydrographs incompatible.');
+				return;
+			}
+			point.addMeta(obj);
+			
+			var geoObj = new FloodLocationPoint(point);
+			var chart = new BreachChart(point);
+			var pair = new ChartPair(geoObj, chart);
+			this.pairs.insert(pair);
+			this.geoObjs.insert(geoObj);
+			
+//			var text = $('<div>',{text: point.id, class: 'pull-left'});
+//			var chkbox = $('<input>',{
+//				type: 'checkbox',
+//				class: 'pull-right'
+//			}).prop('checked', true);
+//			chkbox.change( this.onCheckboxChange.bind(this, chkbox, pair) );
+//			var clear = $('<div>',{class: 'clearfix'});
+//			var d = $('<div>').append(text).append(chkbox).append(clear);
+//			d.mouseover( geoObj.highlight.bind(geoObj, true) );
+//			d.mouseout(geoObj.highlight.bind(geoObj, false));
+			
+			d = new FloodLocationWidget(point);
+			d.div.mouseover( geoObj.highlight.bind(geoObj, true) );
+			d.div.mouseout(geoObj.highlight.bind(geoObj, false));
+			d.div.click(geoObj.moveto.bind(geoObj, map));
+			d.chkbox.change( this.onCheckboxChange.bind(this, d.chkbox, pair) );
+			
+			this.divPoints.append(d.div);
+		}
+		this.layer.setData(this.geoObjs);
+		
+		showStationView(true);
+		$('#statview').show();
+		new BreachChartView($('#stat-dias'), this.pairs);
+		this.success('');
+	};
+	
+	this.onCheckboxChange = function(chkbox, pair) {
+		pair.geoObj.data.enabled = chkbox.prop('checked');
+		pair.geoObj.notifyOn('update');
+		this.layer.display();
+	};
+	
+	this.onStart = function(evt) {
+		var data = [];
+		for(var i = 0; i < this.hydroList.length(); i++) {
+			var item = this.hydroList.get(i);
+			if( ! item.enabled ) continue;
+			var p1 = this.convertProj(item.X1, item.Y1, true);
+			var p2 = this.convertProj(item.X2, item.Y2, true);
+			var p3 = this.convertProj(item.X3, item.Y3, true);
+			var obj = {
+				id: item.id,
+				numbers: item.numbers,
+				X1: p1[0],
+				Y1: p1[1],
+				X2: p2[0],
+				Y2: p2[1],
+				X3: p3[0],
+				Y3: p3[1],
+				hydros: item.values.list
+			};
+			data.push(obj);
+		}
+		ajax('/srv/flood_compute', {name: this.txtName.value(), test: JSON.stringify(data)}, function(result) {
+			console.log(result);
+		});
+	};
+
+	this.init.apply(this, arguments);
+}
+
+FloodLocationWidget.prototype = new Widget();
+function FloodLocationWidget(data) {
+	
+	this.init = function(data) {
+		this.div = $('.templates .flood-location-entry').clone();
+		this.data = data;
+		FloodLocationWidget.prototype.init.call(this, this.data);
+		
+		this.chkbox = this.div.find('input[type=checkbox]');
+		this.div.find('.id').html( this.data.id );
+	};
+	
+	this.init(data);
+}
+
+FloodLocation.prototype = new ICallbacks();
+function FloodLocation(id) {
+	
+	ICallbacks.call(this);
+	
+	this.init = function(id) {
+		this.id = id;
+		this.enabled = true;
+		this.hydrograph = new Container();
+		this.values = new Container();
+	};
+	
+	this.addMeta = function(meta) {
+		$.extend(this, meta);
+	};
+	
+	this.addValue = function(year, hour, val) {
+		var date = new Date();
+		date.setUTCFullYear(year, 0, 0);
+		date.setUTCHours(hour, 0, 0, 0);
+		this.hydrograph.insert([date, Number(val)]);
+		this.values.insert(Number(val));
+	};
+	
+	this.init.apply(this, arguments);
+}
+
+FloodLocationLayer.prototype = new Layer();
+function FloodLocationLayer(name, map) {
+	
+	Layer.call(this, name, map);
+				
+	this.update = function() {
+		this.display();
+	};
+	
+	this.display = function() {
+		for(var i = 0; i < this.data.length(); i++) {
+			var point = this.data.get(i);
+			if( point.enabled ) {
+				point.show(map);
+			} else {
+				point.hide();
+			}
+		}
+	};
+	
+	this.clear = function() {
+		for(var i = 0; i < this.data.length(); i++) {
+			this.data.get(i).hide();
+		}
+	};
+	
+	this.init();
+}
+
+/* *************************** */
+IGeoObject.prototype = new ICallbacks();
+function IGeoObject() {
+	ICallbacks.call( this );
+	
+	this.init = function() {
+		this.lat = null;
+		this.lon = null;
+		this.mouseIn = false;
+		this.enabled = true;
+	};
+	this.highlight = function(state) {};
+	this.moveto = function(map) { 
+		map.panTo( this.getPosition() );
+	};
+	this.getPosition = function() {
+		return new google.maps.LatLng(this.lat, this.lon);
+	};
+	this.registerOnClick = function() {};
+	this.registerOnEnter = function() {};
+	this.registerOnLeave = function() {};
+	
+	this.onClick = function() {
+		this.notifyOn('click');
+	};
+	this.onEnter = function() {
+		this.mouseIn = true; 
+		this.notifyOn('enter');
+	};
+	this.onLeave = function() {
+		this.mouseIn = false;
+		this.notifyOn('leave');
+	};
+	this.init.apply(this, arguments);
+}
+
+IChart.prototype = new ICallbacks();
+function IChart() {
+	
+	ICallbacks.call( this );
+	
+	this.div = $('#chart-div').clone().removeAttr("id");
+	this.dia = null;
+	/* public methods */
+	this.setData = function(data) {};
+	this.draw = function() {};
+	
+	/* internal methods */
+	this.chartOnEnter = function() {
+		this.div.css("outline", "2px solid #428bca");		
+		this.notifyOn('enter');
+	};
+
+	this.chartOnLeave = function() {
+		this.div.css("outline", "1px solid #acaaa7");
+		this.notifyOn('leave');
+	};
+
+	this.chartOnClick = function() {
+		this.notifyOn('click');
+	};
+	
+	this.create = function(width, height) {
+		this.width = width;
+		this.height = height;
+		this.div.height(this.height);
+		this.div.width(this.width);
+	};
+	
+	this.activate = function() {
+		this.draw();
+	};
+	
+	this.deactivate = function() {
+		
+	};
+	
+	this.ready = function() {
+		this.div.find('.spanLoad').css('display', 'none');
+	};
+	
+	this.setLoading = function() {
+		this.div.find('.spanInactive').css('display', 'none');
+		this.div.find('.spanLoad').css('display', 'block');
+	};
+	
+	this.div.hover(this.chartOnEnter.bind(this), this.chartOnLeave.bind(this));
+	this.div.click(this.chartOnClick.bind(this));
+}
+
+function ChartPair(geoObj, chart) {
+	this.geoObj = geoObj;
+	this.chart = chart;
+}
+
+IChartView.prototype = new ICallbacks();
+function IChartView(widget, data) {
+	
+	ICallbacks.call( this );
+	
+	/* internal methods */
+	this.init = function(widget, data) {
+		this.widget = widget;
+		this.lines_on = true;
+		
+		this.setData(data);
+		this.draw();
+		this.widget.scroll(this.onScroll.bind(this));
+	};
+	
+	this.setData = function(data) {
+		this.data = data;
+	};
+	
+	this.draw = function() {
+
+		this.widget.empty();
+		
+		//this.dispose();
+
+		var width = 200;
+		var height = this.widget[0].clientHeight - 30;
+
+		/*
+		 * make the widget invisible to speed up appending new charts inside the
+		 * following loop
+		 */
+		this.widget.css('display', 'none');
+		for (var i = 0; i < this.data.length(); i++) {
+			
+			var pair = this.data.get(i);
+			var chart = pair.chart;
+			var geoObj = pair.geoObj;
+
+			chart.create(width, height);
+			this.widget.append(chart.div);
+			
+			chart.setCallback('enter', this.onChartEnter.bind(this, pair));
+			chart.setCallback('leave', this.onChartLeave.bind(this, pair));
+			chart.setCallback('click', this.onChartClick.bind(this, pair));
+			geoObj.setCallback('enter', this.onGeoObjEnter.bind(this, pair));
+			geoObj.setCallback('leave', this.onGeoObjLeave.bind(this, pair));
+			geoObj.setCallback('click', this.onGeoObjClick.bind(this, pair));
+		}
+		this.widget.css('display', 'block');
+
+		this.toggleCharts();
+	};
+	
+	this.onChartEnter = function(pair) {
+		pair.geoObj.highlight(true);
+		if (this.lines_on)
+			this.drawLine(pair);
+	};
+	
+	this.onChartLeave = function(pair) {
+		pair.geoObj.highlight(false);
+		this.removeLine();
+	};
+	
+	this.onChartClick = function(pair) {
+		if( this.lines_on ) {
+			map.panTo(pair.geoObj.getPosition());
+			this.drawLine(pair);
+		}
+	};
+	
+	this.onGeoObjEnter = function(pair) {
+		if( this.lines_on )
+			this.drawLine(pair);
+	};
+	
+	this.onGeoObjLeave = function(pair) {
+		this.removeLine();
+	};
+	
+	this.onGeoObjClick = function(pair) {
+		this.scrollTo(pair, (function() {
+			this.removeLine();
+			if( this.lines_on )
+				this.drawLine(pair);
+		}).bind(this), (function() {
+			if (! pair.geoObj.mouseIn )
+				this.removeLine();
+		}).bind(this));
+	};
+	
+	this.enableLines = function(on) {
+		this.lines_on = on;
+	};
+	
+	this.drawLine = function(pair) {
+
+		var box = pair.chart.div;
+		var p1 = box.offset();
+		p1.left += box.width() / 2;
+
+		var item = pair.geoObj;
+		var pixel = LatLonToPixel(item.lat, item.lon);
+		var p2 = $('#mapview').offset();
+
+		p2.left += pixel.x;
+		p2.top += pixel.y;
+
+		canvas.drawLine(p1, p2);
+	};
+	
+	this.removeLine = function() {
+		canvas.clearCanvas();
+	};
+	
+	this.scrollTo = function(pair, step_fun, done_fun) {
+
+		var box = pair.chart.div;
+		var ref = this.widget.scrollLeft();
+		var val = ref + box.position().left
+				- (this.widget.width() - box.width()) / 2;
+		val = Math.max(0, val);
+
+		this.widget.animate({
+			scrollLeft : val
+		}, {
+			duration : 750,
+			step : step_fun,
+			done : done_fun
+		});
+	};
+	
+	this.onScroll = function() {
+		if( this.timer )
+			clearTimeout(this.timer);
+		this.timer = setTimeout(this.toggleCharts.bind(this), 250);
+	};
+	
+	/* return list of visible stations */
+	this.getVisible = function() {
+		var list = [];
+		for (var i = 0; i < this.data.length(); i++) {
+			var pair = this.data.get(i);
+			var chart = pair.chart;
+			var left = this.widget.offset().left;
+			var right = this.widget.offset().left + this.widget.width();
+			var chart_left = chart.div.offset().left;
+			if( chart_left + chart.div.width() > left && chart_left < right )
+				list.push(pair);
+		}
+		return list;
+	};
+	
+	this.toggleCharts = function() {
+		this.timer = null;
+		var visibles = this.getVisible();		
+
+		for (var i = 0; i < this.data.length(); i++) {
+			this.data.get(i).chart.deactivate();
+		}
+		
+		for (var i = 0; i < visibles.length; i++) {
+			var pair = visibles[i];
+			pair.chart.activate();
+		}
+	};
+		
+	if( arguments.length > 0 )
+		this.init.apply(this, arguments);
+}
+
+FloodLocationPoint.prototype = new IGeoObject();
+function FloodLocationPoint(data) {
+	
+	IGeoObject.call(this);
+	
+	this.init = function(data) {
+		this.data = data;
+		this.markers = [];
+		for(var i = 1; i <= 3; i++ ) {
+			this.markers.push(new google.maps.Marker({
+				position : Geometry.LatLon(this.data['Y'+i], this.data['X'+i]),
+				map : null
+			}));
+		}
+		this.lat = this.data.Y2;
+		this.lon = this.data.X2;
+		this.registerOnClick();
+		this.registerOnEnter();
+		this.registerOnLeave();
+		
+		this.setCallback('update', (function(){ this.enabled = this.data.enabled; }).bind(this) );
+	};
+	
+	this.show = function(map) {
+		/* avoid reloading */
+		for(var i = 0; i <= 2; i++ ) {
+			if( ! this.markers[i].getMap() )
+				this.markers[i].setMap(map);
+		}
+	};
+	
+	this.hide = function() {
+		for(var i = 0; i <= 2; i++ )
+			this.markers[i].setMap(null);
+	};
+	
+	this.highlight = function(state) {
+		var anim = state ? google.maps.Animation.BOUNCE : null;
+		for(var i = 0; i <= 2; i++ )
+			this.markers[i].setAnimation(anim);
+	};
+	
+	this.registerOnClick = function() {
+		for(var i = 0; i <= 2; i++ ) {
+			google.maps.event.addListener(this.markers[i], 'click', (function() {
+				/* Call parent method first. */
+				FloodLocationPoint.prototype.onClick.call(this);
+				//this.notifyOn('click');
+			}).bind(this));
+		}
+	};
+	
+	this.registerOnEnter = function() {
+		for(var i = 0; i <= 2; i++ ) {
+			google.maps.event.addListener(this.markers[i], 'mouseover', (function() {
+				/* Call parent method first. */
+				FloodLocationPoint.prototype.onEnter.call(this);
+				//this.notifyOn('enter');
+			}).bind(this));
+		}
+	};
+	
+	this.registerOnLeave = function() {
+		/* Call parent method first. */
+		FloodLocationPoint.prototype.registerOnLeave.call(this);
+		for(var i = 0; i <= 2; i++ ) {
+			google.maps.event.addListener(this.markers[i], 'mouseout', (function() {
+				FloodLocationPoint.prototype.onLeave.call(this);
+			}).bind(this));
+		}
+	};
+	
+	this.init.apply(this, arguments);
+}
+
+BreachChart.prototype = new IChart();
+function BreachChart(data) {
+	
+	IChart.call(this);
+	
+	this.init = function(data) {
+		this.data = data;
+		/* Create table to hold hydrograph data. */
+		this.table = new google.visualization.DataTable();
+		this.table.addColumn('datetime', 'Date');
+		this.table.addColumn('number', 'Live-Data');
+		this.table.addRows( this.data.hydrograph.list );
+	};
+	
+	this.draw = function() {
+		
+		this.options = {
+			curveType : 'function',
+			width : this.width,
+			height : this.height,
+			interpolateNulls : true,
+			legend : {
+				position : 'none'
+			}
+		};
+		
+		this.setLoading();
+		//this.div.css('display', 'none');
+		/* lazy one time initialization */
+		if( this.dia == null ) {
+			this.dia = new google.visualization.LineChart( this.div.find('.dia')[0] );
+			google.visualization.events.addListener(this.dia, 'ready', this.ready.bind(this));
+		}
+		this.dia.draw(this.table, this.options);
+		//this.div.css('display', 'inline-block');
+	};
+	
+	this.init.apply(this, arguments);
+}
+
+BreachChartView.prototype = new IChartView();
+function BreachChartView(widget, data) {
+	IChartView.call(this, widget, data);
+}
+
+FloodListWidget.prototype = new ListWidget();
+
+function FloodListWidget(div, data, map, callbacks) {
+
+	ListWidget.call(this);
+	
+	/* Override */
+	this.init = function(div, data, map, callbacks) {
+		this.__proto__.init.call(this, div, data, map, callbacks);
+	};
+
+	/* Override */
+	this.getMarkerColor = function(mag) {
+		return '#E4E7EB';
+	};
+
+	if (arguments.length == 4)
+		this.init(div, data, map, callbacks);
+}
+
+FloodWidget.prototype = new Widget();
+
+function FloodWidget(data, marker) {
+
+	//EQWidget.call(this, data, marker);
+	//Widget.call(this);
+	
+	this.createLayers = function(layers) {
+		/* create layer switcher */
+		this.chk_boxes = [];
+		this.div.find('.layers').empty();
+		for( attr in layers ) {
+			var cbox = new HtmlCheckBox(attr);
+			cbox.bindTo( this.data[layers[attr]] );
+			this.div.find('.layers').append(cbox.div);
+			this.chk_boxes.push(cbox);
+		}
+	};
+	
+	this.setPopovers = function(tooltips) {
+		var options = {
+			placement : 'top',
+			html : true,
+			container : this.div,
+			animation : false
+		};
+		
+		for( title in tooltips ) {
+			options.title = title;
+			this.div.find(tooltips[title]).tooltip(options);
+		}
+	};
+	
+	this.init = function(data) {
+		this.div = $('.templates .flood-entry').clone();
+		this.div.show();
+		
+		FloodWidget.prototype.init.call(this, data);
+				
+		this.div.find('.subject').click(this.notifyOn.bind(this, 'clk_entry', this.data));
+		
+		/* create layer switcher */
+		this.createLayers({
+			'Water heights': 'show_waterheights',
+			'Buildings': 'show_buildings'
+		});
+		
+		this.setPopovers({
+			'Download data': '.lnkDownload',
+			'Show dialog': '.lnkDialog',
+		});
+		
+		this.div.find('.lnkDialog').click( global.buildingsDialog.show.bind(global.buildingsDialog, this.data) );
+		
+		this.update();
+	};
+	
+	this.update = function() {
+		var timestamp = new Date(this.data.timestamp);
+		var year = timestamp.getUTCFullYear();
+		var month = timestamp.getUTCMonth() + 1;
+		var day = timestamp.getUTCDate();
+		var hour = timestamp.getUTCHours();
+		var minutes = timestamp.getUTCMinutes();
+		var datestr = year + '/' + zeroPad(month, 2) + '/' + zeroPad(day, 2);
+		var timestr = zeroPad(hour, 2) + ':' + zeroPad(minutes, 2);
+		
+		this.div.find('.subject').html(this.data.prop.name);
+		this.div.find('.timestamp').html(datestr + ' &#183; ' + timestr + ' UTC' + ' &#183; ' + this.data._id);
+		this.div.find('.locations').html('Number of locations: ' + this.data.prop.locations);
+		
+		this.div.find('.progress').hide();
+		this.div.find('.status').hide();
+		this.div.find('.calc-data').hide();
+		if( ! this.data.process ) {
+			this.div.find('.status').html('Simulation is being prepared');
+			this.div.find('.status').show();
+		} else {
+			if( this.data.process.progress < 100 ) {
+				this.div.find('.progress-bar').css('width', this.data.process.progress + '%');
+				this.div.find('.progress').show();
+			} else {
+				this.div.find('.status').html('Simulation processed');
+				this.div.find('.status').show();
+			}
+			this.div.find('.runtime').html('Runtime: ' + this.data.process.calcTime.toFixed(2) + ' s');
+			this.div.find('.resource').html(this.data.process.resources);
+			this.div.find('.calc-data').show();
+		}
+		
+		console.log(this.data);
+		this.select();
+	};
+	
+	if( arguments.length > 0 )
+		this.init(data);
+}
+
+ActionFlag.prototype = new ICallbacks();
+
+function ActionFlag(val) {
+	
+	ICallbacks.call(this);
+	
+	this.val = val;
+	
+	this.set = function(val) {
+		console.log('ActionFlag: ' + val);
+		if( arguments.length == 0 || val == true ) {
+			this.val = val;
+			this.notifyOn('update');
+			return;
+		}
+		this.unset();
+	};
+	
+	this.unset = function() {
+		this.val = false;
+		this.notifyOn('update');
+	};
+	
+	this.get = function() {
+		return this.val;
+	};
+}
+
+FloodEvent.prototype = new ICallbacks();
+
+function FloodEvent(meta) {
+	
+	ICallbacks.call( this );
+	
+	this.init = function(meta) {
+		$.extend(this, meta);
+				
+		this.waterheights = new Container(sort_string.bind(this,'height'));
+		this.tfps = new Container();
+		
+		this.show_waterheights = new ActionFlag(true);
+		this.show_waterheights.setCallback('update', this.notifyOn.bind(this,'update'));
+		this.show_buildings = new ActionFlag(true);
+		this.show_buildings.setCallback('update', this.notifyOn.bind(this,'update'));
+		
+		this.heights_loaded = false;
+		
+		this.setCallback('select', this.select);
+	};
+	
+	this.select = function() {
+		if( this.selected ) {
+			this.load();
+		}
+	};
+		
+	this.load = function(callback,type) {
+		if( this.isLoaded(type) )
+			return true;
+		this.loadWaterHeights();
+		return false;
+	};
+	
+	this.isLoaded = function(type) {
+		return this.heights_loaded;
+	};
+	
+	this.loadWaterHeights = function() {
+		if( this.heights_loaded )
+			return;
+		console.log("loadWaterHeights()");
+		ajax_mt('webguisrv/getwaterheights', {evid:this._id}, (function(result) {
+			console.log(result);
+			/* traverse different water levels */
+			if( !result.heights ) return;
+			for (var i = 0; i < result.heights.length; i++) {
+				/* each level contains multiple polygons */
+				var heights = result.heights[i].points;
+				for (var j = 0; j < heights.length; j++) {
+					/* construct a single polygon here */
+					var pol = new Polygon( [heights[j]], result.heights[i].color );
+					pol.poly.setOptions({zIndex:i});
+					pol.height = result.heights[i].height;
+					pol.setInfoWin( new InfoWindow('<span>Water heights greater than ' + pol.height + ' meter.</span>') );
+					this.waterheights.insert(pol);
+				}
+			}
+			this.heights_loaded = true;
+			this.notifyOn('loaded_HEIGHTS');
+			this.checkLoaded();
+		}).bind(this));
+	};
+	
+	this.checkLoaded = function() {
+		this.notifyOn('update');
+		if( this.isLoaded() )
+			this.notifyOn('loaded');
+	};
+	
+	this.init.apply(this, arguments);
+}
+
+BuildingsLayer.prototype = new Layer();
+
+function BuildingsLayer(name, map, fun_enabled) {
+	
+	Layer.call(this,name,map);
+	
+	this.init = function() {
+		/* Container to hold the graphical representations of the buildings. */
+		this.buildings = new Container();
+		/* Reload buildings if bounds of map have changed and remain unchanged for 200 ms. */
+		this.map.addListener('bounds_changed', DelayedFunction.create( this.getBuildings.bind(this), 200));
+	};
+	
+	/* Create HTML-formatted information based on a building. */
+	this.getInfoText = function(building) {
+		/* Try to extract known tags. */
+		var tags = {
+			'addr:city': 'City',
+			'addr:postcode': 'Postcode',
+			'addr:street': 'Street',
+			'addr:housenumber': 'Housenumber',
+		};
+		var text = '';
+		for(var tag in tags) {
+			if( ! building.tags || ! building.tags[tag] ) continue;
+			text += '<b>' + tags[tag] + ' : ' + building.tags[tag] + '</b><br>';
+		}
+		return text == '' ? 'No information available.' : text;
+	};
+	
+	this.getBuildings = function() {
+		/* Show buildings only if an event is selected. */
+		if( ! this.data ) return;
+		/* Clear layer and underlying container. */
+		this.clear();
+		this.buildings.clear();
+		/* Show buildings only at a zoom level of 15 or greater. */
+		if( this.map.getZoom() < 15 )
+			return;
+		/* Extrcat current bounds and set parameters. */
+		var bounds = this.map.getBounds();
+		var ne = bounds.getNorthEast();
+		var sw = bounds.getSouthWest();
+		var params = { minx: sw.lng(), miny: sw.lat(), maxx: ne.lng(), maxy: ne.lat() };		
+		/* Add id of selected event in case there is a selection. */
+		if( this.data )
+			params.evtid = this.data._id;
+		/* TODO - improve */
+		$('.map_progress').show();
+		/* Retrieve buildings from server. */
+		ajax('webguisrv/getbuildings/', params, (function(result) {
+			console.log(result);
+			/* Walk through list of buildings and create appropriate polygons. */
+			var buildings = result.buildings;
+			for(var i = 0; i < buildings.length; i++) {
+				/* It is sufficient to use the default polygon class. */
+				var item = new CFZ(buildings[i]);
+				/* Bind info window to polygon. */
+				item.setInfoWin( new InfoWindow( this.getInfoText(buildings[i]) ) );
+				this.buildings.insert( item );
+			}
+			/* Draw list of polygons on map. */
+			if( this.data && fun_enabled(this.data) ) this.display();
+			/* TODO - improve */
+			$('.map_progress').hide();
+		}).bind(this));
+	};
+	
+	this.update = function() {
+		if( ! fun_enabled(this.data) ) return this.clear();
+		if( this.dataHasChanged )
+			return this.getBuildings();
+		return this.display();
+	};
+	
+	this.display = function() {
+		for(var i = 0; i < this.buildings.length(); i++) {
+			var pol = this.buildings.get(i);
+			var color = "#00CCFF";
+			if( pol["height"] >= 1)
+				color = "#fdfd01";
+            if( pol["height"] >= 3)
+            	color = "#ff6100";
+            if( pol["height"] >= 5)
+                color = "#f50000";
+			pol.show( this.map, color );
+		}
+	};
+	
+	this.clear = function() {
+		for (var i = 0; i < this.buildings.length(); i++)
+			this.buildings.get(i).show(null);
+	};
+	
+	this.getCurrentBuildings = function() {
+		return this.buildings;
+	};
+		
+	this.init();
+}
+
+/* Consolidates all calls to this function until no more invocations arrive for 'ms' milliseconds.
+   Finally, function 'func' is called once. */
+function DelayedFunction(func, ms) {
+	this.func = func;
+	this.ms = ms;
+	this.timer = null;
+	
+	this.after = function() {
+		if( this.timer )
+			clearTimeout( this.timer );
+		this.timer = setTimeout( this.func, this.ms );
+	};
+}
+
+DelayedFunction.create = function(fun, ms) {
+	var dlfun = new DelayedFunction(fun, ms);
+	return dlfun.after.bind(dlfun);
+};

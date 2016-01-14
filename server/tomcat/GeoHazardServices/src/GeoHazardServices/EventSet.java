@@ -9,21 +9,21 @@ public class EventSet {
 	public int total_dur;
 	/* Progress accumulated over all events. */
 	private Integer overall_progress;
-	private List<TaskParameter> tasks;
+	private List<EQTask> tasks;
 	
 	public EventSet(String setid, int size, int total_dur) {
 		this.setid = setid;
 		this.size = size;
 		this.total_dur = total_dur;
 		this.overall_progress = 0;
-		this.tasks = new ArrayList<TaskParameter>();
+		this.tasks = new ArrayList<EQTask>();
 	}
 	
-	public synchronized void addTask(TaskParameter task) {
+	public synchronized void addTask(EQTask task) {
 		this.tasks.add(task);
 	}
 	
-	public List<TaskParameter> getTasks() {
+	public List<EQTask> getTasks() {
 		return this.tasks;
 	}
 	

@@ -12,18 +12,24 @@ import java.io.PrintStream;
 import java.io.Writer;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import FloodPrototype.FloodAdapter;
+import FloodPrototype.FloodTask;
+
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
+import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
+import com.mongodb.ServerAddress;
 import com.mongodb.WriteConcern;
 import com.mongodb.util.JSON;
 
@@ -37,16 +43,19 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	
 	private Thread thread;
 	private MongoClient dbclient;
+	private DB db;
 	
 	private String hardware;
 	
 	private Integer priority;
 	private int slot = IScheduler.SLOT_NORMAL;
 	private Object lock;
-	private TaskParameter task;
+	private Task task;
 	
 	private HashMap<String, DBObject> tfps;
 	private HashMap<String, DBObject> tsps;
+	
+	private FloodAdapter floodAdapter;
 	
 	public WorkerThread( IScheduler scheduler,
 						 String workdir ) throws IOException {
@@ -62,7 +71,14 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		}
 				
 		try {
-			this.dbclient = new MongoClient();
+			
+			dbclient = new MongoClient(Arrays.asList(
+			   new ServerAddress("tcnode1", 27017),
+			   new ServerAddress("tcnode2", 27017),
+			   new ServerAddress("tcnode3", 27017))
+			);
+			db = dbclient.getDB("trideccloud");
+			
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
@@ -83,6 +99,9 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 				return 1;
 			}
 		}
+		
+		/* TODO: not the right place */
+		floodAdapter = new FloodAdapter(db, sshCon, workdir, hardware);
 		
 		return 0;
 	}
@@ -135,7 +154,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	@Override
 	public void run() {
 		
-		TaskParameter params;
+		Task params;
 		
 		System.out.println("Thread " + this.thread.getId() + " started");
 		
@@ -143,9 +162,15 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 			try {
 				params = getWork();
+				checkSshConnection();
+				
 				System.out.println("Thread " + this.thread.getId() + " computes event " + params.id );
-				handleRequest( params );
-								
+				if( params instanceof EQTask ) {
+					handleRequest( (EQTask) params );
+				} else if( params instanceof FloodTask ) {
+					floodAdapter.handleRequest(task);
+				}
+						
 			} catch (InterruptedException e) {
 				break;
 			}
@@ -153,9 +178,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 	}
 	
-	private int handleRequest( TaskParameter task ) {
+	private int handleRequest( EQTask task ) {
 		
-		checkSshConnection();
 		writeFault( task.eqparams );
 		writeTFPs( task );
 		
@@ -236,7 +260,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		return 0;
 	}
 	
-	private int writeTFPs( TaskParameter task ) {
+	private int writeTFPs( EQTask task ) {
 		
 		if( ! remote )
 			return 1;
@@ -251,7 +275,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			
 			/* filter TFPs according to institution settings */
 			DBObject instQuery = new BasicDBObject( "name", task.user.inst );
-			cursor = dbclient.getDB( "easywave" ).getCollection("institutions").find( instQuery );
+			cursor = db.getCollection("institutions").find( instQuery );
 		
 			if( cursor.hasNext() ) {
 				
@@ -273,7 +297,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			cursor.close();
 		}
 		
-		cursor = dbclient.getDB( "easywave" ).getCollection("tfps").find( tfpQuery );
+		cursor = db.getCollection("tfps").find( tfpQuery );
 		
 		sshCon[0].out.println("rm -f ftps.inp");
 				
@@ -297,7 +321,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		cursor.close();
 		
 		/* process TSPs */
-		cursor = dbclient.getDB( "easywave" ).getCollection("tsps").find();
+		cursor = db.getCollection("tsps").find();
 		for( DBObject obj: cursor ) {
 			String id = (String) obj.get( "_id" ).toString();
 			Double lat = (Double) obj.get( "lat_sea" );
@@ -324,7 +348,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		DBObject query = null;
 		BasicDBList andList = new BasicDBList();
 		
-		cursor = dbclient.getDB( "easywave" ).getCollection("users").find( userObj );
+		cursor = db.getCollection("users").find( userObj );
 		/* check if a real user requests this computation */
 		if( cursor.hasNext() ) {
 			
@@ -351,7 +375,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		query = new BasicDBObject( "$and", andList );
 				
 		if( query != null ) {
-			cursor = dbclient.getDB( "easywave" ).getCollection("stations").find( query );
+			cursor = db.getCollection("stations").find( query );
 		}
 						
 		for( DBObject obj: cursor ) {
@@ -371,7 +395,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		return 0;
 	}
 	
-	private int startEasyWave( TaskParameter task ) {
+	private int startEasyWave( EQTask task ) {
 								
 		Process p = null;
 		int simTime = task.duration + 10;
@@ -398,9 +422,9 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		  
 			}
 			
-			DBCollection coll = dbclient.getDB( "easywave" ).getCollection("eqs");
-			DBCollection colEvents = dbclient.getDB( "easywave" ).getCollection("events");
-			DBCollection colEvtSets = dbclient.getDB( "easywave" ).getCollection("evtsets");
+			DBCollection coll = db.getCollection("eqs");
+			DBCollection colEvents = db.getCollection("events");
+			DBCollection colEvtSets = db.getCollection("evtsets");
 						
 			int processIndex = -1;
 			int totalMinPrev = 0;
@@ -432,13 +456,13 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 					
 					/* create a kml file if at least 10 minutes of simulation are done */
 					if( totalMin > 10 && task.dt_out > 0 )
-						createVectorFile( totalMin, task.id );
+						createVectorFile( task, totalMin );
 							
 					if( task.progress == 100.0f ) {
 						for( Double ewh: GlobalParameter.jets.keySet() )
-							getWaveHeights( task.id, ewh.toString() );
+							getWaveHeights( task, ewh.toString() );
 					
-						addPoiResults( task.id );
+						addPoiResults( task );
 						addStationResults( task );
 						if( task.evtset != null ) {
 							task.evtset.addTask(task);
@@ -570,7 +594,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		return 0;
 	}
 	
-	private int createVectorFile( int time, String id ) {
+	private int createVectorFile( EQTask task, int time ) {
 		
 		/* Nothing to do if a raw computation was requested. */
 		if( task.raw > 0 )
@@ -584,7 +608,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 		String ogr2ogr = String.format( "ogr2ogr -f kml -simplify 0.001 arrival.%d.kml arrival.%d.kml", time - 10, time - 10);
 		
-		String kml_parser = String.format( "python ../getShape.py arrival.%d.kml %d %s", time - 10, time - 10, id );
+		String kml_parser = String.format( "python ../getShape.py arrival.%d.kml %d %s", time - 10, time - 10, task.id );
 		
 		String kml_file = String.format( "arrival.%d.kml", time - 10 );
 		
@@ -615,22 +639,23 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			}
 			
 			if( remote ) {
-				sshCon[1].out.println( "cat " + kml_file );
-				sshCon[1].out.println( "echo -n '\004'" );
-				sshCon[1].out.flush();
-				
-				Writer writer = new BufferedWriter(new OutputStreamWriter( new FileOutputStream( workdir + "/" + kml_file ) ) );
-				int ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
-				while( ret > 0 ) {
-					if( sshCon[1].buffer[ ret - 1 ] == '\004' ) {
-						ret -= 1;
-						writer.write( sshCon[1].buffer, 0, ret );
-						break;
-					}
-					writer.write( sshCon[1].buffer, 0, ret );
-					ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
-				}
-				writer.close();
+				sshCon[1].copyFile(kml_file, workdir + "/" + kml_file);
+//				sshCon[1].out.println( "cat " + kml_file );
+//				sshCon[1].out.println( "echo -n '\004'" );
+//				sshCon[1].out.flush();
+//				
+//				Writer writer = new BufferedWriter(new OutputStreamWriter( new FileOutputStream( workdir + "/" + kml_file ) ) );
+//				int ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
+//				while( ret > 0 ) {
+//					if( sshCon[1].buffer[ ret - 1 ] == '\004' ) {
+//						ret -= 1;
+//						writer.write( sshCon[1].buffer, 0, ret );
+//						break;
+//					}
+//					writer.write( sshCon[1].buffer, 0, ret );
+//					ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
+//				}
+//				writer.close();
 			}
 			
 			p = Runtime.getRuntime().exec( kml_parser, null, workdir );
@@ -651,7 +676,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		return 0;
 	}
 	
-	private int getWaveHeights( String id, String ewh ) {
+	private int getWaveHeights(EQTask task, String ewh) {
 		
 		/* Nothing to do if a raw computation was requested. */
 		if( task.raw > 0 )
@@ -663,7 +688,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 		String ogr2ogr = String.format( "ogr2ogr -f kml -simplify 0.001 heights.%s.kml heights.%s.kml", ewh, ewh);
 		
-		String kml_parser = String.format( "python ../getEWH.py heights.%s.kml %s %s", ewh, ewh, id );
+		String kml_parser = String.format( "python ../getEWH.py heights.%s.kml %s %s", ewh, ewh, task.id );
 		
 		String kml_file = String.format( "heights.%s.kml", ewh );
 		
@@ -691,22 +716,23 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			sshCon[1].complete();
 			
 			if( remote ) {
-				sshCon[1].out.println( "cat " + kml_file );
-				sshCon[1].out.println( "echo -n '\004'" );
-				sshCon[1].out.flush();
-				
-				Writer writer = new BufferedWriter(new OutputStreamWriter( new FileOutputStream( workdir + "/" + kml_file ) ) );
-				int ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
-				while( ret > 0 ) {
-					if( sshCon[1].buffer[ ret - 1 ] == '\004' ) {
-						ret -= 1;
-						writer.write( sshCon[1].buffer, 0, ret );
-						break;
-					}
-					writer.write( sshCon[1].buffer, 0, ret );
-					ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
-				}
-				writer.close();
+				sshCon[1].copyFile(kml_file, workdir + "/" + kml_file);
+//				sshCon[1].out.println( "cat " + kml_file );
+//				sshCon[1].out.println( "echo -n '\004'" );
+//				sshCon[1].out.flush();
+//				
+//				Writer writer = new BufferedWriter(new OutputStreamWriter( new FileOutputStream( workdir + "/" + kml_file ) ) );
+//				int ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
+//				while( ret > 0 ) {
+//					if( sshCon[1].buffer[ ret - 1 ] == '\004' ) {
+//						ret -= 1;
+//						writer.write( sshCon[1].buffer, 0, ret );
+//						break;
+//					}
+//					writer.write( sshCon[1].buffer, 0, ret );
+//					ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
+//				}
+//				writer.close();
 			}
 			
 			p = Runtime.getRuntime().exec( kml_parser, null, workdir );
@@ -728,7 +754,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 	}
 	
-	private int addPoiResults( String id ) {
+	private int addPoiResults(EQTask task) {
 		
 		/* Nothing to do if a raw computation was requested. */
 		if( task.raw > 0 )
@@ -779,13 +805,13 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		    
 		    reader.close();
 		    
-		    DBCollection coll = dbclient.getDB( "easywave" ).getCollection("tfp_comp");
+		    DBCollection coll = db.getCollection("tfp_comp");
 		    
 		    for( DBObject obj: tfps.values() ) {
 		    	coll.insert( obj );
 		    }
 		    
-		    coll = dbclient.getDB( "easywave" ).getCollection("comp");
+		    coll = db.getCollection("comp");
 		    
 		    HashMap<Integer,Double> maxEWH = new HashMap<Integer, Double>();
 		    HashMap<Integer,Double> minETA = new HashMap<Integer, Double>();
@@ -810,7 +836,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		    	cfz.put("type", "CFZ");
 		    	cfz.put("ewh", maxEWH.get(key));
 		    	cfz.put("eta", minETA.get(key));
-		    	cfz.put( "EventID", id );
+		    	cfz.put( "EventID", task.id );
 		    	coll.insert( cfz );
 		    }
 			
@@ -822,7 +848,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		return 0;
 	}
 	
-	private int addStationResults( TaskParameter task ) {
+	private int addStationResults( EQTask task ) {
 		
 		/* Nothing to do if a raw computation was requested. */
 		if( task.raw > 0 )
@@ -859,7 +885,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			ArrayList<Integer> statIds = new ArrayList<Integer>();
 			ArrayList<String> statNames = new ArrayList<String>();
 			
-			DBCollection simData = dbclient.getDB( "easywave" ).getCollection("simsealeveldata");
+			DBCollection simData = db.getCollection("simsealeveldata");
 			DBObject obj;
 			List<DBObject> objList = new ArrayList<DBObject>();
 			
@@ -922,11 +948,11 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		return 0;
 	}
 	
-	private void saveRawData( TaskParameter task ) {
+	private void saveRawData( EQTask task ) {
 		if( ! remote )
 			throw new UnsupportedOperationException("saveRawData() not yet available as local version.");		
 		
-		DBObject dirs = dbclient.getDB("easywave").getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
+		DBObject dirs = db.getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
 		String resdir = (String) dirs.get("results");
 		String mkdir = String.format("mkdir -p -m 0777 %s/events/%s", resdir, task.id);
 		String rm = String.format("rm -f %s/events/%s/*", resdir, task.id);
@@ -944,9 +970,9 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	}
 	
 	private int evtset_post(EventSet evtset) {
-		DBObject dirs = dbclient.getDB("easywave").getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
+		DBObject dirs = db.getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
 		String resdir = (String) dirs.get("results");
-		List<TaskParameter> tasks = evtset.getTasks();
+		List<EQTask> tasks = evtset.getTasks();
 		System.out.println(tasks);
 		/* At least one task should be part of the event set. */
 		if( tasks.size() < 1 )
@@ -970,13 +996,16 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		sshCon[1].out.println("echo '\004'");
 		sshCon[1].complete();
 		System.out.println("create jets...");
-		for( Double ewh: GlobalParameter.jets.keySet() )
-			getWaveHeights(evtset.setid, ewh.toString());
+		for( Double ewh: GlobalParameter.jets.keySet() ) {
+			EQTask dummy = new EQTask(null);
+			dummy.id = evtset.setid;
+			getWaveHeights(dummy, ewh.toString());
+		}
 		
 		return 0;
 	}
 	
-	private int pyPostProcess( TaskParameter task ) {
+	private int pyPostProcess( EQTask task ) {
 		/* Execute in thread (at least for event sets) to speed up the scheduling. */
 		final String id = task.id;
 		if( task.evtset != null ) {
@@ -991,13 +1020,13 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		}
 		return 0;
 	}
-	
+		
 	@Override
 	public int compareTo( WorkerThread o ) {
 		return priority.compareTo( o.priority );
 	}
 	
-	private TaskParameter getWork() throws InterruptedException {
+	private Task getWork() throws InterruptedException {
 		
 		synchronized( lock ) {
 			task = null;
@@ -1010,7 +1039,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		}
 	}
 	
-	public void putWork( TaskParameter task ) {
+	public void putWork( Task task ) {
 		
 		synchronized( lock ) {
 			this.task = task;
