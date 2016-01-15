@@ -74,10 +74,11 @@ subtitle = args.subtitle
 output_data_dir = args.output_data_dir
 output = args.output
 #Ausdehnung Karteninhalt
-west = float(args.extent_west)
-east = float(args.extent_east)
-south = float(args.extent_south)
-north = float(args.extent_north)
+west, east, south, north = None, None, None, None
+west = args.extent_west
+east = args.extent_east
+south = args.extent_south
+north = args.extent_north
 #Koordinatensystem
 #crs_system = args.crs_system
 
@@ -99,6 +100,8 @@ x_ratio = float(args.x_ratio)
 wave_data_dir = args.wave_data_dir
 
 wave_height = args.wave_height
+wave_height = '%s%s' % (wave_data_dir, wave_height)
+wave_height_new = '%stemp/eWave_height_temp.nc' % (wave_data_dir)
 wave_height_expression = float(args.wave_height_expression)
 
 wave_time = args.wave_time
@@ -170,18 +173,42 @@ elif not title=="-None-" and not subtitle=="-None-":
 else:
     paper_height = y_map_dist + map_height + 1.3
 
+
+############################
+######### Extent ###########
+############################
+
+if (west is None) or (east is None) or (north is None) or (south is None):
+    temp_extent_file1 = 'data/temp/contour.shp'
+    temp_extent_file2 = 'data/temp/contour.dbf'
+    temp_extent_file3 = 'data/temp/contour.shx'
+
+    subprocess.call(['gdal_contour', '-i', '1000', '-off', str(wave_height_expression), wave_height, temp_extent_file1])
+    extent_info = subprocess.Popen(['ogrinfo', '-al', '-so', temp_extent_file1], stdout=subprocess.PIPE).stdout.read().decode("utf-8")
+
+    subprocess.call(['rm', temp_extent_file1])
+    subprocess.call(['rm', temp_extent_file2])
+    subprocess.call(['rm', temp_extent_file3])
+
+    extent_w_height = re.findall("\((-?\d+.\d+), (-?\d+.\d+)\)", extent_info)
+
+if west is None:
+    west = extent_w_height[0][0]
+if east is None:    
+    east = extent_w_height[1][0]
+if south is None:    
+    south = extent_w_height[0][1]
+if north is None:    
+    north = extent_w_height[1][1]
+
+west = float(west)
+east = float(east)
+south = float(south)
+north = float(north)
+
 ############################
 ####### Kartenrahmen #######
 ############################
-'''
-wave_height = '%s%s' % (wave_data_dir, wave_height)
-gmtinfo = subprocess.Popen(['gmt', 'grdinfo', wave_height], stdout=subprocess.PIPE).stdout.read().decode("utf-8")
-extent = re.findall("x_min: (-?\d+.\d+).*x_max: (-?\d+.\d+).*y_min: (-?\d+.\d+).*y_max: (-?\d+.\d+)",gmtinfo, re.S)
-west = float(extent[0][0])
-east = float(extent[0][1])
-south = float(extent[0][2])
-north = float(extent[0][3])
-'''
 
 
 #Berechnet automatisch die Größe des Kartenrahmen
@@ -290,9 +317,6 @@ if not subtitle=="-None-":
 if plot_wave_height=="Y":
     if wave_height_expression <= 0:
         wave_height_expression = 0.00000000000000001
-
-    wave_height = '%s%s' % (wave_data_dir, wave_height)
-    wave_height_new = '%stemp/eWave_height_temp.nc' % (wave_data_dir)
 
     #./Tsunami_wave_height.sh output wave_height_data wave_height_new expression wave_height_cpt
     subprocess.call(['./gmt_scripts/Tsunami_wave_height.sh', output_data_dir + output, wave_height, wave_height_new, str(wave_height_expression), wave_height_cpt, y_map_distance])
