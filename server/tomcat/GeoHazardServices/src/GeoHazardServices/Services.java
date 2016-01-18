@@ -266,8 +266,8 @@ public class Services {
 				  continue;
 			  }
 			  
-			  thread.setRemote( user, host, dir + i );
 			  thread.setHardware(hardware);
+			  thread.setRemote( user, host, dir + i );
 			  thread.setPriority(priority);
 			  thread.setSlot(slots[i]);
 			  
@@ -631,7 +631,7 @@ public class Services {
 	  List<Double> dips = get_values(dip_list, dip_min, dip_step, dip_max);
 	  List<Double> strikes = get_values(strike_list, strike_min, strike_step, strike_max);
 	  List<Double> rakes = get_values(rake_list, rake_min, rake_step, rake_max);
-	  if( depths == null || dips == null || strikes == null || rakes == null )
+	  if( mags == null || depths == null || dips == null || strikes == null || rakes == null )
 		  return jsfailure("Invalid range given.");
 	  
 	  int count = mags.size() * depths.size() * dips.size() * strikes.size() * rakes.size();
@@ -1667,12 +1667,9 @@ public class Services {
 	 
 	/* convert timestamp from String to Date; return on error */
 	Date timestamp;
-	Date maxTimestamp = new Date();
-	Date minTimestamp;
 	
 	try {
 		timestamp = sdf.parse( ts );
-		minTimestamp = sdf.parse( ts );
 	} catch (ParseException e) {
 		e.printStackTrace();
 		return null;
@@ -1711,11 +1708,17 @@ public class Services {
 	Date upperTimeLimit = new Date( System.currentTimeMillis() - delay * 60 * 1000 );
 	
 	/* create DB query - search for newer events related to the general list or the user */
-	BasicDBObject inQuery = new BasicDBObject();
-	inQuery.put( "timestamp", new BasicDBObject( "$gt", timestamp ) );
+	BasicDBList time = new BasicDBList();
+	time.add( new BasicDBObject("timestamp", new BasicDBObject( "$gt", timestamp )) );	
+	BasicDBObject inQuery = new BasicDBObject("$and", time);
 	inQuery.put( "$or", users );
 				
 	boolean first = true;
+	
+	Map<String, List<DBObject>> lists = new HashMap<String, List<DBObject>>();
+	for( Map.Entry<String, IDataProvider> entry: providers.entrySet() ) {
+		lists.put(entry.getKey(), new ArrayList<DBObject>());
+	}
 		
 	/* walk through the returned entries */
 	if( user != null ) {
@@ -1724,6 +1727,11 @@ public class Services {
 		DBCursor cursor = coll.find( inQuery ).sort( new BasicDBObject("timestamp", -1) );
 		
 		for( DBObject obj: cursor ) {
+			
+			if( first ) {
+				timestamp = (Date) obj.get( "timestamp" );
+				first = false;
+			}
 			
 			/* get corresponding entry from earthquake collection */
 			String id = (String) obj.get("id");
@@ -1734,7 +1742,7 @@ public class Services {
 			if( delay > 0 )
 				objQuery.put( "prop.date", new BasicDBObject( "$lt", upperTimeLimit ) );
 			
-			DBObject obj2;
+			DBObject obj2 = null;
 					
 			if( obj.get("event").equals( "msg_sent" ) ) {
 				
@@ -1757,6 +1765,10 @@ public class Services {
 				obj2 = db.getCollection("eqs").findOne( objQuery );
 				if( obj2 == null )
 					obj2 = db.getCollection("evtsets").findOne( objQuery );
+			}
+			
+			for( Map.Entry<String, IDataProvider> entry: providers.entrySet() ) {
+				entry.getValue().add(lists.get(entry.getKey()), obj);
 			}
 				
 			/*  */
@@ -1808,20 +1820,16 @@ public class Services {
 	
 	}
 	
-	if( timestamp.after(maxTimestamp) )
-		maxTimestamp = timestamp;
-	
 	/* create new JSON object that can be used directly within JavaScript */
 	JsonObject jsonObj = new JsonObject();
 	jsonObj.addProperty( "serverTime", sdf.format( new Date() ) );
-	jsonObj.addProperty( "ts", sdf.format( maxTimestamp ) );
+	jsonObj.addProperty( "ts", sdf.format( timestamp ) );
 	jsonObj.add( "main", gson.toJsonTree( mlist ) );
 	jsonObj.add( "user", gson.toJsonTree( ulist ) );
 	jsonObj.add( "evtsets", gson.toJsonTree( evtsets ) );
 			
 	for( Map.Entry<String, IDataProvider> entry: providers.entrySet() ) {
-		List<DBObject> list = entry.getValue().update(user, minTimestamp, maxTimestamp);
-		jsonObj.add( entry.getKey(), gson.toJsonTree(list) );
+		jsonObj.add( entry.getKey(), gson.toJsonTree( lists.get( entry.getKey() ) ) );
 	}
 	
 	return jsonObj.toString();

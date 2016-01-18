@@ -363,6 +363,11 @@ html, body {
 	display: none;
 }
 
+.entry .lnkEditEvtSet {
+	padding-right: 0.2em;
+	display: none;
+}
+
 .entry .lnkSend {
 	padding-right: 0.4em;
 	display: none;
@@ -1499,12 +1504,12 @@ pre {
 	margin-top: 0.5em;
 	padding-top: 0.5em;
 	border-top: 1px solid black;
-	font-size: 1.2em;
+	font-size: 1.05em;
 }
 
 #floodcomp input[type="checkbox"] {
-	transform: scale(1.2);
-	-webkit-transform: scale(1.2);
+	transform: scale(1.05);
+	-webkit-transform: scale(1.05);
 }
 
 #floodcomp .flood-location-entry {

@@ -81,15 +81,15 @@ public class FloodAdapter implements IAdapter {
 		}
 		
 		/* definition file */
-		strDef.append("./dem100mulde.txt\n");
+		strDef.append("../dem100mulde.txt\n");
 		strDef.append("./sourcepoints.txt\n");
 		strDef.append("./breachhydrographs.txt\n");
-		strDef.append("./levelfile.txt\n");
+		strDef.append("../levelfile.txt\n");
 		strDef.append("./out\n");
 		strDef.append("0.4\n");
 		strDef.append( task.getLocations().size() + "\n");
 		strDef.append("file\n");
-		strDef.append("./mn100mulde.txt\n");
+		strDef.append("../mn100mulde.txt\n");
 		strDef.append("homo\n");
 		strDef.append("0\n");
 		strDef.append("5\n");
@@ -111,18 +111,6 @@ public class FloodAdapter implements IAdapter {
 		sshCon[0].out.println( "flood2d" );
 		sshCon[0].out.println( "echo '\004'" );
 		sshCon[0].out.flush();
-		
-		/* create sub-object that holds all event data */
-		BasicDBObject dbObject = new BasicDBObject();
-		dbObject.put( "progress", 0.0 );
-		dbObject.put( "calcTime", 0.0 );
-		dbObject.put( "resources", this.hardware );
-		
-		/* DB object to find current earthquake ID */
-		//BasicDBObject obj = new BasicDBObject("_id", task.id );
-		//obj.put( "process", dbObject );
-		//db.getCollection("floodsims").insert(obj);
-		
 		
 		String line = reader.readLine();
 		while (line != null && ! line.equals("\004")) {
@@ -148,6 +136,7 @@ public class FloodAdapter implements IAdapter {
 				BasicDBObject process = new BasicDBObject();
 				process.put( "progress", progress );
 				process.put( "calcTime", calcTime );
+				process.put( "resources", this.hardware );
 				
 				BasicDBObject setter = new BasicDBObject("process", process);
 				

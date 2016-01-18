@@ -51,4 +51,15 @@ public class FloodProvider implements IDataProvider {
 		
 		return list;
 	}
+
+	@Override
+	public boolean add(List<DBObject> out, DBObject obj) {
+		if( ! "flood".equals(obj.get("class")) )
+			return false;
+		BasicDBObject objQuery = new BasicDBObject("_id", obj.get("id"));
+		obj.put("data", db.getCollection("floodsims").findOne( objQuery ));
+		out.add( obj );
+		return true;
+	}
+	
 }

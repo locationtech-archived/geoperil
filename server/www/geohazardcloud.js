@@ -29,7 +29,7 @@ function Earthquake(meta) {
 		
 		/* we also want to be notified if the selection status of this event has changed */
 		this.setCallback('select', this.select);
-		this.setCallback('progress', this.progress);
+		this.setCallback('progress', this.progressUpdate);
 	};
 	
 	this.select = function() {
@@ -65,9 +65,15 @@ function Earthquake(meta) {
 		return false;
 	};
 	
-	this.progress = function() {
+	this.getProgress = function() {
+		return this.process[0].progress;
+	};
+	
+	this.progressUpdate = function() {
 		if( this.selected ) {
 			this.loadIsos();
+			if( this.getProgress() == 100 )
+				this.load();
 		}
 	};
 		
@@ -263,23 +269,25 @@ function Earthquake(meta) {
 			this.notifyOn('loaded');
 	};
 	
-	this.init(meta);
+	if( arguments.length == 1 )
+		this.init(meta);
 }
 
 EventSet.prototype = new Earthquake();
 function EventSet(meta) {
-	Earthquake.call(this,meta);
+	Earthquake.call(this, meta);
 	this.init = function(meta) {
 		/* add all attributes to this object */
 		$.extend(this, meta);
+		//EventSet.prototype.init.call(this, meta);
 		this.check_progress();
 	};
 	
 	this.check_progress = function() {
 		ajax('srv/evtset_status', {setid:this._id}, (function(result) {
-			console.log("progress: ", result.progress);
 			this.progress = result.progress;
 			this.calcTime = result.calcTime;
+			this.notifyOn('progress');
 			this.notifyOn('update');
 			/* Check progress again if computation is still running. */
 			if( result.comp == 'pending' ) {
@@ -295,12 +303,18 @@ function EventSet(meta) {
 		console.log("load(): ", callback);
 		if( this.isLoaded(type) )
 			return true;
+		if( this.progress < 100 )
+			return false;
 		this.loadTsunamiJets();
 		return false;
 	};
 	
 	this.isLoaded = function(type) {
 		return this.jets_loaded;
+	};
+	
+	this.getProgress = function() {
+		return this.progress;
 	};
 	
 	this.init(meta);
@@ -2493,6 +2507,10 @@ function GlobalControl() {
 		
 		/* Flood - Prototype */
 		this.floodcomp = new FloodComposeTab($('#floodcomp'));
+		this.floodcomp.setCallback('started', (function() {
+			
+			$("#tabFloodList > a").click();
+		}).bind(this));
 		
 		w = new ListWidget($('#floodlist'), floodsims, map, callbacks);
 		w.create();
@@ -2509,12 +2527,12 @@ function GlobalControl() {
 				 function(data){ return data.isos; }) );
 		this.layers.insert( new TFPLayer('TFP-Layer', map) );
 		this.layers.insert( new PolygonLayer('Flood-Layer', map,
-				 function(data){ return data.show_waterheights.val; },
+				 function(data){ return data.show_waterheights && data.show_waterheights.get(); },
 				 function(data){ return data.waterheights; }) );
 		this.layers.insert( new MarkerLayer('Marker-Layer', map) );
 		
 		this.layers.insert( new BuildingsLayer('Buildings', map,
-				function(data){ return data.show_buildings.get(); }) );
+				function(data){ return data.show_buildings && data.show_buildings.get(); }) );
 		
 		for( var i = 0; i < this.layers.length(); i++ ) {
 			var layer = this.layers.get(i);
@@ -2538,11 +2556,11 @@ function GlobalControl() {
 			eq = data.parentEvt;
 			markMsgAsDisplayed(data);	
 		}
-		
 		if(this.active != eq._id) {
 			this.deselect();
 			this.active = eq._id;
 			eq.selected = true;
+			console.log('notifyOn select');
 			eq.notifyOn('select');
 		}
 		
@@ -2607,7 +2625,10 @@ function GlobalControl() {
 	};
 	
 	this.edit_set = function(data) {
-		this.evtsetcomp.load(data);
+		if( data instanceof EventSet )
+			this.evtsetcomp.load(data);
+		else
+			this.evtsetcomp.load_eq(data);
 		$('#tabEvtSetComp').find('a').trigger('click');
 	};
 
@@ -2656,8 +2677,9 @@ function GlobalControl() {
 	
 	/* TODO: refactor */
 	this.grid = function(data) {
-		if (active == data._id)
-			showGrid(active, data.show_grid);
+		/* TODO: showGrid within the MarkerLayer! */
+		if(this.active == data._id)
+			showGrid(this.active, data.show_grid);
 	};
 	
 	this.loadBuildings = function(event, minx, miny, maxx, maxy, func) {
@@ -3210,7 +3232,8 @@ function EQWidget(data, marker) {
 				this.onGridChange.bind(this));
 		this.div.find('.info a').click(
 				(function(){this.div.find('.info').hide();}).bind(this));
-
+		this.div.find('.lnkEditEvtSet').click(this.notifyOn.bind(this, 'clk_edit_set', this.data));
+		
 		/* create layer switcher */
 		var layers = {
 			'Forecast points/zones': this.onCFZLayer.bind(this),
@@ -3238,6 +3261,9 @@ function EQWidget(data, marker) {
 		options.placement = 'top';
 		options.title = 'Modify and reprocess';
 		this.div.find('.lnkEdit').tooltip(options);
+		
+		options.title = 'Reprocess event set';
+		this.div.find('.lnkEditEvtSet').tooltip(options);
 		
 		options.title = 'Inspect event';
 		this.div.find('.lnkLearn').tooltip(options);
@@ -3398,6 +3424,9 @@ function EQWidget(data, marker) {
 
 			if (checkPerm('comp'))
 				this.div.find('.lnkEdit').show();
+			
+			if (checkPerm('evtset'))
+				this.div.find('.lnkEditEvtSet').show();
 
 			if (checkPermsAny('intmsg', 'mail', 'fax', 'ftp', 'sms')
 					&& !this.data.extern)
@@ -3614,22 +3643,26 @@ function MsgWidget(data) {
 		this.init(data);
 }
 
+/* TODO: EvtSetWidget extends EQWidget at the moment, but invokes init() of Widget! */
 EvtSetWidget.prototype = new EQWidget();
 
 function EvtSetWidget(data, marker) {
 
 	//EQWidget.call(this, data, marker);
+	//EQWidget.call(this);
 	
 	this.init = function(data, marker) {
 		this.div = $('.evtset-entry').clone();
 		this.div.removeClass('evtset-entry');
 		this.div.show();
+		
+		EQWidget.prototype.init.call(this, data);
+		
 		/* store a reference to the EventSet object */
 		this.data = data;
 		this.marker = marker;
 		/* register callbacks */
 		this.div.find('.subject').click(this.notifyOn.bind(this, 'clk_entry', this.data));
-		
 		this.div.find('.lnkEdit').click(this.notifyOn.bind(this, 'clk_edit_set', this.data));
 		this.div.find('.lnkTimeline').click(this.notifyOn.bind(this, 'clk_timeline', this.data));
 		
@@ -3643,7 +3676,7 @@ function EvtSetWidget(data, marker) {
 		options.title = 'Download Data';
 		this.div.find('.lnkRiskData').tooltip(options);
 		
-		if (checkPerm('comp'))
+		//if (checkPerm('comp'))
 			this.div.find('.lnkEdit').show();
 		if (checkPerm('timeline'))
 			this.div.find('.lnkTimeline').show();
@@ -3818,11 +3851,16 @@ function ICallbacks() {
 //					setTimeout( this.callbacks[action][i].bind(this, vargs[0]), 0 );
 //				else if ( vargs.length == 2 )
 //					setTimeout( this.callbacks[action][i].bind(this, vargs[0], vargs[1]), 0 );
+				
+				ICallbacks.total++;
+				if( ICallbacks.total % 20 == 0 )
+					console.log('Total notfifications: ' + ICallbacks.total);
 				this.callbacks[action][i].apply(this, vargs);
 			}
 	};
 }
 ICallbacks.next_uid = 1;
+ICallbacks.total = 0;
 
 function LayerSwitcher(div, layers) {
 	
@@ -4176,7 +4214,6 @@ function getUpdates(timestamp) {
 			var uadd = false;
 			var sadd = false;
 			var msgadd = false;
-			var show = false;
 			
 			for (var i = mlist.length - 1; i >= 0; i--) {
 
@@ -4196,9 +4233,6 @@ function getUpdates(timestamp) {
 					}
 
 				} else if (obj['event'] == 'progress') {
-
-					if (id == active)
-						show = true;
 				        
                     /* Update progress only if the event was already loaded. */
                     if( entries.get(id) ) {
@@ -4276,13 +4310,6 @@ function getUpdates(timestamp) {
                         }
 					
 				} else if (obj['event'] == 'progress') {
-
-					/*
-					 * don't show polygons again if we already display
-					 * the event with 100% progress
-					 */
-					if (id == active)
-						show = true;
                                         
                     /* Update progress only if the event was already loaded. */
                     if( entries.get(id) ) {
@@ -4328,7 +4355,6 @@ function getUpdates(timestamp) {
 				if( obj['event'] == 'new') {
 					var entry = entries.getOrInsert(new FloodEvent(obj.data));
 					floodsims.insert(entry);
-					console.log(entry);
 					change = true;
 				}
 				if( obj['event'] == 'progress') {
@@ -4336,7 +4362,6 @@ function getUpdates(timestamp) {
 					/* Update progress only if the event was already loaded. */
                     if( entries.get(id) ) {
 					    entries.get(id).process = obj.process;
-					    console.log( entries.get(id).process );
 					    entries.get(id).notifyOn('update');
                     }
 				}
@@ -4358,14 +4383,6 @@ function getUpdates(timestamp) {
 
 			if (msgadd) {
 				messages.notifyOn('change');
-			}
-
-			if (show) {
-
-				var filled = entries.get(active)['process'][0]['progress'];
-				if (filled == 100) {
-					entries.get(active).load();
-				}
 			}
 
 			timerId = setTimeout(function() {
@@ -4749,8 +4766,10 @@ function logIn(callback) {
 	}
 	
 	if( checkPerm("flood") ) {
+		$('#tabRecent').hide();
 		$('#tabFloodCompose').show();
 		$('#tabFloodList').show();
+		$('#tabFloodCompose').find('a').trigger('click');
 	} else {
 		$('#tabFloodCompose').hide();
 		$('#tabFloodList').hide();
@@ -5065,16 +5084,6 @@ function tabChanged(e) {
 	} else {
 		markers.compose.setMap(null);
 	}
-}
-
-function enableGrid(args) {
-
-	var entry = args.data.entry;
-
-	entry['show_grid'] = $(this).is(':checked');
-
-	if (active == entry['_id'])
-		showGrid(active, entry['show_grid']);
 }
 
 function checkInput() {
@@ -6557,13 +6566,13 @@ function BuildingsDialog() {
 		];
 		var text = '';
 		text += '<tr>\n';
-		text += '<th>Latitude</th>\n';
-		text += '<th>Longitude</th>\n';
 		for(var j = 0; j < tags.length; j++) {
 			var tag = tags[j][1];
 			text += '<th>' + tag + '</th>\n';
 		}
 		text += '<th>Water Height</th>\n';
+		text += '<th>Latitude</th>\n';
+		text += '<th>Longitude</th>\n';
 		text += '</tr>\n';
 		for(var i = 0; i < buildings.length(); i++ ) {
 			var b = buildings.get(i);
@@ -6571,13 +6580,13 @@ function BuildingsDialog() {
 			var mlat = b.miny + (b.maxy - b.miny) / 2;
 			var mlon = b.minx + (b.maxx - b.minx) / 2;
 			text += '<tr>\n';
-			text += '<td>' + mlat.toFixed(2) + '</td>\n';
-			text += '<td>' + mlon.toFixed(2) + '</td>\n';
 			for(var j = 0; j < tags.length; j++) {
 				var tag = tags[j][0];
 				text += '<td>' +  (! b.tags || ! b.tags[tag] ? ' - ' : b.tags[tag]) + '</td>\n';
 			}
 			text += '<td>' + b.height.toFixed(2) + '</td>\n';
+			text += '<td>' + mlat.toFixed(2) + '</td>\n';
+			text += '<td>' + mlon.toFixed(2) + '</td>\n';
 			text += '</tr>\n';
 		}
 		this.table.html(text);
@@ -6638,7 +6647,8 @@ function AdminDialog() {
 			'notify': new HtmlCheckBox('Notifications'),
 			'api': new HtmlCheckBox('API'),
 			'report': new HtmlCheckBox('Report'),
-			'evtset': new HtmlCheckBox('Event Sets')
+			'evtset': new HtmlCheckBox('Event Sets'),
+			'flood': new HtmlCheckBox('Flood Prototype')
 		};
 		
 		this.instInputs = {
@@ -7166,7 +7176,6 @@ function HtmlCheckBox(label, checked) {
 	};
 
 	this.value = function(checked,notify) {
-		console.log('Checkbox: ', checked);
 		var curval = this.check.prop('checked');		
 		if(arguments.length < 1)
 			return curval;		
@@ -8002,12 +8011,12 @@ function MarkerLayer(name,map) {
 		this.active_marker.setMap(map);
 		map.panTo(this.active_marker.getPosition());
 		
-		showGrid(active, this.data.show_grid);
+		showGrid(this.data._id, this.data.show_grid);
 	};
 	
 	this.clear = function() {
 		this.active_marker.setMap(null);
-		showGrid(active, false);
+		showGrid(this.data._id, false);
 	};
 	
 	this.init();
@@ -8471,7 +8480,7 @@ function FloodComposeTab(div) {
 	
 	this.addPoints = function() {
 		if( ! this.pointList || ! this.hydroList ) {
-			this.success('');
+			this.error('');
 			return;
 		}
 		this.divPoints.empty();
@@ -8513,8 +8522,10 @@ function FloodComposeTab(div) {
 		}
 		this.layer.setData(this.geoObjs);
 		
+		/* TODO */
 		showStationView(true);
 		$('#statview').show();
+		$('#stat-panel').hide();
 		new BreachChartView($('#stat-dias'), this.pairs);
 		this.success('');
 	};
@@ -8549,6 +8560,18 @@ function FloodComposeTab(div) {
 		ajax('/srv/flood_compute', {name: this.txtName.value(), test: JSON.stringify(data)}, function(result) {
 			console.log(result);
 		});
+		this.layer.clear();
+		/* TODO */
+		showStationView(false);
+		$('#statview').hide();
+		this.notifyOn('started');
+	};
+	
+	this.reset = function() {
+		this.filePoints.find('.fname').html('');
+		this.fileHydros.find('.fname').html('');
+		this.error('');
+		this.divPoints.empty();
 	};
 
 	this.init.apply(this, arguments);
@@ -8733,6 +8756,7 @@ function IChartView(widget, data) {
 		this.setData(data);
 		this.draw();
 		this.widget.scroll(this.onScroll.bind(this));
+		this.show();
 	};
 	
 	this.setData = function(data) {
@@ -8886,6 +8910,14 @@ function IChartView(widget, data) {
 			var pair = visibles[i];
 			pair.chart.activate();
 		}
+	};
+	
+	this.show = function() {
+		this.widget.show();
+	};
+	
+	this.hide = function() {
+		this.widget.hide();
 	};
 		
 	if( arguments.length > 0 )
@@ -9122,7 +9154,6 @@ function FloodWidget(data, marker) {
 			this.div.find('.calc-data').show();
 		}
 		
-		console.log(this.data);
 		this.select();
 	};
 	
@@ -9185,10 +9216,16 @@ function FloodEvent(meta) {
 			this.load();
 		}
 	};
+	
+	this.getProgress = function() {
+		return this.process.progress;
+	};
 		
 	this.load = function(callback,type) {
 		if( this.isLoaded(type) )
 			return true;
+		if( this.getProgress() < 100 )
+			return false;
 		this.loadWaterHeights();
 		return false;
 	};
