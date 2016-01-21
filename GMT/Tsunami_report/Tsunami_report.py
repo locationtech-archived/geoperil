@@ -71,8 +71,11 @@ args = parser.parse_args()
 #############################################
 title = args.title
 subtitle = args.subtitle
+
 output_data_dir = args.output_data_dir
 output = args.output
+output = '%s%s' % (output_data_dir, output)
+
 #Ausdehnung Karteninhalt
 west, east, south, north = None, None, None, None
 west = args.extent_west
@@ -103,8 +106,12 @@ wave_height = args.wave_height
 wave_height = '%s%s' % (wave_data_dir, wave_height)
 wave_height_new = '%stemp/eWave_height_temp.nc' % (wave_data_dir)
 wave_height_expression = float(args.wave_height_expression)
+if wave_height_expression <= 0:
+        wave_height_expression = 0.00000000000000001
 
 wave_time = args.wave_time
+wave_time = '%s%s' % (wave_data_dir, wave_time)
+wave_time_new = '%stemp/eWave_time_temp.nc' % (wave_data_dir)
 
 dem = args.dem
 plot_wave_height = args.plot_wave_height
@@ -125,7 +132,6 @@ date = datetime.datetime.utcnow().strftime("%Y, %B %d, %H:%M")
 
 #gibt Eingabewerte zur übersicht aus
 print ('Titel:               ', title)
-print ('Output-Directory:    ', output_data_dir)
 print ('Output-Datei:        ', output)
 
 print ('Ausdehnung')
@@ -177,30 +183,8 @@ else:
 ############################
 ######### Extent ###########
 ############################
-
-if (west is None) or (east is None) or (north is None) or (south is None):
-    temp_extent_file1 = 'data/temp/contour.shp'
-    temp_extent_file2 = 'data/temp/contour.dbf'
-    temp_extent_file3 = 'data/temp/contour.shx'
-
-    subprocess.call(['gdal_contour', '-i', '1000', '-off', str(wave_height_expression), wave_height, temp_extent_file1])
-    extent_info = subprocess.Popen(['ogrinfo', '-al', '-so', temp_extent_file1], stdout=subprocess.PIPE).stdout.read().decode("utf-8")
-
-    subprocess.call(['rm', temp_extent_file1])
-    subprocess.call(['rm', temp_extent_file2])
-    subprocess.call(['rm', temp_extent_file3])
-
-    extent_w_height = re.findall("\((-?\d+.\d+), (-?\d+.\d+)\)", extent_info)
-
-if west is None:
-    west = extent_w_height[0][0]
-if east is None:    
-    east = extent_w_height[1][0]
-if south is None:    
-    south = extent_w_height[0][1]
-if north is None:    
-    north = extent_w_height[1][1]
-
+#Falls keine/oder nicht vollständige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-Traveltime-GRIDs berechnet
+west, east, south, north = calc_extent_for_w_time(wave_time, west, east, south, north)
 west = float(west)
 east = float(east)
 south = float(south)
@@ -282,8 +266,6 @@ def choose_best_basemap (psize):
 basemap_size = choose_best_basemap(perfect_pixel_size)
 
 #legt Speicherort der Basemap fest
-#basemap='%s%s/etopo1_ice_%s.nc' %(basemap_data_dir, basemap_size, basemap_size)
-#basemap_hillshade='%s%s/etopo1_ice_%s_shade.nc' %(basemap_data_dir, basemap_size, basemap_size)
 basemap='%s%s/basemap_%s.nc' %(basemap_data_dir, basemap_size, basemap_size)
 basemap_hillshade='%s%s/basemap_%s_shade.nc' %(basemap_data_dir, basemap_size, basemap_size)
 
@@ -301,12 +283,12 @@ y_map_distance = '%s%s' % (y_map_dist, unit)
 
 #./Basemap.sh title output extent projection y_map_dist basemap basemap_hillshade 
 #	outline coast_res coast_color terrain color_water color_land color_globe_land color_globe_water land_res etopo_water_cpt etopo_land_cpt
-subprocess.call(['./gmt_scripts/Basemap.sh', title, output_data_dir + output, R, J, y_map_distance, basemap, basemap_hillshade, \
+subprocess.call(['./gmt_scripts/Basemap.sh', title,output , R, J, y_map_distance, basemap, basemap_hillshade, \
     outline, coast_res, coast_color, dem, color_water, color_land, color_globe_land, color_globe_water, land_res, etopo_water_cpt, etopo_land_cpt, \
     world_pop_data, world_pop_cpt, world_pop, subtitle, str(paper_height)])
 
 if not subtitle=="-None-":
-    subprocess.call(['./gmt_scripts/subtitle.sh',output_data_dir + output, str(subtitle), str(subtitle_pos_y), str(map_width)])
+    subprocess.call(['./gmt_scripts/subtitle.sh',output , str(subtitle), str(subtitle_pos_y), str(map_width)])
 
 #############################
 ########## Karte ############
@@ -315,20 +297,14 @@ if not subtitle=="-None-":
 ####### Wellenhöhen #########
 #plottet die Wellenhöhen
 if plot_wave_height=="Y":
-    if wave_height_expression <= 0:
-        wave_height_expression = 0.00000000000000001
-
     #./Tsunami_wave_height.sh output wave_height_data wave_height_new expression wave_height_cpt
-    subprocess.call(['./gmt_scripts/Tsunami_wave_height.sh', output_data_dir + output, wave_height, wave_height_new, str(wave_height_expression), wave_height_cpt, y_map_distance])
+    subprocess.call(['./gmt_scripts/Tsunami_wave_height.sh', output, wave_height, wave_height_new, str(wave_height_expression), wave_height_cpt, y_map_distance])
 
 ######## Traveltime #########
 #Plottet die Traveltime als Isochrone
 if plot_wave_time=="Y":
-    wave_time = '%s%s' % (wave_data_dir, wave_time)
-    wave_time_new = '%stemp/eWave_time_temp.nc' % (wave_data_dir)
-
     #./Tsunami_wave_traveltime.sh output y_map_dist wave_time Isochrone_dist Isochrone_color
-    subprocess.call(['./gmt_scripts/Tsunami_wave_traveltime.sh', output_data_dir + output,wave_time_new ,y_map_distance, wave_time, Isochrone_dist, Isochrone_color])
+    subprocess.call(['./gmt_scripts/Tsunami_wave_traveltime.sh',output ,wave_time_new ,y_map_distance, wave_time, Isochrone_dist, Isochrone_color])
 
 
 ######## city pop ###########
@@ -337,11 +313,12 @@ if cities_capital=="Y":
 else:
     cities_capital = ''    
 
+#wenn keine Mindest-Populationsanzahl für die Labels angegeben wird, dann wird die Mindestanzahl der Städte übernommen
 if cities_label_pop=="N":
     cities_label_pop = cities_pop
 
 if plot_cities=="Y":
-    subprocess.call(['./gmt_scripts/city_population.sh', output_data_dir + output, R, J, y_map_distance, city_pop_data, cities_pop, cities_capital, cities_label, cities_label_pop])
+    subprocess.call(['./gmt_scripts/city_population.sh', output, R, J, y_map_distance, city_pop_data, cities_pop, cities_capital, cities_label, cities_label_pop])
 
 
 #############################
@@ -353,7 +330,7 @@ if plot_globe=="Y":
     x_globe_dist = float(width) - 2.2
 
     #./Globus.sh output west east south north lon_mid lat_mid y_globe x_globe color_globe_land color_globe_water
-    subprocess.call(['./gmt_scripts/Globus.sh', output_data_dir + output, str(west), str(east), str(south), str(north), str(lon_mid), str(lat_mid), str(y_globe_dist), str(x_globe_dist), color_globe_land, color_globe_water])
+    subprocess.call(['./gmt_scripts/Globus.sh', output, str(west), str(east), str(south), str(north), str(lon_mid), str(lat_mid), str(y_globe_dist), str(x_globe_dist), color_globe_land, color_globe_water])
 
 
 ######################################
@@ -362,7 +339,7 @@ if plot_globe=="Y":
 
 ######## map scale ##########
 if plot_map_scale=="Y":
-    subprocess.call(['./gmt_scripts/map_scale.sh', output_data_dir + output, R, J, str(lon_mid), str(lat_mid), str(scalebar_length), y_map_distance])
+    subprocess.call(['./gmt_scripts/map_scale.sh', output, R, J, str(lon_mid), str(lat_mid), str(scalebar_length), y_map_distance])
 
 ########## Legende ##########
 
@@ -387,27 +364,29 @@ city_pop_pslegend = '-Dx%sc/%sc/6c/BL' % (legend_positions[3][0], legend_positio
 creator_y = y_map_dist - 0.6
 
 #erstellt Legende
-subprocess.call(['./gmt_scripts/Legend.sh', output_data_dir + output, wave_height_cpt, plot_wave_height, plot_wave_time, \
+subprocess.call(['./gmt_scripts/Legend.sh', output, wave_height_cpt, plot_wave_height, plot_wave_time, \
     wave_height_pslegend, wave_height_psscale, wave_time_pslegend, \
     world_pop_cpt, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, city_pop_pslegend, plot_cities, world_pop, \
     date, str(creator_y), str(map_width)])
 
-
+######################################
+###### Umwandlung in PNG/PDF #########
+######################################
 
 #PseudoCommand; beendet das Overlay; Plottet unsichtbare Flüsse/Seen
 #gmt pscoast -J -R -P -O -C-t100 -Y >> ${output}
-subprocess.call(['./gmt_scripts/pseudo_end.sh', output_data_dir + output, R, J])
+subprocess.call(['./gmt_scripts/pseudo_end.sh', output, R, J])
 
 #erstellt png-Datei
 #gmt ps2raster default_output.ps -A -Tg -V
 #-A plottet nur Karteninhalt
-subprocess.call(['gmt', 'ps2raster', output_data_dir + output, '-Tg', '-V', '-E720'])
+subprocess.call(['gmt', 'ps2raster', output, '-Tg', '-V', '-E720'])
 #PDF
-#subprocess.call(['gmt', 'ps2raster', output_data_dir + output, '-Tf', '-V'])
+#subprocess.call(['gmt', 'ps2raster', output, '-Tf', '-V'])
 
 
 ##################################################
-################# INFO -Output ###################
+################# INFO - Output ##################
 ##################################################
 
 print ('\n\nBerechnungen:')
@@ -434,10 +413,8 @@ print ('        optimale Pixelgröße in \':  ', perfect_pixel_size)
 print ('        optimale Pixelgröße in km: ', pixel_km)
 print ('        basemapsize in arc-min:    ', basemap_size)
 
-print ('\n\nNeu:')
-print ('    Basemap:           ', basemap)
-print ('    Basemap Hillshade: ', basemap_hillshade)
+print ('\n        Basemap:		   ', basemap)
+print ('        Basemap Hillshade:         ', basemap_hillshade)
 
 print ('\nOutput:')
-print ('    Output-Datei:      ', output_data_dir + output)
-
+print ('    Output-Datei:      ', output)
