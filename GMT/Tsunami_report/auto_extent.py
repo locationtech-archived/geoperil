@@ -4,31 +4,34 @@ import subprocess
 import re
 
 #Falls keine/oder nicht vollständige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-GRIDs und w_exp berechnet
-'''
-#Calc Extent wave heigt V1
-if (west is None) or (east is None) or (north is None) or (south is None):
-    temp_extent_file1 = 'data/temp/contour.shp'
-    temp_extent_file2 = 'data/temp/contour.dbf'
-    temp_extent_file3 = 'data/temp/contour.shx'
+def calc_extent_for_w_height(wave_height, west, east, south, north, wave_height_expression):
 
-    subprocess.call(['gdal_contour', '-i', '1000', '-off', str(wave_height_expression), wave_height, temp_extent_file1])
-    extent_info = subprocess.Popen(['ogrinfo', '-al', '-so', temp_extent_file1], stdout=subprocess.PIPE).stdout.read().decode("utf-8")
+    #Calc Extent wave heigt V1
+    if (west is None) or (east is None) or (north is None) or (south is None):
+        temp_extent_file1 = 'data/temp/contour.shp'
+        temp_extent_file2 = 'data/temp/contour.dbf'
+        temp_extent_file3 = 'data/temp/contour.shx'
 
-    subprocess.call(['rm', temp_extent_file1])
-    subprocess.call(['rm', temp_extent_file2])
-    subprocess.call(['rm', temp_extent_file3])
+        subprocess.call(['gdal_contour', '-i', '1000', '-off', str(wave_height_expression), wave_height, temp_extent_file1])
+        extent_info = subprocess.Popen(['ogrinfo', '-al', '-so', temp_extent_file1], stdout=subprocess.PIPE).stdout.read().decode("utf-8")
 
-    extent_w_height = re.findall("\((-?\d+.\d+), (-?\d+.\d+)\)", extent_info)
+        subprocess.call(['rm', temp_extent_file1])
+        subprocess.call(['rm', temp_extent_file2])
+        subprocess.call(['rm', temp_extent_file3])
+    
+        extent_w_height = re.findall("\((-?\d+.\d+), (-?\d+.\d+)\)", extent_info)
 
-if west is None:
-    west = extent_w_height[0][0]
-if east is None:    
-    east = extent_w_height[1][0]
-if south is None:    
-    south = extent_w_height[0][1]
-if north is None:    
-    north = extent_w_height[1][1]
-'''  
+    if west is None:
+        west = extent_w_height[0][0]
+    if east is None:    
+        east = extent_w_height[1][0]
+    if south is None:    
+        south = extent_w_height[0][1]
+    if north is None:    
+        north = extent_w_height[1][1]
+
+    return (west, east, south, north)
+    
 '''
 #Calc Extent wave heigt V2
 temp_calc_tif='data/temp/calc_temp.tif'
@@ -72,8 +75,6 @@ def calc_extent_for_w_time(wave_time, west, east, south, north):
         wave_time_max = float(wave_time_max[0][1])
         #4/5 des maximalen Z-Wertes:
         wave_time_max_extent = int(wave_time_max * 0.8)
-        print ('max Wave-Time:            ', wave_time_max)
-        print ('max Wave-Time for Extent: ', wave_time_max_extent)
         
         #berechnet automatisch maximalste Ausdehnung des Traveltime-GRIDs für alle Z-Werte unter wave_time_max_extent
         subprocess.call(['gdal_calc.py', '-A', wave_time, '--outfile=%s' % temp_calc_tif, '--calc=logical_and(A>=0.0000001, A<=%s)' % (wave_time_max_extent)]) 
