@@ -179,5 +179,26 @@ class DataSrv(BaseSrv):
                     raise HTTPError("404 Data does not exist.")
         else:
             raise HTTPError("404 Event %s is faulty." % evid)
+
+    def export_cfzs(self, evtid):
+        out = "# @VGMT1.0 @GPOLYGON\n# FEATURE_DATA\n"
+        for cfz in self._db["cfcz"].find():
+            res = self._db["comp"].find_one({"type": "CFZ", "code": cfz["FID_IO_DIS"], "EventID": evtid})
+            val = " -Z%f\n# @P" % res["ewh"]
+            for poly in cfz["_COORDS_"]:
+                out += ">%s\n" % val
+                for point in poly:
+                    out += "%f %f\n" % (point[0], point[1])
+                val = "\n# @H"
+        return out
+
+    def export_tfps(self, evtid):
+        out = ""
+        for tfp_comp in self._db["tfp_comp"].find({"EventID": evtid}):
+            tfp = self._db["tfps"].find_one({"_id": ObjectId(tfp_comp["tfp"])})
+            if tfp is None:
+                continue
+            out += "%f,%f,%f,%f\n" % (tfp["lon_real"], tfp["lat_real"], tfp_comp["ewh"], tfp_comp["eta"])
+        return out
         
 application = startapp( DataSrv )
