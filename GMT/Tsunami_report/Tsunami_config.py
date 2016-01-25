@@ -78,9 +78,7 @@ tfp_3_fill = '245/56/31'
 tfp_stroke = '35/35/35'
 
 #Quake
-quake_0_5_fill = '250/232/32'
-quake_5_7_fill = '242/158/23'
-quake_7_fill = '245/56/31'
+quake_fill = '252/255/0'
 
 ###############
 ### Tsunami ###

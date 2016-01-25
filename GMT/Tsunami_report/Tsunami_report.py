@@ -345,7 +345,7 @@ if plot_tfp=="Y":
 
 #Plottet Quakes
 if plot_quake=="Y":
-    subprocess.call(['./gmt_scripts/quake.sh',output ,quake, quake_0_5_fill, quake_5_7_fill, quake_7_fill, y_map_distance])    
+    subprocess.call(['./gmt_scripts/quake.sh',output ,quake, quake_fill, y_map_distance])    
 
 ######## city pop ###########
 if cities_capital=="Y":
