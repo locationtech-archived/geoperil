@@ -59,8 +59,23 @@ etopo_land_cpt = 'cpt/brown.cpt'
 #wave_height_cpt = 'cpt/waveheight_3.cpt'
 wave_height_cpt = 'cpt/waveheight_1.cpt'
 
+#world population GRID
 world_pop_cpt = 'cpt/world_population/world_pop_label.cpt'
 
+#cities
+cities_fill = '230/26/26'
+cities_stroke = '58/0/0'
+
+#CFZ
+cfz_cpt = 'cpt/CFZ/CFZ.cpt'
+cfz_stroke = '35/35/35'
+
+#TFP
+tfp_0_03_fill = '75/203/0'
+tfp_03_1_fill = '250/232/32'
+tfp_1_3_fill = '242/158/23'
+tfp_3_fill = '245/56/31'
+tfp_stroke = '35/35/35'
 
 ###############
 ### Tsunami ###

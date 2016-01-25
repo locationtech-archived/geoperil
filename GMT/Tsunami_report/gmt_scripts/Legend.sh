@@ -20,8 +20,11 @@ plot_cities=${13}
 world_pop=${14}
 
 date=${15}
-creator_y=${16}
+created_y=${16}
 map_width=${17}
+
+cities_fill=${18}
+cities_stroke=${19}
 
 #Unterüberschrift
 #gmt pslegend -Dx0c/23.2c/15.8c/BL -O -K <<EOF>> ${output}
@@ -61,14 +64,14 @@ then
 gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${city_pop_pslegend} -O -K -V <<EOF>> ${output}
 L 10p Helvetica L Persons per city
 G 0.2c
-S 0c c 0.2c 230/26/26 0.01c,58/0/0 0.4i < 1.5Mio
+S 0c c 0.2c ${cities_fill} 0.01c,${cities_stroke} 0.4i < 1.5Mio
 G 0.1c
-S 0c c 0.25c 230/26/26 0.01c,58/0/0 0.4i 1.5Mio - 3Mio
+S 0c c 0.25c ${cities_fill} 0.01c,${cities_stroke} 0.4i 1.5Mio - 3Mio
 G 0.1c
-S 0c c 0.3c 230/26/26 0.01c,58/0/0 0.4i > 3Mio
+S 0c c 0.3c ${cities_fill} 0.01c,${cities_stroke} 0.4i > 3Mio
 EOF
 fi
 
-gmt pslegend -Dx0c/${creator_y}c/${map_width}c/BL -O -K <<EOF>> ${output}
+gmt pslegend -Dx0c/${created_y}c/${map_width}c/BL -O -K <<EOF>> ${output}
 L 6p Helvetica L Created on ${date} UTC, by TRIDEC Cloud 
 EOF

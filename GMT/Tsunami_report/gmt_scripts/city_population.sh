@@ -16,25 +16,28 @@ cities_capital=${7}
 cities_label=${8}
 cities_label_pop=${9}
 
+cities_fill=${10}
+cities_stroke=${11}
+
 
 #plottet Städte abgestuft in drei Größen abhängig von cities_pop
 if [ ${cities_pop} -le 1500000 ]
 then
 	#Pop = 0 bis 1.500.000
-	awk "BEGIN {FS=\",\"}; \$29 >= ${cities_pop} && \$29 <= 1500000 ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,58/0/0 -i0,1,2 -Sc0.2c -G230/26/26 -Ya${y_map_dist} -O -K >> ${output}
+	awk "BEGIN {FS=\",\"}; \$29 >= ${cities_pop} && \$29 <= 1500000 ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,${cities_stroke} -i0,1 -Sc0.2c -G${cities_fill} -Ya${y_map_dist} -O -K >> ${output}
 	#Pop = 1.500.000 bis 3.000.000
-	awk "BEGIN {FS=\",\"}; \$29 > 1500000 && \$29 <= 3000000 ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,58/0/0 -i0,1,2 -Sc0.25c -G230/26/26 -Ya${y_map_dist} -O -K >> ${output}
+	awk "BEGIN {FS=\",\"}; \$29 > 1500000 && \$29 <= 3000000 ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,${cities_stroke}  -i0,1 -Sc0.25c -G${cities_fill} -Ya${y_map_dist} -O -K >> ${output}
 	#Pop > 3.000.000
-	awk "BEGIN {FS=\",\"}; \$29 > 3000000 ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,58/0/0 -i0,1,2 -Sc0.3c -G230/26/26 -Ya${y_map_dist} -O -K >> ${output}
+	awk "BEGIN {FS=\",\"}; \$29 > 3000000 ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,${cities_stroke}  -i0,1 -Sc0.3c -G${cities_fill} -Ya${y_map_dist} -O -K >> ${output}
 elif [ ${cities_pop} -le 3000000 ]
 then
 	#Pop = 1.500.000 bis 3.000.000
-	awk "BEGIN {FS=\",\"}; \$29 > ${cities_pop} && \$29 <= 3000000 ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,58/0/0 -i0,1,2 -Sc0.2c -G230/26/26 -Ya${y_map_dist} -O -K >> ${output}
+	awk "BEGIN {FS=\",\"}; \$29 > ${cities_pop} && \$29 <= 3000000 ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,${cities_stroke}  -i0,1 -Sc0.2c -G${cities_fill} -Ya${y_map_dist} -O -K >> ${output}
 	#Pop > 3.000.000
-	awk "BEGIN {FS=\",\"}; \$29 > 3000000 ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,58/0/0 -i0,1,2 -Sc0.3c -G230/26/26 -Ya${y_map_dist} -O -K >> ${output}
+	awk "BEGIN {FS=\",\"}; \$29 > 3000000 ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,${cities_stroke}  -i0,1 -Sc0.3c -G${cities_fill} -Ya${y_map_dist} -O -K >> ${output}
 else
 	#Pop > 3.000.000
-	awk "BEGIN {FS=\",\"}; \$29 > ${cities_pop} ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,58/0/0 -i0,1,2 -Sc0.3c -G230/26/26 -Ya${y_map_dist} -O -K >> ${output}
+	awk "BEGIN {FS=\",\"}; \$29 > ${cities_pop} ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,${cities_stroke}  -i0,1 -Sc0.3c -G${cities_fill} -Ya${y_map_dist} -O -K >> ${output}
 fi
 
 

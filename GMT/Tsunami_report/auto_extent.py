@@ -72,8 +72,8 @@ def calc_extent_for_w_time(wave_time, west, east, south, north):
         wave_time_max = float(wave_time_max[0][1])
         #4/5 des maximalen Z-Wertes:
         wave_time_max_extent = int(wave_time_max * 0.8)
-        print (wave_time_max)
-        print (wave_time_max_extent)
+        print ('max Wave-Time:            ', wave_time_max)
+        print ('max Wave-Time for Extent: ', wave_time_max_extent)
         
         #berechnet automatisch maximalste Ausdehnung des Traveltime-GRIDs für alle Z-Werte unter wave_time_max_extent
         subprocess.call(['gdal_calc.py', '-A', wave_time, '--outfile=%s' % temp_calc_tif, '--calc=logical_and(A>=0.0000001, A<=%s)' % (wave_time_max_extent)]) 

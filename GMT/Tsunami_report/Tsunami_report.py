@@ -36,11 +36,19 @@ parser.add_argument("-e_n", "--extent_north", dest = "extent_north", help="Karte
 parser.add_argument("-y_r", "--y_ratio", dest = "y_ratio", default = "4", help="Kartenrahmenverhältnis: Y-Achse \n(default = 4)")
 parser.add_argument("-x_r", "--x_ratio", dest = "x_ratio", default = "5", help="Kartenrahmenverhältnis: X-Achse \n(default = 5)")
 
-#Tsunami-Daten
+###Tsunami-Daten###
+#Wave-Height
 parser.add_argument("-w_dd", "--wave_data_dir", dest = "wave_data_dir", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/", help="Data-Dir für Tsunami-Daten")
 parser.add_argument("-w_height", "--wave_height", dest = "wave_height", default = "HDF600/eWave.2D.sshmax", help="GRD-Datei für Wellenhöhe\nz.B.: eWave.2D.sshmax")
 parser.add_argument("-w_exp", "--wave_height_expression", dest = "wave_height_expression", default = "0.05", help="Alle Wellenhöhenwerte unter diesem Wert werden nicht angezeigt")
+#Wave-Time
 parser.add_argument("-w_time", "--wave_time", dest = "wave_time", default = "HDF600/eWave.2D.time", help="GRD-Datei für Traveltime\nz.B.: eWave.2D.time")
+#CFZs
+parser.add_argument("-cfz_dd", "--cfz_data_dir", dest = "cfz_data_dir", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/CFZ/", help="Data-Dir für Coastal-Forecast-Zones")
+parser.add_argument("-cfz", "--cfz", dest = "cfz", default = "CFZ_test/cfz2.gmt", help="GMT-Datei für Coastal-Forecast-Zones")
+#TFPs
+parser.add_argument("-tfp_dd", "--tfp_data_dir", dest = "tfp_data_dir", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/TFPs/", help="Data-Dir für Tsunami-Forecast-Points")
+parser.add_argument("-tfp", "--tfp", dest = "tfp", default = "tfp.csv", help="CSV-Datei für Tsunami-Forecast-Points")
 
 
 #Einstell/Plot-Möglichkeiten
@@ -49,6 +57,9 @@ parser.add_argument("-p_w_height", "--plot_wave_height", dest = "plot_wave_heigh
 parser.add_argument("-p_w_time", "--plot_wave_time", dest = "plot_wave_time", default = "N", help="Plot GRD-Datei für Traveltime?\nJa = Y\nNein = N")
 
 parser.add_argument("-p_w_pop", "--plot_world_pop", dest = "world_pop", default = "N", help="Population-GRID Plotten?\nJa = Y\nNein = N")
+
+parser.add_argument("-p_cfz", "--plot_cfz", dest = "plot_cfz", default = "N", help="Coastal-Forecast-Zones Plotten?\nJa = Y\nNein = N")
+parser.add_argument("-p_tfp", "--plot_tfp", dest = "plot_tfp", default = "N", help="Tsunami-Forecast-Points Plotten?\nJa = Y\nNein = N")
 
 parser.add_argument("-p_c", "--plot_cities", dest = "plot_cities", default = "N", help="Cities Plotten?\nJa = Y\nNein = N")
 parser.add_argument("-c_pop", "--cities_pop", dest = "cities_pop", default = "0", help="Cities above will be plotted [in Mio]")
@@ -102,17 +113,33 @@ x_ratio = float(args.x_ratio)
 
 wave_data_dir = args.wave_data_dir
 
+#Wave-Height
 wave_height = args.wave_height
 wave_height = '%s%s' % (wave_data_dir, wave_height)
-wave_height_new = '%stemp/eWave_height_temp.nc' % (wave_data_dir)
+#wave_height_temp = '%stemp/eWave_height_temp.nc' % (wave_data_dir)
+wave_height_temp = 'data/temp/eWave_height_temp.nc'
 wave_height_expression = float(args.wave_height_expression)
 if wave_height_expression <= 0:
         wave_height_expression = 0.00000000000000001
 
+#Wave-Time
 wave_time = args.wave_time
 wave_time = '%s%s' % (wave_data_dir, wave_time)
-wave_time_new = '%stemp/eWave_time_temp.nc' % (wave_data_dir)
+#wave_time_temp = '%stemp/eWave_time_temp.nc' % (wave_data_dir)
+wave_time_temp = 'data/temp/eWave_time_temp.nc'
 
+#CFZs
+cfz_data_dir = args.cfz_data_dir
+cfz =  args.cfz
+cfz = '%s%s' % (cfz_data_dir, cfz)
+plot_cfz = args.plot_cfz
+#TFPs
+tfp_data_dir = args.tfp_data_dir
+tfp = args.tfp
+tfp = '%s%s' % (tfp_data_dir, tfp)
+plot_tfp = args.plot_tfp
+
+#Plot? Y/N
 dem = args.dem
 plot_wave_height = args.plot_wave_height
 plot_wave_time = args.plot_wave_time
@@ -189,6 +216,12 @@ west = float(west)
 east = float(east)
 south = float(south)
 north = float(north)
+
+print ('Extent before calculation:')
+print (    'west:  ', west)
+print (    'east:  ', east)
+print (    'south: ', south)
+print (    'north: ', north)
 
 ############################
 ####### Kartenrahmen #######
@@ -297,14 +330,22 @@ if not subtitle=="-None-":
 ####### Wellenhöhen #########
 #plottet die Wellenhöhen
 if plot_wave_height=="Y":
-    #./Tsunami_wave_height.sh output wave_height_data wave_height_new expression wave_height_cpt
-    subprocess.call(['./gmt_scripts/Tsunami_wave_height.sh', output, wave_height, wave_height_new, str(wave_height_expression), wave_height_cpt, y_map_distance])
+    #./Tsunami_wave_height.sh output wave_height_data wave_height_temp expression wave_height_cpt
+    subprocess.call(['./gmt_scripts/Tsunami_wave_height.sh', output, wave_height, wave_height_temp, str(wave_height_expression), wave_height_cpt, y_map_distance])
 
 ######## Traveltime #########
 #Plottet die Traveltime als Isochrone
 if plot_wave_time=="Y":
     #./Tsunami_wave_traveltime.sh output y_map_dist wave_time Isochrone_dist Isochrone_color
-    subprocess.call(['./gmt_scripts/Tsunami_wave_traveltime.sh',output ,wave_time_new ,y_map_distance, wave_time, Isochrone_dist, Isochrone_color])
+    subprocess.call(['./gmt_scripts/Tsunami_wave_traveltime.sh',output ,wave_time_temp ,y_map_distance, wave_time, Isochrone_dist, Isochrone_color])
+
+#Plottet CFZ
+if plot_cfz=="Y":
+    subprocess.call(['./gmt_scripts/CFZ.sh',output ,cfz, cfz_cpt, cfz_stroke, y_map_distance])
+    
+#Plottet TFP
+if plot_tfp=="Y":
+    subprocess.call(['./gmt_scripts/TFP.sh',output ,tfp, tfp_0_03_fill, tfp_03_1_fill, tfp_1_3_fill, tfp_3_fill, tfp_stroke, y_map_distance])
 
 
 ######## city pop ###########
@@ -318,7 +359,7 @@ if cities_label_pop=="N":
     cities_label_pop = cities_pop
 
 if plot_cities=="Y":
-    subprocess.call(['./gmt_scripts/city_population.sh', output, R, J, y_map_distance, city_pop_data, cities_pop, cities_capital, cities_label, cities_label_pop])
+    subprocess.call(['./gmt_scripts/city_population.sh', output, R, J, y_map_distance, city_pop_data, cities_pop, cities_capital, cities_label, cities_label_pop, cities_fill, cities_stroke])
 
 
 #############################
@@ -361,13 +402,13 @@ world_pop_psscale_1 = '-D%sc/%sc/-1.5c/0.4c' % (legend_positions[2][2], legend_p
 world_pop_psscale_2 = '-D%sc/%sc/-1.5c/0.4c' % (legend_positions[2][3], legend_positions[2][4])
 city_pop_pslegend = '-Dx%sc/%sc/6c/BL' % (legend_positions[3][0], legend_positions[3][1])
 
-creator_y = y_map_dist - 0.6
+created_y = y_map_dist - 0.6
 
 #erstellt Legende
 subprocess.call(['./gmt_scripts/Legend.sh', output, wave_height_cpt, plot_wave_height, plot_wave_time, \
     wave_height_pslegend, wave_height_psscale, wave_time_pslegend, \
     world_pop_cpt, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, city_pop_pslegend, plot_cities, world_pop, \
-    date, str(creator_y), str(map_width)])
+    date, str(created_y), str(map_width), cities_fill, cities_stroke])
 
 ######################################
 ###### Umwandlung in PNG/PDF #########
