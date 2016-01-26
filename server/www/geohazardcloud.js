@@ -7982,8 +7982,10 @@ function TFPLayer(name,map) {
 		var scale = 5;
 		if( this.map.getZoom() < 5 )
 			scale -= (5 - this.map.getZoom()) * 1.5;
+		/* Re-scaling all markers is clearly a bottleneck and decreases performance significantly.
+		 * TODO: Try to avoid this in future releases. */
 		for (var i = 0; i < this.data.tfps.length(); i++)
-			this.data.tfps.get(i).point.setScale(scale);	
+			this.data.tfps.get(i).point.setScale(scale);
 	};
 	
 	this.init();
@@ -8192,7 +8194,9 @@ function Point(lat,lon) {
 	this.setScale = function(scale) {
 		var icon = this.marker.getIcon();
 		icon.scale = scale;
-		this.marker.setIcon(icon);
+		/* setMap() seems to be faster than setIcon() to redraw the marker icon.
+		 * However, the marker is removed from the map for a short period of time. */
+		this.marker.setMap(map);  //this.marker.setIcon(icon);
 	};
 	
 	this.show = function(map) {
@@ -8222,6 +8226,7 @@ function CFZ(meta) {
 		$.extend(this,meta);
 		Polygon.call(this, this._COORDS_);
 		delete this._COORDS_;
+		this.poly.setOptions( {fillOpacity : 0.4, strokeWeight : 1.5} );
 	};
 	
 	this.init(meta);
@@ -8236,7 +8241,8 @@ function CFZResult(meta) {
 	this.toHtml = function() {	
         var min = Math.floor(this.eta);
         var sec = Math.floor((this.eta % 1) * 60.0);
-        var txt = '<b>' + this.COUNTRY + ' - ' + this.STATE_PROV + ' (' + this.code + ')</b><br>';
+        var state = this.STATE_PROV ? ' - ' + this.STATE_PROV : '';
+        var txt = '<b>' + this.COUNTRY + state + ' (' + this.code + ')</b><br>';
 
         if (this.eta != -1) {
         	txt += '<span>Estimated Arrival Time: ' + min + ':'	+ sec + ' minutes</span><br>';
@@ -8259,7 +8265,8 @@ function TFP(meta) {
 	this.toHtml = function() {	
         var min = Math.floor(this.eta);
         var sec = Math.floor((this.eta % 1) * 60.0);
-        var txt = '<b>' + this.country + ' - ' + this.name + ' (' + this.code + ')</b><br>';
+        var code = this.code ? ' (' + this.code + ')' : '';
+        var txt = '<b>' + this.country + ' - ' + this.name + code + '</b><br>';
 
         if (this.eta != -1) {
         	txt += '<span>Estimated Arrival Time: ' + min + ':'	+ sec + ' minutes</span><br>';

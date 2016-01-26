@@ -319,7 +319,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
 		}
 		cursor.close();
-		
+				
 		/* process TSPs */
 		cursor = db.getCollection("tsps").find();
 		for( DBObject obj: cursor ) {
@@ -400,7 +400,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		Process p = null;
 		int simTime = task.duration + 10;
 		
-		String cmdParams = " -grid ../grid_" + task.gridres + ".grd -poi ftps.inp -poi_dt_out 30 -source fault.inp -propagation " + task.dt_out + " -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
+		String cmdParams = " -grid ../grid_" + task.gridres + ".grd -poi ftps.inp -poi_dt_out 30 -poi_search_dist 20 -source fault.inp -propagation " + task.dt_out + " -step 1 -ssh_arrival 0.001 -time " + simTime + " -verbose -adjust_ztop -gpu";
 							
 		try {
 			
@@ -640,22 +640,6 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			
 			if( remote ) {
 				sshCon[1].copyFile(kml_file, workdir + "/" + kml_file);
-//				sshCon[1].out.println( "cat " + kml_file );
-//				sshCon[1].out.println( "echo -n '\004'" );
-//				sshCon[1].out.flush();
-//				
-//				Writer writer = new BufferedWriter(new OutputStreamWriter( new FileOutputStream( workdir + "/" + kml_file ) ) );
-//				int ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
-//				while( ret > 0 ) {
-//					if( sshCon[1].buffer[ ret - 1 ] == '\004' ) {
-//						ret -= 1;
-//						writer.write( sshCon[1].buffer, 0, ret );
-//						break;
-//					}
-//					writer.write( sshCon[1].buffer, 0, ret );
-//					ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
-//				}
-//				writer.close();
 			}
 			
 			p = Runtime.getRuntime().exec( kml_parser, null, workdir );
@@ -717,22 +701,6 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			
 			if( remote ) {
 				sshCon[1].copyFile(kml_file, workdir + "/" + kml_file);
-//				sshCon[1].out.println( "cat " + kml_file );
-//				sshCon[1].out.println( "echo -n '\004'" );
-//				sshCon[1].out.flush();
-//				
-//				Writer writer = new BufferedWriter(new OutputStreamWriter( new FileOutputStream( workdir + "/" + kml_file ) ) );
-//				int ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
-//				while( ret > 0 ) {
-//					if( sshCon[1].buffer[ ret - 1 ] == '\004' ) {
-//						ret -= 1;
-//						writer.write( sshCon[1].buffer, 0, ret );
-//						break;
-//					}
-//					writer.write( sshCon[1].buffer, 0, ret );
-//					ret = sshCon[1].in.read( sshCon[1].buffer, 0, sshCon[1].buffer.length );
-//				}
-//				writer.close();
 			}
 			
 			p = Runtime.getRuntime().exec( kml_parser, null, workdir );
@@ -996,12 +964,12 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		sshCon[1].out.println("echo '\004'");
 		sshCon[1].complete();
 		System.out.println("create jets...");
+		EQTask dummy = new EQTask(null);
+		dummy.id = evtset.setid;
 		for( Double ewh: GlobalParameter.jets.keySet() ) {
-			EQTask dummy = new EQTask(null);
-			dummy.id = evtset.setid;
 			getWaveHeights(dummy, ewh.toString());
 		}
-		
+		saveRawData(dummy);
 		return 0;
 	}
 	
