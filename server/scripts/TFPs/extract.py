@@ -5,13 +5,13 @@ import argparse
 from bson.objectid import ObjectId
 import datetime
 
-from pymongo import MongoClient
+from pymongo import MongoReplicaSetClient
 
 def vprint(*_args, **_kwargs):
     if args.verbose: 
         print(*_args, **_kwargs)
 
-client = MongoClient()
+client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0" ,w="majority")
 db = client['trideccloud']
 
 parser = argparse.ArgumentParser(description='Extract tsunami forecast points from PDF.')

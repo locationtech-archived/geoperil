@@ -3,12 +3,14 @@
 import sys
 import re
 import datetime
+import csv
+import pymongo
 from pymongo import MongoReplicaSetClient
 
 client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0" ,w="majority")
 db = client['trideccloud']
 
-def import_cfz(self, fcfzs, ftsps):
+def import_cfzs(fcfzs, ftsps):
     f = open(fcfzs, 'r')
     content = f.read()
     cfz = re.findall('^>.*\n([^>]*\n)*', content, re.M)
@@ -42,12 +44,13 @@ def import_cfz(self, fcfzs, ftsps):
 
 
 if len(sys.argv) < 3:
-    return print("To few arguments given!")
+    print("To few arguments given!")
+    sys.exit()
 
 client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0" ,w="majority")
 db = client['trideccloud']
 
-import_cfz(sys.argv[1], sys.argv[2])
+import_cfzs(sys.argv[1], sys.argv[2])
 
 client.close()
 
