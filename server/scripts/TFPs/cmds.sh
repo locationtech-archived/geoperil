@@ -15,6 +15,6 @@ python3 ./extract.py cwave15.txt -cw15 #-w
 python3 ./extract.py cwave16.txt -cw16 #-w
 
 python3 ./extract.py pwave16.txt -pw16 #-w
-python3 ./extract.py pwave_ts.txt -pw16 #-w
-python3 ./extract.py pwave_table.txt -cw16 #-w
+python3 ./extract.py pwave_table.txt -pw16 #-w
+python3 ./extract.py pwave_ts.txt -cw16 #-w
 
