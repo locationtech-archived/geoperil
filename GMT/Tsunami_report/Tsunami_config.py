@@ -42,8 +42,11 @@ coast_color = '60/60/60'
 land_res = '500'
 
 #falls terrain=N --> Farben für Land und Wasser
-color_water = 'LightBlue'
-color_land = '226/226/214'
+#color_water = 'LightBlue'
+color_water = '170/170/170'
+#color_land = '226/226/214'
+color_land = '80/80/80 -N1/0.01c,160/160/160 -N2/0.01c,90/90/90'
+
 
 #Farben über Übersichtsglobus
 color_globe_land = '173/209/166'

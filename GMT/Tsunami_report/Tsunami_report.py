@@ -202,16 +202,26 @@ else:
 ############################
 ######### Extent ###########
 ############################
+#gibt den max z-Wert des Wellenhöhen-GRIDs aus
+wave_height_max = get_maxmin_wave_height(wave_height)
 #Falls keine/oder nicht vollständige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-GRIDs und w_exp berechnet
-west, east, south, north = calc_extent_for_w_height(wave_height, west, east, south, north, wave_height_expression)
+
+if (west is None) or (east is None) or (north is None) or (south is None):
+    if wave_height_expression < wave_height_max:
+        west, east, south, north = calc_extent_for_w_height(wave_height, west, east, south, north, wave_height_expression)
+    else:
+        west, east, south, north = calc_extent_for_w_time(wave_time, west, east, south, north)	
 
 #Falls keine/oder nicht vollständige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-Traveltime-GRIDs berechnet
-#west, east, south, north = calc_extent_for_w_time(wave_time, west, east, south, north)
+#west, east, south, north = calc_extent_for_w_time(wave_time, west, east, south, north)	
+
 
 west = float(west)
 east = float(east)
 south = float(south)
 north = float(north)
+
+
 
 print ('Extent before calculation:')
 print (    'west:  ', west)
@@ -319,9 +329,9 @@ subprocess.call(['./gmt_scripts/Basemap.sh', title,output , R, J, y_map_distance
 if not subtitle=="-None-":
     subprocess.call(['./gmt_scripts/subtitle.sh',output , str(subtitle), str(subtitle_pos_y), str(map_width)])
 
-#############################
-########## Karte ############
-#############################
+###################################
+############# Karte ###############
+###################################
 
 ####### Wellenhöhen #########
 #plottet die Wellenhöhen
@@ -335,15 +345,15 @@ if plot_wave_time=="Y":
     #./Tsunami_wave_traveltime.sh output y_map_dist wave_time Isochrone_dist Isochrone_color
     subprocess.call(['./gmt_scripts/Tsunami_wave_traveltime.sh',output ,wave_time_temp ,y_map_distance, wave_time, Isochrone_dist, Isochrone_color])
 
-#Plottet CFZ
+########### CFZ #############
 if plot_cfz=="Y":
     subprocess.call(['./gmt_scripts/CFZ.sh',output ,cfz, cfz_cpt, cfz_stroke, y_map_distance])
     
-#Plottet TFP
+########### TFP #############
 if plot_tfp=="Y":
     subprocess.call(['./gmt_scripts/TFP.sh',output ,tfp, tfp_0_03_fill, tfp_03_1_fill, tfp_1_3_fill, tfp_3_fill, tfp_stroke, y_map_distance])
 
-#Plottet Quakes
+########## Quakes ###########
 if plot_quake=="Y":
     subprocess.call(['./gmt_scripts/quake.sh',output ,quake, quake_fill, y_map_distance])    
 

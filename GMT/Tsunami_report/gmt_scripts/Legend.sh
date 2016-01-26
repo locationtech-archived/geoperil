@@ -43,7 +43,7 @@ fi
 if [ ${plot_wave_time} == Y ]
 then
 #gmt pslegend -R -J -Dx10.8c/7.7c/4c/1/BL -O -K -V <<EOF>> ${output}
-gmt pslegend -R -J ${wave_time_pslegend} -O -K -V <<EOF>> ${output}
+gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -R -J ${wave_time_pslegend} -O -K -V <<EOF>> ${output}
 S 0.15c - 0.5c - 1p,red 0.8c Traveltime in 1 h
 EOF
 fi
