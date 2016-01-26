@@ -2,6 +2,7 @@
 from base import *
 
 class BaseSrv:
+    INFO = ""
     def __init__(self,db):
         self._db = db
 
@@ -9,12 +10,12 @@ class BaseSrv:
     def index(self):
         s = ""
         for n in dir(self):
-            if n not in ["index"]:
+            if n not in ["index","default"]:
                 m = self.__getattribute__(n)
                 if inspect.ismethod(m) and hasattr(m,"exposed") and m.exposed:
                     spec = inspect.getfullargspec(m)
                     s += "<li><b>%s</b> %s<br>" % (n, inspect.formatargspec(*spec))
-        return "<html><ul>%s</ul></html>" % s
+        return "<html>%s<ul>%s</ul></html>" % (self.INFO,s)
 
     def getUser(self):
         if "server_cookie" in cherrypy.request.cookie:
@@ -48,6 +49,9 @@ class BaseSrv:
         else:
             url = urlparse(cherrypy.url())
             return url.scheme + "://" + url.hostname
+
+    def get_url(self):
+        return urlparse(cherrypy.url()).path
 
     def feed_hazard_event(self,event):
         if "eventid" in event:

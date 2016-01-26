@@ -2,7 +2,7 @@
 import os
 import cherrypy
 from cherrypy.lib.static import serve_file
-from cherrypy._cperror import HTTPError
+from cherrypy._cperror import HTTPError,HTTPRedirect
 import time
 import json
 import logging
