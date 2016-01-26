@@ -52,7 +52,7 @@ gmtset MAP_FRAME_TYPE plain
 gmtset PS_MEDIA 21.0cx${paper_height}c
 
 if [ "${title}" == -None- ]
-#Erstellt leeren Kartenrahmen; -BWSen (Süd und West-Achse werden beschriften, Nord und Ost nur geplottet);fügt Titel an Karte falls eingestellt
+#Erstellt leeren Kartenrahmen; -BWSen (Sued und West-Achse werden beschriften, Nord und Ost nur geplottet);fuegt Titel an Karte falls eingestellt
 then
 	gmt psbasemap --FONT_ANNOT_PRIMARY=8p,Helvetica,black ${projection} ${extent} -P -Ba -BNWes -Ya${y_map_dist} -V -K > ${output}
 else
@@ -70,7 +70,7 @@ then
 	#erstellt meer mit hillshade;
 	gmt grdimage -J -R -P -V -K -O ${basemap} -I${basemap_hillshade} -C${etopo_water_cpt} -Y >> ${output}
 	
-	#Anfang clip Land "-Gc"; "-D" für Auflösung der Küstenlinien
+	#Anfang clip Land "-Gc"; "-D" fuer Aufloesung der Kuestenlinien
 	gmt pscoast -J -R -P -V -K -O -D${coast_res} -Gc -Y >> ${output} 
 	
 	if [ ${world_pop} == Y ]
@@ -87,7 +87,7 @@ then
 	if [ ${outline} == Y ]
 	then
 	#erstellt Karte mit outline
-		#für Kontur "-W"
+		#fuer Kontur "-W"
 		gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.002c,${coast_color} -Y >> ${output}	
 	fi
 	
@@ -116,5 +116,5 @@ then
 	fi
 fi
 
-#PseudoCommand; beendet das Overlay; Plottet unsichtbare Flüsse/Seen
+#PseudoCommand; beendet das Overlay; Plottet unsichtbare Fluesse/Seen
 #gmt pscoast -J -R -P -B -O -C-t100 -Y >> ${output}

@@ -25,35 +25,35 @@ city_pop_data = 'data/cities.csv'
 #Projection
 #M = Mercator; J = Miller; Q = Cylindrical Equidistanz 
 crs_system = 'M'
-#Einheit für Printkarte: c = cm
+#Einheit fuer Printkarte: c = cm
 unit = 'c'
 #Breite der Karte in vorher eingegebener Eineit
 map_width = '15.8'
 #Abstand der Karte vom unteren Blattrand in vorher eingegebener Eineit
 #y_map_dist = '7'
 
-#legt Auflösung der Küstenlinien fest;
+#legt Aufloesung der Kuestenlinien fest;
 #f=full, h=high, i=intermediate, l=low, c=crude
 coast_res = 'i'
 #R/G/B
 coast_color = '60/60/60'
 
-#Land-Auflösung: Features kleiner als Eingabe werden nicht geplottet (in km²); z.B. Flüsse, Seen usw.
+#Land-Aufloesung: Features kleiner als Eingabe werden nicht geplottet (in km²); z.B. Fluesse, Seen usw.
 land_res = '500'
 
-#falls terrain=N --> Farben für Land und Wasser
+#falls terrain=N --> Farben fuer Land und Wasser
 #color_water = 'LightBlue'
 color_water = '170/170/170'
 #color_land = '226/226/214'
 color_land = '80/80/80 -N1/0.01c,160/160/160 -N2/0.01c,90/90/90'
 
 
-#Farben über Übersichtsglobus
+#Farben ueber uebersichtsglobus
 color_globe_land = '173/209/166'
 color_globe_water = 'LightBlue'
 
 #CPT-Dateien:
-#werden benötigt für Farbgebung von GRD-Dateien
+#werden benoetigt fuer Farbgebung von GRD-Dateien
 etopo_water_cpt = 'cpt/blue.cpt'
 etopo_land_cpt = 'cpt/brown.cpt'
 #etopo_water_cpt = 'cpt/bathy_etopo.cpt'
@@ -88,7 +88,7 @@ quake_fill = '252/255/0'
 ###############
 
 #Traveltime-Data
-#Abständer der Isochronen in min
+#Abstaender der Isochronen in min
 Isochrone_dist = '60'
 #Farbe der Isochronen
 Isochrone_color = 'red'

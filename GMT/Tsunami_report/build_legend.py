@@ -56,7 +56,7 @@ def calc_legend_positions (world_pop, city_pop, plot_wave_time, plot_wave_height
     city_pop_pslegend_y = float(y_map_dist)-3.0
     
     if plot_wave_height=="Y" and plot_wave_time=="N" and city_pop=="N" and world_pop=="N":
-        #scalebar über volle länge
+        #scalebar ueber volle laenge
         wave_height_pslegend_x = 6.5
         wave_height_psscale_x = 7.9
         wave_height_psscale_length = 12

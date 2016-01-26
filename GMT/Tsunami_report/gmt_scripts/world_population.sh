@@ -9,7 +9,7 @@ J=${4}
 
 coast_res=${2}
 
-#Anfang clip Land "-Gc"; "-D" für Auflösung der Küstenlinien
+#Anfang clip Land "-Gc"; "-D" fuer Aufloesung der Kuestenlinien
 gmt pscoast -J -R -P -V -K -O -D${coast_res} -Gc -Y >> ${output} 
 	
 #erstellt land mit hillshade

@@ -20,7 +20,7 @@ cities_fill=${10}
 cities_stroke=${11}
 
 
-#plottet Städte abgestuft in drei Größen abhängig von cities_pop
+#plottet Staedte abgestuft in drei Groessen abhaengig von cities_pop
 if [ ${cities_pop} -le 1500000 ]
 then
 	#Pop = 0 bis 1.500.000

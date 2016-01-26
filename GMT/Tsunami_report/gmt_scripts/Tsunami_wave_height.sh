@@ -19,7 +19,7 @@ y_map_dist=${6}
 #Clipt grd nach Kriterien; -Sb alle Werte unter expression werden zu NaN
 gmt grdclip ${wave_height_data} -G${wave_height_temp} -Sb${expression}/NaN -V
 
-#runtime plot aus grd-datei "-nn+t0" wichtig für interpolation; "Q" für transparenz von nodata
+#runtime plot aus grd-datei "-nn+t0" wichtig fuer interpolation; "Q" fuer transparenz von nodata
 gmt grdimage ${wave_height_temp} -J -R -P -C${wave_height_cpt} -t20 -V -Q -nn -Ya${y_map_dist} -K -O >> ${output}
 #gmt grdimage ${wave_height_temp} -J -R -P -B -C${wave_height_cpt} -V -Q -nn -Ya${y_map_dist} -K -O >> ${output}
 

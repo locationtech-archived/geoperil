@@ -9,10 +9,10 @@ import re
 #config-file
 from Tsunami_config import *
 
-#Python-Script für Berechnung des Kartenrahmens
+#Python-Script fuer Berechnung des Kartenrahmens
 from auto_extent import *
 
-#Python-Script für Berechnugn der Position der Legendenbestandteile
+#Python-Script fuer Berechnugn der Position der Legendenbestandteile
 from build_legend import *
 
 ###########################################
@@ -20,42 +20,42 @@ from build_legend import *
 ###########################################
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
-parser.add_argument("-t", "--title", dest = "title", default = "-None-", help="Titel für Karte")
-parser.add_argument("-st", "--subtitle", dest = "subtitle", default = "-None-", help="Unterüberschrift für Karte")
+parser.add_argument("-t", "--title", dest = "title", default = "-None-", help="Titel fuer Karte")
+parser.add_argument("-st", "--subtitle", dest = "subtitle", default = "-None-", help="Unterueberschrift fuer Karte")
 parser.add_argument("-o", "--output", dest = "output", default = "/home/basti/GMT/Tsunami_report/PS_files/default_output.ps", help="Pfad der Output-Datei")
 parser.add_argument("-e_w", "--extent_west", dest = "extent_west", help="Karteninhalt: West")
 parser.add_argument("-e_e", "--extent_east", dest = "extent_east", help="Karteninhalt: Ost")
-parser.add_argument("-e_s", "--extent_south", dest = "extent_south", help="Karteninhalt: Süd")
+parser.add_argument("-e_s", "--extent_south", dest = "extent_south", help="Karteninhalt: Sued")
 parser.add_argument("-e_n", "--extent_north", dest = "extent_north", help="Karteninhalt: Nord")
 
 #parser.add_argument("-crs_sys", "--crs_system", dest = "crs_system", default = "M", help="Koordinatensystem der Karte \n(default=Q)")
 #parser.add_argument("-m_width", "--map_width", dest = "map_width", default = "15.8", help="Breite der der Karte in cm \n(default = 15.8)")
 
-#Seitenverhältnis Kartenrahmen	
-parser.add_argument("-y_r", "--y_ratio", dest = "y_ratio", default = "4", help="Kartenrahmenverhältnis: Y-Achse \n(default = 4)")
-parser.add_argument("-x_r", "--x_ratio", dest = "x_ratio", default = "5", help="Kartenrahmenverhältnis: X-Achse \n(default = 5)")
+#Seitenverhaeltnis Kartenrahmen	
+parser.add_argument("-y_r", "--y_ratio", dest = "y_ratio", default = "4", help="Kartenrahmenverhaeltnis: Y-Achse \n(default = 4)")
+parser.add_argument("-x_r", "--x_ratio", dest = "x_ratio", default = "5", help="Kartenrahmenverhaeltnis: X-Achse \n(default = 5)")
 
 ###Tsunami-Daten###
 #Wave-Height
-parser.add_argument("-w_height", "--wave_height", dest = "wave_height", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/HDF600/eWave.2D.sshmax", help="Pfad für GRD-Datei für Wellenhöhe\nz.B.: .../eWave.2D.sshmax")
-parser.add_argument("-w_exp", "--wave_height_expression", dest = "wave_height_expression", default = "0.05", help="Alle Wellenhöhenwerte unter diesem Wert werden nicht angezeigt")
+parser.add_argument("-w_height", "--wave_height", dest = "wave_height", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/HDF600/eWave.2D.sshmax", help="Pfad fuer GRD-Datei fuer Wellenhoehe\nz.B.: .../eWave.2D.sshmax")
+parser.add_argument("-w_exp", "--wave_height_expression", dest = "wave_height_expression", default = "0.05", help="Alle Wellenhoehenwerte unter diesem Wert werden nicht angezeigt")
 #Wave-Time
-parser.add_argument("-w_time", "--wave_time", dest = "wave_time", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/HDF600/eWave.2D.time", help="Pfad für GRD-Datei für Traveltime\nz.B.: eWave.2D.time")
+parser.add_argument("-w_time", "--wave_time", dest = "wave_time", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/HDF600/eWave.2D.time", help="Pfad fuer GRD-Datei fuer Traveltime\nz.B.: eWave.2D.time")
 
 #CFZs
-parser.add_argument("-cfz", "--cfz", dest = "cfz", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/CFZ/CFZ_test/cfz2.gmt", help="Pfad für GMT-Datei für Coastal-Forecast-Zones")
+parser.add_argument("-cfz", "--cfz", dest = "cfz", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/CFZ/CFZ_test/cfz2.gmt", help="Pfad fuer GMT-Datei fuer Coastal-Forecast-Zones")
 
 #TFPs
-parser.add_argument("-tfp", "--tfp", dest = "tfp", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/TFPs/tfp.csv", help="Pfad für CSV-Datei für Tsunami-Forecast-Points")
+parser.add_argument("-tfp", "--tfp", dest = "tfp", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/TFPs/tfp.csv", help="Pfad fuer CSV-Datei fuer Tsunami-Forecast-Points")
 
 #Quake
-parser.add_argument("-q", "--quake", dest = "quake", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/quake/quake.csv", help="Pfad für CSV-Datei für Erdbeben")
+parser.add_argument("-q", "--quake", dest = "quake", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/quake/quake.csv", help="Pfad fuer CSV-Datei fuer Erdbeben")
 
 
-#Einstell/Plot-Möglichkeiten
+#Einstell/Plot-Moeglichkeiten
 parser.add_argument("-p_dem", "--plot_dem", dest = "dem", default = "N", help="DEM als Basemap?\nJa = Y\nNein = N")
-parser.add_argument("-p_w_height", "--plot_wave_height", dest = "plot_wave_height", default = "N", help="Plott GRD-Datei für Wellenhöhe?\nJa = Y\nNein = N")
-parser.add_argument("-p_w_time", "--plot_wave_time", dest = "plot_wave_time", default = "N", help="Plot GRD-Datei für Traveltime?\nJa = Y\nNein = N")
+parser.add_argument("-p_w_height", "--plot_wave_height", dest = "plot_wave_height", default = "N", help="Plott GRD-Datei fuer Wellenhoehe?\nJa = Y\nNein = N")
+parser.add_argument("-p_w_time", "--plot_wave_time", dest = "plot_wave_time", default = "N", help="Plot GRD-Datei fuer Traveltime?\nJa = Y\nNein = N")
 
 parser.add_argument("-p_w_pop", "--plot_world_pop", dest = "world_pop", default = "N", help="Population-GRID Plotten?\nJa = Y\nNein = N")
 
@@ -70,10 +70,10 @@ parser.add_argument("-c_c", "--cities_capital", dest = "cities_capital", default
 parser.add_argument("-c_l", "--cities_label", dest = "cities_label", default = "N", help="Plot city labels?\nJa = Y\nNein = N")
 parser.add_argument("-c_l_p", "--cities_label_pop", dest = "cities_label_pop", default = "N", help="cities above will be labelled")
 
-parser.add_argument("-p_o", "--plot_outline", dest = "plot_outline", default = "N", help="Plot Outline für Landmassen?\nJa = Y\nNein = N")
+parser.add_argument("-p_o", "--plot_outline", dest = "plot_outline", default = "N", help="Plot Outline fuer Landmassen?\nJa = Y\nNein = N")
 
-parser.add_argument("-p_g", "--plot_globe", dest = "plot_globe", default = "Y", help="Übersichtsglobus Plotten?\nJa = Y\nNein = N")
-parser.add_argument("-p_ms", "--plot_map_scale", dest = "plot_map_scale", default = "Y", help="Maßstabsbalken Plotten?\nJa = Y\nNein = N")
+parser.add_argument("-p_g", "--plot_globe", dest = "plot_globe", default = "Y", help="uebersichtsglobus Plotten?\nJa = Y\nNein = N")
+parser.add_argument("-p_ms", "--plot_map_scale", dest = "plot_map_scale", default = "Y", help="Massstabsbalken Plotten?\nJa = Y\nNein = N")
 
 
 args = parser.parse_args()
@@ -99,7 +99,7 @@ north = args.extent_north
 
 #Breite der Karte in cm
 map_width = float(map_width)
-#Seitenverhältnis des Kartenrahmens z.B. 4/5
+#Seitenverhaeltnis des Kartenrahmens z.B. 4/5
 #		 _________	
 #		|	  |
 #       y_ratio	|         |
@@ -149,24 +149,24 @@ outline = args.plot_outline
 
 date = datetime.datetime.utcnow().strftime("%Y, %B %d, %H:%M")
 
-#gibt Eingabewerte zur übersicht aus
+#gibt Eingabewerte zur uebersicht aus
 print ('Titel:               ', title)
 print ('Output-Datei:        ', output)
 
 print ('Ausdehnung')
 print ('    west:            ', west)
 print ('    ost:             ', east)
-print ('    süd:             ', south)
+print ('    sued:             ', south)
 print ('    nord:            ', north)
 
 print ('Koordinatensystem:   ', crs_system)
 print ('Kartenbreite:        ', map_width, 'cm') 
-print ('Seitenverhältnis:     %s/%s' % (y_ratio, x_ratio))
+print ('Seitenverhaeltnis:     %s/%s' % (y_ratio, x_ratio))
 
 print ('Input-Dateien')
 print ('    Basemap-DataDir: ', basemap_data_dir)
 #print ('    Tsunami-DataDir: ', wave_data_dir)
-print ('    Wellenhöhe:      ', wave_height)
+print ('    Wellenhoehe:      ', wave_height)
 print ('    Traveltime:      ', wave_time)
 
 
@@ -190,7 +190,7 @@ map_height = (map_width * y_ratio) / x_ratio
 
 subtitle_pos_y = y_map_dist + map_height + 0.7  
 
-#berechnet blatthöhe
+#berechnet blatthoehe
 if not title=="-None-" and subtitle=="-None-":
     paper_height = y_map_dist + map_height + 2.5
 elif not title=="-None-" and not subtitle=="-None-":
@@ -202,9 +202,9 @@ else:
 ############################
 ######### Extent ###########
 ############################
-#gibt den max z-Wert des Wellenhöhen-GRIDs aus
+#gibt den max z-Wert des Wellenhoehen-GRIDs aus
 wave_height_max = get_maxmin_wave_height(wave_height)
-#Falls keine/oder nicht vollständige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-GRIDs und w_exp berechnet
+#Falls keine/oder nicht vollstaendige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-GRIDs und w_exp berechnet
 
 if (west is None) or (east is None) or (north is None) or (south is None):
     if wave_height_expression < wave_height_max:
@@ -212,7 +212,7 @@ if (west is None) or (east is None) or (north is None) or (south is None):
     else:
         west, east, south, north = calc_extent_for_w_time(wave_time, west, east, south, north)	
 
-#Falls keine/oder nicht vollständige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-Traveltime-GRIDs berechnet
+#Falls keine/oder nicht vollstaendige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-Traveltime-GRIDs berechnet
 #west, east, south, north = calc_extent_for_w_time(wave_time, west, east, south, north)	
 
 
@@ -234,7 +234,7 @@ print (    'north: ', north)
 ############################
 
 
-#Berechnet automatisch die Größe des Kartenrahmen
+#Berechnet automatisch die Groesse des Kartenrahmen
 #Funktion eingeladen aus auto_extent.py
 west, east, south, north, width, height, lon_diff, lat_diff = calc_coords(west, east, south, north, crs_system, map_width, unit, y_ratio, x_ratio)
 
@@ -243,22 +243,22 @@ west, east, south, north, width, height, lon_diff, lat_diff = calc_coords(west, 
 lon_mid = west + (lon_diff / 2)
 lat_mid = south + (lat_diff /2)
 
-#Berechnet Länge der lon-Distanz im Kartenmittelpunkt in km
+#Berechnet Laenge der lon-Distanz im Kartenmittelpunkt in km
 lon_dist = (math.pi / 180) * 6370 * lon_diff * math.cos(math.radians(lat_mid))
-#1/6 von lon_dist gerundet auf nächste Hundert für scalebar
+#1/6 von lon_dist gerundet auf naechste Hundert fuer scalebar
 scalebar_length = round((lon_dist/4) / 100) * 100
 
 
 ###############################
-# Basemap optimale Pixelgröße #
+# Basemap optimale Pixelgroesse #
 ###############################
-#Berechnet ungefähre Pixelgröße der Etopo-Basemap in km
+#Berechnet ungefaehre Pixelgroesse der Etopo-Basemap in km
 ppi = 600
 
-#berechnet optimale Pixelgröße in arc-minute
+#berechnet optimale Pixelgroesse in arc-minute
 one_inch_in_degree = lon_diff / (map_width / 2.54)
 perfect_pixel_size = (one_inch_in_degree / ppi) * 60
-#Pixelgröße in Kilometer
+#Pixelgroesse in Kilometer
 pixel_km = perfect_pixel_size * ((math.pi / 180) * 6370 / 60)
 
 """
@@ -333,8 +333,8 @@ if not subtitle=="-None-":
 ############# Karte ###############
 ###################################
 
-####### Wellenhöhen #########
-#plottet die Wellenhöhen
+####### Wellenhoehen #########
+#plottet die Wellenhoehen
 if plot_wave_height=="Y":
     #./Tsunami_wave_height.sh output wave_height_data wave_height_temp expression wave_height_cpt
     subprocess.call(['./gmt_scripts/Tsunami_wave_height.sh', output, wave_height, wave_height_temp, str(wave_height_expression), wave_height_cpt, y_map_distance])
@@ -363,7 +363,7 @@ if cities_capital=="Y":
 else:
     cities_capital = ''    
 
-#wenn keine Mindest-Populationsanzahl für die Labels angegeben wird, dann wird die Mindestanzahl der Städte übernommen
+#wenn keine Mindest-Populationsanzahl fuer die Labels angegeben wird, dann wird die Mindestanzahl der Staedte uebernommen
 if cities_label_pop=="N":
     cities_label_pop = cities_pop
 
@@ -372,9 +372,9 @@ if plot_cities=="Y":
 
 
 #############################
-##### Übersichts-Globus #####
+##### uebersichts-Globus #####
 #############################
-#Printet einen Übersichtsglobus
+#Printet einen uebersichtsglobus
 if plot_globe=="Y":
     y_globe_dist = float(y_map_dist) - 0.7
     x_globe_dist = float(width) - 2.2
@@ -423,7 +423,7 @@ subprocess.call(['./gmt_scripts/Legend.sh', output, wave_height_cpt, plot_wave_h
 ###### Umwandlung in PNG/PDF #########
 ######################################
 
-#PseudoCommand; beendet das Overlay; Plottet unsichtbare Flüsse/Seen
+#PseudoCommand; beendet das Overlay; Plottet unsichtbare Fluesse/Seen
 #gmt pscoast -J -R -P -O -C-t100 -Y >> ${output}
 subprocess.call(['./gmt_scripts/pseudo_end.sh', output, R, J])
 
@@ -442,11 +442,11 @@ subprocess.call(['gmt', 'ps2raster', output, '-Tg', '-A', '-V', '-E720'])
 print ('\n\nBerechnungen:')
 print ('    Ausdehnung / Kartenrahmen:')
 print ('        Breite (cm): ', width)
-print ('        Höhe (cm):   ', height)
+print ('        Hoehe (cm):   ', height)
 print ('\n        west: ', west)
 print ('        ost:  ', east)
 print ('        nord: ', north)
-print ('        süd:  ', south)
+print ('        sued:  ', south)
 
 print ('    lon/lat - Differenzen:')
 print ('        lat-differenz: ', lat_diff)
@@ -458,9 +458,9 @@ print ('        lat: ', lat_mid)
 
 print ('    Wahl der Basemap:')
 print ('        lon-Distanz:               ', round(lon_dist, 4), 'km')
-print ('        Scalebar-Länge:            ', scalebar_length, 'km')
-print ('        optimale Pixelgröße in \':  ', perfect_pixel_size)
-print ('        optimale Pixelgröße in km: ', pixel_km)
+print ('        Scalebar-Laenge:            ', scalebar_length, 'km')
+print ('        optimale Pixelgroesse in \':  ', perfect_pixel_size)
+print ('        optimale Pixelgroesse in km: ', pixel_km)
 print ('        basemapsize in arc-min:    ', basemap_size)
 
 print ('\n        Basemap:		   ', basemap)

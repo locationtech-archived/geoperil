@@ -10,7 +10,7 @@ def get_maxmin_wave_height(wave_height):
     
     return wave_height_max
 
-#Falls keine/oder nicht vollständige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-GRIDs und w_exp berechnet
+#Falls keine/oder nicht vollstaendige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-GRIDs und w_exp berechnet
 def calc_extent_for_w_height(wave_height, west, east, south, north, wave_height_expression):
 
     #Calc Extent wave heigt V1
@@ -70,26 +70,26 @@ if north is None:
 # berechnet Ausdehnung anhand Tsunami-Traveltime #
 ##################################################
 
-#Falls keine/oder nicht vollständige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-Traveltime-GRIDs berechnet
+#Falls keine/oder nicht vollstaendige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-Traveltime-GRIDs berechnet
 def calc_extent_for_w_time(wave_time, west, east, south, north):
     #Calc Extent wave time 
     temp_calc_tif='data/temp/calc_temp.tif'
     temp_calc_gmt='data/temp/calc_temp.gmt'
     #if (west is None) or (east is None) or (north is None) or (south is None):
-        #entnimmt dem traveltime-GRID den höchsten Z-Wert
+        #entnimmt dem traveltime-GRID den hoechsten Z-Wert
     wave_time_info = subprocess.Popen(['gdalinfo', wave_time, '-mm'], stdout=subprocess.PIPE).stdout.read().decode("utf-8")
     wave_time_max = re.findall("Min/Max=(-?\d+.\d+),(-?\d+.\d+)",wave_time_info)
     wave_time_max = float(wave_time_max[0][1])
         #4/5 des maximalen Z-Wertes:
     wave_time_max_extent = int(wave_time_max * 0.8)
         
-        #berechnet automatisch maximalste Ausdehnung des Traveltime-GRIDs für alle Z-Werte unter wave_time_max_extent
+        #berechnet automatisch maximalste Ausdehnung des Traveltime-GRIDs fuer alle Z-Werte unter wave_time_max_extent
     subprocess.call(['gdal_calc.py', '-A', wave_time, '--outfile=%s' % temp_calc_tif, '--calc=logical_and(A>=0.0000001, A<=%s)' % (wave_time_max_extent)]) 
     subprocess.call(['gdal_polygonize.py', temp_calc_tif, '-f', 'GMT', temp_calc_gmt])
         #liest die GMT-File ien und speichert die zweite Zeile
     gmt_file = open(temp_calc_gmt)
     extent_line = gmt_file.readlines()[1]
-	#liest die Koordinaten für die Ausdehnung aus der zweiten Zeile der GMT-File
+	#liest die Koordinaten fuer die Ausdehnung aus der zweiten Zeile der GMT-File
     extent_w_time = re.findall("(-?\d+.\d+)",extent_line)
         
     subprocess.call(['rm', temp_calc_tif])
@@ -109,14 +109,14 @@ def calc_extent_for_w_time(wave_time, west, east, south, north):
 
 
 ####################################################################################################################
-#Funktionen zur automatischen Berechnung der Größe des Kartenrahmes anhand Eingabe-Koords sowie x_ratio und y_ratio#
+#Funktionen zur automatischen Berechnung der Groesse des Kartenrahmes anhand Eingabe-Koords sowie x_ratio und y_ratio#
 ####################################################################################################################
 
-#falls der Kartenausschnit über die Datumsgrenze (180°) geht müssen die Koordinaten umgewandelt werden
+#falls der Kartenausschnit ueber die Datumsgrenze (180°) geht muessen die Koordinaten umgewandelt werden
 #z.B. west_calc=170; east_calc=-170 --> west_calc=170; east_calc=190
 def reformat_coords_if_dateline(west_calc, east_calc, south_calc, north_calc):
     if west_calc > east_calc:
-        #falls über Datumsgrenze
+        #falls ueber Datumsgrenze
         add_east_calc = abs((-180) - east_calc)
         east_calc = float(180 + add_east_calc)
     
@@ -128,39 +128,39 @@ def reformat_coords_if_dateline(west_calc, east_calc, south_calc, north_calc):
     
     return (west_calc, east_calc, lon_diff, lat_diff)    	
 
-#Berechnet automatisch den Kartenrahmen nach Eingabe der Koordinaten und des Seitenverhältnisses
+#Berechnet automatisch den Kartenrahmen nach Eingabe der Koordinaten und des Seitenverhaeltnisses
 def calc_coords(west_calc, east_calc, south_calc, north_calc, crs_system_calc, map_width_calc, unit_calc, y_ratio_calc, x_ratio_calc):
-    #Wandelt Koordinaten die über die Datumsgrenze gehen um
+    #Wandelt Koordinaten die ueber die Datumsgrenze gehen um
     west_calc, east_calc, lon_diff, lat_diff = reformat_coords_if_dateline(west_calc, east_calc, south_calc, north_calc)
 
     extent = '-R%s/%s/%s/%s' % (west_calc, east_calc, south_calc, north_calc)
     projection = '-J%s%s%s' % (crs_system_calc, map_width_calc, unit_calc)
 
-    #Command zum Ausgeben der Höhe und Breite der Karte
+    #Command zum Ausgeben der Hoehe und Breite der Karte
     #echo $east_calc $north_calc | gmt mapproject -R${west_calc}/${east_calc}/${south_calc}/${north_calc} -J${crs_system_calc}${map_width_calc}c
 
-    #berechnet breite und höhe der karte in unit_calc; führt oberen Command aus
+    #berechnet breite und hoehe der karte in unit_calc; fuehrt oberen Command aus
     #entspricht z.B.: gmt mapproject -R-60/5/30/60 -JQ15.8c   
     calc_width_height_command = ['gmt', 'mapproject', extent, projection]
     mapproject = subprocess.Popen(calc_width_height_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     #bytes("%f %f\n" % (east_calc,north_calc),"ascii") = echo east_calc north_calc 
     width_height = mapproject.communicate(bytes("%f %f\n" % (east_calc,north_calc),"ascii"))[0].decode().split()
 
-    #Breite und Höhe der Karte in unit_calc (z.B. cm)
+    #Breite und Hoehe der Karte in unit_calc (z.B. cm)
     width = float(width_height[0])
     height = float(width_height[1])
 
     #entspricht z.B.: gmt mapproject -JQ15.8c -R-60/5/30/60 -Dc -I
     calc_coords_command = ['gmt', 'mapproject', projection, extent, '-D%s' % unit_calc, '-I']
 
-    #entspricht ungefähr: if width < height:
+    #entspricht ungefaehr: if width < height:
     if (height / width) > (y_ratio_calc / x_ratio_calc):
-        #berechnet den Zuschlag für die X-Achse für west_calc und Ost
+        #berechnet den Zuschlag fuer die X-Achse fuer west_calc und Ost
         width_add = (((height * x_ratio_calc) / y_ratio_calc) - width) / 2
         west_calc_unit_calc = width_add * (-1)
         east_calc_unit_calc =  width + width_add
     
-        #Berechnet östliche Koordinate anhand der eben berechneten Verbesserung
+        #Berechnet oestliche Koordinate anhand der eben berechneten Verbesserung
         calc_west_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         west_calc = calc_west_calc.communicate(bytes("%f %f\n" % (west_calc_unit_calc,height),"ascii"))[0].decode().split()
         west_calc = round(float(west_calc[0]),2)
@@ -170,29 +170,29 @@ def calc_coords(west_calc, east_calc, south_calc, north_calc, crs_system_calc, m
         east_calc = calc_east_calc.communicate(bytes("%f %f\n" % (east_calc_unit_calc,height),"ascii"))[0].decode().split()
         east_calc = round(float(east_calc[0]),2)
     
-    #entspricht ungefähr: elif width > height:
+    #entspricht ungefaehr: elif width > height:
     elif (height / width) < (y_ratio_calc / x_ratio_calc):
-        #berechnet den Zuschlag für die Y-Achse für Nord und Süd
+        #berechnet den Zuschlag fuer die Y-Achse fuer Nord und Sued
         height_add = (((width * y_ratio_calc) / x_ratio_calc) - height) / 2
         south_calc_unit_calc = height_add * (-1)
         north_calc_unit_calc = height + height_add
         
-	#Berechnet südliche Koordinate anhand der eben berechneten Verbesserung
+	#Berechnet suedliche Koordinate anhand der eben berechneten Verbesserung
         calc_south_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         south_calc = calc_south_calc.communicate(bytes("%f %f\n" % (width,south_calc_unit_calc),"ascii"))[0].decode().split()  
         south_calc = round(float(south_calc[1]),2)
     
-        #Berechnet nördliche Koordinate anhand der eben berechneten Verbesserung
+        #Berechnet noerdliche Koordinate anhand der eben berechneten Verbesserung
         calc_north_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         north_calc = calc_north_calc.communicate(bytes("%f %f\n" % (width,north_calc_unit_calc),"ascii"))[0].decode().split() 
         north_calc = round(float(north_calc[1]),2)
     #else:
-    #     Koordinaten sind so perfekt, dass sie genau das Seitenverhältnis abdecken
+    #     Koordinaten sind so perfekt, dass sie genau das Seitenverhaeltnis abdecken
     
-    #Wandelt Koordinaten die über die Datumsgrenze gehen um, da dieses wieder durch die Berechungen umgerechnet wurden
+    #Wandelt Koordinaten die ueber die Datumsgrenze gehen um, da dieses wieder durch die Berechungen umgerechnet wurden
     west_calc, east_calc, lon_diff, lat_diff = reformat_coords_if_dateline(west_calc, east_calc, south_calc, north_calc)
 
-    #gibt neue Höhe und Breite aus:
+    #gibt neue Hoehe und Breite aus:
     extent = '-R%s/%s/%s/%s' % (west_calc, east_calc, south_calc, north_calc)
     mapproject = subprocess.Popen(['gmt', 'mapproject', extent, projection], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     width_height = mapproject.communicate(bytes("%f %f\n" % (east_calc,north_calc),"ascii"))[0].decode().split()

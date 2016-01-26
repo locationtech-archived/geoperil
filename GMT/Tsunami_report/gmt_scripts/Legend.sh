@@ -26,7 +26,7 @@ map_width=${17}
 cities_fill=${18}
 cities_stroke=${19}
 
-#Unterüberschrift
+#Unterueberschrift
 #gmt pslegend -Dx0c/23.2c/15.8c/BL -O -K <<EOF>> ${output}
 #L 12p Helvetica C Tsunami: 10.2.2015 10:22:01
 #EOF
