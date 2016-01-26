@@ -1,0 +1,91 @@
+import sys
+import re
+import pycountry
+import argparse
+from bson.objectid import ObjectId
+import datetime
+
+from pymongo import MongoClient
+
+def vprint(*_args, **_kwargs):
+    if args.verbose: 
+        print(*_args, **_kwargs)
+
+client = MongoClient()
+db = client['trideccloud']
+
+parser = argparse.ArgumentParser(description='Extract tsunami forecast points from PDF.')
+parser.add_argument('fname', type=str)
+parser.add_argument('-cw14', dest='cw14', action='store_true', help='CARIBE WAVE 14')
+parser.add_argument('-cw15', dest='cw15', action='store_true', help='CARIBE WAVE 15')
+parser.add_argument('-cw16', dest='cw16', action='store_true', help='CARIBE WAVE 16')
+parser.add_argument('-pw16', dest='pw16', action='store_true', help='PACIFIC WAVE 16')
+parser.add_argument('-w', dest='write', action='store_true', help='Write results into DB.')
+parser.add_argument('-dup', dest='dup', action='store_true', help='Print duplicates.')
+parser.add_argument('-v', dest='verbose', action='store_true', help='Be verbose.')
+args = parser.parse_args()
+
+f = open( args.fname, 'r')
+
+done = {}
+
+if args.cw14:
+    regex = '^\s*(?P<country>[a-zA-Z_ ]+) (?P<name>[a-zA-Z_]+)\s*(?P<lat>\d*\.\d*S?N?)\s*(?P<lon>\d*\.\d*W?E?)\s*\d*Z.*$'
+elif args.cw15:
+    regex = '^\s*(?P<country>[a-zA-Z_ ]+)  (?P<name>[a-zA-Z][a-zA-Z_ ]*)  (?P<lat>\d*\.\d*S?N?)\s*(?P<lon>\d*\.\d*W?E?)\s*\d*Z.*$'
+elif args.cw16:
+    regex = '^\s*(?P<name>[a-zA-Z][a-zA-Z_ ]+)  (?P<country>[a-zA-Z][a-zA-Z_ ]*)  (?P<lat>\d*\.\d*S?N?)\s*(?P<lon>\d*\.\d*W?E?).*$'
+elif args.pw16:
+    regex = '^\s*(?P<country>(?:[a-zA-Z_. ]+  )?)(?P<name>[a-zA-Z][a-zA-Z_. ]*)  (?P<lat>\d+\.\d+[SN]?)\s*(?P<lon>\d+\.\d+[WE]?).*$'
+else:
+    raise ValueError('No format given.')
+
+now = datetime.datetime.utcnow()
+ninsert = 0
+
+for line in f:
+    match = re.search(regex, line)
+    if match:
+        iso2 = '-'
+        country = country if not match.group('country').strip() else match.group('country')
+        country = " ".join(country.split()) # remove multiple blanks and replace with a single space
+        try:
+            iso2 = pycountry.countries.get( name=country.strip().title() ).alpha2
+        except KeyError:
+            pass
+
+        lat = float(match.group('lat')[:-1]) * (1 - 2*match.group('lat').endswith("S"))
+        lon = float(match.group('lon')[:-1]) * (1 - 2*match.group('lon').endswith("W"))
+        obj = { "country": country.strip(),
+                "name": match.group('name').strip().replace('_',' '),
+                "lat_real": lat,
+                "lon_real": lon,
+                "lat_sea": lat,
+                "lon_sea": lon,
+                "iso_2": iso2,
+                "date": now
+              }
+
+        if str(obj) in done:
+            if args.dup:
+                print(obj)
+            continue
+
+        done[ str(obj) ] = True
+
+        prev = db["tfps"].find_one({"$or": [
+            {"lat_real": obj["lat_real"], "lon_real": obj["lon_real"]},
+            {"country": obj["country"], "name": obj["name"]}
+        ]});
+        if prev is not None:
+            vprint("#:", obj)
+            continue
+
+        print(obj)
+
+        if args.write:
+            db["tfps"].insert(obj)
+            ninsert += 1
+
+f.close()
+vprint('# %d records written.' % ninsert)
