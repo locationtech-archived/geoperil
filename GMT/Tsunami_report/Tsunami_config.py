@@ -6,7 +6,7 @@
 ###############
 
 #Basemap Daten Directory
-basemap_data_dir = '/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/etopo/basemaps/'
+basemap_data_dir = 'data/etopo/basemaps/'
 
 #World-Population Datei
 world_pop_data = 'data/world_pop2000_adj.nc'
