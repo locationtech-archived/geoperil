@@ -116,14 +116,14 @@ class Products:
                 and self.mk_product(ev,"eq.csv",**kwargs) :
             gmtargs = {
                 "output" : "%s.ps" % f[:-4],
-                "quake" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eq.csv"),
-                "wave_height" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"maxWaveHeights.grd"),
-                "wave_height_expression" : "0.05",
-                "wave_time" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"travelTimes.grd"),
                 "plot_dem" : "Y",
                 "plot_quake" : "Y",
+                "quake" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eq.csv"),
                 "plot_wave_height" : "Y",
+                "wave_height" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"maxWaveHeights.grd"),
+                "wave_height_expression" : "0.05",
                 "plot_wave_time" : "Y",
+                "wave_time" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"travelTimes.grd"),
             }
             self.exec_gmt(**gmtargs)
             return os.path.isfile(f)
@@ -134,13 +134,13 @@ class Products:
                 and self.mk_product(ev,"eq.csv",**kwargs) :
             gmtargs = {
                 "output" : "%s.ps" % f[:-4],
-                "quake" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eq.csv"),
-                "cfz" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"cfzs.gmt"),
-                "tfp" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tfps.csv"),
                 "plot_dem" : "Y",
                 "plot_quake" : "Y",
+                "quake" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eq.csv"),
                 "plot_cfz" : "Y",
+                "cfz" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"cfzs.gmt"),
                 "plot_tfp" : "Y",
+                "tfp" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tfps.csv"),
             }
             self.exec_gmt(**gmtargs)
             return os.path.isfile(f)
@@ -149,12 +149,12 @@ class Products:
         if self.mk_product(ev,"maxWaveHeights.grd",**kwargs) and self.mk_product(ev,"eq.csv",**kwargs) :
             gmtargs = {
                 "output" : "%s.ps" % f[:-4],
-                "quake" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eq.csv"),
-                "wave_height" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"maxWaveHeights.grd"),
                 "plot_dem" : "Y",
-                "plot_quake" : "Y",
                 "plot_cities" : "Y",
                 "plot_world_pop" : "Y",
+                "plot_quake" : "Y",
+                "quake" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eq.csv"),
+                "wave_height" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"maxWaveHeights.grd"),
             }
             self.exec_gmt(**gmtargs)
             return os.path.isfile(f)
