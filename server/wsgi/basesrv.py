@@ -15,7 +15,7 @@ class BaseSrv:
                 if inspect.ismethod(m) and hasattr(m,"exposed") and m.exposed:
                     spec = inspect.getfullargspec(m)
                     s += "<li><b>%s</b> %s<br>" % (n, inspect.formatargspec(*spec))
-        return "<html>%s<ul>%s</ul></html>" % (self.INFO,s)
+        return "<html><ul>%s</ul>%s</html>" % (s,self.INFO)
 
     def getUser(self):
         if "server_cookie" in cherrypy.request.cookie:
@@ -42,6 +42,16 @@ class BaseSrv:
             if inst is not None and (kind == "inst" or kind is None):
                 return inst
         return None
+
+    def check_access(self,ev,user):
+        uinstid = user["inst"] if "inst" in user and user["inst"] is not None else None
+        if ev["user"] == user["_id"] or ev["user"] == uinstid:
+            return True
+        else:
+            oinst = self._db["institutions"].find_one({"_id":ev["user"]})
+            if oinst is not None and "public_events" in oinst and oinst["public_events"]:
+                return True
+        return False
 
     def get_hostname(self):
         if "hostname" in config["global"]:

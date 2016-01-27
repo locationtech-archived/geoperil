@@ -20,6 +20,7 @@ from bson.objectid import InvalidId
 import configparser
 from urllib.parse import urlparse
 import subprocess
+import surfer
 
 config = configparser.ConfigParser()
 

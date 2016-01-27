@@ -1,45 +1,49 @@
 from basesrv import *
 import glob
-import surfer
 import requests
+from data_products import *
 
 logger = logging.getLogger("DataSrv")
 
-class DataSrv(BaseSrv):
-    INFO = """<ul>
-    <li><b>&lt;EventID&gt;/</b> - List of Products for Event</li>
-    <li><b>&lt;EventID&gt;/&lt;Product&gt;</b> - get Products for Event</li>
-    <li><b>&lt;EventSetID&gt;/</b> - List of Products for EventSet</li>
-    <li><b>&lt;EventSetID&gt;/&lt;Product&gt;</b> - get Products for EventSet</li>
-    <li><b>&lt;EventSetID&gt;/&lt;EventID&gt;/</b> - List of Products for Event in EventSet</li>
-    <li><b>&lt;EventSetID&gt;/&lt;EventID&gt;/&lt;Product&gt;</b> - get Products for Event in EventSet</li>
-</ul>
-<h3>Products:</h3>
-<ul>
-    <li><h4>maxWaveHeights.grd</h4>
-        Binary SurferGrid with maximum waveheights
-    </li>
-    <li><h4>travelTimes.grd</h4>
-        Binary SurferGrid with estimated arrival times
-    </li>
-    <li><h4>cfzs.gmt</h4>
-        Coastal Forecast Zones as Polygons in GMT format
-    </li>
-    <li><h4>tfps.csv</h4>
-        Tsunami Forecast Points as csv file
-    </li>
-    <li><h4>eq.csv</h4>
-        Earthquake parameters as csv file
-    </li>
-    <li><h4>wavejets_traveltimes.png</h4>
-        Image with wavejets and TravelTimes
-    </li>
-    <li><h4>tl.csv?lon=&lt;longitude&gt;&amp;lat=&lt;latitude&gt;[&amp;minint=&lt;minimum interval&gt;]</h4>
-        Waveform at the point specified by the mandatory parameter 'lon' and 'lat'.<br>
-        Optional parameter 'minint' can be given to request a minimum interval between values, default is 10 minutes.
-    </li>
-</ul>
-"""
+class DataSrv(BaseSrv,Products):
+    def __init__(self, *args, **kwargs):
+        BaseSrv.__init__(self,*args,**kwargs)
+        self._products = []
+        Products.__init__(self)
+
+        desc = [
+            (("EventID",)                       , "List of Products for Event"),
+            (("EventID","Product",)             , "Get Products for Event"),
+            (("EventSetID",)                    , "List of Products for EventSet"),
+            (("EventSetID","Product",)          , "Get Products for EventSet"),
+            (("EventSetID","EventID",)          , "List of Products for Event in EventSet"),
+            (("EventSetID","EventID","Product",), "Get Products for Event in EventSet"),
+        ]
+        ds = ""
+        for n,d in desc:
+            n = "/".join(["&lt;%s&gt;" % x for x in n])
+            ds += "<li><b>%s</b> - %s</li>\n" % (n,d)
+        s = ""
+        for h in self._products:
+            if "help" in h["show"]:
+                n = h["file"]
+                if len(h["params"]) > 0:
+                    n += "?"
+                    ps = []
+                    ops = []
+                    for p,d in h["params"].items():
+                        p += "=&lt;%s&gt;" % d["desc"]
+                        if d["mandatory"]:
+                            ps.append("&amp;%s" % p)
+                        else:
+                            ops.append("[&amp;%s]" % p)
+                    n += "".join(ps+ops)
+                s += "<li><h4>%s</h4>\n%s\n</li>\n" % (n,h["desc"])
+        self.INFO = "<ul>\n%s</ul>\n<h3>Products:</h3>\n<ul>\n%s</ul>" % (ds,s)
+
+    @cherrypy.expose
+    def help(self):
+        return jssuccess(products=self._products)
 
     @cherrypy.expose
     def default(self,eid,*args,**kwargs):
@@ -78,33 +82,21 @@ class DataSrv(BaseSrv):
         else:
             return self.list_products(ev)
 
-    def check_access(self,ev,user):
-        uinstid = user["inst"] if "inst" in user and user["inst"] is not None else None
-        if ev["user"] == user["_id"] or ev["user"] == uinstid:
-            return True
-        else:
-            oinst = self._db["institutions"].find_one({"_id":ev["user"]})
-            if oinst is not None and "public_events" in oinst and oinst["public_events"]:
-                return True
-        return False
-
     def list_products(self,ev):
         url = self.get_url()
         if not url.endswith("/"):
             raise HTTPRedirect(self.get_hostname()+"/"+url+"/")
         links = []
         if "evtids" in ev:
-            links.append("maxWaveHeights.grd")
+            for p in self._products:
+                if "evtset" in p["show"]:
+                    links.append(p["file"])
             for evid in ev["evtids"]:
                 links.append("%s/" % evid)
         else:
-            links.append("maxWaveHeights.grd")
-            links.append("travelTimes.grd")
-            links.append("wavejets_traveltimes.png")
-            links.append("cfzs_tfps.png")
-            links.append("cfzs.gmt")
-            links.append("tfps.csv")
-            links.append("eq.csv")
+            for p in self._products:
+                if "evt" in p["show"]:
+                    links.append(p["file"])
         return self.links2html(links)
 
     def links2html(self,links):
@@ -113,161 +105,85 @@ class DataSrv(BaseSrv):
             s += "<a href='%s'>%s</a><br>" % (l,l)
         return "<html><body>%s</body></html>" % s
 
+    def serve_octet_stream(self,ev,product,f,**kwargs):
+        if self.mk_product(ev,product,**kwargs):
+            return serve_file(f,"application/octet-stream",'attachment',product)
+
+    def serve_plain(self,ev,product,f,**kwargs):
+        if self.mk_product(ev,product,**kwargs):
+            return serve_file(f,"text/plain")
+
+    def serve_png(self,ev,product,f,**kwargs):
+        if self.mk_product(ev,product,**kwargs):
+            return serve_file(f,"image/png")
+
     def serve_product(self,ev,product,**kwargs):
+        cn = 'download_%s' % ev["_id"].replace("@","_")
+        c = cherrypy.response.cookie
+        c[cn] = product
+        c[cn]['path'] = '/'
+        c[cn]['max-age'] = 3600
+        c[cn]['version'] = 1
+
         print("S: %s [%s]" % (product,",".join(["%s=%s" % x for x in kwargs.items()])))
-        if product in ["maxWaveHeights.grd","travelTimes.grd"]:
-            if self.mk_product(ev,product,**kwargs):
-                f = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],product)
-                return serve_file(f,"application/octet-stream",'attachment',product)
-        elif product in ["cfzs.gmt","tfps.csv","eq.csv"]:
-            if self.mk_product(ev,product,**kwargs):
-                f = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],product)
-                return serve_file(f,"text/plain")
-        elif product in ["wavejets_traveltimes.png","cfzs_tfps.png"]:
-            if self.mk_product(ev,product,**kwargs):
-                f = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],product)
-                return serve_file(f,"image/png")
-        elif product == "tl.csv" and "row" in kwargs and "col" in kwargs and "lat" in kwargs and "lon" in kwargs:
-            lat = float(kwargs.pop("lat"))
-            lon = float(kwargs.pop("lon"))
-            row = int(kwargs.pop("row"))
-            col = int(kwargs.pop("col"))
-            minint = int(kwargs.get("minint",10))
-            if self.mk_product(ev,"tl.csv",row=row,col=col,lat=lat,lon=lon,**kwargs):
-                csvfile = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tl%d_%d_%d.csv" % (minint,row,col))
-                return serve_file(csvfile,"text/plain","tl%d_%d_%d.csv" % (minint,row,col))
-        elif product == "tl.csv" and "lat" in kwargs and "lon" in kwargs:
-            lat = float(kwargs["lat"])
-            lon = float(kwargs["lon"])
-            if self.mk_product(ev,"travelTimes.grd",dt=1,**kwargs):
-                inf = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"travelTimes.grd")
-                f = open(inf,"rb")
-                sf = surfer.SurferFile(f)
-                row,col = sf.getRowColFromLatLon(lat,lon)
-                f.close()
-                return self.serve_product(ev,product,row=row,col=col,**kwargs)
-        else:
+        f = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],product)
+        serve = None
+        for p in self._products:
+            if p["file"] == product:
+                serve = p["serve"]
+                break
+        fnk = None
+        res = None
+        if serve is not None:
+            try:
+                fnk = self.__getattribute__("serve_" + serve)
+            except AttributeError:
+                pass
+        if fnk is None:
+            del c[cn]
             raise HTTPError("404 Product not available.")
-        raise HTTPError("404 Product could not be created.")
+        res = fnk(ev,product,f,**kwargs)
+        if res is None:
+            del c[cn]
+            raise HTTPError("404 Product could not be created.")
+        return res
 
     def mk_product(self,ev,product,**kwargs):
         print("MK: %s [%s]" % (product,",".join(["%s=%s" % x for x in kwargs.items()])))
         f = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],product)
-        if product == "maxWaveHeights.grd":
-            if os.path.isfile(f):
-                return True
-            elif self.mk_product(ev,"eWave.2D.sshmax",**kwargs):
-                inf = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eWave.2D.sshmax")
-                os.rename(inf,f)
-                return True
-        elif product == "travelTimes.grd":
-            if os.path.isfile(f):
-                return True
-            elif self.mk_product(ev,"eWave.2D.time",**kwargs):
-                inf = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eWave.2D.time")
-                os.rename(inf,f)
-                return True
-        elif product == "wavejets_traveltimes.png":
-            if os.path.isfile(f):
-                return True
-            elif self.mk_product(ev,"travelTimes.grd",**kwargs) and self.mk_product(ev,"maxWaveHeights.grd",**kwargs):
-                self.exec_gmt(
-                    output = "%s.ps" % f[:-4],
-                    wave_height = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"maxWaveHeights.grd"),
-                    wave_height_expression = "0.05",
-                    wave_time = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"travelTimes.grd"),
-                    plot_dem = "Y",
-                    plot_wave_height = "Y",
-                    plot_wave_time = "Y",
-                )
-                return os.path.isfile(f)
-        elif product == "cfzs_tfps.png":
-            if os.path.isfile(f):
-                return True
-            elif self.mk_product(ev,"cfzs.gmt",**kwargs) and self.mk_product(ev,"tfps.csv",**kwargs):
-                whf = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"maxWaveHeights.grd")
-                ttf = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"travelTimes.grd")
-
-                self.exec_gmt(
-                    output = "%s.ps" % f[:-4],
-                    cfz = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"cfzs.gmt"),
-                    tfp = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tfps.csv"),
-                    plot_dem = "Y",
-                    plot_cfz = "Y",
-                    plot_tfp = "Y",
-                )
-                return os.path.isfile(f)
-        elif product == "cfzs.gmt":
-            if os.path.isfile(f):
-                return True
-            elif self.event_stat(ev["_id"]) == 100:
-                buf = self.export_cfzs(ev["_id"],0.05)
-                if buf is not None:
-                    fobj = open(f,"wt")
-                    fobj.write(buf)
-                    fobj.close()
-                    return True
-        elif product == "tfps.csv":
-            if os.path.isfile(f):
-                return True
-            elif self.event_stat(ev["_id"]) == 100:
-                buf = self.export_tfps(ev["_id"])
-                fobj = open(f,"wt")
-                fobj.write(buf)
-                fobj.close()
-                return True
-        elif product == "eq.csv":
-            if os.path.isfile(f):
-                return True
-            elif self.event_stat(ev["_id"]) == 100:
-                prop = ["longitude","latitude","magnitude","depth","date","strike","dip","rake","region","sea_area"]
-                buf = []
-                for p in prop:
-                    s = str(ev["prop"][p]) if p in ev["prop"] else str(None)
-                    buf.append(s.replace(","," "))
-                fobj = open(f,"wt")
-                fobj.write((",".join(prop)) + "\n")
-                fobj.write((",".join(buf)) + "\n")
-                fobj.close()
-                return True
-        elif product == "tl.csv" and "col" in kwargs and "col" in kwargs and "lat" in kwargs and "lon" in kwargs:
-            minint = int(kwargs.get("minint",10))
-            csvfile = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tl%d_%d_%d.csv" % \
-                        (minint,kwargs["row"],kwargs["col"]))
-            if os.path.isfile(csvfile):
-                return True
-            elif self.extractCsvFromGrids(ev["_id"],csvfile,kwargs["lat"],kwargs["lon"],minint):
-                return True
-            elif self.mk_product(ev,"eWave.2D.00060.ssh",dt=1,**kwargs):
-                return self.extractCsvFromGrids(ev["_id"],csvfile,kwargs["lat"],kwargs["lon"],minint)
-        elif product in ["eWave.2D.sshmax", "eWave.2D.time", "eWave.2D.00060.ssh"]:
-            if os.path.isfile(f):
-                return True
-            elif "apikey" in kwargs:
-                if product == "eWave.2D.00060.ssh" and "dt" not in kwargs:
-                    kwargs["dt"] = 1
-                print("Retriggering simulation %s..." % ev["_id"])
-                self.retriggerSim(ev["_id"],kwargs["dt"] if "dt" in kwargs else 0)
-                print("Waiting for simulation %s..." % ev["_id"])
-                timeout = 1200
-                stat = self.event_stat(ev["_id"])
-                if stat is None:
-                    print("Simulation failed.")
-                    return False
-                while timeout>0 and stat < 100:
-                    time.sleep(10)
-                    timeout -= 10
-                    stat = self.event_stat(ev["_id"])
-                    print("Simulation %s ended." % ev["_id"])
-                while timeout>0 and not os.path.isfile(f):
-                    time.sleep(10)
-                    timeout -= 10
-                if os.path.isfile(f):
-                    time.sleep(10)
-                    return True
-            else:
-                print("Need API key to trigger simulation.")
+        if os.path.isfile(f):
+            return True
+        try:
+            fnk = self.__getattribute__("mk_" + product.replace(".","_"))
+            return fnk(ev,product,f,**kwargs) or False
+        except AttributeError:
+            pass
         return False
+
+    def mk_simulation(self,ev,product,f,**kwargs):
+        if product == "eWave.2D.00060.ssh" and "dt" not in kwargs:
+            kwargs["dt"] = 1
+        stat = self.event_stat(ev["_id"])
+        if stat is None or stat == 100:
+            print("Retriggering simulation %s..." % ev["_id"])
+            self.retriggerSim(ev["_id"],kwargs["dt"] if "dt" in kwargs else 0)
+        print("Waiting for simulation %s..." % ev["_id"])
+        timeout = 1200
+        stat = self.event_stat(ev["_id"])
+        if stat is None:
+            print("Simulation failed.")
+            return False
+        while timeout>0 and stat < 100:
+            time.sleep(10)
+            timeout -= 10
+            stat = self.event_stat(ev["_id"])
+            print("Simulation %s ended." % ev["_id"])
+        while timeout>0 and not os.path.isfile(f):
+            time.sleep(10)
+            timeout -= 10
+        if os.path.isfile(f):
+            time.sleep(10)
+            return True
 
     def exec_gmt(self,**kwargs):
         args = [config["GMT"]["report_bin"]]
@@ -334,7 +250,7 @@ class DataSrv(BaseSrv):
         num = 0
         for cfz in self._db["cfcz"].find():
             res = self._db["comp"].find_one({"type": "CFZ", "code": cfz["FID_IO_DIS"], "EventID": evtid})
-            if res is not None and res["ewh"] >= minewh:
+            if res is not None and res["eta"] >= 0 and res["ewh"] >= minewh:
                 val = " -Z%f\n# @P" % res["ewh"]
                 for poly in cfz["_COORDS_"]:
                     out += ">%s\n" % val
@@ -346,16 +262,25 @@ class DataSrv(BaseSrv):
                         out += "%f %f\n" % (point[0], point[1])
                         num += 1
                     val = "\n# @H"
+        if num == 0:
+            w = -180
+            e = 180
+            s = -90
+            n = 90
+        elif num < 2:
+            w -= 1
+            e += 1
+            s -= 1
+            n += 1
         out = "# @VGMT1.0 @GPOLYGON\n" + ("# @R%f/%f/%f/%f\n" % (w,e,s,n)) + out
-        return out if num > 0 else None
+        return out
 
-    def export_tfps(self, evtid):
+    def export_tfps(self, evtid, minewh=0):
         out = "longitude,latitude,ewh,eta\n"
         for tfp_comp in self._db["tfp_comp"].find({"EventID": evtid}):
             tfp = self._db["tfps"].find_one({"_id": ObjectId(tfp_comp["tfp"])})
-            if tfp is None:
-                continue
-            out += "%f,%f,%f,%f\n" % (tfp["lon_real"], tfp["lat_real"], tfp_comp["ewh"], tfp_comp["eta"])
+            if tfp is not None and tfp_comp["ewh"] >= minewh:
+                out += "%f,%f,%f,%f\n" % (tfp["lon_real"], tfp["lat_real"], tfp_comp["ewh"], tfp_comp["eta"])
         return out
         
 application = startapp( DataSrv )
