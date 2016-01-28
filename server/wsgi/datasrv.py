@@ -105,26 +105,31 @@ class DataSrv(BaseSrv,Products):
             s += "<a href='%s'>%s</a><br>" % (l,l)
         return "<html><body>%s</body></html>" % s
 
+    def serve_file(self,f,content_type,**kwargs):
+        a = 'attachment' if "download" in kwargs else None
+        n = kwargs.get("download","")
+        return serve_file(f,content_type,a,n if n != "" else None)
+
     def serve_octet_stream(self,ev,product,f,**kwargs):
         if self.mk_product(ev,product,**kwargs):
-            return serve_file(f,"application/octet-stream",'attachment',product)
+            self.rec_request(ev,product,f)
+            return self.serve_file(f,"application/octet-stream",**kwargs)
 
     def serve_plain(self,ev,product,f,**kwargs):
         if self.mk_product(ev,product,**kwargs):
-            return serve_file(f,"text/plain")
+            self.rec_request(ev,product,f)
+            return self.serve_file(f,"text/plain",**kwargs)
 
     def serve_png(self,ev,product,f,**kwargs):
         if self.mk_product(ev,product,**kwargs):
-            return serve_file(f,"image/png")
+            self.rec_request(ev,product,f)
+            return self.serve_file(f,"image/png",**kwargs)
+
+    def setCookie(self,ev,value,**kwargs):
+        cn = 'download_%s' % ev["_id"].replace("@","_")
+        super().setCookie(cn,value,**kwargs)
 
     def serve_product(self,ev,product,**kwargs):
-        cn = 'download_%s' % ev["_id"].replace("@","_")
-        c = cherrypy.response.cookie
-        c[cn] = product
-        c[cn]['path'] = '/'
-        c[cn]['max-age'] = 3600
-        c[cn]['version'] = 1
-
         print("S: %s [%s]" % (product,",".join(["%s=%s" % x for x in kwargs.items()])))
         f = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],product)
         serve = None
@@ -140,15 +145,17 @@ class DataSrv(BaseSrv,Products):
             except AttributeError:
                 pass
         if fnk is None:
-            del c[cn]
+            self.setCookie(ev,"not available")
             raise HTTPError("404 Product not available.")
+        self.setCookie(ev,"something wrong")
         res = fnk(ev,product,f,**kwargs)
         if res is None:
-            del c[cn]
             raise HTTPError("404 Product could not be created.")
+        self.setCookie(ev,"success")
         return res
 
     def mk_product(self,ev,product,**kwargs):
+        self.setCookie(ev,product)
         print("MK: %s [%s]" % (product,",".join(["%s=%s" % x for x in kwargs.items()])))
         f = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],product)
         if os.path.isfile(f):
@@ -172,18 +179,43 @@ class DataSrv(BaseSrv,Products):
         stat = self.event_stat(ev["_id"])
         if stat is None:
             print("Simulation failed.")
+            self.setCookie(ev,"simulation failed")
             return False
         while timeout>0 and stat < 100:
             time.sleep(10)
             timeout -= 10
             stat = self.event_stat(ev["_id"])
             print("Simulation %s ended." % ev["_id"])
+        print("Waiting for file...")
         while timeout>0 and not os.path.isfile(f):
             time.sleep(10)
             timeout -= 10
         if os.path.isfile(f):
+            print("File exists.")
             time.sleep(10)
-            return True
+            return self.rec_create(ev,product,f)
+        else:
+            self.setCookie(ev,"result not available")
+
+    def rec_create(self,ev,product,f,params=None):
+        if not os.path.isfile(f):
+            return False
+        doc = {
+            "file":f,
+            "evid":ev["_id"],
+            "product":product,
+            "created":datetime.datetime.now(),
+            "requests":0,
+            "last_request":None,
+        }
+        if params is not None:
+            doc["params"] = params
+        self._db["datafiles"].update({"file":f},doc,upsert=True)
+        return True
+
+    def rec_request(self,ev,product,f):
+        now = datetime.datetime.now()
+        self._db["datafiles"].update({"file":f},{"$inc":{"requests":1},"$set":{"last_request":now}})
 
     def exec_gmt(self,**kwargs):
         args = [config["GMT"]["report_bin"]]
@@ -262,16 +294,6 @@ class DataSrv(BaseSrv,Products):
                         out += "%f %f\n" % (point[0], point[1])
                         num += 1
                     val = "\n# @H"
-        if num == 0:
-            w = -180
-            e = 180
-            s = -90
-            n = 90
-        elif num < 2:
-            w -= 1
-            e += 1
-            s -= 1
-            n += 1
         out = "# @VGMT1.0 @GPOLYGON\n" + ("# @R%f/%f/%f/%f\n" % (w,e,s,n)) + out
         return out
 

@@ -92,23 +92,23 @@ class Products:
         ])
 
     def mk_eWave_2D_sshmax(self,ev,product,f,**kwargs):
-        self.mk_simulation(ev,product,f,**kwargs)
+        return self.mk_simulation(ev,product,f,**kwargs)
     def mk_eWave_2D_time(self,ev,product,f,**kwargs):
-        self.mk_simulation(ev,product,f,**kwargs)
+        return self.mk_simulation(ev,product,f,**kwargs)
     def mk_eWave_2D_00060_ssh(self,ev,product,f,**kwargs):
-        self.mk_simulation(ev,product,f,**kwargs)
+        return self.mk_simulation(ev,product,f,**kwargs)
 
     def mk_maxWaveHeights_grd(self,ev,product,f,**kwargs):
         if self.mk_product(ev,"eWave.2D.sshmax",**kwargs):
             inf = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eWave.2D.sshmax")
             os.rename(inf,f)
-            return True
+            return self.rec_create(ev,product,f)
 
     def mk_travelTimes_grd(self,ev,product,f,**kwargs):
         if self.mk_product(ev,"eWave.2D.time",**kwargs):
             inf = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eWave.2D.time")
             os.rename(inf,f)
-            return True
+            return self.rec_create(ev,product,f)
 
     def mk_wavejets_traveltimes_png(self,ev,product,f,**kwargs):
         if self.mk_product(ev,"travelTimes.grd",**kwargs) \
@@ -126,7 +126,7 @@ class Products:
                 "wave_time" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"travelTimes.grd"),
             }
             self.exec_gmt(**gmtargs)
-            return os.path.isfile(f)
+            return self.rec_create(ev,product,f)
 
     def mk_cfzs_tfps_png(self,ev,product,f,**kwargs):
         if self.mk_product(ev,"cfzs.gmt",**kwargs) \
@@ -143,7 +143,7 @@ class Products:
                 "tfp" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tfps.csv"),
             }
             self.exec_gmt(**gmtargs)
-            return os.path.isfile(f)
+            return self.rec_create(ev,product,f)
 
     def mk_cities_population_png(self,ev,product,f,**kwargs):
         if self.mk_product(ev,"maxWaveHeights.grd",**kwargs) and self.mk_product(ev,"eq.csv",**kwargs) :
@@ -157,17 +157,15 @@ class Products:
                 "wave_height" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"maxWaveHeights.grd"),
             }
             self.exec_gmt(**gmtargs)
-            return os.path.isfile(f)
+            return self.rec_create(ev,product,f)
 
     def mk_cfzs_gmt(self,ev,product,f,**kwargs):
         if self.event_stat(ev["_id"]) == 100:
             buf = self.export_cfzs(ev["_id"])
-            if buf is not None:
-                fobj = open(f,"wt")
-                fobj.write(buf)
-                fobj.close()
-                return True
-        return False
+            fobj = open(f,"wt")
+            fobj.write(buf)
+            fobj.close()
+            return self.rec_create(ev,product,f)
     
     def mk_tfps_csv(self,ev,product,f,**kwargs):
         if self.event_stat(ev["_id"]) == 100:
@@ -175,7 +173,7 @@ class Products:
             fobj = open(f,"wt")
             fobj.write(buf)
             fobj.close()
-            return True
+            return self.rec_create(ev,product,f)
 
     def mk_eq_csv(self,ev,product,f,**kwargs):
         if self.event_stat(ev["_id"]) == 100:
@@ -188,19 +186,24 @@ class Products:
             fobj.write((",".join(prop)) + "\n")
             fobj.write((",".join(buf)) + "\n")
             fobj.close()
-            return True
+            return self.rec_create(ev,product,f)
 
     def mk_tl_csv(self,ev,product,f,**kwargs):
-        if "col" in kwargs and "col" in kwargs and "lat" in kwargs and "lon" in kwargs:
+        if "row" in kwargs and "col" in kwargs and "lat" in kwargs and "lon" in kwargs:
             minint = int(kwargs.get("minint",10))
-            csvfile = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tl%d_%d_%d.csv" % \
-                        (minint,kwargs["row"],kwargs["col"]))
+            lat = float(kwargs.pop("lat"))
+            lon = float(kwargs.pop("lon"))
+            row = int(kwargs.pop("row"))
+            col = int(kwargs.pop("col"))
+            params = {"minint":minint,"row":row,"col":col,"lat":lat,"lon":lon}
+            csvfile = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tl%d_%d_%d.csv" % (minint,row,col))
             if os.path.isfile(csvfile):
                 return True
-            elif self.extractCsvFromGrids(ev["_id"],csvfile,kwargs["lat"],kwargs["lon"],minint):
-                return True
-            elif self.mk_product(ev,"eWave.2D.00060.ssh",dt=1,**kwargs):
-                return self.extractCsvFromGrids(ev["_id"],csvfile,kwargs["lat"],kwargs["lon"],minint)
+            elif self.extractCsvFromGrids(ev["_id"],csvfile,lat,lon,minint):
+                return self.rec_create(ev,product,csvfile,params)
+            elif self.mk_product(ev,"eWave.2D.00060.ssh",dt=1,**kwargs) \
+                    and self.extractCsvFromGrids(ev["_id"],csvfile,lat,lon,minint):
+                return self.rec_create(ev,product,csvfile,params)
 
     def serve_timeline(self,ev,product,f,**kwargs):
         if product == "tl.csv" and "row" in kwargs and "col" in kwargs and "lat" in kwargs and "lon" in kwargs:
@@ -211,7 +214,8 @@ class Products:
             minint = int(kwargs.get("minint",10))
             if self.mk_product(ev,"tl.csv",row=row,col=col,lat=lat,lon=lon,**kwargs):
                 csvfile = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tl%d_%d_%d.csv" % (minint,row,col))
-                return serve_file(csvfile,"text/plain","tl%d_%d_%d.csv" % (minint,row,col))
+                self.rec_request(ev,product,csvfile)
+                return self.serve_file(csvfile,"text/plain",**kwargs)
         elif product == "tl.csv" and "lat" in kwargs and "lon" in kwargs:
             lat = float(kwargs["lat"])
             lon = float(kwargs["lon"])
@@ -221,4 +225,4 @@ class Products:
                 sf = surfer.SurferFile(f)
                 row,col = sf.getRowColFromLatLon(lat,lon)
                 f.close()
-                return self.serve_product(ev,product,row=row,col=col,**kwargs)
+                return self.serve_timeline(ev,product,f,row=row,col=col,**kwargs)

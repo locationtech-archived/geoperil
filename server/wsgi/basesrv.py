@@ -17,6 +17,13 @@ class BaseSrv:
                     s += "<li><b>%s</b> %s<br>" % (n, inspect.formatargspec(*spec))
         return "<html><ul>%s</ul>%s</html>" % (s,self.INFO)
 
+    def setCookie(self,name,value,**kwargs):
+        kwargs["path"] = kwargs.pop("path","/")
+        c = cherrypy.response.cookie
+        c[name] = value
+        for k,v in kwargs.items():
+            c[name][k] = v
+
     def getUser(self):
         if "server_cookie" in cherrypy.request.cookie:
             uuid = cherrypy.request.cookie["server_cookie"].value
