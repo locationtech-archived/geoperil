@@ -41,6 +41,8 @@ world_pop=${21}
 
 subtitle=${22}
 paper_height=${23}
+
+dem_water=${24}
 #########################
 
 
@@ -54,13 +56,13 @@ gmtset PS_MEDIA 21.0cx${paper_height}c
 if [ "${title}" == -None- ]
 #Erstellt leeren Kartenrahmen; -BWSen (Sued und West-Achse werden beschriften, Nord und Ost nur geplottet);fuegt Titel an Karte falls eingestellt
 then
-	gmt psbasemap --FONT_ANNOT_PRIMARY=8p,Helvetica,black ${projection} ${extent} -P -Ba -BNWes -Ya${y_map_dist} -V -K > ${output}
+	gmt psbasemap --MAP_ANNOT_OFFSET_PRIMARY=3p --MAP_ANNOT_OFFSET_SECONDARY=3p --FONT_ANNOT_PRIMARY=8p,Helvetica,black ${projection} ${extent} -P -Ba -BNWes -Ya${y_map_dist} -V -K > ${output}
 else
 	if [ "${subtitle}" == -None- ]
 	then
-		gmt psbasemap --FONT_ANNOT_PRIMARY=8p,Helvetica,black --FONT_TITLE=22p,Helvetica-Bold,black --MAP_TITLE_OFFSET=14p ${projection} ${extent} -P -Ba -BNWes+t"${title}" -Ya${y_map_dist} -V -K > ${output}
+		gmt psbasemap --MAP_ANNOT_OFFSET_PRIMARY=3p --MAP_ANNOT_OFFSET_SECONDARY=3p --FONT_ANNOT_PRIMARY=8p,Helvetica,black --FONT_TITLE=22p,Helvetica-Bold,black --MAP_TITLE_OFFSET=14p ${projection} ${extent} -P -Ba -BNWes+t"${title}" -Ya${y_map_dist} -V -K > ${output}
 	else
-		gmt psbasemap --FONT_ANNOT_PRIMARY=8p,Helvetica,black --FONT_TITLE=22p,Helvetica-Bold,black --MAP_TITLE_OFFSET=25p ${projection} ${extent} -P -Ba -BNWes+t"${title}" -Ya${y_map_dist} -V -K > ${output}	
+		gmt psbasemap --MAP_ANNOT_OFFSET_PRIMARY=3p --MAP_ANNOT_OFFSET_SECONDARY=3p --FONT_ANNOT_PRIMARY=8p,Helvetica,black --FONT_TITLE=22p,Helvetica-Bold,black --MAP_TITLE_OFFSET=25p ${projection} ${extent} -P -Ba -BNWes+t"${title}" -Ya${y_map_dist} -V -K > ${output}	
 	fi
 fi
 
@@ -77,8 +79,13 @@ then
 	then
 		gmt grdimage -J -R -P -V -K -O -C${world_pop_cpt} ${world_pop_data} -Y >> ${output}
 	else
-		#erstellt land mit hillshade
-		gmt grdimage -J -R -P -V -K -O -C${etopo_land_cpt} ${basemap} -I${basemap_hillshade} -Y >> ${output}
+		if [ ${dem_water} == Y ]
+		then
+			gmt pscoast -J -R -P -D${coast_res} -A${land_res} -S${color_water} -G${color_land} -Ya${y_map_dist} -V -K -O >> ${output}
+		else
+			#erstellt land mit hillshade
+			gmt grdimage -J -R -P -V -K -O -C${etopo_land_cpt} ${basemap} -I${basemap_hillshade} -Y >> ${output}
+		fi	
 	fi
 	
 	#Ende Clip Land "-Q"

@@ -54,10 +54,10 @@ color_globe_water = 'LightBlue'
 
 #CPT-Dateien:
 #werden benoetigt fuer Farbgebung von GRD-Dateien
-etopo_water_cpt = 'cpt/blue.cpt'
-etopo_land_cpt = 'cpt/brown.cpt'
-#etopo_water_cpt = 'cpt/bathy_etopo.cpt'
-#etopo_land_cpt = 'cpt/land_etopo.cpt'
+etopo_water_cpt = 'cpt/basemap/blue.cpt'
+etopo_land_cpt = 'cpt/basemap/brown.cpt'
+#etopo_water_cpt = 'cpt/basemap/water_gray.cpt'
+#etopo_land_cpt = 'cpt/basemap/land_gray.cpt'
 
 #wave_height_cpt = 'cpt/waveheight_3.cpt'
 wave_height_cpt = 'cpt/waveheight_1.cpt'
@@ -78,7 +78,8 @@ tfp_0_03_fill = '75/203/0'
 tfp_03_1_fill = '250/232/32'
 tfp_1_3_fill = '242/158/23'
 tfp_3_fill = '245/56/31'
-tfp_stroke = '35/35/35'
+tfp_cpt = 'cpt/TFP/TFP.cpt'
+tfp_stroke = '255/255/255'
 
 #Quake
 quake_fill = '252/255/0'

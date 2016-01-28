@@ -5,6 +5,7 @@ import argparse
 import math
 import datetime
 import re
+import tempfile, shutil
 
 #config-file
 from Tsunami_config import *
@@ -14,6 +15,7 @@ from auto_extent import *
 
 #Python-Script fuer Berechnugn der Position der Legendenbestandteile
 from build_legend import *
+
 
 ###########################################
 ####### passed argmunents with flags ######
@@ -37,16 +39,20 @@ parser.add_argument("-x_r", "--x_ratio", dest = "x_ratio", default = "5", help="
 
 ###Tsunami-Daten###
 #Wave-Height
-parser.add_argument("-w_height", "--wave_height", dest = "wave_height", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/HDF600/eWave.2D.sshmax", help="Pfad fuer GRD-Datei fuer Wellenhoehe\nz.B.: .../eWave.2D.sshmax")
+#parser.add_argument("-w_height", "--wave_height", dest = "wave_height", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/HDF600/eWave.2D.sshmax", help="Pfad fuer GRD-Datei fuer Wellenhoehe\nz.B.: .../eWave.2D.sshmax")
+parser.add_argument("-w_height", "--wave_height", dest = "wave_height", default = "", help="Pfad fuer GRD-Datei fuer Wellenhoehe\nz.B.: .../eWave.2D.sshmax")
 parser.add_argument("-w_exp", "--wave_height_expression", dest = "wave_height_expression", default = "0.05", help="Alle Wellenhoehenwerte unter diesem Wert werden nicht angezeigt")
 #Wave-Time
-parser.add_argument("-w_time", "--wave_time", dest = "wave_time", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/HDF600/eWave.2D.time", help="Pfad fuer GRD-Datei fuer Traveltime\nz.B.: eWave.2D.time")
+#parser.add_argument("-w_time", "--wave_time", dest = "wave_time", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/HDF600/eWave.2D.time", help="Pfad fuer GRD-Datei fuer Traveltime\nz.B.: eWave.2D.time")
+parser.add_argument("-w_time", "--wave_time", dest = "wave_time", default = "", help="Pfad fuer GRD-Datei fuer Traveltime\nz.B.: eWave.2D.time")
 
 #CFZs
-parser.add_argument("-cfz", "--cfz", dest = "cfz", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/CFZ/CFZ_test/cfz2.gmt", help="Pfad fuer GMT-Datei fuer Coastal-Forecast-Zones")
+#parser.add_argument("-cfz", "--cfz", dest = "cfz", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/CFZ/CFZ_test/cfz2.gmt", help="Pfad fuer GMT-Datei fuer Coastal-Forecast-Zones")
+parser.add_argument("-cfz", "--cfz", dest = "cfz", default = "", help="Pfad fuer GMT-Datei fuer Coastal-Forecast-Zones")
 
 #TFPs
-parser.add_argument("-tfp", "--tfp", dest = "tfp", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/TFPs/tfp.csv", help="Pfad fuer CSV-Datei fuer Tsunami-Forecast-Points")
+#parser.add_argument("-tfp", "--tfp", dest = "tfp", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/TFPs/tfp.csv", help="Pfad fuer CSV-Datei fuer Tsunami-Forecast-Points")
+parser.add_argument("-tfp", "--tfp", dest = "tfp", default = "", help="Pfad fuer CSV-Datei fuer Tsunami-Forecast-Points")
 
 #Quake
 parser.add_argument("-q", "--quake", dest = "quake", default = "/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/quake/quake.csv", help="Pfad fuer CSV-Datei fuer Erdbeben")
@@ -54,6 +60,7 @@ parser.add_argument("-q", "--quake", dest = "quake", default = "/home/basti/Schr
 
 #Einstell/Plot-Moeglichkeiten
 parser.add_argument("-p_dem", "--plot_dem", dest = "dem", default = "N", help="DEM als Basemap?\nJa = Y\nNein = N")
+parser.add_argument("-p_dem_w", "--plot_dem_water", dest = "dem_water", default = "N", help="DEM als Basemap (nur Wasser)? p_dem trotzdem noetig\nJa = Y\nNein = N")
 parser.add_argument("-p_w_height", "--plot_wave_height", dest = "plot_wave_height", default = "N", help="Plott GRD-Datei fuer Wellenhoehe?\nJa = Y\nNein = N")
 parser.add_argument("-p_w_time", "--plot_wave_time", dest = "plot_wave_time", default = "N", help="Plot GRD-Datei fuer Traveltime?\nJa = Y\nNein = N")
 
@@ -77,6 +84,9 @@ parser.add_argument("-p_ms", "--plot_map_scale", dest = "plot_map_scale", defaul
 
 
 args = parser.parse_args()
+
+##### make tempdir #####
+tempdir = tempfile.mkdtemp()
 
 #############################################
 ######## passing argument in variables ######
@@ -112,14 +122,14 @@ y_ratio = float(args.y_ratio)
 x_ratio = float(args.x_ratio)
 
 wave_height = args.wave_height
-wave_height_temp = 'data/temp/eWave_height_temp.nc'
+wave_height_temp = '%s/eWave_height_temp.nc' % (tempdir)
 wave_height_expression = float(args.wave_height_expression)
 if wave_height_expression <= 0:
         wave_height_expression = 0.00000000000000001
 
 
 wave_time = args.wave_time
-wave_time_temp = 'data/temp/eWave_time_temp.nc'
+wave_time_temp = '%s/eWave_time_temp.nc' %(tempdir)
 
 #CFZs
 cfz =  args.cfz
@@ -133,6 +143,7 @@ plot_quake = args.plot_quake
 
 #Plot? Y/N
 dem = args.dem
+dem_water = args.dem_water
 plot_wave_height = args.plot_wave_height
 plot_wave_time = args.plot_wave_time
 world_pop = args.world_pop
@@ -202,32 +213,20 @@ else:
 ############################
 ######### Extent ###########
 ############################
-#gibt den max z-Wert des Wellenhoehen-GRIDs aus
-wave_height_max = get_maxmin_wave_height(wave_height)
-#Falls keine/oder nicht vollstaendige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-GRIDs und w_exp berechnet
-
-if (west is None) or (east is None) or (north is None) or (south is None):
-    if wave_height_expression < wave_height_max:
-        west, east, south, north = calc_extent_for_w_height(wave_height, west, east, south, north, wave_height_expression)
-    else:
-        west, east, south, north = calc_extent_for_w_time(wave_time, west, east, south, north)	
-
-#Falls keine/oder nicht vollstaendige Ausdehnung eingegeben wird, wird die Ausdehnung automatisch anhand des Tsunami-Traveltime-GRIDs berechnet
-#west, east, south, north = calc_extent_for_w_time(wave_time, west, east, south, north)	
-
+#berechnet die optimale Ausdehnung anhand der Eingabe-Dateien (siehe auto_extent.px)
+west, east, south, north = best_auto_extent_for_input(west, east, south, north, wave_height, wave_height_expression, wave_time, cfz, tfp, tempdir)
 
 west = float(west)
 east = float(east)
 south = float(south)
 north = float(north)
 
-
-
-print ('Extent before calculation:')
+print ('Extent after input-calculation:')
 print (    'west:  ', west)
 print (    'east:  ', east)
 print (    'south: ', south)
 print (    'north: ', north)
+
 
 ############################
 ####### Kartenrahmen #######
@@ -324,7 +323,7 @@ y_map_distance = '%s%s' % (y_map_dist, unit)
 #	outline coast_res coast_color terrain color_water color_land color_globe_land color_globe_water land_res etopo_water_cpt etopo_land_cpt
 subprocess.call(['./gmt_scripts/Basemap.sh', title,output , R, J, y_map_distance, basemap, basemap_hillshade, \
     outline, coast_res, coast_color, dem, color_water, color_land, color_globe_land, color_globe_water, land_res, etopo_water_cpt, etopo_land_cpt, \
-    world_pop_data, world_pop_cpt, world_pop, subtitle, str(paper_height)])
+    world_pop_data, world_pop_cpt, world_pop, subtitle, str(paper_height), dem_water])
 
 if not subtitle=="-None-":
     subprocess.call(['./gmt_scripts/subtitle.sh',output , str(subtitle), str(subtitle_pos_y), str(map_width)])
@@ -351,7 +350,7 @@ if plot_cfz=="Y":
     
 ########### TFP #############
 if plot_tfp=="Y":
-    subprocess.call(['./gmt_scripts/TFP.sh',output ,tfp, tfp_0_03_fill, tfp_03_1_fill, tfp_1_3_fill, tfp_3_fill, tfp_stroke, y_map_distance])
+    subprocess.call(['./gmt_scripts/TFP.sh',output ,tfp, tfp_0_03_fill, tfp_03_1_fill, tfp_1_3_fill, tfp_3_fill, tfp_cpt, tfp_stroke, y_map_distance])
 
 ########## Quakes ###########
 if plot_quake=="Y":
@@ -434,6 +433,8 @@ subprocess.call(['gmt', 'ps2raster', output, '-Tg', '-A', '-V', '-E720'])
 #PDF
 #subprocess.call(['gmt', 'ps2raster', output, '-Tf', '-V'])
 
+#löscht tempdir
+shutil.rmtree(tempdir)
 
 ##################################################
 ################# INFO - Output ##################
@@ -468,3 +469,4 @@ print ('        Basemap Hillshade:         ', basemap_hillshade)
 
 print ('\nOutput:')
 print ('    Output-Datei:      ', output)
+
