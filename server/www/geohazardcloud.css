@@ -383,6 +383,12 @@ html, body {
 	display: none;
 }
 
+.entry .lnkData {
+	padding-right: 0.3em;
+	margin-top: -0.08em;
+	display: none;
+}
+
 .entry .lnkDelete {
 	margin-right: 0.7em;
 	display: none;
@@ -1534,4 +1540,27 @@ pre {
 	padding-top: 0.2em;
 	padding-bottom: 0.2em;
 	text-align: center;	
+}
+
+.download-dialog .status {
+	display: none;	
+}
+
+.download-dialog .error {
+	color: red;
+	text-align: center;
+	margin-top: 1.5em;
+}
+
+.download-dialog .progress-text {
+	margin-top: 1.5em;
+    text-align: center;
+}
+
+.download-dialog .progress {
+	margin: 0.5em;	
+}
+
+.download-dialog .progress-bar {
+	width: 100%;
 }

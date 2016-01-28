@@ -1023,6 +1023,7 @@
 						<a class="lnkEditEvtSet pull-right" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
 						<a class="lnkLearn pull-right" href="#"><span class="glyphicon glyphicon-info-sign"></span></a>
 						<a class="lnkReport pull-right" href="#"><span class="glyphicon glyphicon-cloud-download"></span></a>
+						<a class="lnkData pull-right" href="#"><span class="glyphicon glyphicon-save"></span></a>
 						<a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
 						<!-- <button class="lnkEdit btn btn-primary btn-sm"><span class="glyphicon glyphicon-repeat"></span></button> -->
 					</div>
@@ -1698,51 +1699,51 @@
 		
 	<canvas id="canvas-line"></canvas>
 				
-	<!-- AdminDialog -->
-	<div class="admin">
-		<div class="header">
-			<h4 class="modal-title">Admin-Interface</h4><br>
-			<ul class="nav nav-tabs">
-				<li class="active"><a href="#adminTabUser" data-toggle="tab">Users</a></li>
-				<li><a href="#adminTabInst" data-toggle="tab">Institutions</a></li>
-				<li><a href="#adminTabStats" data-toggle="tab">Statistics</a></li>
-			</ul>
-		</div>
-		<div class="content tab-content">
-			<div id="adminTabUser" class="tab-pane active">
-				<div class="secProp"></div>
-				<div class="secPerm"></div>
-				<div class="secButtons">
-					<button type="button" class="btn btn-default pull-left btnClear">Clear</button>
-					<button type="button" class="btn btn-success pull-right btnSave">Save new user</button>
-					<button type="button" class="btn btn-primary pull-right btnModify">Modify user</button>
-					<button type="button" class="btn btn-danger pull-right btnDelete">Delete user</button>
-				</div>
-			</div>
-			<div id="adminTabInst" class="tab-pane">
-				<div class="secInputs"></div>
-				<div class="secButtons">
-					<button type="button" class="btn btn-default pull-left btnClear">Clear</button>
-					<button type="button" class="btn btn-success pull-right btnSave">Save new institution</button>
-					<button type="button" class="btn btn-primary pull-right btnModify">Modify institution</button>
-					<button type="button" class="btn btn-danger pull-right btnDelete">Delete institution</button>
-				</div>
-			</div>
-			<div id="adminTabStats" class="tab-pane">
-				<div class="user-logins input-group input-group-sm prop-label">
-					<span class="input-group-addon">
-						<span class="user pull-left"></span>
-						<span class="logins pull-right"></span>
-					</span>
-				</div>
-			</div>
-		</div>
-		<div class="footer">
-			<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-		</div>
-	</div>
-
 	<div class="dialog-templates">
+
+		<!-- AdminDialog -->
+		<div class="admin">
+			<div class="header">
+				<h4 class="modal-title">Admin-Interface</h4><br>
+				<ul class="nav nav-tabs">
+					<li class="active"><a href="#adminTabUser" data-toggle="tab">Users</a></li>
+					<li><a href="#adminTabInst" data-toggle="tab">Institutions</a></li>
+					<li><a href="#adminTabStats" data-toggle="tab">Statistics</a></li>
+				</ul>
+			</div>
+			<div class="content tab-content">
+				<div id="adminTabUser" class="tab-pane active">
+					<div class="secProp"></div>
+					<div class="secPerm"></div>
+					<div class="secButtons">
+						<button type="button" class="btn btn-default pull-left btnClear">Clear</button>
+						<button type="button" class="btn btn-success pull-right btnSave">Save new user</button>
+						<button type="button" class="btn btn-primary pull-right btnModify">Modify user</button>
+						<button type="button" class="btn btn-danger pull-right btnDelete">Delete user</button>
+					</div>
+				</div>
+				<div id="adminTabInst" class="tab-pane">
+					<div class="secInputs"></div>
+					<div class="secButtons">
+						<button type="button" class="btn btn-default pull-left btnClear">Clear</button>
+						<button type="button" class="btn btn-success pull-right btnSave">Save new institution</button>
+						<button type="button" class="btn btn-primary pull-right btnModify">Modify institution</button>
+						<button type="button" class="btn btn-danger pull-right btnDelete">Delete institution</button>
+					</div>
+				</div>
+				<div id="adminTabStats" class="tab-pane">
+					<div class="user-logins input-group input-group-sm prop-label">
+						<span class="input-group-addon">
+							<span class="user pull-left"></span>
+							<span class="logins pull-right"></span>
+						</span>
+					</div>
+				</div>
+			</div>
+			<div class="footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+			</div>
+		</div>
 
 		<!-- MailDialog -->
 		<div class="mail-dialog">
@@ -1844,9 +1845,11 @@
 				<button type="button" class="btn btn-default btnClose" data-dismiss="modal">Close</button>
 			</div>
 		</div>
-	
+		
 	</div>
-							
+	
+	<div class="dynamic"></div>
+								
 	<div class="templates">
 		
 		<!-- HtmlTextGroup -->
@@ -1950,6 +1953,32 @@
 		
 		<div class="html-activity-view">
 			<table><tr></tr></table>
+		</div>
+		
+		<!-- DownloadDialog -->
+		<div class="download-dialog">
+			<div class="header">
+				<h4 class="modal-title">Data Download</h4><br>
+				<!-- <ul class="nav nav-tabs">
+					<li class="active"><a href="#downloadTabGeneral" data-toggle="tab">General</a></li>
+				</ul> -->
+			</div>
+			<div class="content">
+				<!-- <div id="downloadTabGeneral" class="tab-pane active"> -->
+					<div class="secProducts"></div>
+					<div class="status">
+						<div class="progress-text">Download is being prepared...</div>
+						<div class="progress progress-striped active">
+	  						<div class="progress-bar"></div>
+						</div>
+					</div>
+					<div class="error"></div>
+				<!-- </div> -->
+			</div>
+			<div class="footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary btnDownload">Download</button>
+			</div>
 		</div>
 		 
 		<!-- Flood - Location - Entry -->

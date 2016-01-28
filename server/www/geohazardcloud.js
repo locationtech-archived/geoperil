@@ -435,13 +435,13 @@ function Container(sortFun) {
 		var ret = [];
 		var f = attr;
 		if (typeof(attr) != 'function')
-			f = function(o){return o[attr];};
+			f = function(o){return o[attr] == val;};
 			
 		for (var i = 0; i < this.list.length; i++) {
-			if( f(this.list[i]) == val )
+			if( f(this.list[i]) )
 				ret.push(this.list[i]);
 		}
-		return ret;
+		return new Container().setList(ret);
 	};
 
 	this.clear = function() {
@@ -476,6 +476,7 @@ function Container(sortFun) {
 	this.setList = function(list) {
 		this.list = list;
 		this.sort();
+		return this;
 	};
 }
 
@@ -2435,8 +2436,6 @@ function GlobalControl() {
 	this.propDialog = new PropDialog();
 	/* BuildingsDialog */
 	this.buildingsDialog = new BuildingsDialog();
-	/* make dialogs visible if initialization is finished */
-	$('.dialog-templates').show();
 
 	eqlist = new Container(sort_date.bind(this, -1));
 	saved = new Container(sort_timeline);
@@ -2697,6 +2696,17 @@ function GlobalControl() {
 			func(cont);
 		}).bind(this));
 	};
+	
+	/* Use variable 'dialogs' as a static member without polluting any namespace. */
+	this.openDownloadDialog = (function(event) {
+		var dialogs = {};
+		return (function(event) {
+			var evtid = event._id;
+			if( !(evtid in dialogs) )
+				dialogs[evtid] = new DownloadDialog(event);
+			dialogs[evtid].show();
+		}).bind(this);
+	})();
 
 	this.main();
 }
@@ -3281,6 +3291,10 @@ function EQWidget(data, marker) {
 		this.div.find('.lnkReport').tooltip(options);
 		this.div.find('.lnkReport').attr('href', 'webguisrv/generate_report?evtid=' + this.data._id);
 		
+		options.title = 'Download data';
+		this.div.find('.lnkData').tooltip(options);
+		this.div.find('.lnkData').click( global.openDownloadDialog.bind(global, this.data) );
+		
 		options.title = 'Copy to my list';
 		this.div.find('.lnkCopy').tooltip(options);
 		
@@ -3322,7 +3336,7 @@ function EQWidget(data, marker) {
 		var width = prop.width ? prop.width + ' km' : 'n/a';
 
 		this.div.find('.region').text(prop.region);
-		this.div.find('.mag').text(+prop.magnitude.toFixed(2));
+		this.div.find('.mag').text( prop.magnitude ? +prop.magnitude.toFixed(2) : '-');
 		this.div.find('.datetime').html(
 				datestr + ' &#183; ' + timestr + ' UTC' + ' &#183; '
 						+ this.data._id);
@@ -3437,6 +3451,9 @@ function EQWidget(data, marker) {
 			
 			if (checkPerm('report'))
 				this.div.find('.lnkReport').show();
+			
+			if (checkPerm('data'))
+				this.div.find('.lnkData').show();
 
 		} else {
 
@@ -6648,7 +6665,8 @@ function AdminDialog() {
 			'api': new HtmlCheckBox('API'),
 			'report': new HtmlCheckBox('Report'),
 			'evtset': new HtmlCheckBox('Event Sets'),
-			'flood': new HtmlCheckBox('Flood Prototype')
+			'flood': new HtmlCheckBox('Flood Prototype'),
+			'data': new HtmlCheckBox('Data Services')
 		};
 		
 		this.instInputs = {
@@ -7044,8 +7062,8 @@ function AdminDialog() {
 		
 		var users = this.userlist.filter('inst', inst._id);
 		this.tabInst.find('.users').empty();
-		for( var i = 0; i < users.length; i++ )
-			this.tabInst.find('.users').append('<li>' + users[i].username + '</li>');
+		for( var i = 0; i < users.length(); i++ )
+			this.tabInst.find('.users').append('<li>' + users.get(i).username + '</li>');
 	};
 	
 	this.saveInst = function() {
@@ -7326,6 +7344,18 @@ function HtmlDropDown() {
 			}
 		}
 		return this.idx;
+	};
+	
+	this.selectedItem = function() {
+		return (this.idx > -1 ? this.source.get(this.idx) : null);
+	};
+	
+	this.enable = function() {
+		this.div.find('button').prop('disabled', false);
+	};
+	
+	this.disable = function() {
+		this.div.find('button').prop('disabled', true);
 	};
 
 	this.init();
@@ -7675,6 +7705,7 @@ function HtmlDialog(box) {
 			this.content.append(box.find('> .content'));
 			this.footer.append(box.find('> .footer'));
 			box.html(this.div);
+			$('.dynamic').append(box);
 		}
 		this.unlock();
 	};
@@ -9395,3 +9426,76 @@ DelayedFunction.create = function(fun, ms) {
 	var dlfun = new DelayedFunction(fun, ms);
 	return dlfun.after.bind(dlfun);
 };
+
+
+/* Dialogs */
+function DownloadDialog(data) {
+	
+	this.init = function(data) {
+		this.data = data;
+		this.dialog = new HtmlDialog( $('.templates .download-dialog').clone() );
+		this.drpProducts = new HtmlDropDown();
+		
+		var cbox = new HtmlInputGroup('Product', 'list');
+		cbox.input.append( this.drpProducts.div );
+		
+		this.secProducts = this.dialog.content.find('.secProducts');
+		this.secProducts.append( cbox.div );
+		this.btnDownload = this.dialog.footer.find('.btnDownload');
+		this.btnDownload.click( this.downloadData.bind(this) );
+		this.divStatus = this.dialog.content.find('.status');
+		this.divError = this.dialog.content.find('.error');
+		this.loaded = false;
+	};
+	
+	this.downloadData = function() {
+		var evtid = this.data._id;
+		var file = this.drpProducts.selectedItem().file;
+		var cookie_val = 'download_' + this.data._id.replace('@', '_');
+		
+		$.removeCookie( cookie_val );
+		this.timer = setInterval( (function(cookie_val) {
+			console.log('check');
+			var cookie = $.cookie( cookie_val );
+			/* replace @ with _ */
+			if( cookie ) {
+				this.divStatus.hide();
+				$.removeCookie( cookie_val );
+				this.btnDownload.attr('disabled', false);
+				this.drpProducts.enable();
+				clearInterval(this.timer);
+				/* Show error message if something went wrong. */
+				if( cookie != 'success' )
+					this.divError.html('The following error occurred: ' + cookie);
+			}
+		}).bind(this, cookie_val), 100);
+		
+		this.divError.html('');
+		this.divStatus.show();
+		this.btnDownload.prop('disabled', true);
+		this.drpProducts.disable();
+		
+		/* Start download in new iframe to avoid redirects of any kind. The date parameter is necessary to suppress caching. */
+		$('<iframe>', {src: 'datasrv/' + evtid + '/' + file + '?date=' + Date.now() + '&download'}).appendTo('.dynamic').hide();
+	};
+	
+	this.loadProducts = function() {
+		ajax('datasrv/help', null, (function(result) {
+			var key = this.data instanceof EventSet ? 'evtset' : 'evt';
+			var products = new Container().setList(result.products).filter(
+				function(o){ return o.show.indexOf(key) != -1; }
+			);
+			this.drpProducts.setToString( function(o){return o.shortdesc;} );
+			this.drpProducts.setSource(products);
+			this.drpProducts.select(0);
+			this.loaded = true;
+			this.dialog.show();
+		}).bind(this));
+	};
+	
+	this.show = function() {
+		this.loaded ? this.dialog.show() : this.loadProducts();
+	};
+	
+	this.init(data);
+}
