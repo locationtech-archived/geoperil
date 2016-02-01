@@ -64,12 +64,26 @@ fi
 if [ ${plot_cfz} == Y ] || [ ${plot_tfp} == Y ]
 then
 #-Dx0.4c/5.6c/0c/1/BL
+if [ ${plot_cfz} == Y ] && [ ${plot_tfp} == Y ]
+then
 gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -P -R -J ${tfp_cfz_pslegend} -O -V -K <<EOF>> ${output}
 N 2
 #S 0c c 0.13c 255/255/255 0.01c,${tfp_stroke} 0.3c TFP
 S 0c c 0.13c 255/255/255 0.01c,0/0/0 0.3c TFP
 S 1.5c s 0.3c 255/255/255 0.01c,${cfz_stroke} 1.8c CFZ 
 EOF
+elif [ ${plot_cfz} == N ] && [ ${plot_tfp} == Y ]
+then
+gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -P -R -J ${tfp_cfz_pslegend} -O -V -K <<EOF>> ${output}
+S 0c c 0.13c 255/255/255 0.01c,0/0/0 0.3c TFP
+EOF
+elif [ ${plot_cfz} == Y ] && [ ${plot_tfp} == N ]
+then
+gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -P -R -J ${tfp_cfz_pslegend} -O -V -K <<EOF>> ${output}
+S 0c s 0.3c 255/255/255 0.01c,${cfz_stroke} 0.3c CFZ 
+EOF
+fi
+
 #-D2c/6c/4c/0.3ch
 #gmt psscale --MAP_ANNOT_OFFSET_PRIMARY=0.06c --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${tfp_cfz_psscale} -C${cfz_cpt} -Ef -Ba1f0.2 -By+l[m] -G0/4 -O -K -V >> ${output}
 gmt psscale --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${tfp_cfz_psscale_1} -C${cfz_cpt} -Li -G0/0.5 -O -K -V >> ${output}

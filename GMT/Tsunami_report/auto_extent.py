@@ -4,6 +4,8 @@ import subprocess
 import re
 
 
+
+
 ######################################
 ######## calc wave height extent #####
 ######################################
@@ -180,7 +182,7 @@ def reformat_coords_if_dateline(west_calc, east_calc, south_calc, north_calc):
     return (west_calc, east_calc, lon_diff, lat_diff)    	
 
 #Berechnet automatisch den Kartenrahmen nach Eingabe der Koordinaten und des Seitenverhaeltnisses
-def calc_coords(west_calc, east_calc, south_calc, north_calc, crs_system_calc, map_width_calc, unit_calc, y_ratio_calc, x_ratio_calc):
+def calc_coords(west_calc, east_calc, south_calc, north_calc, crs_system_calc, map_width_calc, unit_calc, y_ratio_calc, x_ratio_calc, tempdir):
     #Wandelt Koordinaten die ueber die Datumsgrenze gehen um
     west_calc, east_calc, lon_diff, lat_diff = reformat_coords_if_dateline(west_calc, east_calc, south_calc, north_calc)
 
@@ -193,7 +195,7 @@ def calc_coords(west_calc, east_calc, south_calc, north_calc, crs_system_calc, m
     #berechnet breite und hoehe der karte in unit_calc; fuehrt oberen Command aus
     #entspricht z.B.: gmt mapproject -R-60/5/30/60 -JQ15.8c   
     calc_width_height_command = ['gmt', 'mapproject', extent, projection]
-    mapproject = subprocess.Popen(calc_width_height_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    mapproject = subprocess.Popen(calc_width_height_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=tempdir)
     #bytes("%f %f\n" % (east_calc,north_calc),"ascii") = echo east_calc north_calc 
     width_height = mapproject.communicate(bytes("%f %f\n" % (east_calc,north_calc),"ascii"))[0].decode().split()
 
@@ -212,12 +214,12 @@ def calc_coords(west_calc, east_calc, south_calc, north_calc, crs_system_calc, m
         east_calc_unit_calc =  width + width_add
     
         #Berechnet oestliche Koordinate anhand der eben berechneten Verbesserung
-        calc_west_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        calc_west_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=tempdir)
         west_calc = calc_west_calc.communicate(bytes("%f %f\n" % (west_calc_unit_calc,height),"ascii"))[0].decode().split()
         west_calc = round(float(west_calc[0]),2)
     
         #Berechnet westliche Koordinate anhand der eben berechneten Verbesserung
-        calc_east_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        calc_east_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=tempdir)
         east_calc = calc_east_calc.communicate(bytes("%f %f\n" % (east_calc_unit_calc,height),"ascii"))[0].decode().split()
         east_calc = round(float(east_calc[0]),2)
     
@@ -229,12 +231,12 @@ def calc_coords(west_calc, east_calc, south_calc, north_calc, crs_system_calc, m
         north_calc_unit_calc = height + height_add
         
 	#Berechnet suedliche Koordinate anhand der eben berechneten Verbesserung
-        calc_south_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        calc_south_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=tempdir)
         south_calc = calc_south_calc.communicate(bytes("%f %f\n" % (width,south_calc_unit_calc),"ascii"))[0].decode().split()  
         south_calc = round(float(south_calc[1]),2)
     
         #Berechnet noerdliche Koordinate anhand der eben berechneten Verbesserung
-        calc_north_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        calc_north_calc = subprocess.Popen(calc_coords_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=tempdir)
         north_calc = calc_north_calc.communicate(bytes("%f %f\n" % (width,north_calc_unit_calc),"ascii"))[0].decode().split() 
         north_calc = round(float(north_calc[1]),2)
     #else:
@@ -245,12 +247,13 @@ def calc_coords(west_calc, east_calc, south_calc, north_calc, crs_system_calc, m
 
     #gibt neue Hoehe und Breite aus:
     extent = '-R%s/%s/%s/%s' % (west_calc, east_calc, south_calc, north_calc)
-    mapproject = subprocess.Popen(['gmt', 'mapproject', extent, projection], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    mapproject = subprocess.Popen(['gmt', 'mapproject', extent, projection], stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=tempdir)
     width_height = mapproject.communicate(bytes("%f %f\n" % (east_calc,north_calc),"ascii"))[0].decode().split()
 
     width = float(width_height[0])
     height = float(width_height[1])
-
+    #print (west_calc, east_calc, south_calc, north_calc, width, height, lon_diff, lat_diff)
+    #print (tempdir)     
     return (west_calc, east_calc, south_calc, north_calc, width, height, lon_diff, lat_diff)
 
 

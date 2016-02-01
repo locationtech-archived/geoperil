@@ -60,8 +60,8 @@ etopo_land_cpt = 'cpt/basemap/brown.cpt'
 #etopo_water_cpt = 'cpt/basemap/water_gray.cpt'
 #etopo_land_cpt = 'cpt/basemap/land_gray.cpt'
 
-#wave_height_cpt = 'cpt/waveheight_3.cpt'
-wave_height_cpt = 'cpt/waveheight_1.cpt'
+#wave_height_cpt = 'cpt/waveheight_1.cpt'
+wave_height_cpt = 'cpt/wave_height/waveheight_1.cpt'
 
 #world population GRID
 world_pop_cpt = 'cpt/world_population/world_pop_label.cpt'
