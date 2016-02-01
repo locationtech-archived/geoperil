@@ -2,102 +2,174 @@
 
 import math
 
-def legend_order (world_pop, city_pop, plot_wave_time):
-    world_pop_pslegend_x, world_pop_psscale_x_1, world_pop_psscale_x_2, city_pop_pslegend_x, wave_time_x = 0, 0, 0, 0, 0
 
-    if world_pop=="Y" and city_pop=="Y" and plot_wave_time=="Y":
-        #wave_time, city_pop und world_pop auf einer Ebene
-        world_pop_pslegend_x = 0.2
-        world_pop_psscale_x_1 = 0.2
-        world_pop_psscale_x_2 = 2.2
-        city_pop_pslegend_x = 6.3
-        wave_time_x = 11.0
-    elif world_pop=="Y" and city_pop=="Y" and plot_wave_time=="N":
-        #world_pop und city_pop in einer Ebene
-        world_pop_pslegend_x = 2.2
-        world_pop_psscale_x_1 = 2.2
-        world_pop_psscale_x_2 = 4.2
-        city_pop_pslegend_x = 9.8
-    elif world_pop=="Y" and city_pop=="N" and plot_wave_time=="Y":
-        #world_pop und wave_time in einer Ebene
-        world_pop_pslegend_x = 2.2
-        world_pop_psscale_x_1 = 2.2
-        world_pop_psscale_x_2 = 4.2
-        wave_time_x = 9.3
-    elif world_pop=="Y" and city_pop=="N" and plot_wave_time=="N":
-        #nur world_pop
-        world_pop_pslegend_x = 6.2
-        world_pop_psscale_x_1 = 6.2
-        world_pop_psscale_x_2 = 8.2
-    elif world_pop=="N" and city_pop=="Y" and plot_wave_time=="Y":
-        #city_pop und wave_time in einer Ebene
-        city_pop_pslegend_x = 2.2
-        wave_time_x = 9.3
-    elif world_pop=="N" and city_pop=="Y" and plot_wave_time=="N":
-        #nur city_pop
-        city_pop_pslegend_x = 6.3
-    elif world_pop=="N" and city_pop=="N" and plot_wave_time=="Y":
-        #nur wave_time
-        wave_time_x = 5.9
-    return (wave_time_x, world_pop_pslegend_x, world_pop_psscale_x_1, world_pop_psscale_x_2, city_pop_pslegend_x)
-
-
-
-
-def calc_legend_positions (world_pop, city_pop, plot_wave_time, plot_wave_height, y_map_dist):
-    wave_height_pslegend_x, wave_height_psscale_x, wave_height_psscale_length = 0, 0, 0
-    world_pop_pslegend_x, world_pop_psscale_x_1, world_pop_psscale_x_2, city_pop_pslegend_x, wave_time_x = 0, 0, 0, 0, 0    
-    #Y-Position der Legendbestandteile
-    wave_height_pslegend_y = float(y_map_dist)-1.8
-    wave_height_psscale_y = float(y_map_dist)-1.5
-    wave_time_y = float(y_map_dist)-2.3
-    world_pop_pslegend_y = float(y_map_dist)-1.8
-    world_pop_psscale_y = float(y_map_dist)-2.15
-    city_pop_pslegend_y = float(y_map_dist)-3.0
+def calc_legend_for_wt_TC_wp_c (plot_legend_list):
+    #plot_legend_list2 = [plot_wave_time, world_pop, plot_cities, plot_cfz_tfp]
+    plot_legend_list2 = [plot_legend_list[1], plot_legend_list[2], plot_legend_list[3], plot_legend_list[4]]
     
-    if plot_wave_height=="Y" and plot_wave_time=="N" and city_pop=="N" and world_pop=="N":
-        #scalebar ueber volle laenge
-        wave_height_pslegend_x = 6.5
-        wave_height_psscale_x = 7.9
-        wave_height_psscale_length = 12
-    elif plot_wave_height=="Y" and plot_wave_time=="Y" and city_pop=="N" and world_pop=="N":
-        #scalebar und traveltime auf einer ebene
-        wave_height_pslegend_x = 3.5
-        wave_height_psscale_x = 4.9
-        wave_height_psscale_length = 8.0
-        wave_time_x = 10.8
-    elif plot_wave_height=="Y" and plot_wave_time=="N" and city_pop=="Y" and world_pop=="N":
-        #scalebar und city_pop auf einer ebene
-        wave_height_pslegend_x = 3.5
-        wave_height_psscale_x = 4.9
-        wave_height_psscale_length = 8.0    
-        city_pop_pslegend_x = 10.8
-    elif plot_wave_height=="Y" and plot_wave_time=="N" and city_pop=="N" and world_pop=="Y":   
-        #scalebar und world_pop auf einer ebene 
-        wave_height_pslegend_x = 3.5
-        wave_height_psscale_x = 4.9
-        wave_height_psscale_length = 8.0
-        world_pop_pslegend_x = 10.3
-        world_pop_psscale_x_1 = 10.3
-        world_pop_psscale_x_2 = 12.3
-    elif plot_wave_height=="Y" and (plot_wave_time=="Y" or city_pop=="Y" or world_pop=="Y"):
-        #scalebar lang und wave_time, city_pop und world_pop auf einer ebene
-        wave_height_pslegend_x = 6.5
-        wave_height_psscale_x = 7.9
-        wave_height_psscale_length = 12 
-        wave_time_x, world_pop_pslegend_x, world_pop_psscale_x_1, world_pop_psscale_x_2, city_pop_pslegend_x = legend_order(world_pop, city_pop, plot_wave_time)
-        world_pop_pslegend_y -= 2.2
-        world_pop_psscale_y -= 2.2
-        city_pop_pslegend_y -= 2.2
-        wave_time_y -= 2.2
-    else:
-        #nur wave_time, city_pop und world_pop auf einer ebene
-        wave_time_x, world_pop_pslegend_x, world_pop_psscale_x_1, world_pop_psscale_x_2, city_pop_pslegend_x = legend_order(world_pop, city_pop, plot_wave_time)
+    world_pop_pslegend_x, world_pop_psscale_1_x, world_pop_psscale_2_x = 0, 0, 0
+    cities_pslegend_x = 0
+    wave_time_pslegend_x = 0 
+    tfp_cfz_pslegend_x, tfp_cfz_psscale_1_x, tfp_cfz_psscale_2_x = 0, 0, 0
+    
+    if plot_legend_list2==['Y', 'Y', 'Y', 'Y']:
+        #print ('======TC======  ======wp=======  ======c======  ======wt======')
+        world_pop_pslegend_x = 4.4
+        cities_pslegend_x = 9.2
+        wave_time_pslegend_x = 12.5
+	
+    elif plot_legend_list2==['N', 'Y', 'Y', 'Y']: 	
+        #print ('       ======TC======  ======wp=======  ======c======         ') 
+        tfp_cfz_pslegend_x = 1.4
+        world_pop_pslegend_x = 6
+        cities_pslegend_x = 11.5
+  
+    elif plot_legend_list2==['Y', 'N', 'Y', 'Y']: 	 	
+        #print ('       ======TC======  ======c=======  ======wt======         ')
+        tfp_cfz_pslegend_x = 1.4
+        cities_pslegend_x = 7
+        wave_time_pslegend_x = 11	
+	
+    elif plot_legend_list2==['Y', 'Y', 'N', 'Y']: 	 	
+        #print ('       ======TC======  ======wp=======  ======wt======        ')
+        tfp_cfz_pslegend_x = 1.4
+        world_pop_pslegend_x = 6	
+        wave_time_pslegend_x = 11	
+	
+    elif plot_legend_list2==['Y', 'Y', 'Y', 'N']: 	 	
+        #print ('       ======wp======  ======c=======  ======wt======         ')
+        world_pop_pslegend_x = 1.4
+        cities_pslegend_x = 7	
+        wave_time_pslegend_x = 11
+    elif plot_legend_list2==['N', 'Y', 'N', 'Y']: 	 	
+        #print ('             ======TC======  ======wp=======                  ')
+        tfp_cfz_pslegend_x = 3.5
+        world_pop_pslegend_x = 8.5		
+	
+    elif plot_legend_list2==['N', 'N', 'Y', 'Y']: 	 	
+        #print ('             ======TC======  ======c=======                  ')	
+        tfp_cfz_pslegend_x = 3.5
+        cities_pslegend_x = 9
+			
+    elif plot_legend_list2==['Y', 'N', 'N', 'Y']: 	 	
+        #print ('             ======TC======  ======wt=======                  ')
+        tfp_cfz_pslegend_x = 3.5
+        wave_time_pslegend_x = 9
+			
+    elif plot_legend_list2==['N', 'Y', 'Y', 'N']: 	 	
+        #print ('             ======wp======  ======c=======                  ')	
+        world_pop_pslegend_x = 3.5
+        cities_pslegend_x = 9	
+		
+    elif plot_legend_list2==['Y', 'Y', 'N', 'N']: 	 	
+        #print ('             ======wp======  ======wt=======                  ')
+        world_pop_pslegend_x = 3.5	
+        wave_time_pslegend_x = 9
+		
+    elif plot_legend_list2==['Y', 'N', 'Y', 'N']: 	 	
+        #print ('             ======c======  ======wt=======                  ')
+        cities_pslegend_x = 3.5	
+        wave_time_pslegend_x = 9
+			
+    elif plot_legend_list2==['N', 'N', 'N', 'Y']: 	 	
+        #print ('                     ======TC======                       ')
+        tfp_cfz_pslegend_x = 6.5 
+		
+    elif plot_legend_list2==['N', 'Y', 'N', 'N']: 	 	
+        #print ('                     ======wp======                       ')
+        world_pop_pslegend_x = 6.3
+		
+    elif plot_legend_list2==['N', 'N', 'Y', 'N']: 	 	
+        #print ('                     ======c======                       ')
+        cities_pslegend_x = 6.5	
+	
+    elif plot_legend_list2==['Y', 'N', 'N', 'N']: 	 	
+        #print ('                     ======wt======                       ')	
+        wave_time_pslegend_x = 6.2									
 
-    wave_height_legend = [wave_height_pslegend_x, wave_height_pslegend_y, wave_height_psscale_x, wave_height_psscale_y, wave_height_psscale_length]
-    wave_time_legend = [wave_time_x, wave_time_y] 
-    world_pop_legend = [world_pop_pslegend_x, world_pop_pslegend_y, world_pop_psscale_x_1, world_pop_psscale_x_2, world_pop_psscale_y]
-    city_pop_legend = [city_pop_pslegend_x, city_pop_pslegend_y]
-    legend_positions = [wave_height_legend, wave_time_legend, world_pop_legend, city_pop_legend]
+    world_pop_psscale_1_x = world_pop_pslegend_x
+    world_pop_psscale_2_x = world_pop_psscale_1_x + 1.8   
+    
+    tfp_cfz_psscale_1_x = tfp_cfz_pslegend_x
+    tfp_cfz_psscale_2_x = tfp_cfz_psscale_1_x + 2.2
 
-    return (legend_positions)
+    return (world_pop_pslegend_x, world_pop_psscale_1_x, world_pop_psscale_2_x, cities_pslegend_x, wave_time_pslegend_x, tfp_cfz_pslegend_x, tfp_cfz_psscale_1_x, tfp_cfz_psscale_2_x)
+
+
+def calc_legend_positions (plot_legend_list, y_map_dist):
+    wave_height_pslegend_x, wave_height_psscale_x, wave_height_psscale_length = 0, 0, 0
+    world_pop_pslegend_x, world_pop_psscale_1_x, world_pop_psscale_2_x = 0, 0, 0
+    cities_pslegend_x = 0
+    wave_time_pslegend_x = 0 
+    tfp_cfz_pslegend_x, tfp_cfz_psscale_1_x, tfp_cfz_psscale_2_x = 0, 0, 0   
+    
+    #Y-Position der Legendbestandteile
+    wave_height_pslegend_y = float(y_map_dist)-1.55
+    wave_height_psscale_y = float(y_map_dist)-1.15
+    wave_time_pslegend_y = float(y_map_dist)-1.95
+    world_pop_pslegend_y = float(y_map_dist)-1.55
+    world_pop_psscale_y = float(y_map_dist)-1.75
+    cities_pslegend_y = float(y_map_dist)-2.49
+    tfp_cfz_pslegend_y = float(y_map_dist)-1.55
+    tfp_cfz_psscale_y = float(y_map_dist)-1.55
+    
+    #plot_legend_list = [plot_wave_height, plot_wave_time, world_pop, plot_cities, plot_cfz_tfp]
+    if plot_legend_list==['Y', 'N', 'N', 'N', 'N']:
+        #nur wave-height
+        wave_height_pslegend_x = 6.6
+        wave_height_psscale_x = 7.9
+        wave_height_psscale_length = 13
+    elif plot_legend_list==['Y', 'Y', 'N', 'N', 'N']:
+        #nur wave-height und wave-time
+        wave_height_pslegend_x = 4
+        wave_height_psscale_x = 5.4
+        wave_height_psscale_length = 8	
+        wave_time_pslegend_x = 11
+    elif plot_legend_list==['Y', 'Y', 'Y', 'Y', 'Y']:
+        #alles 
+        world_pop_pslegend_x, world_pop_psscale_1_x, world_pop_psscale_2_x, cities_pslegend_x, wave_time_pslegend_x, tfp_cfz_pslegend_x, tfp_cfz_psscale_1_x, tfp_cfz_psscale_2_x = calc_legend_for_wt_TC_wp_c (['Y','N','Y','Y','Y'])
+        
+        wave_height_pslegend_x = 4
+        wave_height_psscale_x = 5.4
+        wave_height_psscale_length = 8	
+        wave_time_pslegend_x = 11
+	
+        world_pop_pslegend_y -= 1.55
+        world_pop_psscale_y -= 1.55
+        cities_pslegend_y -= 1.55
+        tfp_cfz_pslegend_y -= 1.55
+        tfp_cfz_psscale_y -= 1.55
+    elif plot_legend_list[0]=="Y" and (plot_legend_list[1]=="Y" or plot_legend_list[2]=="Y" or plot_legend_list[3]=="Y" or plot_legend_list[4]=="Y"):
+        #wave-height und alle anderen
+        world_pop_pslegend_x, world_pop_psscale_1_x, world_pop_psscale_2_x, cities_pslegend_x, wave_time_pslegend_x, tfp_cfz_pslegend_x, tfp_cfz_psscale_1_x, tfp_cfz_psscale_2_x = calc_legend_for_wt_TC_wp_c (plot_legend_list)
+	
+        wave_height_pslegend_x = 6.6
+        wave_height_psscale_x = 7.9
+        wave_height_psscale_length = 13   
+	
+        world_pop_pslegend_y -= 1.55
+        world_pop_psscale_y -= 1.55
+        cities_pslegend_y -= 1.55
+        tfp_cfz_pslegend_y -= 1.55
+        tfp_cfz_psscale_y -= 1.55
+        wave_time_pslegend_y -= 1.55	
+    elif plot_legend_list[0]=="N" and (plot_legend_list[1]=="Y" or plot_legend_list[2]=="Y" or plot_legend_list[3]=="Y" or plot_legend_list[4]=="Y"):	    
+        #alles außer wave-height
+        world_pop_pslegend_x, world_pop_psscale_1_x, world_pop_psscale_2_x, cities_pslegend_x, wave_time_pslegend_x, tfp_cfz_pslegend_x, tfp_cfz_psscale_1_x, tfp_cfz_psscale_2_x = calc_legend_for_wt_TC_wp_c (plot_legend_list) 
+	
+    #erstellt die Positionen der Legendenbestandteile fuer gmt-script Legend.sh	
+    wave_height_pslegend = '-Dx%sc/%sc/2.8c/1c/BL' % (wave_height_pslegend_x, wave_height_pslegend_y)
+    wave_height_psscale = '-D%sc/%sc/%sc/0.3ch' % (wave_height_psscale_x, wave_height_psscale_y, wave_height_psscale_length)
+    wave_time_pslegend = '-Dx%sc/%sc/4c/1c/BL' % (wave_time_pslegend_x, wave_time_pslegend_y)
+
+    world_pop_pslegend = '-Dx%sc/%sc/4c/1c/BL' % (world_pop_pslegend_x, world_pop_pslegend_y)
+    world_pop_psscale_1 = '-D%sc/%sc/-1.2c/0.35c' % (world_pop_psscale_1_x, world_pop_psscale_y)
+    world_pop_psscale_2 = '-D%sc/%sc/-1.2c/0.35c' % (world_pop_psscale_2_x, world_pop_psscale_y)
+    
+    cities_pslegend = '-Dx%sc/%sc/6c/BL' % (cities_pslegend_x, cities_pslegend_y)	 
+
+    tfp_cfz_pslegend = '-Dx%sc/%sc/0c/1/BL' % (tfp_cfz_pslegend_x, tfp_cfz_pslegend_y)
+    tfp_cfz_psscale_1 = '-D%sc/%sc/-0.8/0.35c' % (tfp_cfz_psscale_1_x, tfp_cfz_psscale_y)
+    tfp_cfz_psscale_2 = '-D%sc/%sc/-0.8/0.35c' % (tfp_cfz_psscale_2_x, tfp_cfz_psscale_y)   
+    
+    return (wave_height_pslegend, wave_height_psscale, wave_time_pslegend, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2)

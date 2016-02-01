@@ -188,15 +188,18 @@ print ('    Traveltime:      ', wave_time)
 ############################
 ## Kartenabstand (unten) ###
 ############################
-y_map_dist = 2
 
-layer_list_count = [plot_wave_time, world_pop, plot_cities].count("Y")
-
-if (plot_wave_height=="Y" and layer_list_count <=1) or (plot_wave_height=="N" and layer_list_count >=1):
-    y_map_dist += 2
-elif plot_wave_height=="Y" and layer_list_count >1:
-    y_map_dist += 4 
-    
+y_map_dist = 1
+layer_list_count = [plot_wave_time, world_pop, plot_cities, plot_tfp, plot_cfz].count("Y")   
+layer_list_count_xwave = [world_pop, plot_cities, plot_tfp, plot_cfz].count("Y")   
+     
+if  (plot_wave_height=="Y" and layer_list_count <= 0) or (plot_wave_height=="Y" and plot_wave_time=="Y" and layer_list_count_xwave <= 0):
+    y_map_dist += 1.9  
+elif plot_wave_height=="Y" and layer_list_count >=1:
+    y_map_dist += 3.8   
+elif plot_wave_height=="N" and layer_list_count >=1:    
+    y_map_dist += 2.3
+ 
 map_height = (map_width * y_ratio) / x_ratio  
 
 subtitle_pos_y = y_map_dist + map_height + 0.7  
@@ -391,33 +394,19 @@ if plot_map_scale=="Y":
     subprocess.call(['./gmt_scripts/map_scale.sh', output, R, J, str(lon_mid), str(lat_mid), str(scalebar_length), y_map_distance])
 
 ########## Legende ##########
+if plot_cfz=="Y" or plot_tfp=="Y":
+    plot_cfz_tfp = "Y"
+else:
+    plot_cfz_tfp = "N"
+plot_legend_list = [plot_wave_height, plot_wave_time, world_pop, plot_cities, plot_cfz_tfp]
 
-#Berechnet die Positionen der Legendenbestandteile
-legend_positions = calc_legend_positions(world_pop, plot_cities, plot_wave_time, plot_wave_height, y_map_dist)
-#    Aufbau von legend_positions:
-#wave_height_legend = [wave_height_pslegend_x, wave_height_pslegend_y, wave_height_psscale_x, wave_height_psscale_y, wave_height_psscale_length]
-#wave_time_legend = [wave_time_x, wave_time_y] 
-#world_pop_legend = [world_pop_pslegend_x, world_pop_pslegend_y, world_pop_psscale_x_1, world_pop_psscale_x_2, world_pop_psscale_y]
-#city_pop_legend = [city_pop_pslegend_x, city_pop_pslegend_y]
-#legend_positions = [wave_height_legend, wave_time_legend, world_pop_legend, city_pop_legend]
-
-wave_height_pslegend = '-Dx%sc/%sc/2.8c/1c/BL' % (legend_positions[0][0], legend_positions[0][1])
-wave_height_psscale = '-D%sc/%sc/%sc/0.5ch' % (legend_positions[0][2], legend_positions[0][3], legend_positions[0][4])
-wave_time_pslegend = '-Dx%sc/%sc/4c/1c/BL' % (legend_positions[1][0], legend_positions[1][1])
-
-world_pop_pslegend = '-Dx%sc/%sc/4c/1c/BL' % (legend_positions[2][0], legend_positions[2][1])
-world_pop_psscale_1 = '-D%sc/%sc/-1.5c/0.4c' % (legend_positions[2][2], legend_positions[2][4])
-world_pop_psscale_2 = '-D%sc/%sc/-1.5c/0.4c' % (legend_positions[2][3], legend_positions[2][4])
-city_pop_pslegend = '-Dx%sc/%sc/6c/BL' % (legend_positions[3][0], legend_positions[3][1])
+wave_height_pslegend, wave_height_psscale, wave_time_pslegend, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2 = calc_legend_positions (plot_legend_list, y_map_dist)
 
 created_y = y_map_dist - 0.6
 
-#erstellt Legende
-subprocess.call(['./gmt_scripts/Legend.sh', output, wave_height_cpt, plot_wave_height, plot_wave_time, \
-    wave_height_pslegend, wave_height_psscale, wave_time_pslegend, \
-    world_pop_cpt, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, city_pop_pslegend, plot_cities, world_pop, \
-    date, str(created_y), str(map_width), cities_fill, cities_stroke])
-
+subprocess.call(['./gmt_scripts/Legend.sh',output, plot_wave_height, plot_wave_time, world_pop, plot_cfz, plot_tfp, plot_cities, cfz_cpt, cfz_stroke, tfp_stroke, wave_height_cpt, world_pop_cpt, cities_fill, cities_stroke, \
+    wave_height_pslegend, wave_height_psscale, wave_time_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, \
+    str(created_y), str(map_width), date])
 ######################################
 ###### Umwandlung in PNG/PDF #########
 ######################################

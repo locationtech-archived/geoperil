@@ -6,7 +6,8 @@
 ###############
 
 #Basemap Daten Directory
-basemap_data_dir = 'data/etopo/basemaps/'
+#basemap_data_dir = 'data/etopo/basemaps/'
+basemap_data_dir = '/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/etopo/basemaps/'
 
 #World-Population Datei
 world_pop_data = 'data/world_pop2000_adj.nc'
@@ -70,7 +71,8 @@ cities_fill = '230/26/26'
 cities_stroke = '58/0/0'
 
 #CFZ
-cfz_cpt = 'cpt/CFZ/CFZ.cpt'
+#cfz_cpt = 'cpt/CFZ/CFZ.cpt'
+cfz_cpt = 'cpt/TFP/TFP.cpt'
 cfz_stroke = '35/35/35'
 
 #TFP

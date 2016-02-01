@@ -24,7 +24,7 @@ gmt grdclip ${wave_time} -G${wave_time_temp} -Sb0/NaN -V
 #-A1+u' h'+apu+w250; apu=Beschriftung uphill; w250=Specifies how many (x,y) points will be used to estimate label angles
 	#gmt grdcontour ${wave_time_temp} -R -J -W0.007c,${Isochrone_color} -Z0.01666666666666666666666666666667 -A1+u' h'+apu+w250+f8p,Helvetica-Bold,red -P -Ya${y_map_dist} -O -K -V >> ${output}
 #gmt grdcontour ${wave_time_temp} -R -J -W0.007c,${Isochrone_color} -Z0.01666666666666666666666666666667 -A1+u' hour'+f8p,Helvetica-Bold,red -Gl10W/35N/80W/66N -P -Ya${y_map_dist} -O -K -V >> ${output}
-gmt grdcontour ${wave_time_temp} -R -J -W0.007c,${Isochrone_color} -Z0.01666666666666666666666666666667 -A1+u' hour'+f8p,Helvetica-Bold,red -P -Ya${y_map_dist} -O -K -V >> ${output}
+gmt grdcontour ${wave_time_temp} -R -J -W0.01c,${Isochrone_color} -Z0.01666666666666666666666666666667 -A1+u' hour'+f8p,Helvetica-Bold,red -P -Ya${y_map_dist} -O -K -V >> ${output}
 
 
 
