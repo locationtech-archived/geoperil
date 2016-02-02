@@ -649,7 +649,7 @@ public class Services {
 				  for( Double strike: strikes ) {
 					  for( Double rake: rakes ) {
 						  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
-						  String retid = _compute(eqp, user, name + " " + i, null, null, dur, evtset );
+						  String retid = _compute(eqp, user, name + " " + i, null, null, dur, evtset, "easywave" );
 						  evtids.add(retid);
 						  i++;
 					  }
@@ -780,7 +780,8 @@ public class Services {
   }
   
   private String _compute(EQParameter eqp, User user, String name, 
-		  String parent, String root, Integer dur, EventSet evtSet) {
+		  String parent, String root, Integer dur, EventSet evtSet,
+		  String algo) {
 	  	  	  
 	  /* create a unique ID that is not already present in the DB */
 	  String id = newRandomId(user.name);
@@ -803,6 +804,9 @@ public class Services {
 	  sub.put( "latitude", eqp.lat );
 	  sub.put( "longitude", eqp.lon );
 	  sub.put( "magnitude", eqp.mw );
+	  sub.put( "slip", eqp.slip );
+	  sub.put( "length", eqp.length );
+	  sub.put( "width", eqp.width );
 	  sub.put( "depth", eqp.depth );
 	  sub.put( "dip", eqp.dip );
 	  sub.put( "strike", eqp.strike );
@@ -839,8 +843,13 @@ public class Services {
 	  /* start request */
 	  EQTask task = new EQTask(eqp, id, user, dur, accel);
 	  task.evtset = evtSet;
+	  task.algo = algo;
 	  if( evtSet == null ) {
-		  task.setSlots(IScheduler.SLOT_NORMAL, IScheduler.SLOT_EXCLUSIVE);
+		  if( algo.equals("hysea") ) {
+			  task.setSlots(IScheduler.SLOT_HYSEA);
+		  } else {
+			  task.setSlots(IScheduler.SLOT_NORMAL, IScheduler.SLOT_EXCLUSIVE);
+		  }
 	  } else {
 		  task.setSlots(IScheduler.SLOT_NORMAL);
 		  task.dt_out = 0;
@@ -857,6 +866,9 @@ public class Services {
 		  @FormParam("lon") Double lon, 
 		  @FormParam("lat") Double lat,
 		  @FormParam("mag") Double mag,
+		  @FormParam("slip") Double slip,
+		  @FormParam("length") Double length,
+		  @FormParam("width") Double width,
 		  @FormParam("depth") Double depth,
 		  @FormParam("dip") Double dip,
 		  @FormParam("strike") Double strike,
@@ -865,12 +877,17 @@ public class Services {
 		  @FormParam("date") String dateStr,
 		  @FormParam("root") String root,
 		  @FormParam("parent") String parent,
+		  @FormParam("algo") @DefaultValue("easywave") String algo,
 		  @CookieParam("server_cookie") String session) {
 	  	  	  
-	  Object[] required = { name, lon, lat, mag, depth,
-							dip, strike, rake, dur };
-
-	  if( ! checkParams( request, required ) )
+	  Object[] required1 = { name, lon, lat, depth,	dip,
+			  				 strike, rake, dur, algo };
+	  
+	  if( ! checkParams( request, required1 ) )
+		  return jsfailure();
+	  
+	  Object[] required2 = { slip, length, width };
+	  if( ! checkParams( request, required2 ) && (mag == null || ! algo.equals("easywave")) )
 		  return jsfailure();
 	  
 	  /* only privileged users are allowed to compute own scenarios - check for valid session */
@@ -907,8 +924,10 @@ public class Services {
 	  if( parent != null && parent.equals("") )
 		  parent = null;
 		  
-	  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
-	  String ret_id = _compute(eqp, user, name, parent, root, dur, null);
+	  EQParameter eqp = (mag == null)
+			  ? new EQParameter(lon, lat, slip, length, width, depth, dip, strike, rake, date)
+			  : new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
+	  String ret_id = _compute(eqp, user, name, parent, root, dur, null, algo);
 	  return jssuccess( new BasicDBObject("_id", ret_id) );
   }
   

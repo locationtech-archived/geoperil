@@ -106,7 +106,7 @@
 							<ul class="nav nav-tabs main-tabs">
 								<li id="tabRecent" class="active"><a href="#sidebarTab" data-toggle="tab">Recent</a></li>
 							 	<li id="tabSaved" class="tab-private"><a href="#saved" id="hrefSaved" data-toggle="tab">My List</a></li>
-							  	<li id="tabCustom" class="tab-private"><a href="#custom" data-toggle="tab">Compose</a></li>
+							  	<li id="tabCompose" class="tab-private"><a href="#compose" data-toggle="tab">Compose</a></li>
 							  	<li id="tabEvtSets" class="tab-private"><a href="#evtsets" data-toggle="tab">Event Sets</a></li>
 							  	<li id="tabEvtSetComp" class="tab-private"><a href="#evtsetcomp" data-toggle="tab">Event Set Compose</a></li>
 							  	<li id="tabTimeline" class="tab-private"><a href="#timeline" id="hrefTimeline" data-toggle="tab">Timeline</a></li>
@@ -147,105 +147,16 @@
 		  				</div>
 		  			</div>
 		  			<div class="col-md-12 tab-pane" id="saved"></div>
-		  			<div class="col-md-12 tab-pane" id="custom">					  					
-		  				<form class="form-horizontal form-center">
-		  					<div class="input-group input-group-sm">
-		  						<span class="input-group-addon left-label">Name:</span>
-		  						<input id="inName" type="text" class="form-control" placeholder="Custom">
-		  						<!-- <span class="input-group-addon right-label"></span> -->
-		  					</div>
-		  					<div class="input-group input-group-sm">
-		  						<span class="input-group-addon left-label">Root-Id:</span>
-		  						<span id="inRootId" class="form-control"></span>
-		  						<span class="input-group-btn right-label">
-	  								<button id="btnDelRoot" type="button" class="btn btn-default">
-	  									<span class="glyphicon glyphicon-remove"></span>
-	  								</button>
-	  							</span>
-		  					</div>
-		  					<div class="input-group input-group-sm">
-		  						<span class="input-group-addon left-label">Parent-Id:</span>
-		  						<span id="inParentId" class="form-control"></span>
-		  						<span class="input-group-btn right-label">
-	  								<button id="btnDelParent" type="button" class="btn btn-default">
-	  									<span class="glyphicon glyphicon-remove"></span>
-	  								</button>
-	  							</span>
-		  					</div>
-		  					<div class="input-group input-group-sm">
-		  						<span class="input-group-addon left-label">Date:</span>
-		  						<span id="inDate" class="form-control"></span>
-		  						<span class="input-group-btn right-label">
-	  								<button id="btnDelDate" type="button" class="btn btn-default">
-	  									<span class="glyphicon glyphicon-remove"></span>
-	  								</button>
-	  							</span>
-		  					</div>
-		  					<div class="input-group input-group-sm">
-		  						<span class="input-group-addon left-label">Latitude:</span>
-		  						<input id="inLat" type="text" class="form-control" maxlength="10">
-		  						<span class="input-group-addon right-label">&deg;</span>
-		  					</div>
-		  					<div class="input-group input-group-sm">
-		  						<span class="input-group-addon left-label">Longitude:</span>
-		  						<input id="inLon" type="text" class="form-control" maxlength="10">
-		  						<span class="input-group-addon right-label">&deg;</span>
-		  					</div>
-		  					<div class="input-group input-group-sm">
-	  							<span class="input-group-addon left-label">Magnitude:</span>
-	  							<input id="inMag" type="text" class="form-control" maxlength="10">
-	  							<span class="input-group-addon right-label">Mw</span>
-	  						</div>
-	  						<div class="input-group input-group-sm">
-	  							<span class="input-group-addon left-label">Depth:</span>
-	  							<input id="inDepth" type="text" class="form-control" maxlength="10">
-	  							<span class="input-group-addon right-label">km</span>
-	  						</div>
-	  						<div class="input-group input-group-sm">
-	  							<span class="input-group-addon left-label">Dip:</span>
-	  							<input id="inDip" type="text" class="form-control" maxlength="10">
-	  							<span class="input-group-addon right-label">&deg;</span>
-	  						</div>
-	  						<div class="input-group input-group-sm">
-	  							<span class="input-group-addon left-label">Strike:</span>
-	  							<input id="inStrike" type="text" class="form-control" maxlength="10">
-	  							<span class="input-group-addon right-label">&deg;</span>
-	  						</div>
-	  						<div class="input-group input-group-sm">
-	  							<span class="input-group-addon left-label">Rake:</span>
-	  							<input id="inRake" type="text" class="form-control" maxlength="10">
-	  							<span class="input-group-addon right-label">&deg;</span>
-	  						</div>
-	  						<div class="input-group input-group-sm">
-	  							<span class="input-group-addon left-label">Duration:</span>
-	  							<input id="inDuration" type="text" class="form-control" maxlength="10">
-	  							<span class="input-group-addon right-label">min</span>
-	  						</div>
-	  						<div class="form-group input-group-sm">
-					  			<button id="btnClear" type="button" class="btn btn-default btn-lg">Clear</button>
-					  			<button id="btnStart" type="button" class="btn btn-primary btn-lg" disabled>Start</button>
-					  		</div>
-		  				</form>
-		  				
-		  				<p class="form-control-static labPreset">Load from preset events</p>
-		  				<div id="preset" class="list-group">
-		  					<a id="preset1" class="list-group-item" href="#">Sumatra 2012 (historic)</a>
-				  			<a id="preset2" class="list-group-item" href="#">Tohoku 2011 (historic)</a>
-	  						<a id="preset3" class="list-group-item" href="#">Mentawai 2010 1. Patch (historic)</a>
-	  						<a id="preset4" class="list-group-item" href="#">Mentawai 2010 2. Peak (historic)</a>
-	  						<a id="preset5" class="list-group-item" href="#">Solomon 2007 (historic)</a>
-	  						<a id="preset6" class="list-group-item" href="#">Crete AD365 (historic)</a>
-	  						<a id="preset7" class="list-group-item" href="#">East Crete 1(hypothetic)</a>
-	  						<a id="preset8" class="list-group-item" href="#">East Crete 2 (hypothetic)</a>
-	  						<a id="preset9" class="list-group-item" href="#">West Cyprus (hypothetic)</a>
-	  						<a id="preset10" class="list-group-item" href="#">West Anatolia  (hypothetic)</a>
-	  						<a id="preset11" class="list-group-item" href="#">Marques de Pombal Fault (MPF, hypothetic)</a>
-	  						<a id="preset12" class="list-group-item" href="#">Gorringe Bank Fault (GBF, hypothetic)</a>
-	  						<a id="preset13" class="list-group-item" href="#">Horseshoe Fault (HSF, hypothetic)</a>
-	  						<a id="preset14" class="list-group-item" href="#">Portimao Bank Fault (PBF, hypothetic)</a>
-	  						<a id="preset15" class="list-group-item" href="#">Cadiz Wedge Fault (CWF, hypothetic)</a>
-	  					</div>
-	  				</div>
+		  			<div class="col-md-12 tab-pane" id="compose">
+		  				<div class="compose-form"></div>
+		  				<div class="status"></div>
+		  				<div class="form-group input-group-sm">
+				  			<button type="button" class="btn-clear btn btn-default btn-lg">Clear</button>
+				  			<button type="button" class="btn-start btn btn-primary btn-lg">Start</button>
+				  		</div>
+		  				<p class="form-control-static lab-preset">Load from preset events</p>
+		  				<div class="list-group preset"></div>
+		  			</div>
 	  				<div class="col-md-12 tab-pane" id="timeline">
 	  					<div class="search-group row">
 		  					<div class="input-group input-group-sm">
@@ -302,8 +213,7 @@
 			  				<div class="points"></div>
 		  				</div>
 		  			</div>
-		  			<div class="col-md-12 tab-pane" id="floodlist">
-		  			</div>
+		  			<div class="col-md-12 tab-pane" id="floodlist"></div>
 	  			</div>
 	  		</div>
 	  		
@@ -1856,8 +1766,13 @@
 		<div class="html-textgroup input-group input-group-sm prop-label">
 			<span class="html-label input-group-addon"></span>
 			<input class="html-text form-control" type="text">
-			<span class="html-icon input-group-addon prop-right">
+			<span class="html-icon input-group-addon">
 				<span class="glyphicon"></span>
+			</span>
+			<span class="html-btn input-group-btn">
+				<button type="button" class="btn btn-default">
+					<span class="glyphicon"></span>
+				</button>
 			</span>
  		</div>
  		 		

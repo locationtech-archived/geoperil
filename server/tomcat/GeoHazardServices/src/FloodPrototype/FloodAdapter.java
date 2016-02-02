@@ -13,8 +13,8 @@ import com.mongodb.DB;
 import com.mongodb.DBObject;
 
 import GeoHazardServices.IAdapter;
-import GeoHazardServices.SshConnection;
 import GeoHazardServices.Task;
+import Misc.SshConnection;
 
 public class FloodAdapter implements IAdapter {
 		
@@ -106,11 +106,11 @@ public class FloodAdapter implements IAdapter {
 	
 	private int startFlood2D(FloodTask task) throws IOException {
 		
-		BufferedReader reader = sshCon[0].in;
+		BufferedReader reader = sshCon[0].in();
 		
-		sshCon[0].out.println( "flood2d" );
-		sshCon[0].out.println( "echo '\004'" );
-		sshCon[0].out.flush();
+		sshCon[0].out().println( "flood2d" );
+		sshCon[0].out().println( "echo '\004'" );
+		sshCon[0].out().flush();
 		
 		String line = reader.readLine();
 		while (line != null && ! line.equals("\004")) {
@@ -174,11 +174,11 @@ public class FloodAdapter implements IAdapter {
 	
 	private int createOutput(FloodTask task) throws IOException, InterruptedException {
 		
-		sshCon[0].out.println( "gdalwarp -s_srs EPSG:32632 -t_srs EPSG:4326 wstmax_gpu.asc wstmax_gpu.asc.wsg84" );
+		sshCon[0].runCmd("gdalwarp -s_srs EPSG:32632 -t_srs EPSG:4326 wstmax_gpu.asc wstmax_gpu.asc.wsg84");
 		
 		int heights[] = {1, 3, 5};
 		for( int height: heights ) {
-			sshCon[0].out.println( "gdal_contour -f kml -fl " + height + " wstmax_gpu.asc.wsg84 wstmax_gpu.asc.kml" );
+			sshCon[0].runCmd("gdal_contour -f kml -fl " + height + " wstmax_gpu.asc.wsg84 wstmax_gpu.asc.kml");
 			sshCon[0].copyFile( "wstmax_gpu.asc.kml", workdir + "/wstmax_gpu.asc.kml" );
 			
 			Process p = Runtime.getRuntime().exec( "python ../getFlood.py wstmax_gpu.asc.kml " + task.id + " " + height, null, workdir );
@@ -194,13 +194,8 @@ public class FloodAdapter implements IAdapter {
 		System.out.println(outdir);
 		System.out.println(new File(outdir).mkdirs());
 		
-		sshCon[0].out.println("gdal_translate -of GSBG wstmax_gpu.asc.wsg84 wstmax_gpu.grid");
-		sshCon[0].copyFile("wstmax_gpu.grid", outfile);
-
-		System.out.println("finalize");
-		sshCon[0].out.println("echo '\004'");
-		sshCon[0].complete();
-		
+		sshCon[0].runCmd("gdal_translate -of GSBG wstmax_gpu.asc.wsg84 wstmax_gpu.grid");
+		sshCon[0].copyFile("wstmax_gpu.grid", outfile);		
 		return 0;
 	}
 			 

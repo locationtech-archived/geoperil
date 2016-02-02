@@ -69,6 +69,10 @@ function Earthquake(meta) {
 		return this.process[0].progress;
 	};
 	
+	this.getProcessObj = function() {
+		return (this.process && this.process.length == 1) ? this.process[0] : null;
+	};
+	
 	this.progressUpdate = function() {
 		if( this.selected ) {
 			this.loadIsos();
@@ -2504,6 +2508,11 @@ function GlobalControl() {
 			$("#tabEvtSets > a").click();
 		}).bind(this));
 		
+		this.compose = new ComposeForm($('#compose'));
+		this.compose.setCallback('started', (function() {
+			$("#tabSaved > a").click();
+		}).bind(this));
+		
 		/* Flood - Prototype */
 		this.floodcomp = new FloodComposeTab($('#floodcomp'));
 		this.floodcomp.setCallback('started', (function() {
@@ -2618,9 +2627,9 @@ function GlobalControl() {
 		this.infoDialog.show(data);
 	};
 
-	/* TODO: refactor */
 	this.edit = function(data) {
-		fillForm(data);
+		this.compose.load(data);
+		$('#tabCompose').find('a').trigger('click');
 	};
 	
 	this.edit_set = function(data) {
@@ -3803,7 +3812,24 @@ function Message(meta) {
 		this.init(meta);
 }
 
+function IUtils() {
+	this.toNull = function(expr) {
+		return expr ? expr : null;
+	};
+	
+	/* Removes attributes with a null value in place! */
+	this.removeNulls = function(obj) {
+		for(var key in obj)
+			if( obj[key] === null || obj[key] === undefined )
+				delete obj[key];
+		return obj;
+	};
+}
+
+ICallbacks.prototype = new IUtils();
 function ICallbacks() {
+	
+	IUtils.call(this);
 
 	this.callbacks = {};
 	this.uid = ICallbacks.next_uid++;
@@ -4050,9 +4076,7 @@ function initialize() {
 		
 	$("#btnSignIn").click(drpSignIn);
 	$("#btnSignOut").click(signOut);
-	$("#btnProp").click(showProp);
-	$("#btnStart").click(compute);
-	$("#btnClear").click(clearForm);
+	$("#btnProp").click(showProp);	
 
 	$(".main-tabs > li").click(tabChanged);
 
@@ -4067,8 +4091,6 @@ function initialize() {
 		});
 	});
 
-	$("#custom").find("input").blur(checkInput);
-
 	// set tooltip for deselect button
 	options = {
 		placement : 'top',
@@ -4077,26 +4099,12 @@ function initialize() {
 		animation : false
 	};
 
-	$('#btnDeselect').tooltip(options);
-
-	$('#preset > .list-group-item').click(loadPreset);
+	$('#btnDeselect').tooltip(options);	
 	
 	$('#btnSearch').click(searchEvents);
 	$('#inSearch').keyup(function(e) {
 		if (e.keyCode == 13)
 			searchEvents();
-	});
-
-	$('#btnDelRoot').click(function() {
-		$('#inRootId').html("");
-		$('#inParentId').html("");
-	});
-	$('#btnDelParent').click(function() {
-		$('#inRootId').html("");
-		$('#inParentId').html("");
-	});
-	$('#btnDelDate').click(function() {
-		$('#inDate').html("");
 	});
 
 	$('.lnkGroup').click(groupOnClick);
@@ -4791,7 +4799,7 @@ function logIn(callback) {
 		$('#tabFloodCompose').hide();
 		$('#tabFloodList').hide();
 	}
-	
+		
 	onResize();
 
 	shared.clear();
@@ -4865,103 +4873,6 @@ function logOut() {
 //
 //	$('#lnkUser').html("");
 //	$('#lnkUser').css("display", "none");
-}
-
-function compute() {
-
-	var params = getParams();
-
-	$("#tabSaved").css("display", "block");
-	$("#hrefSaved").click();
-
-	ajax('srv/compute', params, null );
-}
-
-function getParams() {
-
-	var params = {};
-
-	if( $('#inName').val() )
-		params['name'] = $('#inName').val();
-	
-	params['lon'] = $('#inLon').val();
-	params['lat'] = $('#inLat').val();
-	params['mag'] = $('#inMag').val();
-	params['depth'] = $('#inDepth').val();
-	params['dip'] = $('#inDip').val();
-	params['strike'] = $('#inStrike').val();
-	params['rake'] = $('#inRake').val();
-	params['dur'] = $('#inDuration').val();
-	params['root'] = $('#inRootId').html();
-	params['parent'] = $('#inParentId').html();
-
-	if ($('#inDate').html() != "")
-		params['date'] = $('#inDate').data("dateObj").toISOString();
-
-	return params;
-}
-
-function fillForm(entry) {
-
-	if (!loggedIn) {
-
-		signTarget = fillForm.bind(this, entry);
-		$("#SignInDialog").modal("show");
-		return;
-	}
-
-	var prop = entry['prop'];
-
-	$('#inName').val(prop['region']);
-	$('#inLon').val(prop['longitude']);
-	$('#inLat').val(prop['latitude']);
-	$('#inMag').val(prop['magnitude']);
-	$('#inDepth').val(prop['depth']);
-	$('#inDip').val(prop['dip']);
-	$('#inStrike').val(prop['strike']);
-	$('#inRake').val(prop['rake']);
-	$('#inDuration').val(180);
-
-	/* do not set parent and root ID if this is a preset event */
-	if (entry['_id']) {
-		$('#inParentId').html(entry['_id']);
-
-		if (entry['root']) {
-			$('#inRootId').html(entry['root']);
-		} else {
-			$('#inRootId').html(entry['_id']);
-		}
-	} else {
-		$('#inParentId').html("");
-		$('#inRootId').html("");
-	}
-
-	if (prop['date']) {
-		var date = new Date(prop['date']);
-		$('#inDate').html(getDateString(date) + " UTC");
-		$('#inDate').data("dateObj", date);
-	} else {
-		$('#inDate').html("");
-	}
-
-	checkInput();
-
-	$('#tabCustom').css("display", "block");
-	$('#tabCustom').find('a').trigger('click');
-}
-
-function clearForm() {
-	$('#custom :input').val('');
-	$('#inRootId').html('');
-	$('#inParentId').html('');
-	$('#inDate').html('');
-	checkInput();
-}
-
-function fillCustomForm(e) {
-
-	var entry = $(this).parents('.entry').data('entry');
-	fillForm(entry);
 }
 
 String.prototype.splice = function(idx, str) {
@@ -5066,7 +4977,7 @@ function markMsgAsDisplayed(msg) {
 
 function clickMap(event) {
 
-	if ($('#custom').css("display") == "block") {
+	if ($('#compose').css("display") == "block") {
 
 		$('#inLon').val(event.latLng.lng().toFixed(2));
 		$('#inLat').val(event.latLng.lat().toFixed(2));
@@ -5096,68 +5007,11 @@ function setMarkerPos(marker, lat, lon) {
 
 function tabChanged(e) {
 	var tab = $(e.currentTarget).attr('id');
-	if (tab == "tabCustom") {
+	if (tab == "tabCompose") {
 		markers.compose.setMap(map);
 	} else {
 		markers.compose.setMap(null);
 	}
-}
-
-function checkInput() {
-
-	var validLon = checkRange('#inLon', -180, 180);
-	var validLat = checkRange('#inLat', -90, 90);
-
-	var stat = validLon;
-	stat = validLat && stat;
-	stat = checkRange('#inMag', 0, 10.6) && stat;
-	stat = checkRange('#inDepth', 0, 1000) && stat;
-	stat = checkRange('#inDip', 0, 90) && stat;
-	stat = checkRange('#inStrike', 0, 360) && stat;
-	stat = checkRange('#inRake', -180, 180) && stat;
-	stat = checkRange('#inDuration', 0, 600) && stat;
-
-	$('#btnStart').prop('disabled', !stat);
-
-	if (validLon && validLat) {
-		setMarkerPos(markers.compose, $('#inLat').val(), $('#inLon').val());
-	} else {
-		markers.compose.setMap(null);
-	}
-
-	return stat;
-}
-
-function checkRange(id, start, end) {
-
-	var val = $(id).val().replace(",", ".");
-
-	$(id).val(val);
-	$(id).css("color", "");
-
-	if (val == '') {
-		return false;
-	}
-
-	if (checkFloat(val) == false) {
-		$(id).css("color", "red");
-		return false;
-	}
-
-	if (val < start || val > end) {
-		$(id).css("color", "red");
-		return false;
-	}
-
-	return true;
-}
-
-function checkFloat(val) {
-
-	if (isNaN(parseFloat(+val)) || !isFinite(val))
-		return false;
-
-	return true;
 }
 
 function getPreset() {
@@ -5313,22 +5167,6 @@ function getPreset() {
 		rake : 90
 	});
 	return data;
-}
-
-function loadPreset() {
-
-	var data = getPreset();
-	var id = $(this).attr('id').replace('preset','');
-
-	var prop = data[id-1];
-	prop.region = $(this).html();
-
-	var entry = {
-		prop : prop
-	};
-	fillForm(entry);
-
-	$('#custom').scrollTop(0);
 }
 
 function searchEvents() {
@@ -6666,7 +6504,8 @@ function AdminDialog() {
 			'report': new HtmlCheckBox('Report'),
 			'evtset': new HtmlCheckBox('Event Sets'),
 			'flood': new HtmlCheckBox('Flood Prototype'),
-			'data': new HtmlCheckBox('Data Services')
+			'data': new HtmlCheckBox('Data Services'),
+			'hysea': new HtmlCheckBox('HySea')
 		};
 		
 		this.instInputs = {
@@ -7569,16 +7408,16 @@ function HtmlTextField(field, defaultText) {
 }
 
 HtmlTextGroup.prototype = new ICallbacks();
-
 function HtmlTextGroup(label, icon, readonly) {
 	
 	ICallbacks.call(this);
 	
 	this.regex = null;
 
-	this.init = function(label, icon, readonly) {
+	this.init = function(label, icon, readOnly) {
 		this.div = $('.templates > .html-textgroup').clone();
 		this.text = new HtmlTextField(this.div.find('> .html-text'));
+		this.btn = this.div.find('> .html-btn > button');
 		if( label != null ) {
 			this.div.find('> .html-label').html(label);
 		} else {
@@ -7589,14 +7428,26 @@ function HtmlTextGroup(label, icon, readonly) {
 		} else {
 			this.div.find('> .html-icon').hide();
 		}
-		if( readonly )
-			this.text.div.attr('readonly', true);
+		if( readOnly ) this.readonly();
+		this.div.find('> .html-btn').hide();
 	};
 	
 	this.setRLabel = function(text) {
 		this.div.find('> .html-icon > span').html(text);
 		this.div.find('> .html-icon').css('display', '');
 		return this;
+	};
+	
+	this.setButton = function(iconOrText, isHtml) {
+		var span = this.btn.find('> span');
+		isHtml ? span.html(iconOrText) : span.addClass('glyphicon-' + iconOrText);
+		this.div.find('> .html-btn').css('display', '');
+		this.div.find('> .html-icon').hide();
+		return this;
+	};
+	
+	this.getButton = function() {
+		return this.div.find('> .html-btn button');
 	};
 
 	this.value = function(newValue) {
@@ -7609,6 +7460,11 @@ function HtmlTextGroup(label, icon, readonly) {
 	
 	this.valid = function() {
 		return this.text.valid();
+	};
+	
+	this.readonly = function() {
+		this.text.div.attr('readonly', true);
+		return this;
 	};
 	
 	this.init.apply(this, arguments);
@@ -9498,4 +9354,207 @@ function DownloadDialog(data) {
 	};
 	
 	this.init(data);
+}
+
+/* HySea */
+function ComposeForm(div) {
+	ICallbacks.call(this);
+	
+	this.init = function(div) {
+		this.div = div;
+		this.form = div.find('.compose-form');
+		this.status = div.find('.status');
+		this.preset = div.find('.preset');
+		this.btnClear = div.find('.btn-clear');
+		this.btnStart = div.find('.btn-start');
+		/* Create form fields. */
+		this.txtName = new HtmlTextGroup('Name:');
+		this.txtRoot = new HtmlTextGroup('Root-Id:').setButton('remove').readonly();
+		this.txtParent = new HtmlTextGroup('Parent-Id:').setButton('remove').readonly();
+		this.txtDate = new HtmlTextGroup('Date:').setButton('remove').readonly();
+		this.txtLat = new HtmlTextGroup('Latitude:').setRLabel('&deg;');
+		this.txtLat.text.validate_numeric(-90, 90);
+		this.txtLon = new HtmlTextGroup('Longitude:').setRLabel('&deg;');
+		this.txtLon.text.validate_numeric(-180, 180);
+		this.txtMag = new HtmlTextGroup('Magnitude:').setRLabel('Mw');
+		this.txtMag.text.validate_numeric(0, 11);
+		this.txtSlip = new HtmlTextGroup('Slip:').setRLabel('m');
+		this.txtSlip.text.validate_numeric(0, 1000);
+		this.txtLength = new HtmlTextGroup('Length:').setRLabel('km');
+		this.txtLength.text.validate_numeric(0, 1000);
+		this.txtWidth = new HtmlTextGroup('Width:').setRLabel('km');
+		this.txtWidth.text.validate_numeric(0, 1000);
+		this.txtDepth = new HtmlTextGroup('Depth:').setRLabel('km');
+		this.txtDepth.text.validate_numeric(0, 1000);
+		this.txtDip = new HtmlTextGroup('Dip:').setRLabel('&deg;');
+		this.txtDip.text.validate_numeric(0, 90);
+		this.txtStrike = new HtmlTextGroup('Strike:').setRLabel('&deg;');
+		this.txtStrike.text.validate_numeric(0, 360);
+		this.txtRake = new HtmlTextGroup('Rake:').setRLabel('&deg;');
+		this.txtRake.text.validate_numeric(-180, 180);
+		this.txtDur = new HtmlTextGroup('Duration:').setRLabel('min');
+		this.txtDur.text.validate_numeric(0, 600);
+		this.drpAlgo = new HtmlDropDown();
+		this.inpAlgo = new HtmlInputGroup('Algorithm:', 'list');
+		this.inpAlgo.input.append( this.drpAlgo.div );
+		
+		/* Add fields to tab. */
+		this.form.append(this.txtName.div);
+		this.form.append(this.txtRoot.div);
+		this.form.append(this.txtParent.div);
+		this.form.append(this.txtDate.div);
+		this.form.append(this.txtLat.div);
+		this.form.append(this.txtLon.div);
+		this.form.append(this.txtMag.div);
+		this.form.append(this.txtSlip.div);
+		this.form.append(this.txtLength.div);
+		this.form.append(this.txtWidth.div);
+		this.form.append(this.txtDepth.div);
+		this.form.append(this.txtDip.div);
+		this.form.append(this.txtStrike.div);
+		this.form.append(this.txtRake.div);
+		this.form.append(this.txtDur.div);
+		
+		if( checkPerm("hysea") ) {
+			this.form.append(this.inpAlgo.div);
+		}
+		
+		/* Insert available algorithms. */
+		this.drpAlgo.setToString(function(o){ return o.desc; });
+		this.drpAlgo.setSource(	new Container().setList([
+		    {name: 'easywave', desc: 'EasyWave'},
+		    {name: 'hysea', desc: 'HySea'}
+		]));
+		this.drpAlgo.select(0);
+		
+		/* Clear root and parent ID on click. */
+		var clearIds = (function() {
+			this.txtRoot.value('');
+			this.txtParent.value('');
+		}).bind(this);
+		this.txtRoot.getButton().click(clearIds);
+		this.txtParent.getButton().click(clearIds);
+		
+		/* Clear date on click. */
+		var clearDate = (function() {
+			this.txtDate.value('');
+		}).bind(this);
+		this.txtDate.getButton().click(clearDate);
+		
+		/*  */
+		this.form.find('input').on('change', this.check.bind(this));
+		this.drpAlgo.setCallback('change', this.check.bind(this));
+		this.btnClear.click(this.clear.bind(this));
+		this.btnStart.click(this.start.bind(this));
+		this.load_preset();
+		this.check();
+	};
+	
+	this.load_preset = function() {
+		var data = getPreset();		
+		this.preset.empty();
+		for( var i = 0; i < data.length; i++ ) {
+			var prop = data[i];
+			var a = $('<a>', {
+				text: prop.region,
+				href: '#',
+				class: 'list-group-item',
+				click: function() {
+					$(this).data('form').load( $(this).data('prop') );
+				}
+			}).data('prop', {prop: prop}).data('form', this);
+			this.preset.append(a);
+		}
+	};
+	
+	this.load = function(data) {
+		var prop = data.prop;
+		var progress = (data instanceof Earthquake) && data.getProcessObj() ? data.getProcessObj().simTime : 180;
+		this.txtName.value(prop.region);
+		this.txtLat.value(prop.latitude);
+		this.txtLon.value(prop.longitude);
+		this.txtDepth.value(prop.depth);
+		this.txtDip.value(prop.dip);
+		this.txtStrike.value(prop.strike);
+		this.txtRake.value(prop.rake);
+		this.txtDur.value(progress);
+		
+		/* The following information may only be partial available. */
+		this.txtMag.value( prop.magnitude ? prop.magnitude : '' );
+		this.txtSlip.value( prop.slip ? prop.slip : '' );
+		this.txtLength.value( prop.length ? prop.length : '' );
+		this.txtWidth.value( prop.width ? prop.width : '' );
+		
+		/* Do not set parent and root ID if this is a preset event. */
+		if( data._id ) {
+			this.txtParent.value(data._id);
+			this.txtRoot.value(data.root ? data.root : data._id);
+		} else {
+			this.txtParent.value('');
+			this.txtRoot.value('');
+		}
+
+		if( prop.date ) {
+			var date = new Date(prop.date);
+			this.txtDate.value(getDateString(date) + ' UTC');
+			this.txtDate.div.data('dateObj', date);
+		} else {
+			this.txtDate.value('');
+		}
+		
+		this.div.scrollTop(0);
+	};
+	
+	this.check = function() {
+		var valid = this.txtLat.valid() && this.txtLon.valid() &&
+					this.txtDepth.valid() && this.txtDip.valid() &&
+					this.txtStrike.valid() && this.txtRake.valid() &&
+					this.txtDur.valid() && (
+						this.txtMag.valid() && (this.drpAlgo.selectedItem().name == 'easywave') ||
+						this.txtSlip.valid() && this.txtLength.valid() && this.txtWidth.valid()
+					);
+		this.btnStart.prop('disabled', ! valid);
+	};
+	
+	this.clear = function() {
+		this.status.html('');
+		this.form.find('input').val('');
+		this.check();
+	};
+	
+	this.start = function() {
+		this.status.html('');
+		
+		/* TODO: encapsulate somehow */
+		$("#tabSaved").css("display", "block");
+		$("#hrefSaved").click();
+		
+		var data = {
+			name: this.toNull( this.txtName.value() ),
+			lat: this.txtLat.value(),
+			lon: this.txtLon.value(),
+			depth: this.txtDepth.value(),
+			dip: this.txtDip.value(),
+			strike: this.txtStrike.value(),
+			rake: this.txtRake.value(),
+			dur: this.txtDur.value(),
+			mag: this.toNull( this.txtMag.value() ),
+			slip: this.toNull( this.txtSlip.value() ),
+			length: this.toNull( this.txtLength.value() ),
+			width: this.toNull( this.txtWidth.value() ),
+			root: this.toNull( this.txtRoot.value() ),
+			parent: this.toNull( this.txtParent.value() ),
+			date: this.txtDate.value() ? this.txtDate.div.data('dateObj').toISOString() : null,
+			algo: this.drpAlgo.selectedItem().name
+		};
+		console.log(data);
+		ajax_mt('srv/compute', this.removeNulls(data), (function(result) {
+			console.log(result);
+			if( result.status == 'success' ) {
+				
+			}
+		}).bind(this));
+	};
+	
+	this.init.apply(this, arguments);
 }

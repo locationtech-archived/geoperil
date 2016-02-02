@@ -21,6 +21,9 @@ import java.util.regex.Pattern;
 
 import FloodPrototype.FloodAdapter;
 import FloodPrototype.FloodTask;
+import Misc.SshConnection;
+import Tsunami.HySeaAdapter;
+import Tsunami.TsunamiAdapter;
 
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
@@ -56,6 +59,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	private HashMap<String, DBObject> tsps;
 	
 	private FloodAdapter floodAdapter;
+	private TsunamiAdapter hySeaAdapter;
 	
 	public WorkerThread( IScheduler scheduler,
 						 String workdir ) throws IOException {
@@ -101,7 +105,12 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		}
 		
 		/* TODO: not the right place */
-		floodAdapter = new FloodAdapter(db, sshCon, workdir, hardware);
+		try {
+			floodAdapter = new FloodAdapter(db, sshCon, workdir, hardware);
+			hySeaAdapter = new HySeaAdapter(db, sshCon, workdir, hardware);
+		} catch(IOException e) {
+			e.printStackTrace();return 1;
+		}
 		
 		return 0;
 	}
@@ -154,20 +163,22 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	@Override
 	public void run() {
 		
-		Task params;
-		
 		System.out.println("Thread " + this.thread.getId() + " started");
 		
 		while( true ) {
 		
 			try {
-				params = getWork();
+				getWork();
 				checkSshConnection();
 				
-				System.out.println("Thread " + this.thread.getId() + " computes event " + params.id );
-				if( params instanceof EQTask ) {
-					handleRequest( (EQTask) params );
-				} else if( params instanceof FloodTask ) {
+				System.out.println("Thread " + this.thread.getId() + " computes event " + task.id );
+				if( task instanceof EQTask ) {
+					if( ((EQTask) task).algo.equals("hysea") ) {
+						hySeaAdapter.handleRequest(task);
+					} else {
+						handleRequest( (EQTask) task );
+					}
+				} else if( task instanceof FloodTask ) {
 					floodAdapter.handleRequest(task);
 				}
 						
@@ -197,12 +208,12 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		if( remote ) {
 			
 			/* check if ssh connection is still established */
-			sshCon[0].out.println( "echo '\n'" );
-			sshCon[0].out.flush();
+			sshCon[0].out().println( "echo '\n'" );
+			sshCon[0].out().flush();
 			
 			try {
 							
-				if( sshCon[0].in.readLine() == null ) {
+				if( sshCon[0].in().readLine() == null ) {
 				
 					System.err.println( "Error: ssh connection was closed. Trying to reconnect..." );
 					sshCon[0].connect();
@@ -236,8 +247,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	
 		if( remote ) {
 			
-			sshCon[0].out.println("echo '" + fault + "' > fault.inp");
-			sshCon[0].out.flush();
+			sshCon[0].out().println("echo '" + fault + "' > fault.inp");
+			sshCon[0].out().flush();
 			return 0;
 			
 		} else {
@@ -299,7 +310,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		
 		cursor = db.getCollection("tfps").find( tfpQuery );
 		
-		sshCon[0].out.println("rm -f ftps.inp");
+		sshCon[0].out().println("rm -f ftps.inp");
 				
 		for( DBObject obj: cursor ) {
 			
@@ -316,7 +327,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			tfps.put( id, init );
 			
 			String poi = id + "\t" + lon + "\t" + lat;
-			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
+			sshCon[0].out().println("echo '" + poi + "' >> ftps.inp");
 		}
 		cursor.close();
 				
@@ -337,7 +348,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			tsps.put( "tsp_" + id, init );
 			
 			String poi = "tsp_" + id + "\t" + lon + "\t" + lat;
-			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
+			sshCon[0].out().println("echo '" + poi + "' >> ftps.inp");
 		}
 		cursor.close();
 		
@@ -385,10 +396,10 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			Double lon = (Double) obj.get( "lon" );
 			
 			String poi = "s_" + id + "\t" + lon + "\t" + lat;
-			sshCon[0].out.println("echo '" + poi + "' >> ftps.inp");
+			sshCon[0].out().println("echo '" + poi + "' >> ftps.inp");
 		}
 		
-		sshCon[0].out.flush();
+		sshCon[0].out().flush();
 		
 		cursor.close();
 		
@@ -408,12 +419,12 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			
 			if( remote ) {
 								
-				sshCon[0].out.println( "rm -f eWave.* arrival.* easywave.log error.msg" );
-				sshCon[0].out.println( "easywave " + cmdParams );
-				sshCon[0].out.println( "echo '\004'" );
-				sshCon[0].out.flush();
+				sshCon[0].out().println( "rm -f eWave.* arrival.* easywave.log error.msg" );
+				sshCon[0].out().println( "easywave " + cmdParams );
+				sshCon[0].out().println( "echo '\004'" );
+				sshCon[0].out().flush();
 				
-				reader = sshCon[0].in;
+				reader = sshCon[0].in();
 								
 			} else {
 				
@@ -534,8 +545,11 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 						pyPostProcess( task );
 					}
 					
-					if( task.progress == 100.0f && task.evtset == null )
+					if( task.progress == 100.0f && task.evtset == null ) {
 						saveRawData(task);
+						/* Data was successfully stored --> mark event in database. */
+						coll.update( obj, new BasicDBObject( "$set", new BasicDBObject("stored", true) ) );
+					}
 					
 				} else {
 					
@@ -619,12 +633,12 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			if( remote ) {
 					
 				/* ssh should be okay upon here, therefore run commands */
-				sshCon[1].out.println( gdal );
-				sshCon[1].out.println( ogr2ogr );
-				sshCon[1].out.println( "echo '\004'" );
-				sshCon[1].out.flush();
+				sshCon[1].out().println( gdal );
+				sshCon[1].out().println( ogr2ogr );
+				sshCon[1].out().println( "echo '\004'" );
+				sshCon[1].out().flush();
 						
-				reader = sshCon[1].in;
+				reader = sshCon[1].in();
 				
 			} else {
 				p = Runtime.getRuntime().exec( gdal, null, workdir );
@@ -683,12 +697,12 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			if( remote ) {
 					
 				/* ssh should be okay upon here, therefore run commands */
-				sshCon[1].out.println( gdal );
-				sshCon[1].out.println( ogr2ogr );
-				sshCon[1].out.println( "echo '\004'" );
-				sshCon[1].out.flush();
+				sshCon[1].out().println( gdal );
+				sshCon[1].out().println( ogr2ogr );
+				sshCon[1].out().println( "echo '\004'" );
+				sshCon[1].out().flush();
 						
-				reader = sshCon[1].in;
+				reader = sshCon[1].in();
 				
 			} else {
 				p = Runtime.getRuntime().exec( gdal, null, workdir );
@@ -736,10 +750,10 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 				BufferedReader reader = null;
 				PrintStream poiFile = new PrintStream( workdir + "/eWave.poi.summary" );
 				
-				sshCon[1].out.println( "cat eWave.poi.summary" );
-				sshCon[1].out.println( "echo '\004'" );
-				sshCon[1].out.flush();
-				reader = sshCon[1].in;
+				sshCon[1].out().println( "cat eWave.poi.summary" );
+				sshCon[1].out().println( "echo '\004'" );
+				sshCon[1].out().flush();
+				reader = sshCon[1].in();
 				
 				String line = reader.readLine();
 				while (line != null && ! line.equals("\004")) {
@@ -830,10 +844,10 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 				BufferedReader reader = null;
 				PrintStream poiFile = new PrintStream( workdir + "/eWave.poi.ssh" );
 				
-				sshCon[1].out.println( "cat eWave.poi.ssh" );
-				sshCon[1].out.println( "echo '\004'" );
-				sshCon[1].out.flush();
-				reader = sshCon[1].in;
+				sshCon[1].out().println( "cat eWave.poi.ssh" );
+				sshCon[1].out().println( "echo '\004'" );
+				sshCon[1].out().flush();
+				reader = sshCon[1].in();
 				
 				String line = reader.readLine();
 				while (line != null && ! line.equals("\004")) {
@@ -927,13 +941,13 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		String mv = String.format("mv * %s/events/%s/", resdir, task.id);
 		String chmod = String.format("chmod 0666 %s/events/%s/*", resdir, task.id);
 		
-		sshCon[1].out.println(mkdir);
-		sshCon[1].out.println(rm);
-		sshCon[1].out.println("rm range.grd");
-		sshCon[1].out.println(mv);
-		sshCon[1].out.println(chmod);
-		sshCon[1].out.println("echo '\004'");
-		sshCon[1].out.flush();
+		sshCon[1].out().println(mkdir);
+		sshCon[1].out().println(rm);
+		sshCon[1].out().println("rm range.grd");
+		sshCon[1].out().println(mv);
+		sshCon[1].out().println(chmod);
+		sshCon[1].out().println("echo '\004'");
+		sshCon[1].out().flush();
 		sshCon[1].complete();
 	}
 	
@@ -949,19 +963,19 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 			String task_file = String.format(" %s/events/%s/eWave.2D.sshmax", resdir, tasks.get(i).id);
 			if( i == 0) {
 				/* Copy data of first task directly to output file. */
-				sshCon[1].out.println("cp " + task_file + " eWave.2D.sshmax_0" );
+				sshCon[1].out().println("cp " + task_file + " eWave.2D.sshmax_0" );
 			} else {
 				//String gdalbuildvrt = String.format("gdalbuildvrt -separate combined.vrt eWave.2D.sshmax_%d %s", i-1, task_file);
 				String gdalbuildvrt = String.format("gdal_merge.py -separate -o combined_%d.vrt eWave.2D.sshmax_%d %s", i, i-1, task_file);
 				String gdal_calc = String.format("gdal_calc.py -A combined_%1$d.vrt --A_band=1 -B combined_%1$d.vrt --B_band=2"
 								 			   + " --calc=\"maximum(A,B)\" --format=GSBG --outfile eWave.2D.sshmax_%1$d", i);
-				sshCon[1].out.println(gdalbuildvrt);
-				sshCon[1].out.println(gdal_calc);
+				sshCon[1].out().println(gdalbuildvrt);
+				sshCon[1].out().println(gdal_calc);
 			}
 		}
-		sshCon[1].out.println(String.format("cp eWave.2D.sshmax_%d eWave.2D.sshmax", tasks.size()-1));
-		sshCon[1].out.println("rm eWave.2D.sshmax_* combined_*.vrt");
-		sshCon[1].out.println("echo '\004'");
+		sshCon[1].out().println(String.format("cp eWave.2D.sshmax_%d eWave.2D.sshmax", tasks.size()-1));
+		sshCon[1].out().println("rm eWave.2D.sshmax_* combined_*.vrt");
+		sshCon[1].out().println("echo '\004'");
 		sshCon[1].complete();
 		System.out.println("create jets...");
 		EQTask dummy = new EQTask(null);

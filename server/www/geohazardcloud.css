@@ -201,7 +201,7 @@ html, body {
 	padding-left: 1em;
 }
     
-#sidebarTab, #saved, #custom, #timeline, #messages, #static, #evtsets, #evtsetcomp, #floodcomp, #floodlist {
+#sidebarTab, #saved, #timeline, #messages, #static, #evtsets, #evtsetcomp, #floodcomp, #floodlist, #compose {
 	position: absolute;
 	top: 3em;
 	left: 0px;
@@ -209,7 +209,7 @@ html, body {
 	right: 0px;
 }
 
-#sidebar, #saved, #custom, #timeline-data, #messages, #static, #evtsets, #evtsetcomp, #floodcomp, #floodlist {
+#sidebar, #saved, #timeline-data, #messages, #static, #evtsets, #evtsetcomp, #floodcomp, #floodlist, #compose {
 	overflow-y: auto;
 }
 
@@ -231,7 +231,7 @@ html, body {
 	margin-bottom: 1em;
 }
     	
-#grpSignOut, #tabSaved, #tabCustom, #tabTimeline, #tabMessages, #tabStatic, #tabEvtSets, #tabEvtSetComp, #tabFloodCompose, #tabFloodList {
+#grpSignOut, #tabSaved, #tabTimeline, #tabMessages, #tabStatic, #tabEvtSets, #tabEvtSetComp, #tabFloodCompose, #tabFloodList, #tabCompose {
 	display: none;
 }
   	
@@ -244,11 +244,6 @@ html, body {
 	float: right;
 	margin-right: 0.5em;
 	margin-top: 0.5em;
-}
-
-#custom {
-	padding: 0px;
-	width: 100%;
 }
 
 .form-center .input-group.input-group-sm {
@@ -264,18 +259,6 @@ html, body {
 	width: 80%;
 	margin-left: 10%;
 	padding-bottom: 4em;
-}
-
-#btnClear {
-	position: absolute;
-	left: 0.5em;
-	width: 40%;
-}
-
-#btnStart {
-	position: absolute;
-	right: 0.5em;
-	width: 40%;
 }
 
 .labPreset {
@@ -1254,6 +1237,14 @@ pre {
 	display: none;
 }
 
+.html-textgroup .html-btn > button {
+	background-color: #eeeeee;
+}
+
+.html-textgroup .html-btn > button:hover {
+	background-color: #fcfcfc;
+}
+
 .html-dialog .modal-content > .modal-overlay {
 	position: absolute;
 	top: 0px;
@@ -1564,3 +1555,68 @@ pre {
 .download-dialog .progress-bar {
 	width: 100%;
 }
+
+/* Compose Tab */
+#compose {
+	padding: 0px;
+	padding-top: 0.5em;
+	width: 100%;
+}
+
+#compose .html-textgroup, #compose .html-inputgroup {
+	padding: 0.5em;
+	width: 80%;
+	margin-left: 10%;
+}
+
+#compose .html-label {
+	width: 35%;
+}
+
+#compose .html-icon, #compose .html-btn  {
+	width: 15%;
+	border-left: 0;
+}
+
+#compose .html-btn > button {
+	width: 100%;
+}
+
+#compose input[readonly] {
+	background-color: #f8f8f8;
+}
+
+#compose .form-group {
+	position: relative;
+	padding: 0.5em;
+	padding-top: 1em;
+	width: 80%;
+	margin-left: 10%;
+	padding-bottom: 4em;
+}
+
+#compose .btn-clear {
+	position: absolute;
+	left: 0.5em;
+	width: 40%;
+}
+
+#compose .btn-start {
+	position: absolute;
+	right: 0.5em;
+	width: 40%;
+}
+
+#compose .lab-preset {
+	font-size: 1em;
+	font-weight: bold;
+	padding: 0.5em;
+	width: 80%;
+	margin-left: 10%;
+}
+
+#compose .list-group-item {
+	width: 80%;
+	margin-left: 10%;
+}
+

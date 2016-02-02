@@ -43,6 +43,7 @@ public class FairScheduler implements IScheduler {
 		slots = new HashMap<Integer,Slot>();
 		slots.put(SLOT_EXCLUSIVE, new Slot());
 		slots.put(SLOT_NORMAL, new Slot());
+		slots.put(SLOT_HYSEA, new Slot());
 		tasks = new HashMap<String, Task>();
 	}
 	

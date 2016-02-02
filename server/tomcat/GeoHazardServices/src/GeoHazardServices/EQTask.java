@@ -3,6 +3,20 @@ package GeoHazardServices;
 import Misc.User;
 
 public class EQTask extends Task {
+		
+	public class BoundingBox {
+		public double lonMin;
+		public double lonMax;
+		public double latMin;
+		public double latMax;
+		
+		public BoundingBox(double lonMin, double lonMax, double latMin, double latMax) {
+			this.lonMin = lonMin;
+			this.lonMax = lonMax;
+			this.latMin = latMin;
+			this.latMax = latMax;
+		}
+	}
 	
 	public EQParameter eqparams;
 	public int duration;
@@ -11,9 +25,12 @@ public class EQTask extends Task {
 	public int raw;
 	public int dt_out;
 	public EventSet evtset;
+	public String algo;
+	public BoundingBox bbox;
 	
 	public int status;
 	public float progress;
+	public float calcTime;
 	
 	public EQTask( EQParameter eqp ) {
 		super();
@@ -39,5 +56,9 @@ public class EQTask extends Task {
 		this(eqp, id, user, duration, accel);
 		if( gridres != null )
 			this.gridres = gridres;
+	}
+	
+	public void setBoundingBox(double lonMin, double lonMax, double latMin, double latMax) {
+		this.bbox = new BoundingBox(lonMin, lonMax, latMin, latMax);
 	}
 }
