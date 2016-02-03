@@ -67,6 +67,14 @@ class Products:
                 "serve":"png",
                 "params":{},
             },
+            {
+                "file":"custom.png",
+                "shortdesc":"Custom Image",
+                "desc":"Custom Image generated according to given parameters",
+                "show":["help"],
+                "serve":"custom_png",
+                "params":{"gmt_*":{"desc":"GMT parameters"}},
+            },
             {   
                 "file":"tl.csv",
                 "shortdesc":"",
@@ -76,7 +84,7 @@ class Products:
                 "serve":"timeline",
                 "params":{
                     "lon":{
-                        "desc":"longitue",
+                        "desc":"longitude",
                         "mandatory":True,
                     },
                     "lat":{
@@ -125,7 +133,9 @@ class Products:
                 "plot_wave_time" : "Y",
                 "wave_time" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"travelTimes.grd"),
             }
-            self.exec_gmt(**gmtargs)
+            r,out = self.exec_gmt(**gmtargs)
+            for l in out.decode("utf-8").split("\n"):
+                print(l)
             return self.rec_create(ev,product,f)
 
     def mk_cfzs_tfps_png(self,ev,product,f,**kwargs):
@@ -142,7 +152,9 @@ class Products:
                 "plot_tfp" : "Y",
                 "tfp" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tfps.csv"),
             }
-            self.exec_gmt(**gmtargs)
+            r,out = self.exec_gmt(**gmtargs)
+            for l in out.decode("utf-8").split("\n"):
+                print(l)
             return self.rec_create(ev,product,f)
 
     def mk_cities_population_png(self,ev,product,f,**kwargs):
@@ -156,7 +168,9 @@ class Products:
                 "quake" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eq.csv"),
                 "wave_height" : os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"maxWaveHeights.grd"),
             }
-            self.exec_gmt(**gmtargs)
+            r,out = self.exec_gmt(**gmtargs)
+            for l in out.decode("utf-8").split("\n"):
+                print(l)
             return self.rec_create(ev,product,f)
 
     def mk_cfzs_gmt(self,ev,product,f,**kwargs):
@@ -187,6 +201,46 @@ class Products:
             fobj.write((",".join(buf)) + "\n")
             fobj.close()
             return self.rec_create(ev,product,f)
+
+    def mk_custom_png(self,ev,product,f,**kwargs):
+        gmtargs = {}
+        s = []
+        for k,v in kwargs.items():
+            if k.startswith("gmt_"):
+                gmtargs[k[4:]] = v
+                s.append("%s=%s" % (k[4:],v))
+        s.sort()
+        s = hashlib.md5(bytes("&".join(s),"utf-8")).hexdigest()
+        f = os.path.join(os.path.dirname(f),"custom_%s.png" % s)
+        if os.path.isfile(f):
+            return True
+        elif self.mk_product(ev,"cfzs.gmt",**kwargs) \
+                and self.mk_product(ev,"tfps.csv",**kwargs) \
+                and self.mk_product(ev,"eq.csv",**kwargs) \
+                and self.mk_product(ev,"maxWaveHeights.grd",**kwargs) \
+                and self.mk_product(ev,"travelTimes.grd",**kwargs) :
+            gmtargs["output"]       = "%s.ps" % f[:-4]
+            gmtargs["quake"]        = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"eq.csv")
+            gmtargs["wave_height"]  = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"maxWaveHeights.grd")
+            gmtargs["wave_time"]    = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"travelTimes.grd")
+            gmtargs["cfz"]          = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"cfzs.gmt")
+            gmtargs["tfp"]          = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],"tfps.csv")
+            r,out = self.exec_gmt(**gmtargs)
+            for l in out.decode("utf-8").split("\n"):
+                print(l)
+            return self.rec_create(ev,product,f)
+
+    def serve_custom_png(self,ev,product,f,**kwargs):
+        if self.mk_product(ev,product,**kwargs):
+            s = []
+            for k,v in kwargs.items():
+                if k.startswith("gmt_"):
+                    s.append("%s=%s" % (k[4:],v))
+            s.sort()
+            s = hashlib.md5(bytes("&".join(s),"utf-8")).hexdigest()
+            f = os.path.join(os.path.dirname(f),"custom_%s.png" % s)
+            self.rec_request(ev,product,f)
+            return self.serve_file(f,"image/png",**kwargs)
 
     def mk_tl_csv(self,ev,product,f,**kwargs):
         if "row" in kwargs and "col" in kwargs and "lat" in kwargs and "lon" in kwargs:

@@ -28,22 +28,26 @@ class DataSrv(BaseSrv,Products):
             if "help" in h["show"]:
                 n = h["file"]
                 if len(h["params"]) > 0:
-                    n += "?"
                     ps = []
                     ops = []
                     for p,d in h["params"].items():
                         p += "=&lt;%s&gt;" % d["desc"]
-                        if d["mandatory"]:
+                        if d.get("mandatory",False):
                             ps.append("&amp;%s" % p)
                         else:
                             ops.append("[&amp;%s]" % p)
                     n += "".join(ps+ops)
+                    n = n.replace("&amp;","?",1)
                 s += "<li><h4>%s</h4>\n%s\n</li>\n" % (n,h["desc"])
         self.INFO = "<ul>\n%s</ul>\n<h3>Products:</h3>\n<ul>\n%s</ul>" % (ds,s)
 
     @cherrypy.expose
     def help(self):
         return jssuccess(products=self._products)
+
+    @cherrypy.expose
+    def gmt_help(self):
+        return jssuccess(gmt_params=self.gmt_valid_params())
 
     @cherrypy.expose
     def default(self,eid,*args,**kwargs):
@@ -217,15 +221,23 @@ class DataSrv(BaseSrv,Products):
         now = datetime.datetime.now()
         self._db["datafiles"].update({"file":f},{"$inc":{"requests":1},"$set":{"last_request":now}})
 
+    def gmt_valid_params(self):
+        return json.loads(subprocess.check_output([config["GMT"]["report_bin"],"--print_json","Y"]).decode("utf-8"))
+
     def exec_gmt(self,**kwargs):
+        valid_args = self.gmt_valid_params()
+        valid_args = [ x["Flag2"].lstrip("-") for x in valid_args ]
         args = [config["GMT"]["report_bin"]]
         for k,v in kwargs.items():
-            args.append("--"+k)
-            args.append(v)
+            if k in valid_args:
+                args.append("--"+k)
+                args.append(v)
+            else:
+                print("Removing invalid gmt-argument: --%s %s" % (k,v))
         print("Executing: %s" % (" ".join(args)))
-        p = subprocess.Popen(args, cwd=os.path.dirname(config["GMT"]["report_bin"]))
-        p.wait()
-        return p.returncode
+        p = subprocess.Popen(args,cwd=os.path.dirname(config["GMT"]["report_bin"]),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        out,err = p.communicate()
+        return p.returncode,out
 
     def retriggerSim(self,evid,dt_out):
         ev = self._db["eqs"].find_one({"_id":evid})
