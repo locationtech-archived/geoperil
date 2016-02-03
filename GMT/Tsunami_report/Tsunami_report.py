@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import os
 import subprocess
 import argparse
 import math
@@ -125,6 +125,7 @@ def tsunami_report(\
         return    
     
     tempdir = tempfile.mkdtemp()
+    os.environ["GMT_TMPDIR"] = tempdir
     
     map_width = float(map_width)
     y_ratio = float(y_ratio)
@@ -330,10 +331,9 @@ def tsunami_report(\
     #	outline coast_res coast_color terrain color_water color_land color_globe_land color_globe_water land_res basemap_water_cpt basemap_land_cpt
     subprocess.call(['./gmt_scripts/Basemap.sh', title,output , R, J, y_map_distance, basemap, basemap_hillshade, \
         outline, coast_res, coast_color, dem, color_water, color_land, color_globe_land, color_globe_water, land_res, basemap_water_cpt, basemap_land_cpt, \
-        world_pop_data, world_pop_cpt, world_pop, subtitle, str(paper_height), dem_water], env={'GMT_TMPDIR': tempdir})
-
+        world_pop_data, world_pop_cpt, world_pop, subtitle, str(paper_height), dem_water])
     if not subtitle=="-None-":
-       subprocess.call(['./gmt_scripts/subtitle.sh',output , str(subtitle), str(subtitle_pos_y), str(map_width)], env={'GMT_TMPDIR': tempdir})
+       subprocess.call(['./gmt_scripts/subtitle.sh',output , str(subtitle), str(subtitle_pos_y), str(map_width)])
 
     ###################################
     ############# Karte ###############
@@ -343,25 +343,25 @@ def tsunami_report(\
     #plottet die Wellenhoehen
     if plot_wave_height=="Y":
         #./Tsunami_wave_height.sh output wave_height_data wave_height_temp expression wave_height_cpt
-        subprocess.call(['./gmt_scripts/Tsunami_wave_height.sh', output, wave_height, wave_height_temp, str(wave_height_expression), wave_height_cpt, y_map_distance], env={'GMT_TMPDIR': tempdir})
+        subprocess.call(['./gmt_scripts/Tsunami_wave_height.sh', output, wave_height, wave_height_temp, str(wave_height_expression), wave_height_cpt, y_map_distance])
 
     ######## Traveltime #########
     #Plottet die Traveltime als Isochrone
     if plot_wave_time=="Y":
         #./Tsunami_wave_traveltime.sh output y_map_dist wave_time Isochrone_dist Isochrone_color
-        subprocess.call(['./gmt_scripts/Tsunami_wave_traveltime.sh',output ,wave_time_temp ,y_map_distance, wave_time, Isochrone_dist, Isochrone_color], env={'GMT_TMPDIR': tempdir})
+        subprocess.call(['./gmt_scripts/Tsunami_wave_traveltime.sh',output ,wave_time_temp ,y_map_distance, wave_time, Isochrone_dist, Isochrone_color])
 
     ########### CFZ #############
     if plot_cfz=="Y":
-        subprocess.call(['./gmt_scripts/CFZ.sh',output ,cfz, cfz_cpt, cfz_stroke, y_map_distance], env={'GMT_TMPDIR': tempdir})
+        subprocess.call(['./gmt_scripts/CFZ.sh',output ,cfz, cfz_cpt, cfz_stroke, y_map_distance])
     
     ########### TFP #############
     if plot_tfp=="Y":
-        subprocess.call(['./gmt_scripts/TFP.sh',output ,tfp, tfp_0_03_fill, tfp_03_1_fill, tfp_1_3_fill, tfp_3_fill, tfp_cpt, tfp_stroke, y_map_distance], env={'GMT_TMPDIR': tempdir})
+        subprocess.call(['./gmt_scripts/TFP.sh',output ,tfp, tfp_0_03_fill, tfp_03_1_fill, tfp_1_3_fill, tfp_3_fill, tfp_cpt, tfp_stroke, y_map_distance])
 
     ########## Quakes ###########
     if plot_quake=="Y":
-        subprocess.call(['./gmt_scripts/quake.sh',output ,quake, quake_fill, y_map_distance], env={'GMT_TMPDIR': tempdir})    
+        subprocess.call(['./gmt_scripts/quake.sh',output ,quake, quake_fill, y_map_distance])    
 
     ######## city pop ###########
     if cities_capital=="Y":
@@ -374,7 +374,7 @@ def tsunami_report(\
         cities_label_pop = cities_pop
 
     if plot_cities=="Y":
-        subprocess.call(['./gmt_scripts/city_population.sh', output, R, J, y_map_distance, city_pop_data, cities_pop, cities_capital, cities_label, cities_label_pop, cities_fill, cities_stroke], env={'GMT_TMPDIR': tempdir})
+        subprocess.call(['./gmt_scripts/city_population.sh', output, R, J, y_map_distance, city_pop_data, cities_pop, cities_capital, cities_label, cities_label_pop, cities_fill, cities_stroke])
 
 
     #############################
@@ -386,7 +386,7 @@ def tsunami_report(\
         x_globe_dist = float(width) - 2.2
 
         #./Globus.sh output west east south north lon_mid lat_mid y_globe x_globe color_globe_land color_globe_water
-        subprocess.call(['./gmt_scripts/Globus.sh', output, str(west), str(east), str(south), str(north), str(lon_mid), str(lat_mid), str(y_globe_dist), str(x_globe_dist), color_globe_land, color_globe_water, color_globe_grid], env={'GMT_TMPDIR': tempdir})
+        subprocess.call(['./gmt_scripts/Globus.sh', output, str(west), str(east), str(south), str(north), str(lon_mid), str(lat_mid), str(y_globe_dist), str(x_globe_dist), color_globe_land, color_globe_water, color_globe_grid])
 
 
     ######################################
@@ -395,7 +395,7 @@ def tsunami_report(\
 
     ######## map scale ##########
     if plot_map_scale=="Y":
-        subprocess.call(['./gmt_scripts/map_scale.sh', output, R, J, str(lon_mid), str(lat_mid), str(scalebar_length), y_map_distance], env={'GMT_TMPDIR': tempdir})
+        subprocess.call(['./gmt_scripts/map_scale.sh', output, R, J, str(lon_mid), str(lat_mid), str(scalebar_length), y_map_distance])
 
     ########## Legende ##########
     if plot_cfz=="Y" or plot_tfp=="Y":
@@ -410,7 +410,7 @@ def tsunami_report(\
 
     subprocess.call(['./gmt_scripts/Legend.sh',output, plot_wave_height, plot_wave_time, world_pop, plot_cfz, plot_tfp, plot_cities, cfz_cpt, cfz_stroke, tfp_stroke, wave_height_cpt, world_pop_cpt, cities_fill, cities_stroke, \
         wave_height_pslegend, wave_height_psscale, wave_time_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, \
-        str(created_y), str(map_width), date], env={'GMT_TMPDIR': tempdir})
+        str(created_y), str(map_width), date])
    
     ######################################
     ###### Umwandlung in PNG/PDF #########
@@ -418,7 +418,7 @@ def tsunami_report(\
 
     #PseudoCommand; beendet das Overlay; Plottet unsichtbare Fluesse/Seen
     #gmt pscoast -J -R -P -O -C-t100 -Y >> ${output}
-    subprocess.call(['./gmt_scripts/pseudo_end.sh', output, R, J, tempdir], env={'GMT_TMPDIR': tempdir})
+    subprocess.call(['./gmt_scripts/pseudo_end.sh', output, R, J, tempdir])
 
     #erstellt png-Datei
     #gmt ps2raster default_output.ps -A -Tg -V
