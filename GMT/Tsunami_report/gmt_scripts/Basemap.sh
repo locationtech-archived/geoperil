@@ -4,7 +4,7 @@
 #passed arguments
 
 #./Basemap.sh title output extent projection y_map_dist basemap basemap_hillshade 
-#	outline coast_res coast_color dem(terrain) color_water color_land color_globe_land color_globe_water land_res etopo_water_cpt etopo_land_cpt
+#	outline coast_res coast_color dem(terrain) color_water color_land color_globe_land color_globe_water land_res basemap_water_cpt basemap_land_cpt
 
 title=${1}
 output=${2}
@@ -32,8 +32,8 @@ color_globe_water=${15}
 
 land_res=${16}
 
-etopo_water_cpt=${17}
-etopo_land_cpt=${18}
+basemap_water_cpt=${17}
+basemap_land_cpt=${18}
 
 world_pop_data=${19}
 world_pop_cpt=${20}
@@ -72,10 +72,10 @@ if [ ${dem} == Y ]
 then 
 	#erstellt eine Basemap auf Grundlage von ETOPO-Daten
 	#erstellt meer mit hillshade;
-	gmt grdimage -J -R -P -V -K -O ${basemap} -I${basemap_hillshade} -C${etopo_water_cpt} -Y >> ${output}
+	gmt grdimage -J -R -P -V -K -O ${basemap} -I${basemap_hillshade} -C${basemap_water_cpt} -Y >> ${output}
 	
 	#Anfang clip Land "-Gc"; "-D" fuer Aufloesung der Kuestenlinien
-	gmt pscoast -J -R -P -V -K -O -D${coast_res} -Gc -Y >> ${output} 
+	gmt pscoast -J -R -P -V -K -O -D${coast_res} -A${land_res} -Gc -Y >> ${output} 
 	
 	if [ ${world_pop} == Y ]
 	then
@@ -86,7 +86,7 @@ then
 			gmt pscoast -J -R -P -D${coast_res} -A${land_res} -S${color_water} -G${color_land} -Ya${y_map_dist} -V -K -O >> ${output}
 		else
 			#erstellt land mit hillshade
-			gmt grdimage -J -R -P -V -K -O -C${etopo_land_cpt} ${basemap} -I${basemap_hillshade} -Y >> ${output}
+			gmt grdimage -J -R -P -V -K -O -C${basemap_land_cpt} ${basemap} -I${basemap_hillshade} -Y >> ${output}
 		fi	
 	fi
 	
@@ -97,7 +97,7 @@ then
 	then
 	#erstellt Karte mit outline
 		#fuer Kontur "-W"
-		gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.002c,${coast_color} -Y >> ${output}	
+		gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.01c,${coast_color} -Y >> ${output}	
 	fi
 	
 elif [ ${dem} == N ]
@@ -109,9 +109,9 @@ then
 		if [ ${world_pop} == Y ]
 		then
 			gmt grdimage -J -R -P -V -K -O -C${world_pop_cpt} ${world_pop_data} -Y >> ${output}
-			gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.002c,${coast_color} -S${color_water} -Y >> ${output}
+			gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.01c,${coast_color} -S${color_water} -Y >> ${output}
 		else
-			gmt pscoast -J -R -P -D${coast_res} -A${land_res} -S${color_water} -G${color_land} -W0.002c,${coast_color} -Ya${y_map_dist} -V -K -O >> ${output}
+			gmt pscoast -J -R -P -D${coast_res} -A${land_res} -S${color_water} -G${color_land} -W0.01c,${coast_color} -Ya${y_map_dist} -V -K -O >> ${output}
 		fi
 	else
 	#erstellt Karte ohne outline

@@ -55,10 +55,10 @@ color_globe_water = 'LightBlue'
 
 #CPT-Dateien:
 #werden benoetigt fuer Farbgebung von GRD-Dateien
-etopo_water_cpt = 'cpt/basemap/blue.cpt'
-etopo_land_cpt = 'cpt/basemap/brown.cpt'
-#etopo_water_cpt = 'cpt/basemap/water_gray.cpt'
-#etopo_land_cpt = 'cpt/basemap/land_gray.cpt'
+basemap_water_cpt = 'cpt/basemap/blue.cpt'
+basemap_land_cpt = 'cpt/basemap/brown.cpt'
+#basemap_water_cpt = 'cpt/basemap/water_gray.cpt'
+#basemap_land_cpt = 'cpt/basemap/land_gray.cpt'
 
 #wave_height_cpt = 'cpt/waveheight_1.cpt'
 wave_height_cpt = 'cpt/wave_height/waveheight_1.cpt'
