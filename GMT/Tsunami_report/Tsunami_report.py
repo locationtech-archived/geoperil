@@ -187,7 +187,7 @@ def tsunami_report(\
         outline = 'Y'
         land_res = '1000'
         coast_color = '215/215/215'
-        basemap_water_cpt = 'cpt/basemap/water_gray.cpt'
+        basemap_water_cpt = 'cpt/basemap/gray_bright_1.cpt'
         color_land = '80/80/80 -N1/0.01c,160/160/160 -N2/0.01c,90/90/90'
     elif style=="4":
         #water with DEM = darkblue; land no DEM = darkgray
@@ -196,15 +196,15 @@ def tsunami_report(\
         outline = 'Y'
         land_res = '1000'
         coast_color = '215/215/215'
-        basemap_water_cpt = 'cpt/basemap/blue2.cpt'
+        basemap_water_cpt = 'cpt/basemap/blue_dark.cpt'
         color_land = '80/80/80 -N1/0.01c,160/160/160 -N2/0.01c,90/90/90'
     elif style=="5":
         dem = 'Y'
         outline = 'Y'
         land_res = '1000'
         coast_color = '220/220/220'
-        basemap_water_cpt = 'cpt/basemap/blue2.cpt'
-        basemap_land_cpt = 'cpt/basemap/land_gray2.cpt'
+        basemap_water_cpt = 'cpt/basemap/blue_dark.cpt'
+        basemap_land_cpt = 'cpt/basemap/gray_bright_2.cpt'
         
 
 
@@ -357,7 +357,7 @@ def tsunami_report(\
     
     ########### TFP #############
     if plot_tfp=="Y":
-        subprocess.call(['./gmt_scripts/TFP.sh',output ,tfp, tfp_0_03_fill, tfp_03_1_fill, tfp_1_3_fill, tfp_3_fill, tfp_cpt, tfp_stroke, y_map_distance])
+        subprocess.call(['./gmt_scripts/TFP.sh',output ,tfp, tfp_cpt, tfp_stroke, y_map_distance])
 
     ########## Quakes ###########
     if plot_quake=="Y":
@@ -412,6 +412,11 @@ def tsunami_report(\
         wave_height_pslegend, wave_height_psscale, wave_time_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, \
         str(created_y), str(map_width), date])
    
+   
+    #gmt psimage trideccloud-logo.png -C0.2c/0.2c -W2i -Xa-2.4c -O -K >> ${Datei_name}
+    #tridec_cloud_logo = '/home/basti/Schreibtisch/sf_Lubuntu_shared/trideccloud-logo.png'
+    #subprocess.call(['gmt', 'psimage', tridec_cloud_logo, '-C0c/4c', '-W2.5c', '-O', '-K', '>>', output], cwd=tempdir)     
+ 
     ######################################
     ###### Umwandlung in PNG/PDF #########
     ######################################

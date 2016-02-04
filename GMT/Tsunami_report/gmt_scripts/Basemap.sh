@@ -97,7 +97,7 @@ then
 	then
 	#erstellt Karte mit outline
 		#fuer Kontur "-W"
-		gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.01c,${coast_color} -Y >> ${output}	
+		gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.009c,${coast_color} -Y >> ${output}	
 	fi
 	
 elif [ ${dem} == N ]
@@ -109,9 +109,9 @@ then
 		if [ ${world_pop} == Y ]
 		then
 			gmt grdimage -J -R -P -V -K -O -C${world_pop_cpt} ${world_pop_data} -Y >> ${output}
-			gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.01c,${coast_color} -S${color_water} -Y >> ${output}
+			gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.009c,${coast_color} -S${color_water} -Y >> ${output}
 		else
-			gmt pscoast -J -R -P -D${coast_res} -A${land_res} -S${color_water} -G${color_land} -W0.01c,${coast_color} -Ya${y_map_dist} -V -K -O >> ${output}
+			gmt pscoast -J -R -P -D${coast_res} -A${land_res} -S${color_water} -G${color_land} -W0.009c,${coast_color} -Ya${y_map_dist} -V -K -O >> ${output}
 		fi
 	else
 	#erstellt Karte ohne outline
@@ -124,6 +124,3 @@ then
 		fi
 	fi
 fi
-
-#PseudoCommand; beendet das Overlay; Plottet unsichtbare Fluesse/Seen
-#gmt pscoast -J -R -P -B -O -C-t100 -Y >> ${output}

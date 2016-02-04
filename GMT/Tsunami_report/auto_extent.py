@@ -65,14 +65,14 @@ def calc_extent_for_w_time(wave_time, extent, tempdir):
     extent_line = gmt_file.readlines()[1]
 	#liest die Koordinaten fuer die Ausdehnung aus der zweiten Zeile der GMT-File
     extent_w_time = re.findall("(-?\d+.\d+)",extent_line)
-        
+   
     subprocess.call(['rm', temp_calc_tif])
     subprocess.call(['rm', temp_calc_gmt])
-
-    extent[0].append(float(extent_w_time[0]))
-    extent[1].append(float(extent_w_time[1]))
-    extent[2].append(float(extent_w_time[2]))
-    extent[3].append(float(extent_w_time[3]))
+    if extent_w_time!=['0/0', '0/0']:
+        extent[0].append(float(extent_w_time[0]))
+        extent[1].append(float(extent_w_time[1]))
+        extent[2].append(float(extent_w_time[2]))
+        extent[3].append(float(extent_w_time[3]))
 
     return (extent)
 
@@ -85,10 +85,11 @@ def cfz_extent(cfz, extent):
 	#liest die Koordinaten fuer die Ausdehnung aus der zweiten Zeile der GMT-File
     extent_cfz = re.findall("(-?\d+.\d+)",cfz_extent_line)
 
-    extent[0].append(float(extent_cfz[0]))
-    extent[1].append(float(extent_cfz[1]))
-    extent[2].append(float(extent_cfz[2]))
-    extent[3].append(float(extent_cfz[3]))
+    if extent_cfz!=['180.000000', '-180.000000', '90.000000', '-90.000000']:
+        extent[0].append(float(extent_cfz[0]))
+        extent[1].append(float(extent_cfz[1]))
+        extent[2].append(float(extent_cfz[2]))
+        extent[3].append(float(extent_cfz[3]))
 
     return (extent)
 
@@ -115,7 +116,6 @@ def tfp_extent(tfp, extent):
         if min(tfp_lat_list) != max(tfp_lat_list):
             tfp_extent[2] = min(tfp_lat_list)
             tfp_extent[3] = max(tfp_lat_list)
-       
     if tfp_extent[0] or tfp_extent[1] or tfp_extent[2] or tfp_extent[3]:
         extent[0].append(float(tfp_extent[0]))
         extent[1].append(float(tfp_extent[1]))
@@ -136,8 +136,8 @@ def best_auto_extent_for_input(west, east, south, north, wave_height, wave_heigh
             wave_height_max = get_maxmin_wave_height(wave_height)
             if wave_height_expression < wave_height_max:   
                 extent = calc_extent_for_w_height(wave_height, wave_height_expression, extent, tempdir)
-            else:
-                extent = calc_extent_for_w_time(wave_time, extent, tempdir)	
+            elif not wave_time=='':
+                extent = calc_extent_for_w_time(wave_time, extent, tempdir)			
         elif not wave_time=='':
             extent = calc_extent_for_w_time(wave_time, extent, tempdir)
 
@@ -147,15 +147,22 @@ def best_auto_extent_for_input(west, east, south, north, wave_height, wave_heigh
         if not tfp=='':
             extent = tfp_extent(tfp, extent)     
    
-        print (extent)   
-        if west is None:
-            west = min(extent[0])
-        if east is None:
-            east = max(extent[1])
-        if south is None:
-           south = min(extent[2])
-        if north is None:
-            north = max(extent[3])
+        print (extent)
+	
+        if extent==[[],[],[],[]]:
+            west = -180
+            east = 180
+            south = -70
+            north = 83
+        else:
+            if west is None:
+                west = min(extent[0])
+            if east is None:
+                east = max(extent[1])
+            if south is None:
+                south = min(extent[2])
+            if north is None:
+                north = max(extent[3])
 	
     return (west, east, south, north)
 
