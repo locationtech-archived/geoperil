@@ -120,7 +120,18 @@ S 0c c 0.3c ${cities_fill} 0.01c,${cities_stroke} 0.3c > 3Mio
 EOF
 fi
 
+
 #### created on ####
 gmt pslegend -Dx0c/${created_y}c/${map_width}c/BL -O -K <<EOF>> ${output}
 L 6p Helvetica L Created on ${date} UTC, by TRIDEC Cloud 
 EOF
+
+
+
+#tridec_cloud_logo='/home/basti/Schreibtisch/sf_Lubuntu_shared/trideccloud-logo.png'
+#gmt pslegend -Dx1.55c/${created_y}c/${map_width}c/BL -O -K <<EOF>> ${output}
+#L 6p Helvetica L - Created on ${date} UTC 
+#EOF
+#### Logo ####
+#y = y_map_dist - 0.44
+#gmt psimage ${tridec_cloud_logo} -C0c/2.86c -W1.6c -t20 -O -K >> ${output}
