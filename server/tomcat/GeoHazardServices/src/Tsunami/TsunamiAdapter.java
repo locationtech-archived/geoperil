@@ -2,8 +2,12 @@ package Tsunami;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
+import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
 import com.mongodb.DBObject;
@@ -24,6 +28,8 @@ public abstract class TsunamiAdapter implements IAdapter {
 	protected String hardware;
 	protected LocalConnection localCon;
 	
+	private HashMap<String, DBObject> locations;
+	
 	public TsunamiAdapter(DB db, SshConnection[] sshCon, File workdir, String hardware) throws IOException {
 		this.db = db;
 		this.sshCon = sshCon;
@@ -43,11 +49,14 @@ public abstract class TsunamiAdapter implements IAdapter {
 		System.out.println("TsuamiAdapter: " + task);
 		try {
 			writeFault(task);
-			writeTFPs(task);
+			prepareLocations(task);
+			writeLocations(task);
 			simulate(task);
 			/* Create tsunami jets. */
 			for( Double ewh: GlobalParameter.jets.keySet() )
 				createJets(task, ewh.toString());
+			readLocations(task);
+			finalizeLocations(task);
 			updateProgress(task, true);
 			finalize(task);
 			cleanup(task);
@@ -58,8 +67,9 @@ public abstract class TsunamiAdapter implements IAdapter {
 	}
 	
 	protected abstract void writeFault(EQTask task) throws IOException;
-	protected abstract void writeTFPs(EQTask task) throws IOException;
+	protected abstract void writeLocations(EQTask task) throws IOException;
 	protected abstract int simulate(EQTask task) throws IOException;
+	protected abstract int readLocations(EQTask task) throws IOException;
 	
 	/* Should be called by child classes if progress of simulation has changed. */
 	protected int updateProgress(EQTask task) {
@@ -177,7 +187,154 @@ public abstract class TsunamiAdapter implements IAdapter {
 	
 	protected void cleanup(EQTask task) throws IOException {
 		sshCon[0].runCmd(
-			String.format("rm -f heights.*.kml fault.inp eWave.2D.sshmax range.grd")
+			String.format("rm -f heights.*.kml fault.inp locations.inp eWave.2D.sshmax range.grd")
 		);
+	}
+	
+	protected HashMap<String, DBObject> getLocations() {
+		return locations;
+	}
+	
+	protected void prepareLocations(EQTask task) {
+		locations = new HashMap<String, DBObject>();
+		prepareTFPs(task, locations);
+		prepareTSPs(task, locations);
+		prepareStations(task, locations);
+	}
+	
+	private void prepareTFPs(EQTask task, HashMap<String, DBObject> locations) {
+		DBObject tfpQuery = null;
+		if( task.user.inst != null ) {
+			/* filter TFPs according to institution settings */
+			DBObject instObj = db.getCollection("institutions").findOne(
+				new BasicDBObject("name", task.user.inst)
+			);
+		
+			if( instObj != null ) {
+				@SuppressWarnings("unchecked")
+				List<Object> tfpList = (List<Object>) instObj.get("tfps");
+				if( tfpList != null ) {
+					BasicDBList tfpOrList = new BasicDBList();
+					for( Object s: tfpList ) {
+						tfpOrList.add( new BasicDBObject("code", new BasicDBObject("$regex", s)) );
+					}
+					tfpQuery = new BasicDBObject("$or", tfpOrList);
+				}
+			}
+		}
+						
+		for( DBObject obj: db.getCollection("tfps").find( tfpQuery ) ) {
+			String id = (String) obj.get( "_id" ).toString();
+			DBObject init = new BasicDBObject();
+			init.put( "lat", obj.get( "lat_sea" ) );
+			init.put( "lon", obj.get( "lon_sea" ) );
+			init.put( "ewh", 0.0 );
+			init.put( "eta", -1.0 );
+			init.put( "tfp", id );
+			init.put( "EventID", task.id );
+			init.put( "type", "TFP" );
+			locations.put( id, init );
+		}
+	}
+	
+	private void prepareTSPs(EQTask task, HashMap<String, DBObject> locations) {
+		for( DBObject obj: db.getCollection("tsps").find() ) {
+			String id = (String) obj.get( "_id" ).toString();			
+			DBObject init = new BasicDBObject();
+			init.put( "lat", obj.get( "lat_sea" ) );
+			init.put( "lon", obj.get( "lon_sea" ) );
+			init.put( "ewh", 0.0 );
+			init.put( "eta", -1.0 );
+			init.put( "tsp", id );
+			init.put( "EventID", task.id );
+			init.put( "cfcz", obj.get( "FID_IO_DIS" ) );
+			init.put( "type", "TSP" );
+			locations.put( id, init );
+		}
+	}
+	
+	private void prepareStations(EQTask task, HashMap<String, DBObject> locations) {
+		BasicDBList andList = new BasicDBList();
+		/* check if a real user requests this computation */
+		DBObject userObj = db.getCollection("users").findOne(
+			new BasicDBObject("_id", task.user.objId )
+		);
+		if( userObj != null ) {
+			BasicDBList ccodes = (BasicDBList) userObj.get("countries");
+			/* if no country specified, set to an empty list */
+			if( ccodes == null )
+				ccodes = new BasicDBList();
+			andList.add(
+				new BasicDBObject("country", new BasicDBObject("$in", ccodes) )
+			);			
+		}
+		
+		String inst = task.user.inst;
+		if( inst == null || inst.equals("gfz") || inst.equals("tdss15") )
+			inst = "gfz_ex_test";
+		andList.add( new BasicDBObject( "inst", inst ) );
+				
+		for( DBObject obj: db.getCollection("stations").find( new BasicDBObject("$and", andList) )) {
+			String id = (String) obj.get( "name" );		
+			DBObject init = new BasicDBObject();
+			init.put( "lat", obj.get( "lat" ) );
+			init.put( "lon", obj.get( "lon" ) );
+			init.put( "values", new ArrayList<DBObject>() );
+			init.put( "type", "STATION" );
+			locations.put( id, init );
+		}
+	}
+	
+	protected void finalizeLocations(EQTask task) {
+		
+		HashMap<Integer,Double> maxEWH = new HashMap<Integer, Double>();
+	    HashMap<Integer,Double> minETA = new HashMap<Integer, Double>();
+	    /* translate date into time stamp */
+		long time = task.eqparams.date.getTime() / 1000;
+		for(String id: locations.keySet() ) {
+			DBObject loc = locations.get(id);
+			if( loc.get("type").equals("TFP") || loc.get("type").equals("TSP") ) {
+				loc.removeField("lat");
+				loc.removeField("lon");
+				db.getCollection("comp").insert(loc);	
+				
+			} else if( loc.get("type").equals("STATION") ) {
+				@SuppressWarnings("unchecked")
+				List<DBObject> values = (List<DBObject>) loc.get("values");
+				for(DBObject obj: values) {
+					long rel_time = (long) obj.get("reltime") / task.accel;
+					obj.put("inst", task.user.inst);
+					obj.put("timestamp", time + rel_time);
+					obj.put("reltime", rel_time);
+					obj.put("station", id);
+					obj.put("evid", task.id);
+				}
+				db.getCollection("simsealeveldata").insert(values);
+			}
+			
+			/* Update maximal and minimal CFZ values. */
+			if( loc.get("type").equals("TSP") ) {
+			    Double ewh = (Double) loc.get("ewh");
+		    	Double eta = (Double) loc.get("eta");
+		    	Integer cfz = (Integer) loc.get("cfcz");
+		    
+		    	if( ! maxEWH.containsKey(cfz) ) {
+		    		maxEWH.put(cfz, ewh);
+		    		minETA.put(cfz, eta);
+		    	}
+		    	maxEWH.put(cfz, Math.max( maxEWH.get(cfz), ewh ) );
+		    	minETA.put(cfz, Math.min( minETA.get(cfz), eta ) );
+			}
+		}
+		/* Insert CFZ values into database. */
+		for(Integer key: maxEWH.keySet() ) {
+	    	DBObject cfz = new BasicDBObject();
+	    	cfz.put("code", key);
+	    	cfz.put("type", "CFZ");
+	    	cfz.put("ewh", maxEWH.get(key));
+	    	cfz.put("eta", minETA.get(key));
+	    	cfz.put("EventID", task.id);
+	    	db.getCollection("comp").insert( cfz );
+	    }
 	}
 }

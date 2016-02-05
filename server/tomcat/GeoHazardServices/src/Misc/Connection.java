@@ -80,6 +80,10 @@ public abstract class Connection {
 		return lines;
 	}
 	
+	public List<String> readFile(String fname) throws IOException {
+		return runCmd("cat " + fname);
+	}
+	
 	public void writeFile(String content, String fname) {
 		out.println("echo '" + content + "' > " + fname);
 		out.flush();

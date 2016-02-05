@@ -649,7 +649,7 @@ public class Services {
 				  for( Double strike: strikes ) {
 					  for( Double rake: rakes ) {
 						  EQParameter eqp = new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
-						  String retid = _compute(eqp, user, name + " " + i, null, null, dur, evtset, "easywave" );
+						  String retid = _compute(eqp, user, name + " " + i, null, null, dur, evtset, "easywave", 120 );
 						  evtids.add(retid);
 						  i++;
 					  }
@@ -781,7 +781,7 @@ public class Services {
   
   private String _compute(EQParameter eqp, User user, String name, 
 		  String parent, String root, Integer dur, EventSet evtSet,
-		  String algo) {
+		  String algo, Integer gridres) {
 	  	  	  
 	  /* create a unique ID that is not already present in the DB */
 	  String id = newRandomId(user.name);
@@ -844,6 +844,7 @@ public class Services {
 	  EQTask task = new EQTask(eqp, id, user, dur, accel);
 	  task.evtset = evtSet;
 	  task.algo = algo;
+	  task.gridres = gridres;
 	  if( evtSet == null ) {
 		  if( algo.equals("hysea") ) {
 			  task.setSlots(IScheduler.SLOT_HYSEA);
@@ -878,10 +879,11 @@ public class Services {
 		  @FormParam("root") String root,
 		  @FormParam("parent") String parent,
 		  @FormParam("algo") @DefaultValue("easywave") String algo,
+		  @FormParam("gridres") @DefaultValue("120") Integer gridres,
 		  @CookieParam("server_cookie") String session) {
 	  	  	  
 	  Object[] required1 = { name, lon, lat, depth,	dip,
-			  				 strike, rake, dur, algo };
+			  				 strike, rake, dur, algo, gridres };
 	  
 	  if( ! checkParams( request, required1 ) )
 		  return jsfailure();
@@ -927,7 +929,7 @@ public class Services {
 	  EQParameter eqp = (mag == null)
 			  ? new EQParameter(lon, lat, slip, length, width, depth, dip, strike, rake, date)
 			  : new EQParameter(lon, lat, mag, depth, dip, strike, rake, date);
-	  String ret_id = _compute(eqp, user, name, parent, root, dur, null, algo);
+	  String ret_id = _compute(eqp, user, name, parent, root, dur, null, algo, gridres);
 	  return jssuccess( new BasicDBObject("_id", ret_id) );
   }
   
