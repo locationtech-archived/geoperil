@@ -55,12 +55,12 @@ dem_water=${24}
 gmtset MAP_FRAME_TYPE plain
 gmtset PS_MEDIA 21.0cx${paper_height}c
 
-if [ "${title}" == -None- ]
+if [ "${title}" == "None" ]
 #Erstellt leeren Kartenrahmen; -BWSen (Sued und West-Achse werden beschriften, Nord und Ost nur geplottet);fuegt Titel an Karte falls eingestellt
 then
 	gmt psbasemap --MAP_ANNOT_OFFSET_PRIMARY=3p --MAP_ANNOT_OFFSET_SECONDARY=3p --FONT_ANNOT_PRIMARY=8p,Helvetica,black ${projection} ${extent} -P -Ba -BNWes -Ya${y_map_dist} -V -K > ${output}
 else
-	if [ "${subtitle}" == -None- ]
+	if [ "${subtitle}" == "None" ]
 	then
 		gmt psbasemap --MAP_ANNOT_OFFSET_PRIMARY=3p --MAP_ANNOT_OFFSET_SECONDARY=3p --FONT_ANNOT_PRIMARY=8p,Helvetica,black --FONT_TITLE=22p,Helvetica-Bold,black --MAP_TITLE_OFFSET=14p ${projection} ${extent} -P -Ba -BNWes+t"${title}" -Ya${y_map_dist} -V -K > ${output}
 	else

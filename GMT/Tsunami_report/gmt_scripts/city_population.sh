@@ -40,7 +40,6 @@ else
 	awk "BEGIN {FS=\",\"}; \$29 > ${cities_pop} ${cities_capital} {print \$1, \$2;}" ${city_pop_data} | gmt psxy ${R} ${J} -P -W0.01c,${cities_stroke}  -i0,1 -Sc0.3c -G${cities_fill} -Ya${y_map_dist} -O -K >> ${output}
 fi
 
-
 if [ ${cities_label} = Y ]
 then
 	awk "BEGIN {FS=\",\"}; \$29 > ${cities_label_pop} ${cities_capital} {print \$1, \$2, \$7;}" ${city_pop_data} | gmt pstext ${R} ${J} -F+f8p,Helvetica,black+jBL -Dj0.1c -Ya${y_map_dist} -O -K >> ${output}
