@@ -34,9 +34,9 @@ if args.cw14:
 elif args.cw15:
     regex = '^\s*(?P<country>[a-zA-Z_ ]+)  (?P<name>[a-zA-Z][a-zA-Z_ ]*)  (?P<lat>\d*\.\d*S?N?)\s*(?P<lon>\d*\.\d*W?E?)\s*\d*Z.*$'
 elif args.cw16:
-    regex = '^\s*(?P<name>[a-zA-Z][a-zA-Z_ ]+)  (?P<country>[a-zA-Z][a-zA-Z_ ]*)  (?P<lat>\d*\.\d*S?N?)\s*(?P<lon>\d*\.\d*W?E?).*$'
+    regex = '^\s*(?P<name>[a-zA-Z][-a-zA-Z_ ]+)  (?P<country>[a-zA-Z][a-zA-Z_() ]*)  (?P<lat>-?\d*\.\d*S?N?)\s*(?P<lon>-?\d*\.\d*W?E?).*$'
 elif args.pw16:
-    regex = '^\s*(?P<country>(?:[a-zA-Z_. ]+  )?)(?P<name>[a-zA-Z][a-zA-Z_. ]*)  (?P<lat>\d+\.\d+[SN]?)\s*(?P<lon>\d+\.\d+[WE]?).*$'
+    regex = '^\s*(?P<country>(?:[a-zA-Z_. ]+  )?)(?P<name>[a-zA-Z][a-zA-Z_(). ]*)  (?P<lat>\d+\.\d+[SN]?)\s*(?P<lon>\d+\.\d+[WE]?).*$'
 else:
     raise ValueError('No format given.')
 
