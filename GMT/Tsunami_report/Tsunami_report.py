@@ -85,19 +85,24 @@ cities_group = [
 {"Name": "Plot no cities",           "key": "None"}
 ]
 
+res_group = [
+{"Name": "web",     "key": 300},
+{"Name": "HQ",      "key": 600}
+]
+
 input_param = [
 {"Flagname": "Title",                                     "variable": "title",                    "Flag1": "-t",            "Flag2": "--title",                   "default": None,                                                        "help": "Title for map",                                                                "category": "General",                      "data_type": "String",                                                                                                                            "user": True},
 {"Flagname": "Subheading",                                "variable": "subtitle",                 "Flag1": "-st",           "Flag2": "--subtitle",                "default": None,                                                        "help": "subheading for map",                                                           "category": "General",                      "data_type": "String",                                                                                                                            "user": True},
 {"Flagname": "Output-File",                               "variable": "output",                   "Flag1": "-o",            "Flag2": "--output",                  "default": "/home/basti/GMT/Tsunami_report/PS_files/default_output.ps", "help": "Path of Output PS-File",                                                                                                                                                                                                                                                     "user": False},
 
-{"Flagname": "Resolution",                                "variable": "dpi",                      "Flag1": "-dpi",          "Flag2": "--dpi",                     "default": 600,                                                         "help": "Set output resolution\nnumber, web(300) or HQ(600)",                           "category": "General",                      "data_type": "Number",                                                                                                                            "user": True},
+{"Flagname": "Resolution",                                "variable": "dpi",                      "Flag1": "-dpi",          "Flag2": "--dpi",                     "default": 600,                                                         "help": "Set output resolution\nnumber, web(300) or HQ(600)",                           "category": "General",                      "data_type": "group",       "group": res_group,                                                                                                    "user": True},
 
 {"Flagname": "Plot DEM",                                  "variable": "dem",                      "Flag1": "-p_dem",        "Flag2": "--plot_dem",                "default": "water_only",                                                "help": "Select how basemap will be printed\nChoose:\tY -> prints DEM\n\twater_only -> prints only water with DEM\n\tN -> prints no DEM", "category": "Map", "data_type": "group", "group": dem_group,                                                                                "user": True},
 
 {"Flagname": "Basemap water CPT",                         "variable": "basemap_water_cpt",        "Flag1": "-w_cpt",        "Flag2": "--basemap_water_cpt",       "default": None,                                                        "help": "Path to CPT-File for water-basemap",                                                                                                                                                                                                                                         "user": False},
 {"Flagname": "Basemap land CPT",                          "variable": "basemap_land_cpt",         "Flag1": "-l_cpt",        "Flag2": "--basemap_land_cpt",        "default": None,                                                        "help": "Path to CPT-File for land-basemap",                                                                                                                                                                                                                                          "user": False},
 
-{"Flagname": "Style",                                     "variable": "style",                    "Flag1": "-style",        "Flag2": "--style",                   "default": "3",                                                          "help": "Choose pre-built styles",                                                      "category": "Map",                          "data_type": "group",      "group": style_group,                                                                                                  "user": True},
+{"Flagname": "Style",                                     "variable": "style",                    "Flag1": "-style",        "Flag2": "--style",                   "default": "3",                                                         "help": "Choose pre-built styles",                                                      "category": "Map",                          "data_type": "group",       "group": style_group,                                                                                                  "user": True},
 {"Flagname": "Water color",                               "variable": "color_water",              "Flag1": "-c_water",      "Flag2": "--color_water",             "default": "170/170/170",                                               "help": "Color for water (R/G/B)",                                                      "category": "Map",                          "data_type": "R/G/B",                                                                                                                             "user": True},
 {"Flagname": "Land color",                                "variable": "color_land",               "Flag1": "-c_land",       "Flag2": "--color_land",              "default": "80/80/80",                                                  "help": "Color for land (R/G/B)",                                                       "category": "Map",                          "data_type": "R/G/B",                                                                                                                             "user": True},
 
@@ -212,12 +217,7 @@ def tsunami_report(\
         wave_height_expression = 0.00000000000000001
 	
     wave_time_temp = '%s/eWave_time_temp.nc' %(tempdir)
-    
-    #sets dpi
-    if dpi=="web":
-        dpi = 300
-    elif dpi=="HQ":
-        dpi = 600
+
 
     #aktuelles Datum
     date = datetime.datetime.utcnow().strftime("%Y, %B %d, %H:%M")
