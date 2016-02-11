@@ -38,7 +38,7 @@ map_width = '15.8'
 coast_res = 'i'
 
 #Land-Aufloesung: Features kleiner als Eingabe werden nicht geplottet (in km²); z.B. Fluesse, Seen usw.
-land_res = '500'
+land_res = '1000'
 
 #Traveltime-Data
 #Abstaender der Isochronen in min

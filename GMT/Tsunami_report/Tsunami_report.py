@@ -17,86 +17,161 @@ from auto_extent import *
 #Python-Script fuer Berechnugn der Position der Legendenbestandteile
 from build_legend import *
 
+from build_cpt_file import *
+
 
 ###########################################
 ####### passed argmunents with flags ######
 ###########################################
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
-input_param = [
-{"Flagname": "Title",              "variable": "title",                    "Flag1": "-t",            "Flag2": "--title",                   "default": None,             "help": "Title for map",                                                                "category": "General",      "data_type": "String",                                                                                             "user": True},
-{"Flagname": "Subheading",         "variable": "subtitle",                 "Flag1": "-st",           "Flag2": "--subtitle",                "default": None,             "help": "subheading for map",                                                           "category": "General",      "data_type": "String",                                                                                             "user": True},
-{"Flagname": "Output-File",        "variable": "output",                   "Flag1": "-o",            "Flag2": "--output",                  "default": "/home/basti/GMT/Tsunami_report/PS_files/default_output.ps", "help": "Path of Output PS-File",                                                                                                                                                           "user": False},
+#pre-built styles
+style_group = [
+{"Name": "Water DEM gray",      "key": 3,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "water_only"},
+                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"}, 
+                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"}, 
+                                                      {"variable": "border",            "Flag": "-p_b",      "value": "Y"},
+                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"}, 	
+                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"}, 						 						
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "170/170/170"}, 
+                                                      {"variable": "color_land",        "Flag": "-c_land",   "value": "80/80/80"},
+                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]},
+{"Name": "Water DEM darkblue",  "key": 4,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "water_only"},
+                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"}, 
+                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"}, 
+                                                      {"variable": "border",            "Flag": "-p_b",      "value": "Y"},
+                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"}, 	
+                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"}, 						 						
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "118/154/174"}, 
+                                                      {"variable": "color_land",        "Flag": "-c_land",   "value": "80/80/80"},
+                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]},  
+{"Name": "DEM",                 "key": 1,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "Y"},
+                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "N"}, 
+                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"}, 
+                                                      {"variable": "border",            "Flag": "-p_b",      "value": "N"},
+                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"}, 	
+                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"}, 						 						
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "247/252/255"}, 
+                                                      {"variable": "color_land",        "Flag": "-c_land",   "value": "226/226/214"},
+                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/0/0"}]}, 
+{"Name": "DEM gray",            "key": 5,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "Y"},
+                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"}, 
+                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "220/220/220"}, 
+                                                      {"variable": "border",            "Flag": "-p_b",      "value": "Y"},
+                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "200/200/200"}, 	
+                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "170/170/170"}, 						 						
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "118/154/174"}, 
+                                                      {"variable": "color_land",        "Flag": "-c_land",   "value": "150/150/150"},
+                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]}, 
+{"Name": "Gray",                "key": 2,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "N"},
+                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"}, 
+                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"}, 
+                                                      {"variable": "border",            "Flag": "-p_b",      "value": "Y"},
+                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"}, 	
+                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"}, 						 						
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "170/170/170"}, 
+                                                      {"variable": "color_land",        "Flag": "-c_land",   "value": "80/80/80"},
+                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]}]
 
-{"Flagname": "West",               "variable": "west",                     "Flag1": "-e_w",          "Flag2": "--extent_west",             "default": None,             "help": "Extent West",                                                                  "category": "General",      "data_type": "Number",     "limit": {"min":-180, "max": 360}, "unit": "&deg;",                                     "user": True},
-{"Flagname": "East",               "variable": "east",                     "Flag1": "-e_e",          "Flag2": "--extent_east",             "default": None,             "help": "Extent East",                                                                  "category": "General",      "data_type": "Number",     "limit": {"min":-180, "max": 360}, "unit": "&deg;",                                     "user": True},
-{"Flagname": "South",              "variable": "south",                    "Flag1": "-e_s",          "Flag2": "--extent_south",            "default": None,             "help": "Extent South",                                                                 "category": "General",      "data_type": "Number",     "limit": {"min":-90, "max": 90},   "unit": "&deg;",                                     "user": True},
-{"Flagname": "North",              "variable": "north",                    "Flag1": "-e_n",          "Flag2": "--extent_north",            "default": None,             "help": "Extent North",                                                                 "category": "General",      "data_type": "Number",     "limit": {"min":-90, "max": 90},   "unit": "&deg;",                                     "user": True},
-
-{"Flagname": "Y-Ratio",            "variable": "y_ratio",                  "Flag1": "-y_r",          "Flag2": "--y_ratio",                 "default": "4",              "help": "Map-Frame-ratio for y-axis\n(default = 4)",                                                                                                                                                                                   "user": False},
-{"Flagname": "X-Ratio",            "variable": "x_ratio",                  "Flag1": "-x_r",          "Flag2": "--x_ratio",                 "default": "5",              "help": "Map-Frame-ratio for x-axis\n(default = 5)",                                                                                                                                                                                   "user": False},
-
-{"Flagname": "WaveJets",           "variable": "wave_height",              "Flag1": "-w_height",     "Flag2": "--wave_height",             "default": "",               "help": "Path to WaveJets-GRID-File",                                                                                                                                                                                                  "user": False},
-{"Flagname": "Wave-Expression",    "variable": "wave_height_expression",   "Flag1": "-w_exp",        "Flag2": "--wave_height_expression",  "default": "0.05",           "help": "All values above input will be plotted [m]",                                   "category": "WaveJets",      "data_type": "Number",    "limit": {"min": 0, "max": 100},   "unit": "m",        "dependence": "-p_w_height",     "user": True},
-{"Flagname": "Plot WaveJets",      "variable": "plot_wave_height",         "Flag1": "-p_w_height",   "Flag2": "--plot_wave_height",        "default": "N",              "help": "Plot WaveJets?\nYes = Y\nNo = N (default)",                                    "category": "WaveJets",      "data_type": "Boolean",                                                                                           "user": True},
-{"Flagname": "WaveJets CPT",       "variable": "wave_height_cpt",          "Flag1": "-w_height_cpt", "Flag2": "--wave_height_cpt",         "default": "cpt/wave_height/waveheight_1.cpt", "help": "Path to CPT-File for WaveJets",                                                                                                                                                                             "user": False},
-
-{"Flagname": "TravelTimes",        "variable": "wave_time",                "Flag1": "-w_time",       "Flag2": "--wave_time",               "default": "",               "help": "Path to TravelTimes-GRID-File",                                                                                                                                                                                               "user": False},
-{"Flagname": "Plot TravelTimes",   "variable": "plot_wave_time",           "Flag1": "-p_w_time",     "Flag2": "--plot_wave_time",          "default": "N",              "help": "Plot TravelTimes?\nYes = Y\nNo = N (default)",                                 "category": "TravelTimes",   "data_type": "Boolean",                                                                                           "user": True},
-{"Flagname": "TravelTimes color",  "variable": "Isochrone_color",          "Flag1": "-w_time_c",     "Flag2": "--wave_time_color",         "default": "255/0/0",        "help": "Color for TravelTimes (R/G/B)",                                                "category": "TravelTimes",   "data_type": "R/G/B",                                                            "dependence": "-p_w_time",       "user": True},
-
-{"Flagname": "CFZ",                "variable": "cfz",                      "Flag1": "-cfz",          "Flag2": "--cfz",                     "default": "",               "help": "Path to CFZ GMT-File",                                                                                                                                                                                                        "user": False},
-{"Flagname": "Plot CFZ",           "variable": "plot_cfz",                 "Flag1": "-p_cfz",        "Flag2": "--plot_cfz",                "default": "N",              "help": "Plot Coastal-Forecast-Zones?\nYes = Y\nNo = N (default)",                      "category": "CFZ",           "data_type": "Boolean",                                                                                           "user": True},
-{"Flagname": "CFZ CPT",            "variable": "cfz_cpt",                  "Flag1": "-cfz_cpt",      "Flag2": "--cfz_cpt",                 "default": "cpt/CFZ/CFZ.cpt", "help": "Path to CPT-File for Coastal-Forecast-Zones",                                                                                                                                                                                "user": False},
-{"Flagname": "CFZ stroke color",   "variable": "cfz_stroke",               "Flag1": "-cfz_stroke",   "Flag2": "--cfz_stroke",              "default": "35/35/35",       "help": "Color for CFZ stroke (R/G/B)",                                                 "category": "CFZ",           "data_type": "R/G/B",                                                            "dependence": "-p_cfz",          "user": True},
-
-{"Flagname": "TFP",                "variable": "tfp",                      "Flag1": "-tfp",          "Flag2": "--tfp",                     "default": "",               "help": "Path to TFP CSV-File",                                                                                                                                                                                                        "user": False},
-{"Flagname": "Plot TFP",           "variable": "plot_tfp",                 "Flag1": "-p_tfp",        "Flag2": "--plot_tfp",                "default": "N",              "help": "Plot Tsunami-Forecast-Zones?\nYes = Y\nNo = N (default)",                      "category": "TFP",           "data_type": "Boolean",                                                                                           "user": True},
-{"Flagname": "TFP CPT",            "variable": "tfp_cpt",                  "Flag1": "-tfp_cpt",      "Flag2": "--tfp_cpt",                 "default": "cpt/TFP/TFP.cpt", "help": "Path to CPT-File for Tsunami-Forecast-Points",                                                                                                                                                                               "user": False},
-{"Flagname": "TFP stroke color",   "variable": "tfp_stroke",               "Flag1": "-tfp_stroke",   "Flag2": "--tfp_stroke",              "default": "255/255/255",    "help": "Color for TFP stroke (R/G/B)",                                                 "category": "TFP",           "data_type": "R/G/B",                                                            "dependence": "-p_tfp",          "user": True},
-
-{"Flagname": "Quake",              "variable": "quake",                    "Flag1": "-q",            "Flag2": "--quake",                   "default": "",               "help": "Path to Qauke CSV-File",                                                                                                                                                                                                      "user": False},
-{"Flagname": "Plot Quake ",        "variable": "plot_quake",               "Flag1": "-p_q",          "Flag2": "--plot_quake",              "default": "N",              "help": "Plot Quake?\nYes = Y\nNo = N (default)",                                       "category": "Quake",         "data_type": "Boolean",                                                                                           "user": True},
-{"Flagname": "Quake color",        "variable": "quake_fill",               "Flag1": "-q_f",          "Flag2": "--quake_fill",              "default": "252/255/0",      "help": "Fill color for quake (R/G/B)",                                                 "category": "Quake",         "data_type": "R/G/B",                                                            "dependence": "-p_q",            "user": True},
-
-{"Flagname": "Plot DEM",           "variable": "dem",                      "Flag1": "-p_dem",        "Flag2": "--plot_dem",                "default": "N",              "help": "Plot DEM as basemap?\nYes = Y\nNo = N (default)",                              "category": "General",       "data_type": "Boolean",                                                                                           "user": True},
-{"Flagname": "Plot DEM Water",     "variable": "dem_water",                "Flag1": "-p_dem_w",      "Flag2": "--plot_dem_water",          "default": "N",              "help": "Plot DEM as basemap only for water?\n--plot_dem must be True!\nYes = Y\nNo = N (default)", "category": "General", "data_type": "Boolean",                                                    "dependence": "-p_dem",          "user": True},
-{"Flagname": "Basemap water CPT",  "variable": "basemap_water_cpt",        "Flag1": "-w_cpt",        "Flag2": "--basemap_water_cpt",       "default": "cpt/basemap/blue.cpt", "help": "Path to CPT-File for water-basemap",                                                                                                                                                                                    "user": False},
-{"Flagname": "Basemap land CPT",   "variable": "basemap_land_cpt",         "Flag1": "-l_cpt",        "Flag2": "--basemap_land_cpt",        "default": "cpt/basemap/brown.cpt", "help": "Path to CPT-File for land-basemap",                                                                                                                                                                                    "user": False},
-
-{"Flagname": "Plot World Pop",     "variable": "world_pop",                "Flag1": "-p_w_pop",      "Flag2": "--plot_world_pop",          "default": "N",              "help": "Plot World Population?\nYes = Y\nNo = N (default)",                            "category": "World Population", "data_type": "Boolean",                                                                                        "user": True},
-{"Flagname": "World Pop CPT",      "variable": "world_pop_cpt",            "Flag1": "-w_pop_cpt",    "Flag2": "--world_pop_cpt",           "default": "cpt/world_population/world_pop_label.cpt", "help": "Path to CPT-File for World Population",                                                                                                                                                             "user": False},
-
-{"Flagname": "Plot Cities",        "variable": "plot_cities",              "Flag1": "-p_c",          "Flag2": "--plot_cities",             "default": "N",              "help": "Plot Cities?\nYes = Y\nNo = N (default)",                                      "category": "Cities",        "data_type": "Boolean",                                                                                           "user": True},
-{"Flagname": "Cities Population",  "variable": "cities_pop",               "Flag1": "-c_pop",        "Flag2": "--cities_pop",              "default": None,             "help": "All Cities above given value will be plotted [mio]\n(default = 0)",            "category": "Cities",        "data_type": "Number",   "limit": {"min": 0, "max": 36},    "unit": "mio",       "dependence": "-p_c",            "user": True},
-{"Flagname": "Capital citites",    "variable": "cities_capital",           "Flag1": "-c_c",          "Flag2": "--cities_capital",          "default": "N",              "help": "Plot only capital cities?\nYes = Y\nNo = N (default)",                         "category": "Cities",        "data_type": "Boolean",                                                          "dependence": "-p_c",            "user": True},
-{"Flagname": "Label cities",       "variable": "cities_label",             "Flag1": "-c_l",          "Flag2": "--cities_label",            "default": "N",              "help": "Label citites?\nYes = Y\nNo = N (default)",                                    "category": "Cities",        "data_type": "Boolean",                                                          "dependence": "-p_c",            "user": True},
-{"Flagname": "Label cities Population", "variable": "cities_label_pop",    "Flag1": "-c_l_p",        "Flag2": "--cities_label_pop",        "default": None,             "help": "Cities above given value will be labelled [mio]\nIf no input -> all visible cities will be labelled", "category": "Cities", "data_type": "Number", "limit": {"min": 0, "max": 36}, "unit": "mio", "dependence": "-p_c",       "user": True},
-{"Flagname": "Cities color",       "variable": "cities_fill",              "Flag1": "-c_f",          "Flag2": "--cities_fill",             "default": "230/26/26",      "help": "Fill color for cities (R/G/B)",                                                "category": "Cities",        "data_type": "R/G/B",                                                            "dependence": "-p_c",            "user": True},
-{"Flagname": "Cities stroke color","variable": "cities_stroke",            "Flag1": "-c_s",          "Flag2": "--cities_stroke",           "default": "58/0/0",         "help": "Color for cities stroke (R/G/B)",                                              "category": "Cities",        "data_type": "R/G/B",                                                            "dependence": "-p_c",            "user": True},
-
-{"Flagname": "Plot map scale?",    "variable": "plot_map_scale",           "Flag1": "-p_ms",         "Flag2": "--plot_map_scale",          "default": "Y",              "help": "Plot map scale bar?\nYes = Y (default)\nNo = N",                               "category": "General",       "data_type": "Boolean",                                                                                           "user": True},
-{"Flagname": "Plot globe?",        "variable": "plot_globe",               "Flag1": "-p_g",          "Flag2": "--plot_globe",              "default": "Y",              "help": "Plot overview-globe?\nYes = Y (default)\nNo = N",                              "category": "General",       "data_type": "Boolean",                                                                                           "user": True},
-{"Flagname": "Globe land color",   "variable": "color_globe_land",         "Flag1": "-c_g_l",        "Flag2": "--color_globe_land",        "default": "173/209/166",    "help": "Color for land (overview-globe) (R/G/B)",                                      "category": "General",       "data_type": "R/G/B",                                                                                             "user": True},
-{"Flagname": "Globe water color",  "variable": "color_globe_water",        "Flag1": "-c_g_w",        "Flag2": "--color_globe_water",       "default": "173/216/230",    "help": "Color for water (overview-globe) (R/G/B)",                                     "category": "General",       "data_type": "R/G/B",                                                                                             "user": True},
-{"Flagname": "Globe grid color",   "variable": "color_globe_grid",         "Flag1": "-c_g_g",        "Flag2": "--color_globe_grid",        "default": "59/80/54",       "help": "Color for globe grid (overview-globe) (R/G/B)",                                "category": "General",       "data_type": "R/G/B",                                                                                             "user": True},
-
-{"Flagname": "Plot outline",       "variable": "outline",                  "Flag1": "-p_o",          "Flag2": "--plot_outline",            "default": "N",              "help": "Plot outline (coast)?\nYes = Y\nNo = N (default)",                             "category": "General",       "data_type": "Boolean",                                                                                           "user": True},
-{"Flagname": "Coastline color",    "variable": "coast_color",              "Flag1": "-c_color",      "Flag2": "--coast_color",             "default": "60/60/60",       "help": "Color for coastlines (R/G/B)\n--plot_outline must be True!",                   "category": "General",       "data_type": "R/G/B",                                                            "dependence": "-p_o",            "user": True},
-{"Flagname": "Water color",        "variable": "color_water",              "Flag1": "-c_water",      "Flag2": "--color_water",             "default": "170/170/170",    "help": "Color for water (R/G/B)\n--plot_dem must be False or --plot_dem_water True!",  "category": "General",       "data_type": "R/G/B",                                                                                             "user": True},
-{"Flagname": "Land color",         "variable": "color_land",               "Flag1": "-c_land",       "Flag2": "--color_land",              "default": "80/80/80",       "help": "Color for land (R/G/B)\n--plot_dem must be False!",                            "category": "General",       "data_type": "R/G/B",                                                                                             "user": True},
-{"Flagname": "Style",              "variable": "style",                    "Flag1": "-style",        "Flag2": "--style",                   "default": "2",              "help": "Choose pre-built styles",                                                      "category": "General",       "data_type": "group", "group": [{"Name": "DEM", "key": 1}, {"Name": "Gray", "key": 2}, {"Name": "Water DEM gray", "key": 3}, {"Name": "Water DEM darkblue", "key": 4}, {"Name": "DEM gray", "key": 5}], "user": True},
-
-{"Flagname": "JSON",               "variable": "print_json",               "Flag1": "-p_j",          "Flag2": "--print_json",              "default": None,             "help": "if = Y input printed as json",                                                                                                                                                                                                "user": False}
+dem_group = [
+{"Name": "Plot DEM",        "key": "Y"}, 
+{"Name": "Plot water only", "key": "water_only"},
+{"Name": "Plot no DEM",     "key": "N"}
 ]
 
-for x in input_param:
-    if x["default"] is None:
-        parser.add_argument(x["Flag1"], x["Flag2"], dest = x["variable"], help = x["help"])        
-    else:
-        parser.add_argument(x["Flag1"], x["Flag2"], dest = x["variable"], default = x["default"], help = x["help"])   
+cities_group = [
+{"Name": "Plot all cities",          "key": "all"},
+{"Name": "Plot only capital cities", "key": "capitals"},
+{"Name": "Plot no cities",           "key": "None"}
+]
 
+input_param = [
+{"Flagname": "Title",                                     "variable": "title",                    "Flag1": "-t",            "Flag2": "--title",                   "default": None,                                                        "help": "Title for map",                                                                "category": "General",                      "data_type": "String",                                                                                                                            "user": True},
+{"Flagname": "Subheading",                                "variable": "subtitle",                 "Flag1": "-st",           "Flag2": "--subtitle",                "default": None,                                                        "help": "subheading for map",                                                           "category": "General",                      "data_type": "String",                                                                                                                            "user": True},
+{"Flagname": "Output-File",                               "variable": "output",                   "Flag1": "-o",            "Flag2": "--output",                  "default": "/home/basti/GMT/Tsunami_report/PS_files/default_output.ps", "help": "Path of Output PS-File",                                                                                                                                                                                                                                                     "user": False},
+
+{"Flagname": "Resolution",                                "variable": "dpi",                      "Flag1": "-dpi",          "Flag2": "--dpi",                     "default": 600,                                                         "help": "Set output resolution\nnumber, web(300) or HQ(600)",                           "category": "General",                      "data_type": "Number",                                                                                                                            "user": True},
+
+{"Flagname": "Plot DEM",                                  "variable": "dem",                      "Flag1": "-p_dem",        "Flag2": "--plot_dem",                "default": "water_only",                                                "help": "Select how basemap will be printed\nChoose:\tY -> prints DEM\n\twater_only -> prints only water with DEM\n\tN -> prints no DEM", "category": "Map", "data_type": "group", "group": dem_group,                                                                                "user": True},
+
+{"Flagname": "Basemap water CPT",                         "variable": "basemap_water_cpt",        "Flag1": "-w_cpt",        "Flag2": "--basemap_water_cpt",       "default": None,                                                        "help": "Path to CPT-File for water-basemap",                                                                                                                                                                                                                                         "user": False},
+{"Flagname": "Basemap land CPT",                          "variable": "basemap_land_cpt",         "Flag1": "-l_cpt",        "Flag2": "--basemap_land_cpt",        "default": None,                                                        "help": "Path to CPT-File for land-basemap",                                                                                                                                                                                                                                          "user": False},
+
+{"Flagname": "Style",                                     "variable": "style",                    "Flag1": "-style",        "Flag2": "--style",                   "default": "3",                                                          "help": "Choose pre-built styles",                                                      "category": "Map",                          "data_type": "group",      "group": style_group,                                                                                                  "user": True},
+{"Flagname": "Water color",                               "variable": "color_water",              "Flag1": "-c_water",      "Flag2": "--color_water",             "default": "170/170/170",                                               "help": "Color for water (R/G/B)",                                                      "category": "Map",                          "data_type": "R/G/B",                                                                                                                             "user": True},
+{"Flagname": "Land color",                                "variable": "color_land",               "Flag1": "-c_land",       "Flag2": "--color_land",              "default": "80/80/80",                                                  "help": "Color for land (R/G/B)",                                                       "category": "Map",                          "data_type": "R/G/B",                                                                                                                             "user": True},
+
+{"Flagname": "Plot outline",                              "variable": "outline",                  "Flag1": "-p_o",          "Flag2": "--plot_outline",            "default": "Y",                                                         "help": "Plot outline (coast)?\nYes = Y\nNo = N (default)",                             "category": "Map",                          "data_type": "Boolean",                                                          "enable": ["-c_color"],                                          "user": True},
+{"Flagname": "Coastline color",                           "variable": "coast_color",              "Flag1": "-c_color",      "Flag2": "--coast_color",             "default": "215/215/215",                                               "help": "Color for coastlines (R/G/B)\n--plot_outline must be True!",                   "category": "Map",                          "data_type": "R/G/B",                                                                                                                             "user": True},
+
+{"Flagname": "Plot border",                               "variable": "border",                   "Flag1": "-p_b",          "Flag2": "--plot_border",             "default": "Y",                                                         "help": "Plot border?\nYes = Y\nNo = N (default)",                                      "category": "Map",                          "data_type": "Boolean",                                                          "enable": ["-b_l1_c", "-b_l2_c"],                                "user": True},
+{"Flagname": "Border lvl 1 color",                        "variable": "border_lvl1_color",        "Flag1": "-b_l1_c",       "Flag2": "--border_lvl1_color",       "default": "160/160/160",                                               "help": "Border lvl 1 color (R/G/B)",                                                   "category": "Map",                          "data_type": "R/G/B",                                                                                                                             "user": True},
+{"Flagname": "Border lvl 2 color",                        "variable": "border_lvl2_color",        "Flag1": "-b_l2_c",       "Flag2": "--border_lvl2_color",       "default": "90/90/90",                                                  "help": "Border lvl 2 color (R/G/B)",                                                   "category": "Map",                          "data_type": "R/G/B",                                                                                                                             "user": True},
+
+{"Flagname": "Plot map scale",                            "variable": "plot_map_scale",           "Flag1": "-p_ms",         "Flag2": "--plot_map_scale",          "default": "Y",                                                         "help": "Plot map scale bar?\nYes = Y (default)\nNo = N",                               "category": "Map",                          "data_type": "Boolean",                                                                                                                           "user": True},
+{"Flagname": "Plot globe",                                "variable": "plot_globe",               "Flag1": "-p_g",          "Flag2": "--plot_globe",              "default": "Y",                                                         "help": "Plot overview-globe?\nYes = Y (default)\nNo = N",                              "category": "Map",                          "data_type": "Boolean",                                                          "enable": ["-c_g_l", "-c_g_w", "-c_g_g"],                        "user": True},
+{"Flagname": "Globe land color",                          "variable": "color_globe_land",         "Flag1": "-c_g_l",        "Flag2": "--color_globe_land",        "default": "173/209/166",                                               "help": "Color for land (overview-globe) (R/G/B)",                                      "category": "Map",                          "data_type": "R/G/B",                                                                                                                             "user": True},
+{"Flagname": "Globe water color",                         "variable": "color_globe_water",        "Flag1": "-c_g_w",        "Flag2": "--color_globe_water",       "default": "173/216/230",                                               "help": "Color for water (overview-globe) (R/G/B)",                                     "category": "Map",                          "data_type": "R/G/B",                                                                                                                             "user": True},
+{"Flagname": "Globe grid color",                          "variable": "color_globe_grid",         "Flag1": "-c_g_g",        "Flag2": "--color_globe_grid",        "default": "59/80/54",                                                  "help": "Color for globe grid (overview-globe) (R/G/B)",                                "category": "Map",                          "data_type": "R/G/B",                                                                                                                             "user": True},
+
+{"Flagname": "West",                                      "variable": "west",                     "Flag1": "-e_w",          "Flag2": "--extent_west",             "default": None,                                                        "help": "Extent West",                                                                  "category": "Map",                          "data_type": "Number",     "limit": {"min":-180, "max": 360}, "unit": "&deg;",                                                                    "user": True},
+{"Flagname": "East",                                      "variable": "east",                     "Flag1": "-e_e",          "Flag2": "--extent_east",             "default": None,                                                        "help": "Extent East",                                                                  "category": "Map",                          "data_type": "Number",     "limit": {"min":-180, "max": 360}, "unit": "&deg;",                                                                    "user": True},
+{"Flagname": "South",                                     "variable": "south",                    "Flag1": "-e_s",          "Flag2": "--extent_south",            "default": None,                                                        "help": "Extent South",                                                                 "category": "Map",                          "data_type": "Number",     "limit": {"min":-90, "max": 90},   "unit": "&deg;",                                                                    "user": True},
+{"Flagname": "North",                                     "variable": "north",                    "Flag1": "-e_n",          "Flag2": "--extent_north",            "default": None,                                                        "help": "Extent North",                                                                 "category": "Map",                          "data_type": "Number",     "limit": {"min":-90, "max": 90},   "unit": "&deg;",                                                                    "user": True},
+
+{"Flagname": "Y-Ratio",                                   "variable": "y_ratio",                  "Flag1": "-y_r",          "Flag2": "--y_ratio",                 "default": "4",                                                         "help": "Map-Frame-ratio for y-axis\n(default = 4)",                                                                                                                                                                                                                                  "user": False},
+{"Flagname": "X-Ratio",                                   "variable": "x_ratio",                  "Flag1": "-x_r",          "Flag2": "--x_ratio",                 "default": "5",                                                         "help": "Map-Frame-ratio for x-axis\n(default = 5)",                                                                                                                                                                                                                                  "user": False},
+
+{"Flagname": "Earthquake",                                "variable": "quake",                    "Flag1": "-q",            "Flag2": "--quake",                   "default": "",                                                          "help": "Path to Qauke CSV-File",                                                                                                                                                                                                                                                     "user": False},
+{"Flagname": "Plot Earthquake ",                          "variable": "plot_quake",               "Flag1": "-p_q",          "Flag2": "--plot_quake",              "default": "N",                                                         "help": "Plot Quake?\nYes = Y\nNo = N (default)",                                       "category": "Map overlay",                  "data_type": "Boolean",                                                          "enable": ["-q_f"],                                              "user": True},
+{"Flagname": "Earthquake color",                          "variable": "quake_fill",               "Flag1": "-q_f",          "Flag2": "--quake_fill",              "default": "252/255/0",                                                 "help": "Fill color for quake (R/G/B)",                                                 "category": "Map overlay",                  "data_type": "R/G/B",                                                                                                                             "user": True},
+
+{"Flagname": "Plot wave jets",                            "variable": "plot_wave_height",         "Flag1": "-p_w_height",   "Flag2": "--plot_wave_height",        "default": "N",                                                         "help": "Plot WaveJets?\nYes = Y\nNo = N (default)",                                    "category": "Map overlay",                  "data_type": "Boolean",                                                          "enable": ["-w_exp"],                                            "user": True},
+{"Flagname": "Wave jets",                                 "variable": "wave_height",              "Flag1": "-w_height",     "Flag2": "--wave_height",             "default": "",                                                          "help": "Path to WaveJets-GRID-File",                                                                                                                                                                                                                                                 "user": False},
+{"Flagname": "Wave expression",                           "variable": "wave_height_expression",   "Flag1": "-w_exp",        "Flag2": "--wave_height_expression",  "default": "0.05",                                                      "help": "All values above input will be plotted [m]",                                   "category": "Map overlay",                  "data_type": "Number",     "limit": {"min": 0, "max": 100},   "unit": "m",                                                                        "user": True},
+{"Flagname": "Wave jets CPT",                             "variable": "wave_height_cpt",          "Flag1": "-w_height_cpt", "Flag2": "--wave_height_cpt",         "default": "cpt/wave_height/waveheight_1.cpt",                          "help": "Path to CPT-File for WaveJets",                                                                                                                                                                                                                                              "user": False},
+
+{"Flagname": "Estimated Travel Times (ETA)",              "variable": "wave_time",                "Flag1": "-w_time",       "Flag2": "--wave_time",               "default": "",                                                          "help": "Path to TravelTimes-GRID-File",                                                                                                                                                                                                                                              "user": False},
+{"Flagname": "Plot Estimated Travel Times (ETA)",         "variable": "plot_wave_time",           "Flag1": "-p_w_time",     "Flag2": "--plot_wave_time",          "default": "N",                                                         "help": "Plot TravelTimes?\nYes = Y\nNo = N (default)",                                 "category": "Map overlay",                  "data_type": "Boolean",                                                          "enable": ["-w_time_c"],                                         "user": True},
+{"Flagname": "ETA color",                                 "variable": "Isochrone_color",          "Flag1": "-w_time_c",     "Flag2": "--wave_time_color",         "default": "255/255/255",                                               "help": "Color for TravelTimes (R/G/B)",                                                "category": "Map overlay",                  "data_type": "R/G/B",                                                                                                                             "user": True},
+
+{"Flagname": "Coastal Forecast Zones (CFZ)",              "variable": "cfz",                      "Flag1": "-cfz",          "Flag2": "--cfz",                     "default": "",                                                          "help": "Path to CFZ GMT-File",                                                                                                                                                                                                                                                       "user": False},
+{"Flagname": "Plot Coastal Forecast Zones (CFZ)",         "variable": "plot_cfz",                 "Flag1": "-p_cfz",        "Flag2": "--plot_cfz",                "default": "N",                                                         "help": "Plot Coastal-Forecast-Zones?\nYes = Y\nNo = N (default)",                      "category": "Map overlay",                  "data_type": "Boolean",                                                          "enable": ["-cfz_stroke"],                                       "user": True},
+{"Flagname": "CFZ CPT",                                   "variable": "cfz_cpt",                  "Flag1": "-cfz_cpt",      "Flag2": "--cfz_cpt",                 "default": "cpt/CFZ/CFZ.cpt",                                           "help": "Path to CPT-File for Coastal-Forecast-Zones",                                                                                                                                                                                                                                "user": False},
+{"Flagname": "CFZ outline color",                         "variable": "cfz_stroke",               "Flag1": "-cfz_stroke",   "Flag2": "--cfz_stroke",              "default": "35/35/35",                                                  "help": "Color for CFZ stroke (R/G/B)",                                                 "category": "Map overlay",                  "data_type": "R/G/B",                                                                                                                             "user": True},
+
+{"Flagname": "Tsunami Forecast Points (TFP)",             "variable": "tfp",                      "Flag1": "-tfp",          "Flag2": "--tfp",                     "default": "",                                                          "help": "Path to TFP CSV-File",                                                                                                                                                                                                                                                      "user": False},
+{"Flagname": "Plot Tsunami Forecast Points (TFP)",        "variable": "plot_tfp",                 "Flag1": "-p_tfp",        "Flag2": "--plot_tfp",                "default": "N",                                                         "help": "Plot Tsunami-Forecast-Zones?\nYes = Y\nNo = N (default)",                      "category": "Map overlay",                  "data_type": "Boolean",                                                          "enable": ["-tfp_stroke"],                                      "user": True},
+{"Flagname": "TFP CPT",                                   "variable": "tfp_cpt",                  "Flag1": "-tfp_cpt",      "Flag2": "--tfp_cpt",                 "default": "cpt/TFP/TFP.cpt",                                           "help": "Path to CPT-File for Tsunami-Forecast-Points",                                                                                                                                                                                                                              "user": False},
+{"Flagname": "TFP outline color",                         "variable": "tfp_stroke",               "Flag1": "-tfp_stroke",   "Flag2": "--tfp_stroke",              "default": "255/255/255",                                               "help": "Color for TFP stroke (R/G/B)",                                                 "category": "Map overlay",                  "data_type": "R/G/B",                                                                                                                            "user": True},
+
+{"Flagname": "Plot cities",                               "variable": "plot_cities",              "Flag1": "-p_c",          "Flag2": "--plot_cities",             "default": "None",                                                      "help": "Plot Cities?\nChoose:\tall, capitals, None",                                   "category": "Cities and population",        "data_type": "group",      "group": cities_group,                                "enable": ["-c_pop", "-c_l", "-c_l_p", "-c_f", "-c_s"],         "user": True},
+{"Flagname": "Plot cities with more than",                "variable": "cities_pop",               "Flag1": "-c_pop",        "Flag2": "--cities_pop",              "default": None,                                                        "help": "All Cities above given value will be plotted [mio]\n(default = 0)",            "category": "Cities and population",        "data_type": "Number",     "limit": {"min": 0, "max": 36},    "unit": "mio",                                                                     "user": True},
+{"Flagname": "Label cities",                              "variable": "cities_label",             "Flag1": "-c_l",          "Flag2": "--cities_label",            "default": "N",                                                         "help": "Label citites?\nYes = Y\nNo = N (default)",                                    "category": "Cities and population",        "data_type": "Boolean",                                                                                                                          "user": True},
+{"Flagname": "Label cities with more than",               "variable": "cities_label_pop",         "Flag1": "-c_l_p",        "Flag2": "--cities_label_pop",        "default": None,                                                        "help": "Cities above given value will be labelled [mio]\n(default = cities pop)",      "category": "Cities and population",        "data_type": "Number",     "limit": {"min": 0, "max": 36},    "unit": "mio",                                                                     "user": True},
+{"Flagname": "Cities color",                              "variable": "cities_fill",              "Flag1": "-c_f",          "Flag2": "--cities_fill",             "default": "230/26/26",                                                 "help": "Fill color for cities (R/G/B)",                                                "category": "Cities and population",        "data_type": "R/G/B",                                                                                                                            "user": True},
+{"Flagname": "Cities outline color",                      "variable": "cities_stroke",            "Flag1": "-c_s",          "Flag2": "--cities_stroke",           "default": "58/0/0",                                                    "help": "Color for cities stroke (R/G/B)",                                              "category": "Cities and population",        "data_type": "R/G/B",                                                                                                                            "user": True},
+
+{"Flagname": "Plot World Population",                     "variable": "world_pop",                "Flag1": "-p_w_pop",      "Flag2": "--plot_world_pop",          "default": "N",                                                         "help": "Plot World Population?\nYes = Y\nNo = N (default)",                            "category": "Cities and population",        "data_type": "Boolean",                                                                                                                          "user": True},
+{"Flagname": "World Pop CPT",                             "variable": "world_pop_cpt",            "Flag1": "-w_pop_cpt",    "Flag2": "--world_pop_cpt",           "default": "cpt/world_population/world_pop_label.cpt",                  "help": "Path to CPT-File for World Population",                                                                                                                                                                                                                                     "user": False},
+
+{"Flagname": "JSON",                                      "variable": "print_json",               "Flag1": "-p_j",          "Flag2": "--print_json",              "default": None,                                                        "help": "if = Y input printed as json",                                                                                                                                                                                                                                              "user": False}
+]
+
+for flag in input_param:
+    if flag["default"] is None:
+        parser.add_argument(flag["Flag1"], flag["Flag2"], dest = flag["variable"], help = flag["help"])        
+    else:
+        parser.add_argument(flag["Flag1"], flag["Flag2"], dest = flag["variable"], default = flag["default"], help = flag["help"])   
 args = parser.parse_args()
+
+#ueberschreibt die defaultwerte, die vom pre-built style betroffen werden
+for style_loop in style_group:
+    if style_loop["key"]==int(args.style):
+        for style_flag in style_loop["change"]:
+             parser.set_defaults(**{style_flag["variable"] : style_flag["value"]}) 
+args = parser.parse_args()
+
 
 ###########################################################################################
 ############################## Tsunami Report Function ####################################
@@ -110,20 +185,20 @@ def tsunami_report(\
     cfz, plot_cfz, cfz_cpt, cfz_stroke, \
     tfp, plot_tfp, tfp_cpt, tfp_stroke, \
     quake, plot_quake, quake_fill, \
-    dem, dem_water, basemap_water_cpt, basemap_land_cpt, \
+    dem, basemap_water_cpt, basemap_land_cpt, \
     world_pop, world_pop_cpt, \
-    plot_cities, cities_pop, cities_capital, cities_label, cities_label_pop, cities_fill, cities_stroke, \
+    plot_cities, cities_pop, cities_label, cities_label_pop, cities_fill, cities_stroke, \
     plot_map_scale, plot_globe, color_globe_land, color_globe_water, color_globe_grid, \
-    outline, coast_color, color_water, color_land, style, \
+    outline, coast_color, border, border_lvl1_color, border_lvl2_color, color_water, color_land, style, \
     basemap_data_dir, world_pop_data, city_pop_data, \
     crs_system, unit, map_width, coast_res, land_res, Isochrone_dist, \
-    print_json, input_param):
+    dpi, print_json, input_param):
 
     #prints input-list as json
     if print_json=="Y":
         print (json.dumps(input_param))
-        return    
-    
+        return 
+
     tempdir = tempfile.mkdtemp()
     os.environ["GMT_TMPDIR"] = tempdir
     
@@ -138,6 +213,11 @@ def tsunami_report(\
 	
     wave_time_temp = '%s/eWave_time_temp.nc' %(tempdir)
     
+    #sets dpi
+    if dpi=="web":
+        dpi = 300
+    elif dpi=="HQ":
+        dpi = 600
 
     #aktuelles Datum
     date = datetime.datetime.utcnow().strftime("%Y, %B %d, %H:%M")
@@ -151,9 +231,9 @@ def tsunami_report(\
     print ('\tplot CFZ?:\t\t', plot_cfz, '\n\tCFZ:\t\t\t', cfz, '\n\tCFZ CPT:\t\t', cfz_cpt, '\n\tCFZ stroke:\t\t', cfz_stroke, '\n')
     print ('\tplot TFP?:\t\t', plot_tfp, '\n\tTFP:\t\t\t', tfp, '\n\tTFP CPT:\t\t', tfp_cpt, '\n\tTFP stroke:\t\t', tfp_stroke, '\n')
     print ('\tplot quake?:\t\t', plot_quake, '\n\tquake:\t\t\t', quake, '\n\tquake fill:\t\t', quake_fill, '\n')
-    print ('\tplot dem?:\t\t', dem, '\n\tplot dem water?:\t', dem_water, '\n\tbasemap water CPT:\t', basemap_water_cpt, '\n\tbasemap land CPT:\t', basemap_land_cpt, '\n')
+    print ('\tplot dem?:\t\t', dem, '\n\tbasemap water CPT:\t', basemap_water_cpt, '\n\tbasemap land CPT:\t', basemap_land_cpt, '\n')
     print ('\tplot world pop?:\t', world_pop, '\n\tworld pop CPT:\t\t', world_pop_cpt, '\n')
-    print ('\tplot cities?:\t\t', plot_cities, '\n\tcities pop:\t\t', cities_pop, '\n\tcapital cities?:\t', cities_capital, '\n\tlabel cities?:\t\t', cities_label, '\n\tlabel cities pop:\t', cities_label_pop, '\n\tcities color:\t\t', cities_fill, '\n\tcities stroke:\t\t', cities_stroke, '\n')
+    print ('\tplot cities?:\t\t', plot_cities, '\n\tcities pop:\t\t', cities_pop, '\n\tlabel cities?:\t\t', cities_label, '\n\tlabel cities pop:\t', cities_label_pop, '\n\tcities color:\t\t', cities_fill, '\n\tcities stroke:\t\t', cities_stroke, '\n')
     print ('\tplot map scale?:\t', plot_map_scale, '\n\tplot globe?:\t\t', plot_globe, '\n\tglobe land color\t', color_globe_land, '\n\tglobe water color:\t', color_globe_water, '\n\tglobe grid color:\t', color_globe_grid, '\n')
     print ('\tplot outline?:\t\t', outline, '\n\tcoast color:\t\t', coast_color, '\n\tcolor water:\t\t', color_water, '\n\tcolor land:\t\t', color_land, '\n\tstyle nr:\t\t', style, '\n')
     print ('\tbasemap data dir:\t', basemap_data_dir, '\n\tworld pop file:\t\t', world_pop_data, '\n\tcity pop file:\t\t', city_pop_data, '\n')
@@ -164,51 +244,6 @@ def tsunami_report(\
     ##############################################
     ################# Berechnungen ###############
     ##############################################
-
-    ############################
-    ##### pre-built styles #####
-    ############################
-    if style=="1":
-        #DEM: land=brown; water=blue
-        dem = 'Y'
-        basemap_water_cpt = 'cpt/basemap/blue.cpt'
-        basemap_land_cpt = 'cpt/basemap/brown.cpt'
-    elif style=="2":
-        #no DEM: land=darkgray; water=gray
-        dem = 'N'
-        outline = 'Y'
-        land_res = '1000'
-        coast_color = '215/215/215'
-        color_water = '170/170/170'
-        color_land = '80/80/80 -N1/0.01c,160/160/160 -N2/0.01c,90/90/90'
-    elif style=="3":
-        #water with DEM = gray; land no DEM = darkgray
-        dem = 'Y'
-        dem_water = 'Y'
-        outline = 'Y'
-        land_res = '1000'
-        coast_color = '215/215/215'
-        basemap_water_cpt = 'cpt/basemap/gray_bright_1.cpt'
-        color_land = '80/80/80 -N1/0.01c,160/160/160 -N2/0.01c,90/90/90'
-    elif style=="4":
-        #water with DEM = darkblue; land no DEM = darkgray
-        dem = 'Y'
-        dem_water = 'Y'
-        outline = 'Y'
-        land_res = '1000'
-        coast_color = '215/215/215'
-        basemap_water_cpt = 'cpt/basemap/blue_dark.cpt'
-        color_land = '80/80/80 -N1/0.01c,160/160/160 -N2/0.01c,90/90/90'
-    elif style=="5":
-        dem = 'Y'
-        outline = 'Y'
-        land_res = '1000'
-        coast_color = '220/220/220'
-        basemap_water_cpt = 'cpt/basemap/blue_dark.cpt'
-        basemap_land_cpt = 'cpt/basemap/gray_bright_2.cpt'
-        
-
-
 
     ############################
     ## Kartenabstand (unten) ###
@@ -281,11 +316,12 @@ def tsunami_report(\
     # Basemap optimale Pixelgroesse #
     ###############################
     #Berechnet ungefaehre Pixelgroesse der Etopo-Basemap in km
-    ppi = 300
+    #dpi = 300
+    dpi = float(dpi)
 
     #berechnet optimale Pixelgroesse in arc-minute
     one_inch_in_degree = lon_diff / (map_width / 2.54)
-    perfect_pixel_size = (one_inch_in_degree / ppi) * 60
+    perfect_pixel_size = (one_inch_in_degree / dpi) * 60
     #Pixelgroesse in Kilometer
     pixel_km = perfect_pixel_size * ((math.pi / 180) * 6370 / 60)
 
@@ -320,6 +356,18 @@ def tsunami_report(\
     ###############   GMT   ##########################
     ##################################################
 
+    #### Build CPT File ####
+    if dem=="Y" or dem=="water_only":
+        if basemap_water_cpt is None:
+            basemap_water_cpt = '%s/basemap_water_cpt.cpt' % (tempdir)
+            build_basemap_cpt(basemap_water_cpt, color_water) 
+	
+        if dem=="Y":
+            if basemap_land_cpt is None:
+                basemap_land_cpt = '%s/basemap_land_cpt.cpt' % (tempdir)
+                build_basemap_cpt(basemap_land_cpt, color_land)    
+    
+
     #############################
     ######### Basemap ###########
     #############################
@@ -328,11 +376,12 @@ def tsunami_report(\
     y_map_distance = '%s%s' % (y_map_dist, unit)
     #map_height = (map_width * y_ratio) / x_ratio
 
+    border_color = '-N1/0.01c,%s -N2/0.01c,%s' % (border_lvl1_color, border_lvl2_color)
     #./Basemap.sh title output extent projection y_map_dist basemap basemap_hillshade 
     #	outline coast_res coast_color terrain color_water color_land color_globe_land color_globe_water land_res basemap_water_cpt basemap_land_cpt
     subprocess.call(['./gmt_scripts/Basemap.sh', str(title),output , R, J, y_map_distance, basemap, basemap_hillshade, \
-        outline, coast_res, coast_color, dem, color_water, color_land, color_globe_land, color_globe_water, land_res, basemap_water_cpt, basemap_land_cpt, \
-        world_pop_data, world_pop_cpt, world_pop, str(subtitle), str(paper_height), dem_water])
+        outline, coast_res, coast_color, dem, color_water, color_land, color_globe_land, color_globe_water, land_res, str(basemap_water_cpt), str(basemap_land_cpt), \
+        world_pop_data, world_pop_cpt, world_pop, str(subtitle), str(paper_height), border, border_color])
     if subtitle is not None:
        subprocess.call(['./gmt_scripts/subtitle.sh',output , str(subtitle), str(subtitle_pos_y), str(map_width)])
 
@@ -365,8 +414,8 @@ def tsunami_report(\
         subprocess.call(['./gmt_scripts/quake.sh',output ,quake, quake_fill, y_map_distance])    
 
     ######## city pop ###########
-    if plot_cities=="Y":
-        if cities_capital=="Y":
+    if plot_cities=="all" or plot_cities=="capitals":
+        if plot_cities=="capitals":
             cities_capital = '&& $6 == "Admin-0 capital"'
         else:
             cities_capital = ''    
@@ -413,6 +462,10 @@ def tsunami_report(\
         plot_cfz_tfp = "Y"
     else:
         plot_cfz_tfp = "N"
+    if plot_cities=="all" or plot_cities=="capitals":
+        plot_cities = "Y"
+    else:
+        plot_cities = "N"		
     plot_legend_list = [plot_wave_height, plot_wave_time, world_pop, plot_cities, plot_cfz_tfp]
 
     wave_height_pslegend, wave_height_psscale, wave_time_pslegend, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2 = calc_legend_positions (plot_legend_list, y_map_dist)
@@ -429,13 +482,15 @@ def tsunami_report(\
     #PseudoCommand; beendet das Overlay; Plottet unsichtbare Fluesse/Seen
     #gmt pscoast -J -R -P -O -C-t100 -Y >> ${output}
     subprocess.call(['./gmt_scripts/pseudo_end.sh', output, R, J, tempdir])
-
+    
+    #PDF
+    #subprocess.call(['gmt', 'ps2raster', output, '-Tf', '-V'])
     #erstellt png-Datei
     #gmt ps2raster default_output.ps -A -Tg -V
     #-A plottet nur Karteninhalt
-    subprocess.call(['gmt', 'ps2raster', output, '-Tg', '-A', '-V', '-E500'], cwd=tempdir)
-    #PDF
-    #subprocess.call(['gmt', 'ps2raster', output, '-Tf', '-V'])
+    E = '-E%s' % (dpi)
+    subprocess.call(['gmt', 'ps2raster', output, '-Tg', '-A', '-V', E], cwd=tempdir)
+    
 
     #löscht tempdir
     shutil.rmtree(tempdir)
@@ -489,11 +544,11 @@ tsunami_report(\
     args.cfz, args.plot_cfz, args.cfz_cpt, args.cfz_stroke, \
     args.tfp, args.plot_tfp, args.tfp_cpt, args.tfp_stroke, \
     args.quake, args.plot_quake, args.quake_fill, \
-    args.dem, args.dem_water, args.basemap_water_cpt, args.basemap_land_cpt, \
+    args.dem, args.basemap_water_cpt, args.basemap_land_cpt, \
     args.world_pop, args.world_pop_cpt, \
-    args.plot_cities, args.cities_pop, args.cities_capital, args.cities_label, args.cities_label_pop, args.cities_fill, args.cities_stroke, \
+    args.plot_cities, args.cities_pop, args.cities_label, args.cities_label_pop, args.cities_fill, args.cities_stroke, \
     args.plot_map_scale, args.plot_globe, args.color_globe_land, args.color_globe_water, args.color_globe_grid, \
-    args.outline, args.coast_color, args.color_water, args.color_land, args.style, \
+    args.outline, args.coast_color, args.border, args.border_lvl1_color, args.border_lvl2_color, args.color_water, args.color_land, args.style, \
     basemap_data_dir, world_pop_data, city_pop_data, \
     crs_system, unit, map_width, coast_res, land_res, Isochrone_dist, \
-    args.print_json, input_param) 
+    args. dpi, args.print_json, input_param) 

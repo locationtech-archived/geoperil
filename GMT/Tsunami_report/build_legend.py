@@ -113,8 +113,9 @@ def calc_legend_positions (plot_legend_list, y_map_dist):
     tfp_cfz_pslegend_y = float(y_map_dist)-1.55
     tfp_cfz_psscale_y = float(y_map_dist)-1.55
     
+    
     #plot_legend_list = [plot_wave_height, plot_wave_time, world_pop, plot_cities, plot_cfz_tfp]
-    if plot_legend_list==['Y', 'N', 'N', 'N', 'N']:
+    if plot_legend_list==['Y', 'N', 'N', 'N', 'N']:   
         #nur wave-height
         wave_height_pslegend_x = 6.6
         wave_height_psscale_x = 7.9

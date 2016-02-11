@@ -45,10 +45,10 @@ if [ ${plot_wave_height} == Y ]
 then
 #-Dx1.6c/7.25c/2.8c/1c/BL
 gmt pslegend ${wave_height_pslegend} -O -K -V <<EOF>> ${output}
-H 10 Helvetica wave height
+H 10 Helvetica Wave height
 EOF
 #-D3c/7.65c/6c/0.3ch
-gmt psscale --MAP_ANNOT_OFFSET_PRIMARY=0.06c --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${wave_height_psscale} -C${wave_height_cpt} -G0/1.5 -By+l[m] -Ef -Ba0.5f0.1 -O -K -V >> ${output}
+gmt psscale --MAP_ANNOT_OFFSET_PRIMARY=0.06c --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${wave_height_psscale} -C${wave_height_cpt} -G0/2 -By+l[m] -Ef -Ba0.5f0.1 -O -K -V >> ${output}
 fi
 
 #### wave time ####
@@ -56,7 +56,7 @@ if [ ${plot_wave_time} == Y ]
 then
 #-Dx0c/3.5c/2.8c/1c/BL
 gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -R -J ${wave_time_pslegend} -O -V -K <<EOF>> ${output}
-S 0c - 0.4c - 1p,red 0.5c Traveltime in 1 h
+S 0c - 0.4c - 1p,red 0.5c Travel time in hr
 EOF
 fi
 

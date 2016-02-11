@@ -42,7 +42,8 @@ world_pop=${21}
 subtitle=${22}
 paper_height=${23}
 
-dem_water=${24}
+border=${24}
+border_color=${25}
 
 
 #########################
@@ -68,7 +69,7 @@ else
 	fi
 fi
 
-if [ ${dem} == Y ]
+if [ ${dem} == "Y" ] || [ ${dem} == "water_only" ]
 then 
 	#erstellt eine Basemap auf Grundlage von ETOPO-Daten
 	#erstellt meer mit hillshade;
@@ -77,11 +78,11 @@ then
 	#Anfang clip Land "-Gc"; "-D" fuer Aufloesung der Kuestenlinien
 	gmt pscoast -J -R -P -V -K -O -D${coast_res} -A${land_res} -Gc -Y >> ${output} 
 	
-	if [ ${world_pop} == Y ]
+	if [ ${world_pop} == "Y" ]
 	then
 		gmt grdimage -J -R -P -V -K -O -C${world_pop_cpt} ${world_pop_data} -Y >> ${output}
 	else
-		if [ ${dem_water} == Y ]
+		if [ ${dem} == "water_only" ]
 		then
 			gmt pscoast -J -R -P -D${coast_res} -A${land_res} -S${color_water} -G${color_land} -Ya${y_map_dist} -V -K -O >> ${output}
 		else
@@ -92,35 +93,24 @@ then
 	
 	#Ende Clip Land "-Q"
 	gmt pscoast -J -R -P -V -K -O -Q -Y >> ${output}
-	
-	if [ ${outline} == Y ]
-	then
-	#erstellt Karte mit outline
-		#fuer Kontur "-W"
-		gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.009c,${coast_color} -Y >> ${output}	
-	fi
-	
-elif [ ${dem} == N ]
+elif [ ${dem} == "N" ]
 then
 #Erstellt einfache zweifarbe Basemap
-	if [ ${outline} == Y ]
+	if [ ${world_pop} == Y ]
 	then
-	#erstellt Karte mit outline
-		if [ ${world_pop} == Y ]
-		then
-			gmt grdimage -J -R -P -V -K -O -C${world_pop_cpt} ${world_pop_data} -Y >> ${output}
-			gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -W0.009c,${coast_color} -S${color_water} -Y >> ${output}
-		else
-			gmt pscoast -J -R -P -D${coast_res} -A${land_res} -S${color_water} -G${color_land} -W0.009c,${coast_color} -Ya${y_map_dist} -V -K -O >> ${output}
-		fi
+		gmt grdimage -J -R -P -V -K -O -C${world_pop_cpt} ${world_pop_data} -Y >> ${output}
+		gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -S${color_water} -Y >> ${output}
 	else
-	#erstellt Karte ohne outline
-		if [ ${world_pop} == Y ]
-		then
-			gmt grdimage -J -R -P -V -K -O -C${world_pop_cpt} ${world_pop_data} -Y >> ${output}
-			gmt pscoast -J -R -P -V -O -K -D${coast_res} -A${land_res} -S${color_water} -Y >> ${output}
-		else
-			gmt pscoast -J -R -P -D${coast_res} -A${land_res} -S${color_water} -G${color_land} -Ya${y_map_dist} -V -K -O >> ${output}
-		fi
+		gmt pscoast -J -R -P -D${coast_res} -A${land_res} -S${color_water} -G${color_land} -Ya${y_map_dist} -V -K -O >> ${output}
 	fi
+fi
+
+#print outlines 
+if [ ${outline} == Y ]
+then
+	gmt pscoast -J -R -P -D${coast_res} -A${land_res} -W0.009c,${coast_color} ${borders} -Ya${y_map_dist} -V -K -O >> ${output}
+fi
+if [ ${border} == Y ]
+then
+	gmt pscoast -J -R -P -D${coast_res} -A${land_res} ${border_color} -Ya${y_map_dist} -V -K -O >> ${output}
 fi
