@@ -17,6 +17,10 @@
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
     <link href='http://fonts.googleapis.com/css?family=Prosto+One' rel='stylesheet' type='text/css'>
     <script src="js/proj4.js"></script>
+    <!-- Color Picker: Apache License, Version 2.0 -->
+    <script src="js/bootstrap-colorpicker.min.js"></script>
+    <link href="css/bootstrap-colorpicker.min.css" rel="stylesheet">
+    <!-- Color Picker end -->
     <script>
 	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
 	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
@@ -943,6 +947,7 @@
 						</div>
 						<div class="row">
 							<span class="small resource"></span>
+							<span class="small algorithm"></span>
 						</div>
 						<div class="row">
 							<span class="small calc"></span>
@@ -1866,6 +1871,13 @@
 			<i class="load fa fa-spinner fa-spin fa-lg"></i>
 		</div>
 		
+		<!-- HtmlColorGroup -->
+		<div class="html-colorgroup input-group input-group-sm prop-label">
+			<span class="html-label input-group-addon"></span>
+		    <input class="html-text form-control" type="text" value="">
+		    <span class="html-color input-group-addon"><i></i></span>
+		</div>
+		
 		<div class="html-activity-view">
 			<table><tr></tr></table>
 		</div>
@@ -1881,6 +1893,7 @@
 			<div class="content">
 				<!-- <div id="downloadTabGeneral" class="tab-pane active"> -->
 					<div class="secProducts"></div>
+					<div class="secOptions"></div>
 					<div class="status">
 						<div class="progress-text">Download is being prepared...</div>
 						<div class="progress progress-striped active">

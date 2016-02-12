@@ -18,6 +18,8 @@ function Earthquake(meta) {
 		this.isos = new Container();
 		this.tfps = new Container();
 		
+		this.objects = {};
+		
 		this.show_cfzs = true;
 		this.show_jets = true;
 		this.show_isos = true;
@@ -62,6 +64,8 @@ function Earthquake(meta) {
 			this.loadTsunamiJets();
 		if( ! type )
 			this.loadIsos();
+		if( ! type )
+			this.loadObjects('city');
 		return false;
 	};
 	
@@ -95,7 +99,7 @@ function Earthquake(meta) {
 				for (var j = 0; j < jets.length; j++) {
 					/* construct a single polygon here */
 					var pol = new Polygon( [jets[j]], result.jets[i].color );
-					pol.poly.setOptions({zIndex:i});
+					pol.poly.setOptions({zIndex:2+i});
 					pol.ewh = result.jets[i].ewh;
 					pol.setInfoWin( new InfoWindow('<span>Wave heights greater than ' + pol.ewh + ' meter.</span>') );
 					this.jets.insert(pol);
@@ -136,6 +140,19 @@ function Earthquake(meta) {
 			this.tfps_loaded = true;
 			this.notifyOn('loaded_TFPS');
 			this.checkLoaded();
+		}).bind(this));
+	};
+	
+	this.loadObjects = function(type) {
+		if( this.objects[type] )
+			return;
+		ajax_mt('webguisrv/getcomp', {evid: this._id, kind: type}, (function(result) {
+			if( !result.comp ) return;
+			this.objects[type] = new Container().setList(result.comp);
+			console.log(this.objects[type]);
+			/* TODO */
+			//this.notifyOn('loaded_OBJS');
+			//this.checkLoaded();
 		}).bind(this));
 	};
 	
@@ -382,11 +399,20 @@ function Container(sortFun) {
 		return this.list[i];
 	};
 
+	this.findItem = function(key, val) {
+		return this.getByKey(key, val).item;
+	};
+	
+	this.findIdx = function(key, val) {
+		return this.getByKey(key, val).idx;
+	};
+	
 	this.getByKey = function(key, val) {
 
 		for (var i = 0; i < this.list.length; i++) {
 
-			if (this.list[i][key] == val)
+			var mkey = key ? this.list[i][key] : this.list[i];
+			if(mkey == val)
 				return {
 					idx : i,
 					item : this.list[i]
@@ -453,8 +479,8 @@ function Container(sortFun) {
 	};
 
 	this.sort = function() {
-
-		this.list.sort(this.sortFun);
+		if( this.sortFun )
+			this.list.sort(this.sortFun);
 	};
 
 	this.setSortFun = function(sortFun) {
@@ -2512,11 +2538,11 @@ function GlobalControl() {
 		this.compose.setCallback('started', (function() {
 			$("#tabSaved > a").click();
 		}).bind(this));
+		this.widgets['tabCompose'] = this.compose;
 		
 		/* Flood - Prototype */
 		this.floodcomp = new FloodComposeTab($('#floodcomp'));
 		this.floodcomp.setCallback('started', (function() {
-			
 			$("#tabFloodList > a").click();
 		}).bind(this));
 		
@@ -2539,6 +2565,14 @@ function GlobalControl() {
 				 function(data){ return data.waterheights; }) );
 		this.layers.insert( new MarkerLayer('Marker-Layer', map) );
 		
+		if( checkPerm('population') ) {
+			this.layers.insert( new ObjectLayer('Objects', map,
+				 function(data){ return true; },
+				 function(data){ return data.objects['city']; },
+				 { type: 'city', newInst: function() { return new City(); } }
+			));
+		}
+		
 		this.layers.insert( new BuildingsLayer('Buildings', map,
 				function(data){ return data.show_buildings && data.show_buildings.get(); }) );
 		
@@ -2547,6 +2581,11 @@ function GlobalControl() {
 			this.setCallback('select', layer.setData.bind(layer));
 		}
 		//new LayerSwitcher( $('#layer-switcher'), this.layers );
+		
+		/* Add google maps listeners. */
+		google.maps.event.addListener(map, 'click', (function(event) {
+			this.notifyOn('map_click', event.latLng.lat(), event.latLng.lng());
+		}).bind(this));
 	};
 	
 	this.tabChanged = function(e) {
@@ -2717,7 +2756,7 @@ function GlobalControl() {
 		}).bind(this);
 	})();
 
-	this.main();
+	//this.main();
 }
 
 function Marker(lat, lon, label, color, map) {
@@ -3419,8 +3458,9 @@ function EQWidget(data, marker) {
 
 			this.div.find('.progress-bar').css('width', process.progress + '%');
 			this.div.find('.resource').html(process.resources);
+			this.div.find('.algorithm').html(' &#183; ' + (process.algorithm == 'hysea' ? 'HySEA' : 'EasyWave'));
 			this.div.find('.calc').html(
-					'Runtime ' + process.calcTime / 1000
+					'Runtime ' + (process.calcTime / 1000).toFixed(2)
 							+ ' sec &#183; SimDuration ' + process.simTime
 							+ ' min');
 			this.div.find('.grid').html(
@@ -3992,10 +4032,6 @@ var simText = defaultText;
 
 var signTarget = null;
 
-var markers = {
-	compose : null
-};
-
 var stations;
 var stationView;
 var stationSymbols;
@@ -4041,16 +4077,8 @@ function load_gmaps() {
 
 	map = new google.maps.Map(document.getElementById('mapview'), mapOptions);
 
-	google.maps.event.addListener(map, 'click', clickMap);
 	google.maps.event.addListener(map, 'resize', mapResized);
-
-	google.maps.event
-			.addListener(map, 'projection_changed', projection_changed);
-
-	/* create default marker used in the "Compose" tab, make it invisible first */
-	markers.compose = createDefaultMarker($('#inLat').val(), $('#inLon').val(),
-			"#E4E7EB");
-	markers.compose.setMap(null);
+	google.maps.event.addListener(map, 'projection_changed', projection_changed);
 }
 
 function initialize() {
@@ -4077,8 +4105,6 @@ function initialize() {
 	$("#btnSignIn").click(drpSignIn);
 	$("#btnSignOut").click(signOut);
 	$("#btnProp").click(showProp);	
-
-	$(".main-tabs > li").click(tabChanged);
 
 	$("#diaSignIn").click(diaSignIn);
 	$("#splashSignIn").click(diaSignIn);
@@ -4582,6 +4608,7 @@ function showGrid(pointer, visible) {
 		strokeWeight : 2,
 		fillColor : '#FF0000',
 		fillOpacity : 0.0,
+		zIndex: 0,
 		// editable: true,
 		// draggable: true,
 		bounds : new google.maps.LatLngBounds(new google.maps.LatLng(latMin,
@@ -4703,6 +4730,7 @@ function logIn(callback) {
 
 	load_gmaps();
 	global = new GlobalControl();
+	global.main();
 
 	// show disclaimer - redirect to xkcd if not accepted
 	if (!$.cookie('disclaimer')) {
@@ -4975,19 +5003,6 @@ function markMsgAsDisplayed(msg) {
 
 }
 
-function clickMap(event) {
-
-	if ($('#compose').css("display") == "block") {
-
-		$('#inLon').val(event.latLng.lng().toFixed(2));
-		$('#inLat').val(event.latLng.lat().toFixed(2));
-
-		// checkAll();
-
-		setMarkerPos(markers.compose, $('#inLat').val(), $('#inLon').val());
-	}
-}
-
 function createDefaultMarker(lat, lon, color) {
 
 	var link = getMarkerIconLink("%E2%80%A2", color);
@@ -5003,15 +5018,6 @@ function setMarkerPos(marker, lat, lon) {
 		lat : Number(lat),
 		lng : Number(lon)
 	});
-}
-
-function tabChanged(e) {
-	var tab = $(e.currentTarget).attr('id');
-	if (tab == "tabCompose") {
-		markers.compose.setMap(map);
-	} else {
-		markers.compose.setMap(null);
-	}
 }
 
 function getPreset() {
@@ -5572,7 +5578,7 @@ function showMsg(msg) {
 	$('#showTextDia').modal('show');
 }
 
-function getDateString(date) {
+function getDateString(date, delim) {
 
 	var year = date.getUTCFullYear();
 	var month = date.getUTCMonth() + 1;
@@ -5582,8 +5588,8 @@ function getDateString(date) {
 
 	var datestr = year + "/" + zeroPad(month, 2) + "/" + zeroPad(day, 2);
 	var timestr = zeroPad(hour, 2) + ":" + zeroPad(minutes, 2);
-
-	return datestr + " &#183; " + timestr;
+	
+	return datestr + (delim ? delim : ' &#183; ') + timestr;
 }
 
 function getLocalDateString(date) {
@@ -5619,8 +5625,10 @@ function checkStaticLink() {
 	
 	/* we need google maps from this point on */
 	load_gmaps();
-	if( typeof global === 'undefined' )
+	if( typeof global === 'undefined' ) {
 		global = new GlobalControl();
+		global.main();
+	}
 
 	toggleCloudButton();
 
@@ -6053,6 +6061,12 @@ function LatLonToPixel(lat, lon) {
 	var pixel = overlay.getProjection().fromLatLngToContainerPixel(latlon);
 
 	return pixel;
+}
+
+function PixelToLatLng(px, py) {
+	var point = new google.maps.Point(px, py);
+	var latlng = overlay.getProjection().fromContainerPixelToLatLng(point);
+	return latlng;
 }
 
 function Splash() {
@@ -6505,7 +6519,8 @@ function AdminDialog() {
 			'evtset': new HtmlCheckBox('Event Sets'),
 			'flood': new HtmlCheckBox('Flood Prototype'),
 			'data': new HtmlCheckBox('Data Services'),
-			'hysea': new HtmlCheckBox('HySea')
+			'hysea': new HtmlCheckBox('HySea'),
+			'population': new HtmlCheckBox('Population')
 		};
 		
 		this.instInputs = {
@@ -7169,7 +7184,7 @@ function HtmlDropDown() {
 	this.onChange = function(e) {
 		var item = $(e.delegateTarget);
 		this.select(item.closest('li').index());
-		this.notifyOn('change');
+		this.notifyOn('change', this.idx);
 	};
 
 	this.select = function(idx) {
@@ -7180,13 +7195,31 @@ function HtmlDropDown() {
 				this.div.find('> button > .html-text').html(
 						item.find('> a').html());
 				this.idx = idx;
+				this.notifyOn('change', this.idx);
 			}
 		}
 		return this.idx;
 	};
 	
+	this.selectByVal = function(key, val) {
+		var item = this.source.getByKey(key, val);
+		var idx = item.idx >= 0 ? item.idx : 0;
+		this.select( idx ); 
+	};
+	
+	/* Just a wrapper to provide a common interface. */
+	this.value = function() {
+		return this.selectedItem();
+	};
+	
 	this.selectedItem = function() {
 		return (this.idx > -1 ? this.source.get(this.idx) : null);
+	};
+	
+	this.size = function() {
+		if( ! this.source )
+			return 0;
+		return this.source.length();
 	};
 	
 	this.enable = function() {
@@ -7430,6 +7463,8 @@ function HtmlTextGroup(label, icon, readonly) {
 		}
 		if( readOnly ) this.readonly();
 		this.div.find('> .html-btn').hide();
+		/* Forward change event of embedded text field. */
+		this.text.setCallback('change', this.notifyOn.bind(this, 'change'));
 	};
 	
 	this.setRLabel = function(text) {
@@ -7458,13 +7493,21 @@ function HtmlTextGroup(label, icon, readonly) {
 		return this.text.validate(regex);
 	};
 	
+	this.validate_numeric = function(min, max) {
+		return this.text.validate_numeric(min, max);
+	};
+	
 	this.valid = function() {
 		return this.text.valid();
 	};
 	
-	this.readonly = function() {
-		this.text.div.attr('readonly', true);
+	this.readonly = function(no) {
+		this.text.div.attr('readonly', arguments.length == 0 || no);
 		return this;
+	};
+	
+	this.hasValue = function() {
+		return this.value() != '';
 	};
 	
 	this.init.apply(this, arguments);
@@ -7493,6 +7536,45 @@ function HtmlInputGroup(label, icon, box) {
 	};
 
 	this.init(label, icon, box);
+}
+
+function HtmlColorGroup(label) {
+	
+	this.init = function(label) {
+		this.div = $('.templates > .html-colorgroup').clone();
+		this.div.find('> .html-label').html(label);
+		this.text = new HtmlTextField(this.div.find('> .html-text'));
+		
+		this.div.colorpicker({
+			format: 'hex',
+			component: this.div.find('> .html-color')
+		});
+		
+		this.value = function(newValue) {
+			if(newValue !== undefined) {
+				var hex = newValue;
+				var rgb = /rgb\(\s*(\d*)\s*,\s*(\d*)\s*,\s*(\d*)\s*\)/.exec(newValue);
+				if( rgb != null && rgb.length == 4 ) {
+					hex = '#';
+					for(var i = 1; i < 4; i++)
+						hex += zeroPad(parseInt(rgb[i]).toString(16), 2);
+				}
+				this.text.value(hex);
+			}
+			return this.text.value();
+		};
+		
+		this.gmtValue = function() {
+			var hex = this.value();
+			var gmt = '';
+			for(var i = 0; i < 3; i++)
+				gmt += parseInt(hex.substring(2*i+1, 2*i+3), 16) + '/';
+			/* Remove last '/' character. */
+			return gmt.slice(0,-1);
+		};
+	};
+	
+	this.init.apply(this, arguments);
 }
 
 function HtmlDynGroup(label,box) {
@@ -7782,6 +7864,46 @@ function Layer(name, map) {
 		this.init(name, map);
 }
 
+ObjectLayer.prototype = new PolygonLayer();
+function ObjectLayer(name, map, fun_enabled, fun_data, args) {
+	
+	PolygonLayer.call(this, name, map, fun_enabled, fun_data);
+	
+	this.init = function(args) {
+		this.args = args;
+		ajax('webguisrv/getoois', {kind: this.args.type}, (function(result) {
+			console.log(result);
+			this.objects = new Container().setList(result.objs);
+			for(var i = 0; i < this.objects.length(); i++) {
+				var obj = this.objects.get(i);
+				obj.graphic = this.args.newInst();
+			}
+		}).bind(this));
+	};
+	
+	this.display = function() {
+		this.clear();
+		var container = fun_data(this.data);
+		if( ! container ) return;
+		for(var i = 0; i < container.length(); i++) {
+			var item = container.get(i);
+			var obj = this.objects.findItem('uid', item.ref);
+			if( item.eta != -1 && obj.graphic )
+				obj.graphic.lazy(obj).show(map, obj, item);
+		}
+	};
+	
+	this.clear = function() {
+		for (var i = 0; i < this.objects.length(); i++) {
+			var obj = this.objects.get(i);
+			if( obj.graphic )
+				obj.graphic.hide();
+		}
+	};
+	
+	this.init(args);
+}
+
 CFZLayer.prototype = new Layer();
 
 function CFZLayer(name,map) {
@@ -7984,7 +8106,8 @@ function Polygon(coords,color) {
 		this.poly = new google.maps.Polygon({
 			paths : this.coords,
 			strokeOpacity : 0.5,
-			fillOpacity : 0.8
+			fillOpacity : 0.8,
+			zIndex: 2
 		});
 		
 		if( color )
@@ -8039,6 +8162,97 @@ function Polyline(coords,color) {
 	this.init(coords,color);
 }
 
+/* TODO: combine Rectangle and Point with a common super calss. */
+function Rectangle(lat,lon,map) {
+	
+	this.init = function(lat,lon,map) {
+		this.window = null;
+		this.lat = lat;
+		this.lon = lon;
+		this.bounds = null;
+		this.fromLevel = 0;
+		this.rect = new google.maps.Rectangle({
+			fillOpacity : 0.7,
+			fillColor : 'white',
+			strokeOpacity : 1.0,
+			strokeColor : 'black',
+			strokeWeight : 1.5
+		});
+		/* register click event handler */
+		google.maps.event.addListener(this.rect, 'click', (function(e) {
+			if( ! this.window )
+				return;
+			this.window.open( this.rect.getMap(), e.latLng );
+		}).bind(this));
+		this.setMap(map);
+	};
+	
+	this.setMap = function(map) {
+		this.map = map;
+		this.rect.setMap(map);
+		google.maps.event.addListener(this.map, 'zoom_changed', (function(e) {
+			/* Evaluate bounds expressions again on zoom change if it is a function. */
+			if( typeof this.bounds == 'function' ) {
+				this.rect.setOptions({bounds: this.bounds()});
+			}
+			/* Check if object should be shown at this zoom level. */
+			this.show();
+		}).bind(this));
+	};
+	
+	this.setColor = function(color) {
+		this.rect.setOptions({fillColor: color});
+	};
+	
+	this.setSize = function(w, h) {
+		this.bounds = {
+			north: this.lat + h,
+			south: this.lat - h,
+			east: this.lon + w,
+			west: this.lon - w
+		};
+		this.rect.setOptions({bounds: bounds});
+	};
+	
+	this.setSizeInPixel = function(pw, ph) {
+		this.bounds = (function(pw, ph) {
+			var p = LatLonToPixel(this.lat, this.lon);
+			var ne = PixelToLatLng(p.x + pw/2, p.y + ph/2);
+			var sw = PixelToLatLng(p.x - pw/2, p.y - ph/2);
+			return {
+				north: ne.lat(),
+				south: sw.lat(),
+				east: ne.lng(),
+				west: sw.lng(),
+			};
+		}).bind(this, pw, ph);
+		this.rect.setOptions({bounds: this.bounds()});
+	};
+	
+	this.showFrom = function(zoomLevel) {
+		this.fromLevel = zoomLevel;
+	};
+	
+	this.show = function() {
+		this.rect.setVisible( this.map.getZoom() >= this.fromLevel );
+	};
+	
+	this.hide = function() {
+		this.rect.setVisible(false);
+	};
+		
+	this.setInfoWin = function(win) {
+		this.window = win;
+		return this;
+	};
+	
+	this.getInfoWin = function() {
+		return this.window;
+	};
+		
+	this.init(lat,lon,map);
+}
+
 function Point(lat,lon) {
 	
 	this.init = function(lat,lon) {
@@ -8083,7 +8297,8 @@ function Point(lat,lon) {
 		icon.scale = scale;
 		/* setMap() seems to be faster than setIcon() to redraw the marker icon.
 		 * However, the marker is removed from the map for a short period of time. */
-		this.marker.setMap(map);  //this.marker.setIcon(icon);
+		if( this.marker.getMap() )
+			this.marker.setMap(map);  //this.marker.setIcon(icon);
 	};
 	
 	this.show = function(map) {
@@ -8095,9 +8310,14 @@ function Point(lat,lon) {
 	this.hide = function() {
 		this.marker.setMap(null);
 	};
-	
+		
 	this.setInfoWin = function(win) {
-		this.window = win; 
+		this.window = win;
+		return this;
+	};
+	
+	this.getInfoWin = function() {
+		return this.window;
 	};
 		
 	this.init(lat,lon);
@@ -8113,7 +8333,7 @@ function CFZ(meta) {
 		$.extend(this,meta);
 		Polygon.call(this, this._COORDS_);
 		delete this._COORDS_;
-		this.poly.setOptions( {fillOpacity : 0.4, strokeWeight : 1.5} );
+		this.poly.setOptions( {fillOpacity : 0.4, strokeWeight : 1.5, zIndex: 1} );
 	};
 	
 	this.init(meta);
@@ -9291,17 +9511,26 @@ function DownloadDialog(data) {
 		this.data = data;
 		this.dialog = new HtmlDialog( $('.templates .download-dialog').clone() );
 		this.drpProducts = new HtmlDropDown();
+		this.drpProducts.setCallback('change', (function() {
+			/* TODO */
+			this.drpProducts.selectedItem().file == "custom.png" ? this.secOptions.show() : this.secOptions.hide();
+		}).bind(this));
 		
 		var cbox = new HtmlInputGroup('Product', 'list');
 		cbox.input.append( this.drpProducts.div );
 		
 		this.secProducts = this.dialog.content.find('.secProducts');
 		this.secProducts.append( cbox.div );
+		this.secOptions = this.dialog.content.find('.secOptions');
+		this.secOptions.hide();
 		this.btnDownload = this.dialog.footer.find('.btnDownload');
 		this.btnDownload.click( this.downloadData.bind(this) );
 		this.divStatus = this.dialog.content.find('.status');
 		this.divError = this.dialog.content.find('.error');
 		this.loaded = false;
+		
+		this.categories = new Container();
+		this.params = new Container();
 	};
 	
 	this.downloadData = function() {
@@ -9309,9 +9538,28 @@ function DownloadDialog(data) {
 		var file = this.drpProducts.selectedItem().file;
 		var cookie_val = 'download_' + this.data._id.replace('@', '_');
 		
+		/* TODO */
+		var args = {};
+		if( file == 'custom.png' ) {
+			for(var i = 0; i < this.params.length(); i++) {
+				var param = this.params.get(i);
+				var flag = param.Flag2.substring(2);
+				var value = param.html.value();
+				/* Ignore unspecified values. */
+				if( value === '' ) continue;
+				if( param.data_type == 'Boolean' )
+					args[flag] = value ? 'Y' : 'N';
+				if( param.data_type == 'Number' ||  param.data_type == 'String')
+					args[flag] = value;
+				if( param.data_type == 'R/G/B' )
+					args[flag] = param.html.gmtValue();
+				if( param.data_type == 'group' )
+					args[flag] = value.key;
+			}
+		}
+		
 		$.removeCookie( cookie_val );
 		this.timer = setInterval( (function(cookie_val) {
-			console.log('check');
 			var cookie = $.cookie( cookie_val );
 			/* replace @ with _ */
 			if( cookie ) {
@@ -9331,21 +9579,107 @@ function DownloadDialog(data) {
 		this.btnDownload.prop('disabled', true);
 		this.drpProducts.disable();
 		
+		var src = 'datasrv/' + evtid + '/' + file + '?date=' + Date.now() + '&download=';
+		var ret = [];
+		for(var key in args)
+			ret.push( encodeURIComponent('gmt_' + key) + "=" + encodeURIComponent(args[key]) );
+		src += '&' + ret.join('&');
+		
+		console.log(args);
+		
 		/* Start download in new iframe to avoid redirects of any kind. The date parameter is necessary to suppress caching. */
-		$('<iframe>', {src: 'datasrv/' + evtid + '/' + file + '?date=' + Date.now() + '&download'}).appendTo('.dynamic').hide();
+		$('<iframe>', {src: src}).appendTo('.dynamic').hide();
 	};
 	
 	this.loadProducts = function() {
 		ajax('datasrv/help', null, (function(result) {
 			var key = this.data instanceof EventSet ? 'evtset' : 'evt';
+			/* TODO: given by API, but show: ['evt'] is missing */
+			result.products.push({shortdesc: 'Custom Image', show: ['evt'], file: "custom.png"});
 			var products = new Container().setList(result.products).filter(
 				function(o){ return o.show.indexOf(key) != -1; }
 			);
+			console.log(result.products);
 			this.drpProducts.setToString( function(o){return o.shortdesc;} );
 			this.drpProducts.setSource(products);
 			this.drpProducts.select(0);
-			this.loaded = true;
-			this.dialog.show();
+			
+			ajax('datasrv/gmt_help', null, (function(result) {
+				this.params = new Container().setList(result.gmt_params).filter( function(o) {
+					return (o.user == true && o.category); 
+				});
+				for(var i = 0; i < this.params.length(); i++) {
+					var param = this.params.get(i);
+					console.log(param);
+					if( ! this.categories.findItem('category', param.category) )
+						this.categories.insert({
+							'group': new HtmlDynGroup(param.category),
+							'category': param.category
+						});
+					var html;
+					if( param.data_type == "Boolean" ) {
+						param.html = new HtmlCheckBox(param.Flagname, param['default'] == "Y");
+						for(var j = 0; param.enable && j < param.enable.length; j++) {
+							var dep = param.enable[j];
+							param.html.setCallback('change', (function(dep, val) {
+								var div = this.params.findItem('Flag1',dep).html.div;
+								val ? div.show() : div.hide();
+							}).bind(this, dep));
+						}
+						html = param.html;
+					} else if( param.data_type == "Number" ) {
+						param.html = new HtmlTextGroup(param.Flagname).setRLabel(param.unit);
+						param.html.value(param['default']);
+						param.html.validate_numeric(param.limit.min, param.limit.max);
+						html = param.html;
+					} else if( param.data_type == "R/G/B" ) {
+						param.html = new HtmlColorGroup(param.Flagname);
+						param.html.value('rgb(' + param['default'].split('/').join(',') + ')');
+						html = param.html;
+					} else if( param.data_type == "group" ) {
+						param.html = new HtmlDropDown();
+						param.html.setToString( function(o){return o.Name;} );
+						param.html.setSource( new Container().setList(param.group) );
+						param.html.select( param.html.source.getByKey('key', param['default']).idx );
+						html = new HtmlInputGroup(param.Flagname, 'list');
+						html.input.append( param.html.div );
+						/* TODO */
+						param.html.setCallback('change', (function(param) {
+							var item = param.html.selectedItem();
+							for(var j = 0; item.change && j < item.change.length; j++) {
+								var dep = item.change[j];								
+								var dep_param = this.params.findItem('Flag1', dep.Flag);
+								if( dep_param.data_type == 'Boolean' )
+									dep_param.html.value( dep.value == 'Y' );
+								if( dep_param.data_type == 'R/G/B' )
+									dep_param.html.value( 'rgb(' + dep.value.split('/').join(',') + ')' );
+								if( dep_param.data_type == 'group' )
+									dep_param.html.selectByVal('key', dep.value);
+							}
+						}).bind(this, param));
+					} else {
+						param.html = new HtmlTextGroup(param.Flagname);
+						param.html.value(param['default']);
+						html = param.html;
+					}
+					/* Append HTML object to corresponding group. */
+					this.categories.findItem('category', param.category).group.content.append( html.div );
+				}
+				for(var i = 0; i < this.categories.length(); i++) {
+					var category = this.categories.get(i);
+					category.group.div.removeClass('html-dyngroup').addClass('html-dyngroup2');
+					this.secOptions.append(category.group.div);
+				}
+				/* Fire on change event once for each checkbox to disable all dependent fields. */
+				for(var i = 0; i < this.params.length(); i++) {
+					var param = this.params.get(i);
+					if( param.html instanceof HtmlCheckBox )
+						param.html.notifyOn('change', param.html.value());
+				}
+				this.loaded = true;
+				this.dialog.show();
+			}).bind(this));
+			
 		}).bind(this));
 	};
 	
@@ -9356,9 +9690,18 @@ function DownloadDialog(data) {
 	this.init(data);
 }
 
-/* HySea */
-function ComposeForm(div) {
+Panel.prototype = new ICallbacks();
+function Panel() {
 	ICallbacks.call(this);
+	
+	this.show = function() {};
+	this.hide = function() {};
+}
+
+/* HySea */
+ComposeForm.prototype = new Panel();
+function ComposeForm(div) {
+	Panel.call(this);
 	
 	this.init = function(div) {
 		this.div = div;
@@ -9397,6 +9740,9 @@ function ComposeForm(div) {
 		this.drpAlgo = new HtmlDropDown();
 		this.inpAlgo = new HtmlInputGroup('Algorithm:', 'list');
 		this.inpAlgo.input.append( this.drpAlgo.div );
+		this.drpResolution = new HtmlDropDown();
+		this.inpResolution = new HtmlInputGroup('Resolution:', 'list');
+		this.inpResolution.input.append( this.drpResolution.div );
 		
 		/* Add fields to tab. */
 		this.form.append(this.txtName.div);
@@ -9418,6 +9764,7 @@ function ComposeForm(div) {
 		if( checkPerm("hysea") ) {
 			this.form.append(this.inpAlgo.div);
 		}
+		this.form.append(this.inpResolution.div);
 		
 		/* Insert available algorithms. */
 		this.drpAlgo.setToString(function(o){ return o.desc; });
@@ -9426,6 +9773,12 @@ function ComposeForm(div) {
 		    {name: 'hysea', desc: 'HySea'}
 		]));
 		this.drpAlgo.select(0);
+		
+		/* Insert available resolutions. */
+		this.drpResolution.setSource( new Container().setList(
+			['120', '60', '30']
+		));
+		this.drpResolution.select(0);
 		
 		/* Clear root and parent ID on click. */
 		var clearIds = (function() {
@@ -9440,6 +9793,14 @@ function ComposeForm(div) {
 			this.txtDate.value('');
 		}).bind(this);
 		this.txtDate.getButton().click(clearDate);
+		
+		/* Create marker! */
+		this.marker = new Marker(0, 0, "%E2%80%A2", '#e4e7eb', map);
+		var func = function() {
+			this.marker.setPosition(this.txtLat.value(), this.txtLon.value());
+		};
+		this.txtLat.setCallback('change', func.bind(this));
+		this.txtLon.setCallback('change', func.bind(this));
 		
 		/*  */
 		this.form.find('input').on('change', this.check.bind(this));
@@ -9468,8 +9829,10 @@ function ComposeForm(div) {
 	};
 	
 	this.load = function(data) {
+		this.clear();
 		var prop = data.prop;
-		var progress = (data instanceof Earthquake) && data.getProcessObj() ? data.getProcessObj().simTime : 180;
+		var process = (data instanceof Earthquake) ? data.getProcessObj() : null;
+		var progress = process ? process.simTime : 180;
 		this.txtName.value(prop.region);
 		this.txtLat.value(prop.latitude);
 		this.txtLon.value(prop.longitude);
@@ -9496,39 +9859,45 @@ function ComposeForm(div) {
 
 		if( prop.date ) {
 			var date = new Date(prop.date);
-			this.txtDate.value(getDateString(date) + ' UTC');
+			this.txtDate.value(getDateString(date, ' - ') + ' UTC');
 			this.txtDate.div.data('dateObj', date);
 		} else {
 			this.txtDate.value('');
 		}
 		
+		this.drpResolution.selectByVal(null, process ? process.resolution * 60 : null);
+		this.drpAlgo.selectByVal('name', process && process.algorithm ? process.algorithm : null);
+		
 		this.div.scrollTop(0);
 	};
 	
 	this.check = function() {
+		var algo = this.drpAlgo.selectedItem();
 		var valid = this.txtLat.valid() && this.txtLon.valid() &&
 					this.txtDepth.valid() && this.txtDip.valid() &&
 					this.txtStrike.valid() && this.txtRake.valid() &&
 					this.txtDur.valid() && (
-						this.txtMag.valid() && (this.drpAlgo.selectedItem().name == 'easywave') ||
+						this.txtMag.valid() && (algo.name == 'easywave') ||
 						this.txtSlip.valid() && this.txtLength.valid() && this.txtWidth.valid()
 					);
+		var hasSlip = this.txtSlip.hasValue() || this.txtLength.hasValue() || this.txtWidth.hasValue();
+		var hasMag = this.txtMag.hasValue();
+		this.txtMag.readonly(algo.name == 'hysea' || hasSlip);
+		this.txtSlip.readonly(hasMag);
+		this.txtLength.readonly(hasMag);
+		this.txtWidth.readonly(hasMag);
 		this.btnStart.prop('disabled', ! valid);
 	};
 	
 	this.clear = function() {
 		this.status.html('');
 		this.form.find('input').val('');
-		this.check();
+		this.drpResolution.select(0);
+		this.drpAlgo.select(0);
 	};
 	
 	this.start = function() {
 		this.status.html('');
-		
-		/* TODO: encapsulate somehow */
-		$("#tabSaved").css("display", "block");
-		$("#hrefSaved").click();
-		
 		var data = {
 			name: this.toNull( this.txtName.value() ),
 			lat: this.txtLat.value(),
@@ -9545,16 +9914,69 @@ function ComposeForm(div) {
 			root: this.toNull( this.txtRoot.value() ),
 			parent: this.toNull( this.txtParent.value() ),
 			date: this.txtDate.value() ? this.txtDate.div.data('dateObj').toISOString() : null,
-			algo: this.drpAlgo.selectedItem().name
+			algo: this.drpAlgo.selectedItem().name,
+			gridres: this.drpResolution.selectedItem()
 		};
 		console.log(data);
 		ajax_mt('srv/compute', this.removeNulls(data), (function(result) {
 			console.log(result);
 			if( result.status == 'success' ) {
-				
+				this.notifyOn('started');
 			}
 		}).bind(this));
 	};
 	
+	this.show = function() {
+		this.marker.show();
+		this.cid = global.setCallback('map_click', (function(lat, lon) {
+			this.marker.setPosition(lat, lon);
+			this.txtLat.value(lat.toFixed(4));
+			this.txtLon.value(lon.toFixed(4));
+		}).bind(this));
+	};
+	
+	this.hide = function() {
+		this.marker.hide();
+		global.delCallback('map_click', this.cid);
+	};
+	
 	this.init.apply(this, arguments);
+}
+
+/*****/
+MapObject.prototype = new ICallbacks();
+function MapObject() {
+	ICallbacks.call(this);
+	this.create = function() {};
+	this.show = function(map) {};
+	this.hide = function(map) {};
+}
+
+City.prototype = new MapObject();
+function City() {
+	MapObject.call(this);
+	this.create = function(obj) {
+		this.point = new Rectangle(obj.lat, obj.lon, map).setInfoWin(new InfoWindow());
+		return this;
+	};
+	
+	this.lazy = function(obj) {
+		return this.point ? this : this.create(obj);
+	};
+	
+	this.show = function(map, obj, data) {
+		var html = '<b>' + obj.name + ' - ' + obj.adm0 + '</b><br>' + 
+		   '<span>Population: ' + obj.popmin.toLocaleString("en-US") + ' - ' + obj.popmax.toLocaleString("en-US") + '</span><br>' +
+		   '<span>Estimated Wave Height: ' + data.ewh + '</span>';
+		this.point.getInfoWin().setHtml(html);
+		this.point.setColor( getPoiColor(data) );
+		this.point.setSizeInPixel(10, 10);
+		this.point.showFrom(5);
+		this.point.show();
+	};
+	
+	this.hide = function() {
+		if( this.point )
+			this.point.show(null);
+	};
 }
