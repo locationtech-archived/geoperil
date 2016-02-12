@@ -355,7 +355,7 @@ public class Services {
 	  return true;
   }
   
-  private String _computeById(User user, String evtid, Integer dur, Integer accel, Integer gridres) {
+  private String _computeById(User user, String evtid, Integer dur, Integer accel, Integer gridres, String algo) {
 	  DBObject eq = db.getCollection("eqs").findOne( new BasicDBObject( "_id", evtid ) );
 	  if( eq == null )
 		  return null;
@@ -394,6 +394,7 @@ public class Services {
 	  
 	  /* start request */
 	  EQTask task = new EQTask(eqp, evtid, user, dur, accel, gridres);
+	  task.algo = algo;
 	  task.setSlots(IScheduler.SLOT_NORMAL, IScheduler.SLOT_EXCLUSIVE);
 	  return request( evtid, task );
   }
@@ -413,7 +414,8 @@ public class Services {
 		  @FormParam("evtid") String evtid,
 		  @FormParam("raw") @DefaultValue("0") Integer raw,
 		  @FormParam("gridres") Integer gridres,
-		  @FormParam("dt_out") @DefaultValue("10") Integer dt_out ) {
+		  @FormParam("dt_out") @DefaultValue("10") Integer dt_out,
+		  @FormParam("algo") @DefaultValue("easywave") String algo) {
 	  	  		
 	  /* Check for invalid parameter configurations. */
 	  if( (inst != null || secret != null) && apikey != null )
@@ -515,6 +517,7 @@ public class Services {
 	  EQTask task = new EQTask( eqp, evtid, user, dur, accel, gridres);
 	  task.raw = raw;
 	  task.dt_out = dt_out;
+	  task.algo = algo;
 	  String ret_id = request(evtid, task);
 	  return jssuccess( new BasicDBObject( "_id", ret_id ) );
   }
@@ -1002,7 +1005,8 @@ public class Services {
 		  @FormParam("comp") Integer comp,
 		  @FormParam("accel") Integer accel,
 		  @FormParam("gridres") Integer gridres,
-		  @FormParam("apikey") String apikey) {
+		  @FormParam("apikey") String apikey,
+		  @FormParam("algo") @DefaultValue("easywave") String algo) {
 	  	  
 	  /* Check for invalid parameter configurations. */
 	  if( (inst != null || secret != null) && apikey != null )
@@ -1159,7 +1163,7 @@ public class Services {
 	  
 	  if( simulate )
 		  //computeById( request, null, null, id, refineId, comp, accel, apikey );
-		  _computeById(user, compId.toString(), comp, accel, gridres);
+		  _computeById(user, compId.toString(), comp, accel, gridres, algo);
 	  else
 		  /* run request in a separate thread to avoid blocking */
 		  new Thread() {

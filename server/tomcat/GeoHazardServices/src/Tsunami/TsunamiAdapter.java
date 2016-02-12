@@ -351,9 +351,13 @@ public abstract class TsunamiAdapter implements IAdapter {
 	}
 	
 	protected void finalizeLocations(EQTask task) {
-		
+		long d1 = 0;
+		long t0, t1;
+		t0 = System.nanoTime();
 		HashMap<Integer,Double> maxEWH = new HashMap<Integer, Double>();
 	    HashMap<Integer,Double> minETA = new HashMap<Integer, Double>();
+	    /* Temporary data structure used to avoid many database interactions. */
+	    List<DBObject> comps = new ArrayList<DBObject>();
 	    /* translate date into time stamp */
 		long time = task.eqparams.date.getTime() / 1000;
 		for(String id: locations.keySet() ) {
@@ -361,8 +365,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 			if( loc.get("type").equals("TFP") || loc.get("type").equals("TSP") ) {
 				loc.removeField("lat");
 				loc.removeField("lon");
-				db.getCollection("comp").insert(loc);	
-				
+				comps.add(loc);
 			} else if( loc.get("type").equals("STATION") ) {
 				@SuppressWarnings("unchecked")
 				List<DBObject> values = (List<DBObject>) loc.get("values");
@@ -374,7 +377,9 @@ public abstract class TsunamiAdapter implements IAdapter {
 					obj.put("station", id);
 					obj.put("evid", task.id);
 				}
+				t1 = System.nanoTime();
 				db.getCollection("simsealeveldata").insert(values);
+				d1 += System.nanoTime() - t1;
 			}
 			
 			/* Update maximal and minimal CFZ values. */
@@ -410,8 +415,14 @@ public abstract class TsunamiAdapter implements IAdapter {
 		    	cfz.put("eta", minETA.get(key));
 		    	cfz.put("EventID", task.id);
 	    	}
-		    db.getCollection("comp").insert( cfz );
+	    	comps.add( cfz );
 	    }
+		/* Bulk insert. */
+		t1 = System.nanoTime();
+		db.getCollection("comp").insert(comps);
+		System.out.println("Comp: " + (System.nanoTime() - t1) / 1000000000.);
+		System.out.println("Sealevel: " + d1 / 1000000000.);
+		System.out.println("Total: " + (System.nanoTime() - t0) / 1000000000.);
 	}
 	
 	protected int createJets(EQTask task, String ewh) throws IOException {
