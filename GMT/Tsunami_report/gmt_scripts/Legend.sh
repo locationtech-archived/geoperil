@@ -38,6 +38,14 @@ map_width=${26}
 
 date=${27}
 
+quake=${28}
+plot_quake=${29}
+quake_fill=${30}
+beachball_y=${31}
+quake_y=${32}
+
+Isochrone_color=${33}
+
 
 
 #### wave height ####
@@ -56,7 +64,9 @@ if [ ${plot_wave_time} == Y ]
 then
 #-Dx0c/3.5c/2.8c/1c/BL
 gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -R -J ${wave_time_pslegend} -O -V -K <<EOF>> ${output}
-S 0c - 0.4c - 1p,red 0.5c Travel time in hr
+#S 0c - 0.4c - 1p,red 0.5c Travel time in hr
+#S 0c - 0.4c 0/0/0 1p,red 0.5c Travel time in hr
+S 0.3c B 0.04c ${Isochrone_color} 0.2,0/0/0 0.5c Travel time in hr
 EOF
 fi
 
@@ -86,7 +96,7 @@ fi
 
 #-D2c/6c/4c/0.3ch
 #gmt psscale --MAP_ANNOT_OFFSET_PRIMARY=0.06c --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${tfp_cfz_psscale} -C${cfz_cpt} -Ef -Ba1f0.2 -By+l[m] -G0/4 -O -K -V >> ${output}
-gmt psscale --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${tfp_cfz_psscale_1} -C${cfz_cpt} -Li -G0/0.5 -O -K -V >> ${output}
+gmt psscale --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${tfp_cfz_psscale_1} -C${cfz_cpt} -Li -G-3/0.5 -O -K -V >> ${output}
 gmt psscale --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${tfp_cfz_psscale_2} -C${cfz_cpt} -Li -G0.5/5 -O -K -V >> ${output}
 fi
 
@@ -126,12 +136,14 @@ gmt pslegend -Dx0c/${created_y}c/${map_width}c/BL -O -K <<EOF>> ${output}
 L 6p Helvetica L Created on ${date} UTC, by TRIDEC Cloud 
 EOF
 
+if [ ${plot_quake} == Y ]
+then
+awk "BEGIN {FS=\",\"}; NR >= 2 {print 0, 0, \$4, \$6, \$7, \$8, \$3, 0, 0;}" ${quake} | gmt psmeca -R-0.45/0.45/-0.45/0.45 -JM0.9c -M -Sa0.8c -G85/97/134 -E238/238/238 -W0.01c,0/0/0 -P -K -O -V -Ya${beachball_y}c -Xa0.7c >> ${output} 
 
-
-#tridec_cloud_logo='/home/basti/Schreibtisch/sf_Lubuntu_shared/trideccloud-logo.png'
-#gmt pslegend -Dx1.55c/${created_y}c/${map_width}c/BL -O -K <<EOF>> ${output}
-#L 6p Helvetica L - Created on ${date} UTC 
-#EOF
-#### Logo ####
-#y = y_map_dist - 0.44
-#gmt psimage ${tridec_cloud_logo} -C0c/2.86c -W1.6c -t20 -O -K >> ${output}
+quake_date=$(awk "BEGIN {FS=\",\"}; NR >= 2 {print \$5}" ${quake})
+quake_date=$(date -d"${quake_date}" +'%Y, %B %d, %H:%M')
+quake_text=$(awk "BEGIN {FS=\",\"}; NR >= 2 {print \"Lat: \"\$2, \"Lon: \"\$1,\" Depth: \"\$4\" km, M: \"\$3}" ${quake})
+gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -Dx0.7c/${quake_y}c/15c/BL -O -K <<EOF>> ${output}
+S 1.1c a 0.55c ${quake_fill} 0.01c,35/35/35 1.6c ${quake_date} UTC, ${quake_text}
+EOF
+fi

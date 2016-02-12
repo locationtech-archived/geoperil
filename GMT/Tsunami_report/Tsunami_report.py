@@ -80,9 +80,9 @@ dem_group = [
 ]
 
 cities_group = [
-{"Name": "Plot all cities",          "key": "all"},
-{"Name": "Plot only capital cities", "key": "capitals"},
-{"Name": "Plot no cities",           "key": "None"}
+{"Name": "Plot all cities",          "key": "all",       "enable": ["-c_pop", "-c_l", "-c_l_p", "-c_f", "-c_s"]},
+{"Name": "Plot only capital cities", "key": "capitals",  "enable": ["-c_pop", "-c_l", "-c_l_p", "-c_f", "-c_s"]},
+{"Name": "Plot no cities",           "key": "None",      "disable": ["-c_pop", "-c_l", "-c_l_p", "-c_f", "-c_s"]}
 ]
 
 res_group = [
@@ -150,7 +150,7 @@ input_param = [
 {"Flagname": "TFP CPT",                                   "variable": "tfp_cpt",                  "Flag1": "-tfp_cpt",      "Flag2": "--tfp_cpt",                 "default": "cpt/TFP/TFP.cpt",                                           "help": "Path to CPT-File for Tsunami-Forecast-Points",                                                                                                                                                                                                                              "user": False},
 {"Flagname": "TFP outline color",                         "variable": "tfp_stroke",               "Flag1": "-tfp_stroke",   "Flag2": "--tfp_stroke",              "default": "255/255/255",                                               "help": "Color for TFP stroke (R/G/B)",                                                 "category": "Map overlay",                  "data_type": "R/G/B",                                                                                                                            "user": True},
 
-{"Flagname": "Plot cities",                               "variable": "plot_cities",              "Flag1": "-p_c",          "Flag2": "--plot_cities",             "default": "None",                                                      "help": "Plot Cities?\nChoose:\tall, capitals, None",                                   "category": "Cities and population",        "data_type": "group",      "group": cities_group,                                "enable": ["-c_pop", "-c_l", "-c_l_p", "-c_f", "-c_s"],         "user": True},
+{"Flagname": "Plot cities",                               "variable": "plot_cities",              "Flag1": "-p_c",          "Flag2": "--plot_cities",             "default": "None",                                                      "help": "Plot Cities?\nChoose:\tall, capitals, None",                                   "category": "Cities and population",        "data_type": "group",      "group": cities_group,                                                                                                "user": True},
 {"Flagname": "Plot cities with more than",                "variable": "cities_pop",               "Flag1": "-c_pop",        "Flag2": "--cities_pop",              "default": None,                                                        "help": "All Cities above given value will be plotted [mio]\n(default = 0)",            "category": "Cities and population",        "data_type": "Number",     "limit": {"min": 0, "max": 36},    "unit": "mio",                                                                     "user": True},
 {"Flagname": "Label cities",                              "variable": "cities_label",             "Flag1": "-c_l",          "Flag2": "--cities_label",            "default": "N",                                                         "help": "Label citites?\nYes = Y\nNo = N (default)",                                    "category": "Cities and population",        "data_type": "Boolean",                                                                                                                          "user": True},
 {"Flagname": "Label cities with more than",               "variable": "cities_label_pop",         "Flag1": "-c_l_p",        "Flag2": "--cities_label_pop",        "default": None,                                                        "help": "Cities above given value will be labelled [mio]\n(default = cities pop)",      "category": "Cities and population",        "data_type": "Number",     "limit": {"min": 0, "max": 36},    "unit": "mio",                                                                     "user": True},
@@ -251,8 +251,14 @@ def tsunami_report(\
 
     #berechnet Abstand zur unteren Blattkante, abhaengig von zu plottenden Inhalten
     y_map_dist = 1
-    layer_list_count = [plot_wave_time, world_pop, plot_cities, plot_tfp, plot_cfz].count("Y")   
-    layer_list_count_xwave = [world_pop, plot_cities, plot_tfp, plot_cfz].count("Y")   
+    
+    #erstellt plot_cities_bool (Y / N)
+    if plot_cities=="all" or plot_cities=="capitals":
+        plot_cities_bool = "Y"
+    else:
+        plot_cities_bool = "N"
+    layer_list_count = [plot_wave_time, world_pop, plot_cities_bool, plot_tfp, plot_cfz].count("Y")   
+    layer_list_count_xwave = [world_pop, plot_cities_bool, plot_tfp, plot_cfz].count("Y")   
          
     if  (plot_wave_height=="Y" and layer_list_count <= 0) or (plot_wave_height=="Y" and plot_wave_time=="Y" and layer_list_count_xwave <= 0):
         y_map_dist += 1.9  
@@ -260,6 +266,10 @@ def tsunami_report(\
         y_map_dist += 3.8   
     elif plot_wave_height=="N" and layer_list_count >=1:    
         y_map_dist += 2.3
+    #y_map_dist if plot_quake == Y (Legend)
+    quake_y_diff = 0.9
+    if plot_quake=="Y":
+       y_map_dist += quake_y_diff 
  
     map_height = (map_width * y_ratio) / x_ratio  
 
@@ -462,18 +472,20 @@ def tsunami_report(\
         plot_cfz_tfp = "Y"
     else:
         plot_cfz_tfp = "N"
-    if plot_cities=="all" or plot_cities=="capitals":
-        plot_cities = "Y"
-    else:
-        plot_cities = "N"		
-    plot_legend_list = [plot_wave_height, plot_wave_time, world_pop, plot_cities, plot_cfz_tfp]
+    
+				
+    plot_legend_list = [plot_wave_height, plot_wave_time, world_pop, plot_cities_bool, plot_cfz_tfp]
 
-    wave_height_pslegend, wave_height_psscale, wave_time_pslegend, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2 = calc_legend_positions (plot_legend_list, y_map_dist)
+    wave_height_pslegend, wave_height_psscale, wave_time_pslegend, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2 = calc_legend_positions (plot_legend_list, y_map_dist, plot_quake, quake_y_diff)
 
     created_y = y_map_dist - 0.6
-    subprocess.call(['./gmt_scripts/Legend.sh',output, plot_wave_height, plot_wave_time, world_pop, plot_cfz, plot_tfp, plot_cities, cfz_cpt, cfz_stroke, tfp_stroke, wave_height_cpt, world_pop_cpt, cities_fill, cities_stroke, \
+
+    beachball_y = y_map_dist - 1.5
+    quake_y = y_map_dist - 1.4
+
+    subprocess.call(['./gmt_scripts/Legend.sh',output, plot_wave_height, plot_wave_time, world_pop, plot_cfz, plot_tfp, plot_cities_bool, cfz_cpt, cfz_stroke, tfp_stroke, wave_height_cpt, world_pop_cpt, cities_fill, cities_stroke, \
         wave_height_pslegend, wave_height_psscale, wave_time_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, \
-        str(created_y), str(map_width), date])     
+        str(created_y), str(map_width), date, quake, plot_quake, quake_fill, str(beachball_y), str(quake_y), Isochrone_color])     
  
     ######################################
     ###### Umwandlung in PNG/PDF #########

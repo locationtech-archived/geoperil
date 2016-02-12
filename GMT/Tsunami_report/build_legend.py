@@ -96,12 +96,15 @@ def calc_legend_for_wt_TC_wp_c (plot_legend_list):
     return (world_pop_pslegend_x, world_pop_psscale_1_x, world_pop_psscale_2_x, cities_pslegend_x, wave_time_pslegend_x, tfp_cfz_pslegend_x, tfp_cfz_psscale_1_x, tfp_cfz_psscale_2_x)
 
 
-def calc_legend_positions (plot_legend_list, y_map_dist):
+def calc_legend_positions (plot_legend_list, y_map_dist, plot_quake, quake_y_diff):
     wave_height_pslegend_x, wave_height_psscale_x, wave_height_psscale_length = 0, 0, 0
     world_pop_pslegend_x, world_pop_psscale_1_x, world_pop_psscale_2_x = 0, 0, 0
     cities_pslegend_x = 0
     wave_time_pslegend_x = 0 
     tfp_cfz_pslegend_x, tfp_cfz_psscale_1_x, tfp_cfz_psscale_2_x = 0, 0, 0   
+    
+    if plot_quake=="Y":
+        y_map_dist -= quake_y_diff
     
     #Y-Position der Legendbestandteile
     wave_height_pslegend_y = float(y_map_dist)-1.55
@@ -170,7 +173,7 @@ def calc_legend_positions (plot_legend_list, y_map_dist):
     cities_pslegend = '-Dx%sc/%sc/6c/BL' % (cities_pslegend_x, cities_pslegend_y)	 
 
     tfp_cfz_pslegend = '-Dx%sc/%sc/0c/1/BL' % (tfp_cfz_pslegend_x, tfp_cfz_pslegend_y)
-    tfp_cfz_psscale_1 = '-D%sc/%sc/-0.8/0.35c' % (tfp_cfz_psscale_1_x, tfp_cfz_psscale_y)
+    tfp_cfz_psscale_1 = '-D%sc/%sc/-1.2/0.35c' % (tfp_cfz_psscale_1_x, (tfp_cfz_psscale_y - 0.2))
     tfp_cfz_psscale_2 = '-D%sc/%sc/-0.8/0.35c' % (tfp_cfz_psscale_2_x, tfp_cfz_psscale_y)   
     
     return (wave_height_pslegend, wave_height_psscale, wave_time_pslegend, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2)
