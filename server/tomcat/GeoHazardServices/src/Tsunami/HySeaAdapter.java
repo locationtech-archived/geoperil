@@ -35,7 +35,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 		EQParameter eqp = task.eqparams;
 		
 		/* Compute bounding box. */
-		double margin = task.duration / 10;
+		double margin = 7.5 + task.duration / 10.0;
 		double ulx = eqp.lon - margin;
 		double lrx = eqp.lon + margin;
 		double uly = Math.min( eqp.lat + margin, 90 );
@@ -177,6 +177,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 				jobid = Integer.valueOf( matcher.group(1) );
 		}
 		if( jobid == 0 ) return -1;
+		System.out.println(jobid);
 		
 		initialProgress(task);
 		
@@ -185,7 +186,8 @@ public class HySeaAdapter extends TsunamiAdapter {
 		int lnr = 1;
 		while( ! finished ) {
 			boolean changed = false;
-			for( String line: sshCon[0].runCmd("tail -n +" + lnr + " ~/HySEA.o" + jobid) ) {
+			/* TODO: No idea why '\n\004' is needed here. Must have something to do with the embedded ssh command in hysea_status.sh. */
+			for( String line: sshCon[0].runCmd("hysea_status.sh " + jobid + " | tail -n +" + lnr + "; echo '\n\004'") ) {
 				Matcher matcher = Pattern.compile("Time = (\\d+\\.?\\d*) sec").matcher(line);
 				if( matcher.find() ) {
 					task.progress = Math.min( Float.valueOf( matcher.group(1) ) / (task.duration * 60.0f), 1.0f) * 100.0f;
@@ -201,7 +203,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 				System.out.println(task.progress);
 			}
 			try {
-				Thread.sleep(5000);
+				Thread.sleep(2000);
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
@@ -213,7 +215,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 				outfile, "eWave.2D.sshmax.tiff"
 			),
 			String.format(
-				"gdal_translate -of GSAG %s %s", "eWave.2D.sshmax.tiff", "eWave.2D.sshmax"
+				"gdal_translate -of GSBG %s %s", "eWave.2D.sshmax.tiff", "eWave.2D.sshmax"
 			)
 		);
 		return 0;

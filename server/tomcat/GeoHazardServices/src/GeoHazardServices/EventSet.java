@@ -10,6 +10,7 @@ public class EventSet {
 	/* Progress accumulated over all events. */
 	private Integer overall_progress;
 	private List<EQTask> tasks;
+	private EQTask last;
 	
 	public EventSet(String setid, int size, int total_dur) {
 		this.setid = setid;
@@ -21,6 +22,14 @@ public class EventSet {
 	
 	public synchronized void addTask(EQTask task) {
 		this.tasks.add(task);
+	}
+	
+	public synchronized void setLastTask(EQTask task) {
+		this.last = task;
+	}
+	
+	public synchronized boolean isLastTask(EQTask task) {
+		return this.last == task;
 	}
 	
 	public List<EQTask> getTasks() {

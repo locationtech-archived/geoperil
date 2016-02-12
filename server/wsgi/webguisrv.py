@@ -316,6 +316,14 @@ class WebGuiSrv(BaseSrv):
         return res
 
     @cherrypy.expose
+    def getoois(self, kind):
+       user = self.getUser()
+       if user is not None or self.auth_shared(evid):
+           res = list( self._db["oois"].find({"type":kind}) )
+           return jssuccess(objs=res)
+       return jsdeny()
+
+    @cherrypy.expose
     def getbuildings(self, minx, miny, maxx, maxy, evtid=None):
         user = self.getUser()
         if user is not None:
@@ -405,7 +413,7 @@ class WebGuiSrv(BaseSrv):
     
     # for internal use
     def _gettfps(self, evid):
-        crs = self._db["tfp_comp"].find({"EventID":evid})
+        crs = list(self._db["tfp_comp"].find({"EventID":evid})) + list(self._db["comp"].find({"EventID":evid, "type": "TFP"}))
         res = []
         for tfp in crs:
             obj = self._db["tfps"].find_one({"_id":ObjectId(tfp["tfp"])})

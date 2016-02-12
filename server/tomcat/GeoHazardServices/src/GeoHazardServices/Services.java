@@ -19,6 +19,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
@@ -161,6 +162,7 @@ public class Services {
   public Services() {
 	  
 	  System.out.println("Constructor");
+	  Locale.setDefault(new Locale("en", "US"));
 	  scheduler = new FairScheduler();
 	  worker = new ArrayList<WorkerThread>();
 	  	  	  

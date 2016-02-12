@@ -64,20 +64,32 @@ public abstract class Connection {
 			lines.addAll( runCmd(cmd) );
 		return lines;
 	}
-	
+		
 	public List<String> runCmd(String cmd) throws IOException {
 		List<String> lines = new ArrayList<String>();
-		out.println( cmd );
-		/* Force newline before \004! */
-		out.println( "echo '\n\004'" );
-		out.flush();
+		runLiveCmd(cmd);
 		String line;
-		while( (line = in.readLine()) != null && ! line.equals("\004") ) {			
+		while( (line = nextLine()) != null) {
 			lines.add(line);
 		}
 		/* Remove inserted newline from the result. */
 		lines.remove(lines.size() - 1);
 		return lines;
+	}
+	
+	public void runLiveCmd(String cmd) throws IOException {
+		/* Run command. */
+		out.println( cmd );
+		/* Force newline before \004! */
+		out.println( "echo '\n\004'" );
+		out.flush();		
+	}
+	
+	public String nextLine() throws IOException {
+		String line = in.readLine();
+		if( line == null || line.equals("\004") )
+			return null;
+		return line;
 	}
 	
 	public List<String> readFile(String fname) throws IOException {

@@ -259,4 +259,14 @@ public class BetterStringBuilder {
 	public BetterStringBuilder newline() {
 		return this.append( System.getProperty("line.separator") );
 	}
+	
+	public BetterStringBuilder appendMany(String...strings) {
+		for(String s: strings)
+			this.append(s);
+		return this;
+	}
+	
+	public BetterStringBuilder appendManyNl(String...strings) {
+		return this.appendMany(strings).newline();
+	}
 }

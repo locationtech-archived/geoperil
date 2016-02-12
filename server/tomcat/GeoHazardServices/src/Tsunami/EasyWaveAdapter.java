@@ -2,37 +2,49 @@ package Tsunami;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
 import com.mongodb.DBObject;
 
+import GeoHazardServices.EQParameter;
 import GeoHazardServices.EQTask;
+import Misc.BetterStringBuilder;
 import Misc.SshConnection;
 
 public class EasyWaveAdapter extends TsunamiAdapter {
 
 	public EasyWaveAdapter(DB db, SshConnection[] sshCon, File workdir, String hardware) throws IOException {
 		super(db, sshCon, workdir, hardware);
-		// TODO Auto-generated constructor stub
 	}
 
 	@Override
 	protected void writeFault(EQTask task) throws IOException {
-		// TODO Auto-generated method stub
-
+		EQParameter eqp = task.eqparams;
+		BetterStringBuilder strFault = new BetterStringBuilder();
+		strFault.appendManyNl(
+			eqp.mw != 0
+				? "-mw " + eqp.mw
+				: String.format("-slip %f -size %f %f", eqp.slip, eqp.length, eqp.width),
+			String.format(" -location %f %f %f -strike %f -dip %f -rake %f",
+				eqp.lon, eqp.lat, eqp.depth, eqp.strike, eqp.dip, eqp.rake
+			)
+		);
+		sshCon[0].writeFile(strFault.toString(), "fault.inp");
 	}
 
 	@Override
 	protected void writeLocations(EQTask task) throws IOException {
-		StringBuilder strLocations = new StringBuilder();
+		BetterStringBuilder strLocations = new BetterStringBuilder();
 		HashMap<String, DBObject> locations = getLocations();
 		for(String id: locations.keySet()) {
 			DBObject loc = locations.get(id);
-			strLocations.append(id + "\t" + loc.get("lon") + "\t" + loc.get("lat") );
+			strLocations.appendln(id + "\t" + loc.get("lon") + "\t" + loc.get("lat") );
 		}
 		sshCon[0].writeFile(strLocations.toString(), "locations.inp");
 	}
@@ -57,7 +69,7 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 		}
 		
 		/* Read stations from file. */
-		ArrayList<Integer> statIds = new ArrayList<Integer>();
+		Map<Integer, String> statIds = new HashMap<Integer, String>();
 		lines = sshCon[0].readFile("eWave.poi.ssh");
 		/* search for stations in headline and store related index */		
 		for( int i = 0; i < lines.size(); i++ ) {
@@ -67,7 +79,7 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 					String id = data[j];
 					DBObject loc = locations.get(id);
 					if( loc.get("type").equals("STATION") )
-	    				statIds.add(j);
+	    				statIds.put(j, id);
 				}
 				continue;
 			}
@@ -77,11 +89,11 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 	    		break;
 	    			    	
 	    	/* extract value of each station for the next timestamp */
-	    	for( int j = 0; j < statIds.size(); j++ ) {
+	    	for(Integer j: statIds.keySet()) {
 	    		@SuppressWarnings("unchecked")
 				List<DBObject> values = (List<DBObject>) locations.get( statIds.get(j) ).get("values");
 	    		values.add(
-	    			new BasicDBObject("reltime", rel_time).append("value", data[ statIds.get(j) ])
+	    			new BasicDBObject("reltime", rel_time).append("value", data[j])
 	    		);
 	    	}
 		}
@@ -90,7 +102,45 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 
 	@Override
 	protected int simulate(EQTask task) throws IOException {
-		// TODO Auto-generated method stub
+		int simTime = task.duration + 10;
+		String cmdParams = String.format(
+			"-grid ../grid_%d.grd -poi locations.inp -poi_dt_out 30 -poi_search_dist 20 -source fault.inp -propagation %d -step 1 -ssh_arrival 0.001 -time %d -verbose -adjust_ztop -gpu",
+			task.gridres, task.dt_out, simTime
+		);
+		String line;
+		task.curSimTime = 0.0f;
+		task.calcTime = 0.0f;
+		sshCon[0].runLiveCmd("easywave " + cmdParams);
+		while( (line = sshCon[0].nextLine()) != null) {
+			Matcher matcher = Pattern.compile("range: (.*) (.*) (.*) (.*)").matcher(line);
+			if( matcher.find() ) {
+				/* get region boundaries */
+				double lonMin = Double.valueOf( matcher.group(1) );
+				double lonMax = Double.valueOf( matcher.group(2) );
+				double latMin = Double.valueOf( matcher.group(3) );
+				double latMax = Double.valueOf( matcher.group(4) );
+				task.setBoundingBox(lonMin, lonMax, latMin, latMax);
+				initialProgress(task);
+				continue;
+			}
+			/* check if output line contains progress report */
+			matcher = Pattern.compile("(\\d\\d):(\\d\\d):(\\d\\d).*elapsed: (\\d*) msec").matcher(line);
+			if( ! matcher.find() ) continue;
+			System.out.println( matcher.group() );
+			/* parse current simulation time */
+			int hours = Integer.valueOf( matcher.group(1) );
+			int min = Integer.valueOf( matcher.group(2) );
+			int totalMin = hours * 60 + min;
+			
+			/* calculate current progress in percentage */
+			task.progress = ( (float)totalMin / (float)simTime ) * 100.0f;
+			task.prevSimTime = task.curSimTime;
+			task.curSimTime = totalMin;
+			task.prevCalcTime = task.calcTime;
+			task.calcTime = Integer.valueOf( matcher.group(4) );
+			
+			updateProgress(task);
+		}
 		return 0;
 	}
 }

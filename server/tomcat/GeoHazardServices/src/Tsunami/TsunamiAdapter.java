@@ -14,8 +14,10 @@ import com.mongodb.DBObject;
 import com.mongodb.util.JSON;
 
 import GeoHazardServices.EQTask;
+import GeoHazardServices.EventSet;
 import GeoHazardServices.GlobalParameter;
 import GeoHazardServices.IAdapter;
+import GeoHazardServices.Services;
 import GeoHazardServices.Task;
 import Misc.LocalConnection;
 import Misc.SshConnection;
@@ -72,14 +74,19 @@ public abstract class TsunamiAdapter implements IAdapter {
 	protected abstract int readLocations(EQTask task) throws IOException;
 	
 	/* Should be called by child classes if progress of simulation has changed. */
-	protected int updateProgress(EQTask task) {
+	protected int updateProgress(EQTask task) throws IOException {
 		return updateProgress(task, false);
 	}
 	
-	private int updateProgress(EQTask task, boolean finalize) {
+	private int updateProgress(EQTask task, boolean finalize) throws IOException {
 		/*  */
 		if( task.progress == 100.0f && ! finalize )
 			return 0;
+		
+		/* create a kml file if at least 10 minutes of simulation are done */
+		/* TODO: what if file is missing? */
+		if( task.curSimTime > 10 && task.dt_out > 0 )
+			createIsolines(task, (int) task.curSimTime);
 		
 		/* DB object to find current earthquake ID */
 		BasicDBObject obj = new BasicDBObject("_id", task.id );
@@ -88,7 +95,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 		BasicDBObject setter = new BasicDBObject("raw_progress",  task.progress);
 		if( task.raw == 0 ) {
 			setter.put( "process." + 0 + ".progress", task.progress );
-			setter.put( "process." + 0 + ".curSimTime", /* TODO */ 0 );
+			setter.put( "process." + 0 + ".curSimTime", task.curSimTime );
 			setter.put( "process." + 0 + ".calcTime", task.calcTime );
 		}
 		
@@ -113,7 +120,36 @@ public abstract class TsunamiAdapter implements IAdapter {
 			/* update the reference event with the new data */
 			db.getCollection("events").update( refEvent, event, true, false );
 		}
+		
+		updateEventSet(task);
+		
 		return 0;
+	}
+	
+	private void updateEventSet(EQTask task) {
+		
+		if( task.evtset == null || task.raw == 1 )
+			return;
+		
+		/* Update Event-Set progress. */
+		synchronized(task.evtset) {
+			if( task.progress == 100.0f )
+				task.evtset.addTask(task);
+			float progress = task.evtset.incOverallProgress( (int)(task.curSimTime - task.prevSimTime) );
+			System.out.println(task.evtset.getOverallProgress() + "/" + task.evtset.total_dur);
+			db.getCollection("evtsets").update(
+				new BasicDBObject("_id", task.evtset.setid ),
+				new BasicDBObject("$inc", new BasicDBObject("calcTime", task.calcTime - task.prevCalcTime))
+			);
+			if( progress != 100.0f ) {
+				db.getCollection("evtsets").update(
+					new BasicDBObject("_id", task.evtset.setid ),
+					new BasicDBObject("$set", new BasicDBObject("progress", progress))
+				);
+			} else {
+				task.evtset.setLastTask(task);
+			}
+		}
 	}
 	
 	/* Should be called by child classes if the computation was successfully started. */
@@ -131,6 +167,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 			dbObject.put( "curSimTime", 0.0 );
 			dbObject.put( "calcTime", 0.0 );
 			dbObject.put( "resources", this.hardware );
+			dbObject.put( "algorithm", task.algo );
 			
 			/* create final DB object used to update the collection  */
 			BasicDBObject update = new BasicDBObject();
@@ -139,25 +176,6 @@ public abstract class TsunamiAdapter implements IAdapter {
 			/* append a new process entry and return the corresponding index */
 			db.getCollection("eqs").findAndModify( obj, null, null, false, update, true, false);
 			return 0;
-	}
-	
-	protected int createJets(EQTask task, String ewh) throws IOException {
-		
-		/* Nothing to do if a raw computation was requested. */
-		if( task.raw > 0 )
-			return 0;
-
-		String kml_file = String.format("heights.%s.kml", ewh);
-		
-		/* ssh should be okay upon here, therefore run commands */
-		sshCon[0].runCmds(
-			String.format("gdal_contour -f kml -fl %1$s eWave.2D.sshmax heights.%1$s.kml", ewh),
-			String.format("ogr2ogr -f kml -simplify 0.001 heights.%1$s.kml heights.%1$s.kml", ewh)
-		);		
-		sshCon[0].copyFile(kml_file, workdir + "/" + kml_file);
-			
-		localCon.runCmd( String.format("python ../getEWH.py heights.%1$s.kml %1$s %2$s", ewh, task.id) );
-		return 0;
 	}
 	
 	protected void saveRawData(EQTask task) throws IOException {
@@ -180,9 +198,55 @@ public abstract class TsunamiAdapter implements IAdapter {
 	}
 	
 	protected void finalize(EQTask task) throws IOException {
-		if( task.evtset == null ) {
-			saveRawData(task);
+		
+		saveRawData(task);
+		
+		if( task.evtset == null && task.raw == 0 )
+			Services.sendPost(GlobalParameter.wsgi_url + "webguisrv/post_compute", "evtid=" + task.id);
+		
+		/* Update Event-Set progress. */
+		if( task.evtset != null && task.raw == 0 ) {
+			BasicDBObject set = new BasicDBObject("_id", task.evtset.setid );
+			if( task.evtset.isLastTask(task) ) {
+				/* This worker thread is the last one and must process the output for the entire event set. */
+				evtset_post(task.evtset);
+				db.getCollection("evtsets").update(set, new BasicDBObject("$set", new BasicDBObject("progress", 100.0f)));
+			}
 		}
+	}
+	
+	private int evtset_post(EventSet evtset) throws IOException {
+		DBObject dirs = db.getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
+		String resdir = (String) dirs.get("results");
+		List<EQTask> tasks = evtset.getTasks();
+		System.out.println(tasks);
+		/* At least one task should be part of the event set. */
+		if( tasks.size() < 1 )
+			throw new IllegalArgumentException("Something went wrong!");
+		for(int i = 0; i < tasks.size(); i++) {
+			String task_file = String.format(" %s/events/%s/eWave.2D.sshmax", resdir, tasks.get(i).id);
+			if( i == 0) {
+				/* Copy data of first task directly to output file. */
+				sshCon[0].runCmd("cp " + task_file + " eWave.2D.sshmax_0");
+			} else {
+				sshCon[0].runCmds(
+					String.format("gdal_merge.py -separate -o combined_%d.vrt eWave.2D.sshmax_%d %s", i, i-1, task_file),
+					String.format("gdal_calc.py -A combined_%1$d.vrt --A_band=1 -B combined_%1$d.vrt --B_band=2 --calc=\"maximum(A,B)\" --format=GSBG --outfile eWave.2D.sshmax_%1$d", i)
+				);
+			}
+		}
+		sshCon[0].runCmds(
+			String.format("cp eWave.2D.sshmax_%d eWave.2D.sshmax", tasks.size()-1),
+			"rm eWave.2D.sshmax_* combined_*.vrt"
+		);
+		System.out.println("create jets...");
+		EQTask dummy = new EQTask(null);
+		dummy.id = evtset.setid;
+		for( Double ewh: GlobalParameter.jets.keySet() ) {
+			createJets(dummy, ewh.toString());
+		}
+		saveRawData(dummy);
+		return 0;
 	}
 	
 	protected void cleanup(EQTask task) throws IOException {
@@ -248,6 +312,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 			init.put( "tsp", id );
 			init.put( "EventID", task.id );
 			init.put( "cfcz", obj.get( "FID_IO_DIS" ) );
+			/* TODO */ init.put( "ref", obj.get( "ref" ) );
 			init.put( "type", "TSP" );
 			locations.put( id, init );
 		}
@@ -317,7 +382,9 @@ public abstract class TsunamiAdapter implements IAdapter {
 			    Double ewh = (Double) loc.get("ewh");
 		    	Double eta = (Double) loc.get("eta");
 		    	Integer cfz = (Integer) loc.get("cfcz");
-		    
+		    	/* TODO: hack! */
+		    	if( cfz == null )
+		    		cfz = 100000 + (Integer) loc.get("ref");
 		    	if( ! maxEWH.containsKey(cfz) ) {
 		    		maxEWH.put(cfz, ewh);
 		    		minETA.put(cfz, eta);
@@ -329,12 +396,59 @@ public abstract class TsunamiAdapter implements IAdapter {
 		/* Insert CFZ values into database. */
 		for(Integer key: maxEWH.keySet() ) {
 	    	DBObject cfz = new BasicDBObject();
-	    	cfz.put("code", key);
-	    	cfz.put("type", "CFZ");
-	    	cfz.put("ewh", maxEWH.get(key));
-	    	cfz.put("eta", minETA.get(key));
-	    	cfz.put("EventID", task.id);
-	    	db.getCollection("comp").insert( cfz );
+	    	/* TODO: hack! */
+	    	if( key < 100000 ) {
+		    	cfz.put("code", key);
+		    	cfz.put("type", "CFZ");
+		    	cfz.put("ewh", maxEWH.get(key));
+		    	cfz.put("eta", minETA.get(key));
+		    	cfz.put("EventID", task.id);
+	    	} else {
+	    		cfz.put("ref", key - 100000);
+	    		cfz.put("type", "city");
+	    		cfz.put("ewh", maxEWH.get(key));
+		    	cfz.put("eta", minETA.get(key));
+		    	cfz.put("EventID", task.id);
+	    	}
+		    db.getCollection("comp").insert( cfz );
 	    }
+	}
+	
+	protected int createJets(EQTask task, String ewh) throws IOException {
+		
+		/* Nothing to do if a raw computation was requested. */
+		if( task.raw > 0 )
+			return 0;
+
+		String kml_file = String.format("heights.%s.kml", ewh);
+		
+		/* ssh should be okay upon here, therefore run commands */
+		sshCon[0].runCmds(
+			String.format("gdal_contour -f kml -fl %1$s eWave.2D.sshmax heights.%1$s.kml", ewh),
+			String.format("ogr2ogr -f kml -simplify 0.001 heights.%1$s.kml heights.%1$s.kml", ewh)
+		);		
+		sshCon[0].copyFile(kml_file, workdir + "/" + kml_file);
+			
+		localCon.runCmd( String.format("python ../getEWH.py heights.%1$s.kml %1$s %2$s", ewh, task.id) );
+		return 0;
+	}
+	
+	private int createIsolines(EQTask task, int time) throws IOException {
+		/* Nothing to do if a raw computation was requested. */
+		if( task.raw > 0 )
+			return 0;
+		
+		/* Use second ssh connection. */
+		sshCon[1].runCmds(
+			String.format("gdal_contour -f kml -i 10 -fl %1$d eWave.2D.%2$05d.time arrival.%1$d.kml", time - 10, time * 60),
+			String.format("ogr2ogr -f kml -simplify 0.001 arrival.%1$d.kml arrival.%1$d.kml", time - 10)
+		);
+		String kml_file = String.format("arrival.%d.kml", time - 10);
+		sshCon[1].copyFile(kml_file, workdir + "/" + kml_file);
+		localCon.runCmd(
+			String.format("python ../getShape.py arrival.%1$d.kml %1$d %2$s", time - 10, task.id)
+		);
+		
+		return 0;
 	}
 }
