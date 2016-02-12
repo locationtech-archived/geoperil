@@ -17,6 +17,7 @@ from auto_extent import *
 #Python-Script fuer Berechnugn der Position der Legendenbestandteile
 from build_legend import *
 
+#Python-Script zur Erstellung von CPT-Dateien, abhaengig von der Input-Farbe (nur einfarbig)
 from build_cpt_file import *
 
 
@@ -25,7 +26,8 @@ from build_cpt_file import *
 ###########################################
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
-#pre-built styles
+#groups sind hauptsaechlich zur automatischen Gestaltung des Webkontens
+#defines pre-built styles
 style_group = [
 {"Name": "Water DEM gray",      "key": 3,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "water_only"},
                                                       {"variable": "outline",           "Flag": "-p_o",      "value": "Y"}, 
@@ -73,23 +75,27 @@ style_group = [
                                                       {"variable": "color_land",        "Flag": "-c_land",   "value": "80/80/80"},
                                                       {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]}]
 
+#Gruppe fuer -p_dem flag
 dem_group = [
 {"Name": "Plot DEM",        "key": "Y"}, 
 {"Name": "Plot water only", "key": "water_only"},
 {"Name": "Plot no DEM",     "key": "N"}
 ]
 
+#Gruppe fuer -p_c flag
 cities_group = [
 {"Name": "Plot all cities",          "key": "all",       "enable": ["-c_pop", "-c_l", "-c_l_p", "-c_f", "-c_s"]},
 {"Name": "Plot only capital cities", "key": "capitals",  "enable": ["-c_pop", "-c_l", "-c_l_p", "-c_f", "-c_s"]},
 {"Name": "Plot no cities",           "key": "None",      "disable": ["-c_pop", "-c_l", "-c_l_p", "-c_f", "-c_s"]}
 ]
 
+#Gruppe fuer -dpi flag
 res_group = [
 {"Name": "web",     "key": 300},
 {"Name": "HQ",      "key": 600}
 ]
 
+#defines flags
 input_param = [
 {"Flagname": "Title",                                     "variable": "title",                    "Flag1": "-t",            "Flag2": "--title",                   "default": None,                                                        "help": "Title for map",                                                                "category": "General",                      "data_type": "String",                                                                                                                            "user": True},
 {"Flagname": "Subheading",                                "variable": "subtitle",                 "Flag1": "-st",           "Flag2": "--subtitle",                "default": None,                                                        "help": "subheading for map",                                                           "category": "General",                      "data_type": "String",                                                                                                                            "user": True},
@@ -160,9 +166,11 @@ input_param = [
 {"Flagname": "Plot World Population",                     "variable": "world_pop",                "Flag1": "-p_w_pop",      "Flag2": "--plot_world_pop",          "default": "N",                                                         "help": "Plot World Population?\nYes = Y\nNo = N (default)",                            "category": "Cities and population",        "data_type": "Boolean",                                                                                                                          "user": True},
 {"Flagname": "World Pop CPT",                             "variable": "world_pop_cpt",            "Flag1": "-w_pop_cpt",    "Flag2": "--world_pop_cpt",           "default": "cpt/world_population/world_pop_label.cpt",                  "help": "Path to CPT-File for World Population",                                                                                                                                                                                                                                     "user": False},
 
-{"Flagname": "JSON",                                      "variable": "print_json",               "Flag1": "-p_j",          "Flag2": "--print_json",              "default": None,                                                        "help": "if = Y input printed as json",                                                                                                                                                                                                                                              "user": False}
+{"Flagname": "JSON",                                      "variable": "print_json",               "Flag1": "-p_j",          "Flag2": "--print_json",              "default": None,                                                        "help": "if = Y input printed as json",                                                                                                                                                                                                                                              "user": False},
+{"Flagname": "HTML help table",                           "variable": "help_table",               "Flag1": "-p_h_t",        "Flag2": "--print_help_table",        "default": None,                                                        "help": "if Filename is given this will build a html help table",                                                                                                                                                                                                                    "user": False}
 ]
 
+#parses the flags
 for flag in input_param:
     if flag["default"] is None:
         parser.add_argument(flag["Flag1"], flag["Flag2"], dest = flag["variable"], help = flag["help"])        
@@ -170,7 +178,7 @@ for flag in input_param:
         parser.add_argument(flag["Flag1"], flag["Flag2"], dest = flag["variable"], default = flag["default"], help = flag["help"])   
 args = parser.parse_args()
 
-#ueberschreibt die defaultwerte, die vom pre-built style betroffen werden
+#ueberschreibt die default-werte in input_param aus style_group abhaengig vom eingebenen style und parsed die flags erneut
 for style_loop in style_group:
     if style_loop["key"]==int(args.style):
         for style_flag in style_loop["change"]:
@@ -197,14 +205,35 @@ def tsunami_report(\
     outline, coast_color, border, border_lvl1_color, border_lvl2_color, color_water, color_land, style, \
     basemap_data_dir, world_pop_data, city_pop_data, \
     crs_system, unit, map_width, coast_res, land_res, Isochrone_dist, \
-    dpi, print_json, input_param):
+    dpi, print_json, input_param, help_table):
 
     #prints input-list as json
     if print_json=="Y":
         print (json.dumps(input_param))
         return 
+    #erstellt html datei für die hilfe	
+    def build_html_help_table(help_table):
+        help_html_table = open(help_table, "w")
+        help_html_table.write('<!DOCTYPE html><html><head><style>\n')
+        help_html_table.write('body {font-family: Arial, \'Helvetica Neue\', Helvetica, sans-serif;}\n')    
+        help_html_table.write('table, th, td {border: 1px solid black;border-collapse: collapse;}\n')    
+        help_html_table.write('th, td {padding: 5px;text-align: left;}\n')  
+        help_html_table.write('</style></head><body>\n')  
+        help_html_table.write('<table style="width:100%"><caption>Tsunami-Report.py Help</caption>\n')  
+        help_html_table.write('<tr><th>Name</th><th>Flag1</th><th>Flag2</th><th>Beschreibung</th><th>Default</th></tr>\n')  	
+        for input_element in input_param:
+            help_html_table.write('\n<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (input_element["Flagname"], input_element["Flag1"], input_element["Flag2"], input_element["help"].replace('\n','<br>').replace('\t','<tab>'), input_element["default"]))  
+        help_html_table.write('</table>\n')         	  
+        help_html_table.write('</body></html>')  
+        help_html_table.close()
 
+    if help_table is not None:
+        build_html_help_table(help_table)	
+        return
+	
+    #erstellt tempdir in /tmp wo alle temporaeren dateien abgespeicher werden
     tempdir = tempfile.mkdtemp()
+    #GMT_TMPDIR = tempdir als environ, damit gmt.conf und gmt.history in tempdir abgespeichert werden (ermoeglicht gleichzeitiges ablaufen des scripts)
     os.environ["GMT_TMPDIR"] = tempdir
     
     map_width = float(map_width)
@@ -218,12 +247,11 @@ def tsunami_report(\
 	
     wave_time_temp = '%s/eWave_time_temp.nc' %(tempdir)
 
-
     #aktuelles Datum
     date = datetime.datetime.utcnow().strftime("%Y, %B %d, %H:%M")
 
     print ('\nAll Input values:')
-    print ('\tTitle:\t\t\t', title, '\n\tSubtitle:\t\t', subtitle, '\n\tOutput-File:\t\t', output, '\n')
+    print ('\tTitle:\t\t\t', title, '\n\tSubtitle:\t\t', subtitle, '\n\tresolution:\t\t', dpi, '\n\tOutput-File:\t\t', output, '\n')
     print ('\tWest:\t\t\t', west, '\n\tEast:\t\t\t', east, '\n\tSouth:\t\t\t', south, '\n\tNorth:\t\t\t', north, '\n')
     print ('\ty-ratio:\t\t', y_ratio, '\n\tx-ratio:\t\t', x_ratio, '\n')
     print ('\tplot WaveJets?:\t\t', plot_wave_height, '\n\tWaveJets:\t\t', wave_height, '\n\tWaveJets temp:\t\t', wave_height_temp, '\n\tWaveJets CPT:\t\t', wave_height_cpt, '\n\tw_exp:\t\t\t', wave_height_expression, '\n')   
@@ -235,7 +263,7 @@ def tsunami_report(\
     print ('\tplot world pop?:\t', world_pop, '\n\tworld pop CPT:\t\t', world_pop_cpt, '\n')
     print ('\tplot cities?:\t\t', plot_cities, '\n\tcities pop:\t\t', cities_pop, '\n\tlabel cities?:\t\t', cities_label, '\n\tlabel cities pop:\t', cities_label_pop, '\n\tcities color:\t\t', cities_fill, '\n\tcities stroke:\t\t', cities_stroke, '\n')
     print ('\tplot map scale?:\t', plot_map_scale, '\n\tplot globe?:\t\t', plot_globe, '\n\tglobe land color\t', color_globe_land, '\n\tglobe water color:\t', color_globe_water, '\n\tglobe grid color:\t', color_globe_grid, '\n')
-    print ('\tplot outline?:\t\t', outline, '\n\tcoast color:\t\t', coast_color, '\n\tcolor water:\t\t', color_water, '\n\tcolor land:\t\t', color_land, '\n\tstyle nr:\t\t', style, '\n')
+    print ('\tplot outline?:\t\t', outline, '\n\tcoast color:\t\t', coast_color, '\n\tborder:\t\t\t', border, '\n\tborder lvl1 color:\t', border_lvl1_color, '\n\tborder lvl2 color:\t', border_lvl2_color,'\n\tcolor water:\t\t', color_water, '\n\tcolor land:\t\t', color_land, '\n\tstyle nr:\t\t', style, '\n')
     print ('\tbasemap data dir:\t', basemap_data_dir, '\n\tworld pop file:\t\t', world_pop_data, '\n\tcity pop file:\t\t', city_pop_data, '\n')
     print ('\tCRS system:\t\t', crs_system, '\n\tunit:\t\t\t', unit, '\n\tmap width:\t\t', map_width, '\n\tcoast res:\t\t', coast_res, '\n\tland res:\t\t', land_res, '\n\tIsochrone dist:\t\t', Isochrone_dist, '\n')
 
@@ -250,8 +278,7 @@ def tsunami_report(\
     ############################
 
     #berechnet Abstand zur unteren Blattkante, abhaengig von zu plottenden Inhalten
-    y_map_dist = 1
-    
+    y_map_dist = 1   
     #erstellt plot_cities_bool (Y / N)
     if plot_cities=="all" or plot_cities=="capitals":
         plot_cities_bool = "Y"
@@ -260,6 +287,7 @@ def tsunami_report(\
     layer_list_count = [plot_wave_time, world_pop, plot_cities_bool, plot_tfp, plot_cfz].count("Y")   
     layer_list_count_xwave = [world_pop, plot_cities_bool, plot_tfp, plot_cfz].count("Y")   
          
+    #berechnet y_map_dist (Y-Zuschlag fuer Blattunterkante) abhaengig von geplotteten Karteninhalten (Legende)	 
     if  (plot_wave_height=="Y" and layer_list_count <= 0) or (plot_wave_height=="Y" and plot_wave_time=="Y" and layer_list_count_xwave <= 0):
         y_map_dist += 1.9  
     elif plot_wave_height=="Y" and layer_list_count >=1:
@@ -270,9 +298,11 @@ def tsunami_report(\
     quake_y_diff = 0.9
     if plot_quake=="Y":
        y_map_dist += quake_y_diff 
- 
+
+    #berechnet die Hoehe der Karte
     map_height = (map_width * y_ratio) / x_ratio  
 
+    #berechnet Position der Unterueberschrift
     subtitle_pos_y = y_map_dist + map_height + 0.55  
     
     #berechnet blatthoehe
@@ -287,7 +317,7 @@ def tsunami_report(\
     ############################
     ######### Extent ###########
     ############################
-    #berechnet die optimale Ausdehnung anhand der Eingabe-Dateien (siehe auto_extent.px)
+    #berechnet die optimale Ausdehnung anhand der Eingabe-Dateien (siehe auto_extent.py)
     west, east, south, north = best_auto_extent_for_input(west, east, south, north, wave_height, wave_height_expression, wave_time, cfz, tfp, tempdir)
     
     west = float(west)
@@ -301,16 +331,13 @@ def tsunami_report(\
     print (    'south: ', south)
     print (    'north: ', north)
 
-
     ############################
     ####### Kartenrahmen #######
     ############################
 
-
     #Berechnet automatisch die Groesse des Kartenrahmen
     #Funktion eingeladen aus auto_extent.py
     west, east, south, north, width, height, lon_diff, lat_diff = calc_coords(west, east, south, north, crs_system, map_width, unit, y_ratio, x_ratio, tempdir)
-
 
     #Berechnet Kartenmittelpunkt
     lon_mid = west + (lon_diff / 2)
@@ -318,14 +345,12 @@ def tsunami_report(\
 
     #Berechnet Laenge der lon-Distanz im Kartenmittelpunkt in km
     lon_dist = (math.pi / 180) * 6370 * lon_diff * math.cos(math.radians(lat_mid))
-    #1/6 von lon_dist gerundet auf naechste Hundert fuer scalebar
+    #1/4 von lon_dist gerundet auf naechste Hundert fuer scalebar
     scalebar_length = round((lon_dist/4) / 100) * 100
 
-
-    ###############################
+    #################################
     # Basemap optimale Pixelgroesse #
-    ###############################
-    #Berechnet ungefaehre Pixelgroesse der Etopo-Basemap in km
+    #################################
     #dpi = 300
     dpi = float(dpi)
 
@@ -335,6 +360,7 @@ def tsunami_report(\
     #Pixelgroesse in Kilometer
     pixel_km = perfect_pixel_size * ((math.pi / 180) * 6370 / 60)
 
+    #waehlt bestes DEM abhaengig von dpi und errechneter bester Pixelgroesse
     def choose_best_basemap (psize):
         #if psize <= 1.0:
         #    return '0.5'
@@ -367,6 +393,7 @@ def tsunami_report(\
     ##################################################
 
     #### Build CPT File ####
+    #erstellt temporaere cpt-datei abhaengig von color_water und color_land (siehe build_cpt_file.py)
     if dem=="Y" or dem=="water_only":
         if basemap_water_cpt is None:
             basemap_water_cpt = '%s/basemap_water_cpt.cpt' % (tempdir)
@@ -377,14 +404,14 @@ def tsunami_report(\
                 basemap_land_cpt = '%s/basemap_land_cpt.cpt' % (tempdir)
                 build_basemap_cpt(basemap_land_cpt, color_land)    
     
-
     #############################
     ######### Basemap ###########
     #############################
+    #Ausdehnung:
     R = '-R%s/%s/%s/%s' % (west, east, south, north)
+    #CRS und Kartenbreite
     J = '-J%s%s%s' % (crs_system, map_width, unit)
     y_map_distance = '%s%s' % (y_map_dist, unit)
-    #map_height = (map_width * y_ratio) / x_ratio
 
     border_color = '-N1/0.01c,%s -N2/0.01c,%s' % (border_lvl1_color, border_lvl2_color)
     #./Basemap.sh title output extent projection y_map_dist basemap basemap_hillshade 
@@ -392,6 +419,7 @@ def tsunami_report(\
     subprocess.call(['./gmt_scripts/Basemap.sh', str(title),output , R, J, y_map_distance, basemap, basemap_hillshade, \
         outline, coast_res, coast_color, dem, color_water, color_land, color_globe_land, color_globe_water, land_res, str(basemap_water_cpt), str(basemap_land_cpt), \
         world_pop_data, world_pop_cpt, world_pop, str(subtitle), str(paper_height), border, border_color])
+    #erstellt subheading    
     if subtitle is not None:
        subprocess.call(['./gmt_scripts/subtitle.sh',output , str(subtitle), str(subtitle_pos_y), str(map_width)])
 
@@ -439,6 +467,7 @@ def tsunami_report(\
         elif (cities_label_pop is not None and cities_pop is not None) and float(cities_label_pop) < float(cities_pop):
             cities_label_pop = cities_pop
         
+        #damit Pop-Anzahl in mio angegeben werden kann:
         if cities_pop is not None:
             cities_pop = int(float(cities_pop) * 1000000)	
         if cities_label_pop is not None:
@@ -452,6 +481,7 @@ def tsunami_report(\
     #############################
     #Printet einen uebersichtsglobus
     if plot_globe=="Y":
+        #berechnet Position des Globus in Karte
         y_globe_dist = float(y_map_dist) - 0.7
         x_globe_dist = float(width) - 2.2
 
@@ -473,16 +503,16 @@ def tsunami_report(\
     else:
         plot_cfz_tfp = "N"
     
-				
+    #Liste mit bool-werten (Y, N) für die Legendenelemente				
     plot_legend_list = [plot_wave_height, plot_wave_time, world_pop, plot_cities_bool, plot_cfz_tfp]
-
+    #berechnet beste Postition der Legendenelemente abhaenig von zu plottenden Karteninhalten (siehe build_legend.py)
     wave_height_pslegend, wave_height_psscale, wave_time_pslegend, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2 = calc_legend_positions (plot_legend_list, y_map_dist, plot_quake, quake_y_diff)
-
+    #berechnet position von Legendenbestandteil "Erstellungsdatum usw."
     created_y = y_map_dist - 0.6
-
+    #berechnet beste Position von Erdbeben-Legende
     beachball_y = y_map_dist - 1.5
     quake_y = y_map_dist - 1.4
-
+    #erstellt Legende:
     subprocess.call(['./gmt_scripts/Legend.sh',output, plot_wave_height, plot_wave_time, world_pop, plot_cfz, plot_tfp, plot_cities_bool, cfz_cpt, cfz_stroke, tfp_stroke, wave_height_cpt, world_pop_cpt, cities_fill, cities_stroke, \
         wave_height_pslegend, wave_height_psscale, wave_time_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, \
         str(created_y), str(map_width), date, quake, plot_quake, quake_fill, str(beachball_y), str(quake_y), Isochrone_color])     
@@ -503,7 +533,6 @@ def tsunami_report(\
     E = '-E%s' % (dpi)
     subprocess.call(['gmt', 'ps2raster', output, '-Tg', '-A', '-V', E], cwd=tempdir)
     
-
     #löscht tempdir
     shutil.rmtree(tempdir)
 
@@ -547,6 +576,7 @@ def tsunami_report(\
 ##############################################################################################################
 ##############################################################################################################
 ##############################################################################################################
+#Funktionsaufruf:
 tsunami_report(\
     args.title, args.subtitle, args.output, \
     args.west, args.east, args.south, args.north, \
@@ -563,4 +593,4 @@ tsunami_report(\
     args.outline, args.coast_color, args.border, args.border_lvl1_color, args.border_lvl2_color, args.color_water, args.color_land, args.style, \
     basemap_data_dir, world_pop_data, city_pop_data, \
     crs_system, unit, map_width, coast_res, land_res, Isochrone_dist, \
-    args. dpi, args.print_json, input_param) 
+    args. dpi, args.print_json, input_param, args.help_table) 
