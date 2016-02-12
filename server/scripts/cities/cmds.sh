@@ -1,0 +1,1 @@
+python3 insert.py cities_ID_final.csv coastline_cities_points_5km_final.csv
