@@ -9642,8 +9642,7 @@ function DownloadDialog(data) {
 						param.html.setSource( new Container().setList(param.group) );
 						param.html.select( param.html.source.getByKey('key', param['default']).idx );
 						html = new HtmlInputGroup(param.Flagname, 'list');
-						html.input.append( param.html.div );
-						/* TODO */
+						html.input.append( param.html.div );						
 						param.html.setCallback('change', (function(param) {
 							var item = param.html.selectedItem();
 							for(var j = 0; item.change && j < item.change.length; j++) {
@@ -9655,6 +9654,12 @@ function DownloadDialog(data) {
 									dep_param.html.value( 'rgb(' + dep.value.split('/').join(',') + ')' );
 								if( dep_param.data_type == 'group' )
 									dep_param.html.selectByVal('key', dep.value);
+							}
+							for(var j = 0; item.enable && j < item.enable.length; j++) {								
+								this.params.findItem('Flag1', item.enable[j]).html.div.show();
+							}
+							for(var j = 0; item.disable && j < item.disable.length; j++) {
+								this.params.findItem('Flag1', item.disable[j]).html.div.hide();
 							}
 						}).bind(this, param));
 					} else {
@@ -9675,6 +9680,8 @@ function DownloadDialog(data) {
 					var param = this.params.get(i);
 					if( param.html instanceof HtmlCheckBox )
 						param.html.notifyOn('change', param.html.value());
+					if( param.html instanceof HtmlDropDown )
+						param.html.notifyOn('change', param.html.select());
 				}
 				this.loaded = true;
 				this.dialog.show();
