@@ -457,7 +457,7 @@ def tsunami_report(\
         def build_quake_legend_string(quake):
             quake_file = open(quake, "r")              	    
             quake_file_split = quake_file.readlines()[1].strip().split(',')
-            quake_date, quake_lat, quake_lon, quake_depth, quake_mag = quake_file_split[4], round(float(quake_file_split[1]), 2), round(float(quake_file_split[0]), 2), quake_file_split[3], quake_file_split[2]
+            quake_date, quake_lat, quake_lon, quake_depth, quake_mag = quake_file_split[4].partition('.')[0], round(float(quake_file_split[1]), 2), round(float(quake_file_split[0]), 2), quake_file_split[3], quake_file_split[2]
             quake_file.close()
             if quake_lon > 0:
                 quake_lon = '%s\\260E' % quake_lon
@@ -471,7 +471,7 @@ def tsunami_report(\
                 quake_lat = '%s\\260S' % quake_lat
             else:
                 quake_lat = '%s\\260' % quake_lat
-            quake_date = datetime.datetime.strptime(quake_date, "%Y-%m-%d %H:%M:%S.%f").strftime("%Y, %B %d, %H:%M")
+            quake_date = datetime.datetime.strptime(quake_date, "%Y-%m-%d %H:%M:%S").strftime("%Y, %B %d, %H:%M")
             quake_string = '%s UTC, Lat: %s Lon: %s, Depth: %s km, M: %s' % (quake_date, quake_lat, quake_lon, quake_depth, quake_mag)  
             print (quake_string)  
             return quake_string
