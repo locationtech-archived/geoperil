@@ -1687,3 +1687,22 @@ pre {
 	margin-left: 10%;
 }
 
+.report-new-dialog .html-dyngroup2 {
+	display: inline-block;
+	width: 90%;
+}
+
+.report-new-dialog .updown {
+	padding-left: 1em;
+}
+
+.report-new-dialog .updown a {
+	display: inline-block;
+	vertical-align: top;
+	margin-top: 1.2em;
+	font-size: 1.25em;
+}
+
+.report-new-dialog img {
+	width: 100%;
+}

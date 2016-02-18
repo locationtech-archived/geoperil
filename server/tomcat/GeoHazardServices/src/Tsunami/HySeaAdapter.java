@@ -25,8 +25,8 @@ public class HySeaAdapter extends TsunamiAdapter {
 	/* Used to map column number to locations id of input and output file. */
 	private List<String> ids; 
 	
-	public HySeaAdapter(DB db, SshConnection[] sshCon, File workdir, String hardware) throws IOException {
-		super(db, sshCon, workdir, hardware);
+	public HySeaAdapter(DB db, SshConnection[] sshCon, File workdir, String hardware, String args) throws IOException {
+		super(db, sshCon, workdir, hardware, args);
 	}
 
 	@Override

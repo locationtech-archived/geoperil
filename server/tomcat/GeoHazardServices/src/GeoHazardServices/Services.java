@@ -269,6 +269,7 @@ public class Services {
 			  }
 			  
 			  thread.setHardware(hardware);
+			  thread.setArgs(args);
 			  thread.setRemote( user, host, dir + i );
 			  thread.setPriority(priority);
 			  thread.setSlot(slots[i]);

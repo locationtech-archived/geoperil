@@ -19,8 +19,8 @@ import Misc.SshConnection;
 
 public class EasyWaveAdapter extends TsunamiAdapter {
 
-	public EasyWaveAdapter(DB db, SshConnection[] sshCon, File workdir, String hardware) throws IOException {
-		super(db, sshCon, workdir, hardware);
+	public EasyWaveAdapter(DB db, SshConnection[] sshCon, File workdir, String hardware, String args) throws IOException {
+		super(db, sshCon, workdir, hardware, args);
 	}
 
 	@Override
@@ -104,8 +104,8 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 	protected int simulate(EQTask task) throws IOException {
 		int simTime = task.duration + 10;
 		String cmdParams = String.format(
-			"-grid ../grid_%d.grd -poi locations.inp -poi_dt_out 30 -poi_search_dist 20 -source fault.inp -propagation %d -step 1 -ssh_arrival 0.001 -time %d -verbose -adjust_ztop -gpu",
-			task.gridres, task.dt_out, simTime
+			"-grid ../grid_%d.grd -poi locations.inp -poi_dt_out 30 -poi_search_dist 20 -source fault.inp -propagation %d -step 1 -ssh_arrival 0.001 -time %d -verbose -adjust_ztop %s",
+			task.gridres, task.dt_out, simTime, args
 		);
 		String line;
 		task.curSimTime = 0.0f;

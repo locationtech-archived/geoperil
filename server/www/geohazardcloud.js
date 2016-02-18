@@ -20,9 +20,14 @@ function Earthquake(meta) {
 		
 		this.objects = {};
 		
-		this.show_cfzs = true;
-		this.show_jets = true;
-		this.show_isos = true;
+		var func = this.notifyOn.bind(this, 'update');
+		this.show = {
+			cfzs: new ActionFlag(true, func),
+			tfps: new ActionFlag(true, func),
+			jets: new ActionFlag(true, func),
+			isos: new ActionFlag(true, func),
+			cities: new ActionFlag(false, func),
+		};
 		
 		/* stores the arrival time upon new isolines should be fetch on the next update */
 		this.last_arr = 0;
@@ -70,7 +75,8 @@ function Earthquake(meta) {
 	};
 	
 	this.getProgress = function() {
-		return this.process[0].progress;
+		var process = this.getProcessObj();
+		return process != null ? process.progress : -1;
 	};
 	
 	this.getProcessObj = function() {
@@ -507,6 +513,12 @@ function Container(sortFun) {
 		this.list = list;
 		this.sort();
 		return this;
+	};
+	
+	this.swap = function(i, j) {
+		var tmp = this.list[i];
+		this.list[i] = this.list[j];
+		this.list[j] = tmp;
 	};
 }
 
@@ -2554,27 +2566,29 @@ function GlobalControl() {
 		/* add layers */
 		this.layers.insert( new CFZLayer('CFZ-Layer', map) );
 		this.layers.insert( new PolygonLayer('Tsunami-Jets', map,
-				 function(data){ return data.show_jets; },
+				 function(data){ return data.show.jets.get(); },
 				 function(data){ return data.jets; }) );
 		this.layers.insert( new PolygonLayer('Isolines', map,
-				 function(data){ return data.show_isos; },
+				 function(data){ return data.show.isos.get(); },
 				 function(data){ return data.isos; }) );
 		this.layers.insert( new TFPLayer('TFP-Layer', map) );
 		this.layers.insert( new PolygonLayer('Flood-Layer', map,
-				 function(data){ return data.show_waterheights && data.show_waterheights.get(); },
+				 function(data){ return data.show.waterheights && data.show.waterheights.get(); },
 				 function(data){ return data.waterheights; }) );
 		this.layers.insert( new MarkerLayer('Marker-Layer', map) );
 		
 		if( checkPerm('population') ) {
 			this.layers.insert( new ObjectLayer('Objects', map,
-				 function(data){ return true; },
+				 function(data){ return data.show.cities.get(); },
 				 function(data){ return data.objects['city']; },
 				 { type: 'city', newInst: function() { return new City(); } }
 			));
 		}
 		
-		this.layers.insert( new BuildingsLayer('Buildings', map,
-				function(data){ return data.show_buildings && data.show_buildings.get(); }) );
+		if( checkPerm('flood') ) {
+			this.layers.insert( new BuildingsLayer('Buildings', map,
+				function(data){ return data.show.buildings && data.show.buildings.get(); }) );
+		}
 		
 		for( var i = 0; i < this.layers.length(); i++ ) {
 			var layer = this.layers.get(i);
@@ -2755,6 +2769,16 @@ function GlobalControl() {
 			dialogs[evtid].show();
 		}).bind(this);
 	})();
+	
+	this.openReportDialog = (function(event) {
+		var dialogs = {};
+		return (function(event) {
+			var evtid = event._id;
+			if( !(evtid in dialogs) )
+				dialogs[evtid] = new ReportDialog(event);
+			dialogs[evtid].show();
+		}).bind(this);
+	})();
 
 	//this.main();
 }
@@ -2789,7 +2813,6 @@ function Marker(lat, lon, label, color, map) {
 	};
 
 	this.setAnimation = function(enable) {
-
 		var anim = enable ? google.maps.Animation.BOUNCE : null;
 		this.marker.setAnimation(anim);
 	};
@@ -2987,16 +3010,31 @@ function Widget() {
 		var color = turnOn ? '#c3d3e1' : '#fafafa';		
 		this.div.css('background-color', color);
 	};
-	
+		
 	this.createLayers = function(layers) {
 		/* create layer switcher */
 		this.chk_boxes = [];
 		this.div.find('.layers').empty();
 		for( attr in layers ) {
+			if( ! layers[attr] ) continue;
 			var cbox = new HtmlCheckBox(attr);
-			cbox.setCallback('change', layers[attr]);
+			cbox.bindTo( layers[attr] );
 			this.div.find('.layers').append(cbox.div);
 			this.chk_boxes.push(cbox);
+		}
+	};
+	
+	this.setPopovers = function(tooltips) {
+		var options = {
+			placement : 'top',
+			html : true,
+			container : this.div,
+			animation : false
+		};
+		
+		for( title in tooltips ) {
+			options.title = title;
+			this.div.find(tooltips[title]).tooltip(options);
 		}
 	};
 	
@@ -3291,70 +3329,44 @@ function EQWidget(data, marker) {
 		this.div.find('.info a').click(
 				(function(){this.div.find('.info').hide();}).bind(this));
 		this.div.find('.lnkEditEvtSet').click(this.notifyOn.bind(this, 'clk_edit_set', this.data));
-		
+			
 		/* create layer switcher */
-		var layers = {
-			'Forecast points/zones': this.onCFZLayer.bind(this),
-			'Wave jets': this.onJetLayer.bind(this),
-			'Travel times': this.onIsoLayer.bind(this)
-		};
-		this.chk_boxes = [];
-		this.div.find('.layers').empty();
-		for( attr in layers ) {
-			var cbox = new HtmlCheckBox(attr);
-			cbox.setCallback('change', layers[attr]);
-			this.div.find('.layers').append(cbox.div);
-			this.chk_boxes.push(cbox);
-		}
+		this.createLayers({
+			'Forecast zones': this.data.show.cfzs,
+			'Forecast points': this.data.show.tfps,
+			'Wave jets': this.data.show.jets,
+			'Travel times': this.data.show.isos,
+			'Cities': checkPerm('population') ? this.data.show.cities : null,
+		});
 		
 		/* set popovers */
-		var options = {
-			placement : 'bottom',
-			title : 'Info',
-			html : true,
-			container : this.div,
-			animation : false
-		};
-
-		options.placement = 'top';
-		options.title = 'Modify and reprocess';
-		this.div.find('.lnkEdit').tooltip(options);
+		this.setPopovers({
+			'Modify and reprocess': '.lnkEdit',
+			'Reprocess event set': '.lnkEditEvtSet',
+			'Inspect event': '.lnkLearn',
+			'Send message': '.lnkSend',
+			'Share map': '.lnkStatic',
+			'Show timeline': '.lnkTimeline',
+			'Download report': '.lnkReport',
+			'Download data and maps': '.lnkData',
+			'Copy to my list': '.lnkCopy'
+		});
 		
-		options.title = 'Reprocess event set';
-		this.div.find('.lnkEditEvtSet').tooltip(options);
+		if( checkPerm('new_report') )
+			this.div.find('.lnkReport').click( global.openReportDialog.bind(global, this.data) );
+		else
+			this.div.find('.lnkReport').attr('href', 'webguisrv/generate_report?evtid=' + this.data._id);
 		
-		options.title = 'Inspect event';
-		this.div.find('.lnkLearn').tooltip(options);
-
-		options.title = 'Send message';
-		this.div.find('.lnkSend').tooltip(options);
-
-		options.title = 'Share map';
-		this.div.find('.lnkStatic').tooltip(options);
-
-		options.title = 'Show timeline';
-		this.div.find('.lnkTimeline').tooltip(options);
-
-		options.title = 'Download report';
-		this.div.find('.lnkReport').tooltip(options);
-		this.div.find('.lnkReport').attr('href', 'webguisrv/generate_report?evtid=' + this.data._id);
-		
-		options.title = 'Download data';
-		this.div.find('.lnkData').tooltip(options);
 		this.div.find('.lnkData').click( global.openDownloadDialog.bind(global, this.data) );
-		
-		options.title = 'Copy to my list';
-		this.div.find('.lnkCopy').tooltip(options);
-		
+				
 		/* the user can delete his own events */
 		if (curuser != null && id_equals(curuser._id, this.data.user)) {
 				
 			this.div.find('.lnkDelete').show();
 			this.div.find('.lnkDelete').click(
-					this.notifyOn.bind(this, 'clk_delete', this.data));
+			this.notifyOn.bind(this, 'clk_delete', this.data));
 
-			options.title = 'Delete entry';
-			this.div.find('.lnkDelete').tooltip(options);
+			this.setPopovers({'Delete entry': '.lnkDelete'});
 		}
 		
 		this.update();
@@ -3443,10 +3455,6 @@ function EQWidget(data, marker) {
 			this.div.find('.progress').show();
 			this.div.find('.calc_data').show();
 			
-			this.chk_boxes[0].value( this.data.show_cfzs );
-			this.chk_boxes[1].value( this.data.show_jets );
-			this.chk_boxes[2].value( this.data.show_isos );
-
 			/* we still consider only one simulation per EQ */
 			var process = this.data.process[0];
 
@@ -3501,7 +3509,7 @@ function EQWidget(data, marker) {
 			if (checkPerm('report'))
 				this.div.find('.lnkReport').show();
 			
-			if (checkPerm('data'))
+			if(checkPerm('data') && this.data.getProgress() == 100)
 				this.div.find('.lnkData').show();
 
 		} else {
@@ -3515,21 +3523,6 @@ function EQWidget(data, marker) {
 	this.onGridChange = function(e) {
 		this.data.show_grid = $(e.currentTarget).is(':checked');
 		this.notifyOn('clk_grid', this.data);
-	};
-	
-	this.onCFZLayer = function(val) {
-		this.data.show_cfzs = val;
-		this.data.notifyOn('update');
-	};
-	
-	this.onJetLayer = function(val) {
-		this.data.show_jets = val;
-		this.data.notifyOn('update');
-	};
-	
-	this.onIsoLayer = function(val) {
-		this.data.show_isos = val;
-		this.data.notifyOn('update');
 	};
 	
 	this.showCopyInfo = function(res) {
@@ -3732,15 +3725,11 @@ function EvtSetWidget(data, marker) {
 		this.div.find('.lnkEdit').click(this.notifyOn.bind(this, 'clk_edit_set', this.data));
 		this.div.find('.lnkTimeline').click(this.notifyOn.bind(this, 'clk_timeline', this.data));
 		
-		options.placement = 'top';
-		options.title = 'Modify and reprocess';
-		this.div.find('.lnkEdit').tooltip(options);
-		
-		options.title = 'Show timeline';
-		this.div.find('.lnkTimeline').tooltip(options);
-		
-		options.title = 'Download Data';
-		this.div.find('.lnkRiskData').tooltip(options);
+		this.setPopovers({
+			'Modify and reprocess': '.lnkEdit',
+			'Show timeline': '.lnkTimeline',
+			'Download Data': '.lnkRiskData',
+		});
 		
 		//if (checkPerm('comp'))
 			this.div.find('.lnkEdit').show();
@@ -3748,18 +3737,10 @@ function EvtSetWidget(data, marker) {
 			this.div.find('.lnkTimeline').show();
 		
 		/* create layer switcher */
-		var layers = {			
-			'Wave Jets Accumulated': this.onJetLayer.bind(this),
-			'Risk Map': function(){},
-		};
-		this.chk_boxes = [];
-		this.div.find('.layers').empty();
-		for( attr in layers ) {
-			var cbox = new HtmlCheckBox(attr);
-			cbox.setCallback('change', layers[attr]);
-			this.div.find('.layers').append(cbox.div);
-			this.chk_boxes.push(cbox);
-		}
+		this.createLayers({			
+			'Wave Jets Accumulated': this.data.show.jets,
+			'Risk Map': new ActionFlag(false),
+		});
 		
 		this.update();
 	};
@@ -3811,8 +3792,6 @@ function EvtSetWidget(data, marker) {
 		
 		this.div.mouseover(this.highlight.bind(this, true));
 		this.div.mouseout(this.highlight.bind(this, false));
-		
-		this.chk_boxes[0].value( this.data.show_jets );
 		
 		this.select();
 	};
@@ -4486,58 +4465,6 @@ function id_equals(id1, id2) {
 	return true;
 }
 
-function getMarkerColor(mag) {
-
-	var color = 'gray';
-
-	if (mag < 2.0) {
-		color = '#FFFFFF';
-	} else if (mag < 3.0) {
-		color = '#BFCCFF';
-	} else if (mag < 4.0) {
-		color = '#9999FF';
-	} else if (mag < 5.0) {
-		color = '#80FFFF';
-	} else if (mag < 5.3) {
-		color = '#7DF894';
-	} else if (mag < 6.0) {
-		color = '#FFFF00';
-	} else if (mag < 7.0) {
-		color = '#FFC800';
-	} else if (mag < 7.4) {
-		color = '#FF9100';
-	} else if (mag < 7.8) {
-		color = '#FF0000';
-	} else if (mag < 8.5) {
-		color = '#C80000';
-	} else if (mag < 9.0) {
-		color = '#800000';
-	} else {
-		color = '#400000';
-	}
-
-	return color;
-}
-
-function addMarker(lat, lon, icon) {
-
-	// create new marker on selected position
-	return new google.maps.Marker({
-		position : new google.maps.LatLng(lat, lon),
-		map : map,
-		icon : icon,
-		zIndex : 1
-	});
-}
-
-function getMarkerIconLink(text, color) {
-
-	var link = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld='
-			+ text + '|' + color.substring(1) + '|000000';
-
-	return link;
-}
-
 function getPoiColor(poi) {
 
 	var color;
@@ -4818,7 +4745,7 @@ function logIn(callback) {
 		$('#tabEvtSetComp').hide();
 	}
 	
-	if( checkPerm("flood") ) {
+	if( checkPerm('flood') ) {
 		$('#tabRecent').hide();
 		$('#tabFloodCompose').show();
 		$('#tabFloodList').show();
@@ -5001,23 +4928,6 @@ function markMsgAsDisplayed(msg) {
 		}
 	});
 
-}
-
-function createDefaultMarker(lat, lon, color) {
-
-	var link = getMarkerIconLink("%E2%80%A2", color);
-	marker = addMarker(lat, lon, new google.maps.MarkerImage(link));
-	marker.setZIndex(100);
-
-	return marker;
-}
-
-function setMarkerPos(marker, lat, lon) {
-
-	marker.setPosition({
-		lat : Number(lat),
-		lng : Number(lon)
-	});
 }
 
 function getPreset() {
@@ -6520,7 +6430,8 @@ function AdminDialog() {
 			'flood': new HtmlCheckBox('Flood Prototype'),
 			'data': new HtmlCheckBox('Data Services'),
 			'hysea': new HtmlCheckBox('HySea'),
-			'population': new HtmlCheckBox('Population')
+			'population': new HtmlCheckBox('Population'),
+			'new_report': new HtmlCheckBox('New Report')
 		};
 		
 		this.instInputs = {
@@ -7923,7 +7834,7 @@ function CFZLayer(name,map) {
 	};
 	
 	this.update = function() {
-		if( this.data.show_cfzs )
+		if( this.data.show.cfzs.get() )
 			return this.display();
 		return this.clear();
 	};
@@ -7969,7 +7880,7 @@ function TFPLayer(name,map) {
 	};
 	
 	this.update = function() {
-		if( this.data.show_cfzs )
+		if( this.data.show.tfps.get() )
 			return this.display();
 		return this.clear();
 	};
@@ -8007,8 +7918,7 @@ function MarkerLayer(name,map) {
 	Layer.call(this,name,map);
 	
 	this.init = function() {
-		this.active_marker = createDefaultMarker(0, 0, "#5cb85c");
-		this.active_marker.setMap(null);
+		this.active_marker = new Marker(0, 0, '%E2%80%A2', '#5cb85c', map);
 	};	
 	
 	this.update = function() {
@@ -8018,15 +7928,14 @@ function MarkerLayer(name,map) {
 	};
 	
 	this.display = function() {
-		setMarkerPos(this.active_marker, this.data.prop.latitude, this.data.prop.longitude);
-		this.active_marker.setMap(map);
-		map.panTo(this.active_marker.getPosition());
-		
+		this.active_marker.setPosition(this.data.prop.latitude, this.data.prop.longitude);
+		this.active_marker.show();
+		//map.panTo(this.active_marker.getPosition());
 		showGrid(this.data._id, this.data.show_grid);
 	};
 	
 	this.clear = function() {
-		this.active_marker.setMap(null);
+		this.active_marker.hide();
 		showGrid(this.data._id, false);
 	};
 	
@@ -9184,33 +9093,7 @@ function FloodWidget(data, marker) {
 
 	//EQWidget.call(this, data, marker);
 	//Widget.call(this);
-	
-	this.createLayers = function(layers) {
-		/* create layer switcher */
-		this.chk_boxes = [];
-		this.div.find('.layers').empty();
-		for( attr in layers ) {
-			var cbox = new HtmlCheckBox(attr);
-			cbox.bindTo( this.data[layers[attr]] );
-			this.div.find('.layers').append(cbox.div);
-			this.chk_boxes.push(cbox);
-		}
-	};
-	
-	this.setPopovers = function(tooltips) {
-		var options = {
-			placement : 'top',
-			html : true,
-			container : this.div,
-			animation : false
-		};
 		
-		for( title in tooltips ) {
-			options.title = title;
-			this.div.find(tooltips[title]).tooltip(options);
-		}
-	};
-	
 	this.init = function(data) {
 		this.div = $('.templates .flood-entry').clone();
 		this.div.show();
@@ -9221,8 +9104,8 @@ function FloodWidget(data, marker) {
 		
 		/* create layer switcher */
 		this.createLayers({
-			'Water heights': 'show_waterheights',
-			'Buildings': 'show_buildings'
+			'Water heights': this.data.show.waterheights,
+			'Buildings': this.data.show.buildings,
 		});
 		
 		this.setPopovers({
@@ -9277,17 +9160,19 @@ function FloodWidget(data, marker) {
 
 ActionFlag.prototype = new ICallbacks();
 
-function ActionFlag(val) {
+function ActionFlag(val, callback) {
 	
 	ICallbacks.call(this);
 	
 	this.val = val;
+	this.callback = callback;
 	
 	this.set = function(val) {
 		console.log('ActionFlag: ' + val);
 		if( arguments.length == 0 || val == true ) {
 			this.val = val;
 			this.notifyOn('update');
+			if(callback) callback();
 			return;
 		}
 		this.unset();
@@ -9296,6 +9181,7 @@ function ActionFlag(val) {
 	this.unset = function() {
 		this.val = false;
 		this.notifyOn('update');
+		if(callback) callback();
 	};
 	
 	this.get = function() {
@@ -9315,10 +9201,11 @@ function FloodEvent(meta) {
 		this.waterheights = new Container(sort_string.bind(this,'height'));
 		this.tfps = new Container();
 		
-		this.show_waterheights = new ActionFlag(true);
-		this.show_waterheights.setCallback('update', this.notifyOn.bind(this,'update'));
-		this.show_buildings = new ActionFlag(true);
-		this.show_buildings.setCallback('update', this.notifyOn.bind(this,'update'));
+		var func = this.notifyOn.bind(this, 'update');
+		this.show = {
+			waterheights: new ActionFlag(true, func),
+			buildings: new ActionFlag(true, func),
+		};
 		
 		this.heights_loaded = false;
 		
@@ -9416,13 +9303,12 @@ function BuildingsLayer(name, map, fun_enabled) {
 	this.getBuildings = function() {
 		/* Show buildings only if an event is selected. */
 		if( ! this.data ) return;
-		/* Clear layer and underlying container. */
-		this.clear();
-		this.buildings.clear();
 		/* Show buildings only at a zoom level of 15 or greater. */
-		if( this.map.getZoom() < 15 )
+		if( this.map.getZoom() < 15 ) {
+			this.clear();
 			return;
-		/* Extrcat current bounds and set parameters. */
+		}
+		/* Extract current bounds and set parameters. */
 		var bounds = this.map.getBounds();
 		var ne = bounds.getNorthEast();
 		var sw = bounds.getSouthWest();
@@ -9435,6 +9321,9 @@ function BuildingsLayer(name, map, fun_enabled) {
 		/* Retrieve buildings from server. */
 		ajax('webguisrv/getbuildings/', params, (function(result) {
 			console.log(result);
+			/* Clear layer and underlying container. */
+			this.clear();
+			this.buildings.clear();
 			/* Walk through list of buildings and create appropriate polygons. */
 			var buildings = result.buildings;
 			for(var i = 0; i < buildings.length; i++) {
@@ -9973,17 +9862,113 @@ function City() {
 	
 	this.show = function(map, obj, data) {
 		var html = '<b>' + obj.name + ' - ' + obj.adm0 + '</b><br>' + 
-		   '<span>Population: ' + obj.popmin.toLocaleString("en-US") + ' - ' + obj.popmax.toLocaleString("en-US") + '</span><br>' +
+		   '<span>Population: ' + obj.popmax.toLocaleString("en-US") + '</span><br>' +
 		   '<span>Estimated Wave Height: ' + data.ewh + '</span>';
+		var size = 10 + Math.sqrt(obj.popmax / 100000) / 2;
 		this.point.getInfoWin().setHtml(html);
 		this.point.setColor( getPoiColor(data) );
-		this.point.setSizeInPixel(10, 10);
+		this.point.setSizeInPixel(size, size);
 		this.point.showFrom(5);
 		this.point.show();
 	};
 	
 	this.hide = function() {
 		if( this.point )
-			this.point.show(null);
+			this.point.hide();
 	};
+}
+
+/*****/
+ReportDialog.prototype = new ICallbacks();
+function ReportDialog(data) {
+	ICallbacks.call(this);
+	
+	this.init = function(data) {
+		this.data = data;
+		this.dialog = new HtmlDialog($('.report-dialog').clone());
+		
+		var default_pages = new Container().setList([
+		    {title: 'General'},
+		    {title: 'WaveJets', file: 'wavejets_traveltimes.png', include: true},
+		    {title: 'TFPs', file: 'cfzs_tfps.png', include: false},
+		    {title: 'Population', file: 'cities_population.png', include: true},
+		]);
+		
+		this.btnCreate = new HtmlButton('Create', (function() {
+			new ReportCustomDialog().show(default_pages, this.data);
+		}).bind(this));
+		
+		this.dialog.content.append(this.btnCreate.div);
+	};
+	
+	this.show = function() {
+		this.dialog.show();
+	};
+	
+	this.hide = function() {
+		this.dialog.hide();
+	};
+	
+	this.init(data);
+}
+
+ReportCustomDialog.prototype = new ICallbacks();
+function ReportCustomDialog() {
+	ICallbacks.call(this);
+	
+	this.init = function() {
+		this.dialog = new HtmlDialog($('.report-new-dialog').clone());
+	};
+	
+	this.draw = function(pages) {
+		/* Attention: $.empty() also removes event listeners which will destroy the group elements. */
+		/* Thus, call detach() on each child element instead, which will retain all listeners. */
+		this.dialog.content.children().detach();
+		for(var i = 0; i < pages.length(); i++) {
+			var page = pages.get(i);
+			var span = $('<span class="updown"></span>');
+			var func = function(pages, i, j) {
+				pages.swap(i,j);
+				this.draw(pages);
+			};
+			if( i > 0 ) {
+				span.append(
+					$('<a><span class="glyphicon glyphicon-arrow-up"></span></a>').click( func.bind(this, pages, i, i-1))
+				);
+			}
+			if( i < pages.length() - 1 ) {
+				span.append(
+					$('<a><span class="glyphicon glyphicon-arrow-down"></span></a>').click( func.bind(this, pages, i, i+1))
+				);
+			}
+			this.dialog.content.append(page.html.div).append(span);
+		}
+	};
+	
+	this.show = function(pages, event) {
+		for(var i = 0; i < pages.length(); i++) {
+			var page = pages.get(i);
+			var group = new HtmlDynGroup(page.title);
+			var box = new HtmlCheckBox('Include in Report', page.include);
+			box.setCallback('change', (function(page,val){
+				page.include = val;
+			}).bind(this));
+			
+			var img = $('<img />', {
+				src: 'datasrv/' + event._id + '/' + page.file
+			});
+			
+			group.content.append( box.div ).append(img);
+			group.div.removeClass('html-dyngroup').addClass('html-dyngroup2');
+			page.html = group;
+		}
+		this.draw(pages);
+		this.dialog.show();
+	};
+	
+	this.hide = function() {
+		this.dialog.hide();
+	};
+	
+	this.init();
 }

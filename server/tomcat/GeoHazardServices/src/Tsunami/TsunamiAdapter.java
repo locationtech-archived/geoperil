@@ -28,15 +28,17 @@ public abstract class TsunamiAdapter implements IAdapter {
 	protected DB db;
 	protected File workdir;
 	protected String hardware;
+	protected String args;
 	protected LocalConnection localCon;
 	
 	private HashMap<String, DBObject> locations;
 	
-	public TsunamiAdapter(DB db, SshConnection[] sshCon, File workdir, String hardware) throws IOException {
+	public TsunamiAdapter(DB db, SshConnection[] sshCon, File workdir, String hardware, String args) throws IOException {
 		this.db = db;
 		this.sshCon = sshCon;
 		this.workdir = workdir;
 		this.hardware = hardware;
+		this.args = args;
 		this.localCon = new LocalConnection(workdir.getAbsolutePath());
 	}
 	
@@ -183,10 +185,9 @@ public abstract class TsunamiAdapter implements IAdapter {
 		String resdir = (String) dirs.get("results") + "/events/" + task.id;
 		localCon.runCmds(
 			String.format("mkdir -p -m 0777 %s", resdir),
-			String.format("rm -f %s/*", resdir),
 			String.format("chmod 0666 %s/*", resdir)
 		);
-		String files[] = {"eWave.2D.sshmax"};
+		String files[] = {"eWave.2D.sshmax", "eWave.2D.time"};
 		for(String f: files) {
 			sshCon[0].copyFile(f, resdir + "/" + f);
 		}
@@ -351,13 +352,13 @@ public abstract class TsunamiAdapter implements IAdapter {
 	}
 	
 	protected void finalizeLocations(EQTask task) {
-		long d1 = 0;
 		long t0, t1;
 		t0 = System.nanoTime();
 		HashMap<Integer,Double> maxEWH = new HashMap<Integer, Double>();
 	    HashMap<Integer,Double> minETA = new HashMap<Integer, Double>();
 	    /* Temporary data structure used to avoid many database interactions. */
 	    List<DBObject> comps = new ArrayList<DBObject>();
+	    List<DBObject> sldata = new ArrayList<DBObject>();
 	    /* translate date into time stamp */
 		long time = task.eqparams.date.getTime() / 1000;
 		for(String id: locations.keySet() ) {
@@ -376,10 +377,8 @@ public abstract class TsunamiAdapter implements IAdapter {
 					obj.put("reltime", rel_time);
 					obj.put("station", id);
 					obj.put("evid", task.id);
+					sldata.add(obj);
 				}
-				t1 = System.nanoTime();
-				db.getCollection("simsealeveldata").insert(values);
-				d1 += System.nanoTime() - t1;
 			}
 			
 			/* Update maximal and minimal CFZ values. */
@@ -421,7 +420,9 @@ public abstract class TsunamiAdapter implements IAdapter {
 		t1 = System.nanoTime();
 		db.getCollection("comp").insert(comps);
 		System.out.println("Comp: " + (System.nanoTime() - t1) / 1000000000.);
-		System.out.println("Sealevel: " + d1 / 1000000000.);
+		t1 = System.nanoTime();
+		db.getCollection("simsealeveldata").insert(sldata);
+		System.out.println("Sealevel: " + (System.nanoTime() - t1) / 1000000000.);
 		System.out.println("Total: " + (System.nanoTime() - t0) / 1000000000.);
 	}
 	

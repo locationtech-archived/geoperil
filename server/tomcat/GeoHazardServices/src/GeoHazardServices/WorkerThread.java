@@ -27,6 +27,7 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	private DB db;
 	
 	private String hardware;
+	private String args;
 	
 	private Integer priority;
 	private int slot = IScheduler.SLOT_NORMAL;
@@ -81,8 +82,8 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		/* TODO: not the right place */
 		try {
 			floodAdapter = new FloodAdapter(db, sshCon, workdir, hardware);
-			hySeaAdapter = new HySeaAdapter(db, sshCon, workdir, hardware);
-			easyWaveAdapter = new EasyWaveAdapter(db, sshCon, workdir, hardware);
+			hySeaAdapter = new HySeaAdapter(db, sshCon, workdir, hardware, args);
+			easyWaveAdapter = new EasyWaveAdapter(db, sshCon, workdir, hardware, args);
 		} catch(IOException e) {
 			e.printStackTrace();return 1;
 		}
@@ -92,6 +93,10 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	
 	public void setHardware( String hardware ) {
 		this.hardware = hardware;
+	}
+	
+	public void setArgs( String args ) {
+		this.args = args;
 	}
 	
 	public void setPriority( int priority ) {
