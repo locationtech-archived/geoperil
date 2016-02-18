@@ -44,7 +44,7 @@ style_group = [
                                                       {"variable": "border",            "Flag": "-p_b",      "value": "Y"},
                                                       {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"}, 	
                                                       {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"}, 						 						
-                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "118/154/174"}, 
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "141/149/154"}, 
                                                       {"variable": "color_land",        "Flag": "-c_land",   "value": "80/80/80"},
                                                       {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]},  
 {"Name": "DEM",                 "key": 1,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "Y"},
@@ -318,7 +318,7 @@ def tsunami_report(\
     ######### Extent ###########
     ############################
     #berechnet die optimale Ausdehnung anhand der Eingabe-Dateien (siehe auto_extent.py)
-    west, east, south, north = best_auto_extent_for_input(west, east, south, north, wave_height, wave_height_expression, wave_time, cfz, tfp, tempdir)
+    west, east, south, north = best_auto_extent_for_input(west, east, south, north, wave_height, wave_height_expression, wave_time, cfz, tfp, tempdir, quake)
     
     west = float(west)
     east = float(east)
@@ -346,7 +346,10 @@ def tsunami_report(\
     #Berechnet Laenge der lon-Distanz im Kartenmittelpunkt in km
     lon_dist = (math.pi / 180) * 6370 * lon_diff * math.cos(math.radians(lat_mid))
     #1/4 von lon_dist gerundet auf naechste Hundert fuer scalebar
-    scalebar_length = round((lon_dist/4) / 100) * 100
+    if lon_dist >= 1000:
+        scalebar_length = round((lon_dist/4) / 100) * 100
+    else:	
+        scalebar_length = round((lon_dist/4) / 10) * 10
 
     #################################
     # Basemap optimale Pixelgroesse #
@@ -448,7 +451,32 @@ def tsunami_report(\
         subprocess.call(['./gmt_scripts/TFP.sh',output ,tfp, tfp_cpt, tfp_stroke, y_map_distance])
 
     ########## Quakes ###########
+    quake_string = ''
     if plot_quake=="Y":
+        #creates Infotext for the earthquake for Legend based on the csv-file    
+        def build_quake_legend_string(quake):
+            quake_file = open(quake, "r").readlines()[1].strip()
+            quake_file_split = quake_file.split(',')
+            quake_date, quake_lat, quake_lon, quake_depth, quake_mag = quake_file_split[4], round(float(quake_file_split[1]), 2), round(float(quake_file_split[0]), 2), quake_file_split[3], quake_file_split[2]
+
+            if quake_lon > 0:
+                quake_lon = '%s\\260E' % quake_lon
+            elif quake_lon < 0:
+                quake_lon = '%s\\260W' % quake_lon
+            else:
+                quake_lon = '%s\\260' % quake_lon	    
+            if quake_lat > 0:
+                quake_lat = '%s\\260N' % quake_lat
+            elif quake_lat < 0:
+                quake_lat = '%s\\260S' % quake_lat
+            else:
+                quake_lat = '%s\\260' % quake_lat
+            quake_date = datetime.datetime.strptime(quake_date, "%Y-%m-%d %H:%M:%S.%f").strftime("%Y, %B %d, %H:%M")
+            quake_string = '%s UTC, Lat: %s Lon: %s, Depth: %s km, M: %s' % (quake_date, quake_lat, quake_lon, quake_depth, quake_mag)  
+            print (quake_string)  
+            return quake_string
+        quake_string = build_quake_legend_string(quake)    
+    
         subprocess.call(['./gmt_scripts/quake.sh',output ,quake, quake_fill, y_map_distance])    
 
     ######## city pop ###########
@@ -512,10 +540,11 @@ def tsunami_report(\
     #berechnet beste Position von Erdbeben-Legende
     beachball_y = y_map_dist - 1.5
     quake_y = y_map_dist - 1.4
+    
     #erstellt Legende:
     subprocess.call(['./gmt_scripts/Legend.sh',output, plot_wave_height, plot_wave_time, world_pop, plot_cfz, plot_tfp, plot_cities_bool, cfz_cpt, cfz_stroke, tfp_stroke, wave_height_cpt, world_pop_cpt, cities_fill, cities_stroke, \
         wave_height_pslegend, wave_height_psscale, wave_time_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, \
-        str(created_y), str(map_width), date, quake, plot_quake, quake_fill, str(beachball_y), str(quake_y), Isochrone_color])     
+        str(created_y), str(map_width), date, quake, plot_quake, quake_fill, str(beachball_y), str(quake_y), Isochrone_color, quake_string])     
  
     ######################################
     ###### Umwandlung in PNG/PDF #########

@@ -99,35 +99,57 @@ def cfz_extent(cfz, extent):
 ####################################	
 def tfp_extent(tfp, extent):
     tfp_csv = open(tfp).readlines()[1:]
-    
+    tfp_count = 0    
     tfp_lon_list = []
     tfp_lat_list = []
-    tfp_extent = [None, None, None, None]
+    tfp_extent = [None, None, None, None]   
     for line in tfp_csv:
-        r = line.split(",")
-        if float(r[3]) >= 0:
-            tfp_lon_list.append(float(r[0]))
-            tfp_lat_list.append(float(r[1]))
+        tfp_csv_split = line.split(",")
+        if float(tfp_csv_split[3]) >= 0:
+            tfp_count += 1	
+            tfp_lon_list.append(float(tfp_csv_split[0]))
+            tfp_lat_list.append(float(tfp_csv_split[1]))
     if not tfp_lon_list==[]: 	    
         if min(tfp_lon_list) != max(tfp_lon_list):
             tfp_extent[0] = min(tfp_lon_list)
             tfp_extent[1] = max(tfp_lon_list)
+        elif tfp_count==1:
+            #falls nur ein tfp von welle getroffen 		
+            tfp_extent[0] = tfp_lon_list[0] - 2
+            tfp_extent[1] = tfp_lon_list[0] + 2	    
     if not tfp_lat_list==[]: 
         if min(tfp_lat_list) != max(tfp_lat_list):
             tfp_extent[2] = min(tfp_lat_list)
             tfp_extent[3] = max(tfp_lat_list)
+        elif tfp_count==1:
+            #falls nur ein tfp von welle getroffen 	
+            tfp_extent[2] = tfp_lat_list[0] - 2
+            tfp_extent[3] = tfp_lat_list[0] + 2		             	    
     if tfp_extent[0] or tfp_extent[1] or tfp_extent[2] or tfp_extent[3]:
         extent[0].append(float(tfp_extent[0]))
         extent[1].append(float(tfp_extent[1]))
         extent[2].append(float(tfp_extent[2]))
-        extent[3].append(float(tfp_extent[3]))
-            
+        extent[3].append(float(tfp_extent[3]))               
     return extent   
-
+####################################
+######### calc quake extent ########
+####################################
+def quake_extent(quake, extent):
+    quake_file = open(quake, "r").readlines()[1].strip()
+    quake_file_split = quake_file.split(',')	
+    quake_lon = quake_file_split[0]	
+    quake_lat = quake_file_split[1]	
+    print ('quake lon: ', quake_lon, '\nquake lat: ', quake_lat)
+    extent[0].append(float(quake_lon) - 2)
+    extent[1].append(float(quake_lon) + 2)
+    extent[2].append(float(quake_lat) - 2)
+    extent[3].append(float(quake_lat) + 2)
+    return extent
+    
 ###########################################
 ######### combine calc extent #############
 ###########################################
-def best_auto_extent_for_input(west, east, south, north, wave_height, wave_height_expression, wave_time, cfz, tfp, tempdir):
+def best_auto_extent_for_input(west, east, south, north, wave_height, wave_height_expression, wave_time, cfz, tfp, tempdir, quake):
     if (west is None) or (east is None) or (north is None) or (south is None): 
         # extent = [[west],[east],[south],[north]] 
         extent = [[],[],[],[]]
@@ -145,10 +167,12 @@ def best_auto_extent_for_input(west, east, south, north, wave_height, wave_heigh
             extent = cfz_extent(cfz, extent)
  
         if not tfp=='':
-            extent = tfp_extent(tfp, extent)     
-   
+            extent = tfp_extent(tfp, extent)   
+	      
+        if not quake=='':   
+            extent = quake_extent(quake, extent)   
         print (extent)
-	
+	    	
         if extent==[[],[],[],[]]:
             west = -180
             east = 180

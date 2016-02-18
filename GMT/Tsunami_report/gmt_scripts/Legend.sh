@@ -46,6 +46,8 @@ quake_y=${32}
 
 Isochrone_color=${33}
 
+quake_string=${34}
+
 
 
 #### wave height ####
@@ -109,9 +111,9 @@ gmt pslegend ${world_pop_pslegend} -O -K <<EOF>> ${output}
 L 10p Helvetica L Persons per km\262
 EOF
 #-D8c/7.05c/-1.2c/0.35c
-gmt psscale --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${world_pop_psscale_1} -C${world_pop_cpt} -Li -G0/25 -O -K -V >> ${output}
+gmt psscale --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${world_pop_psscale_1} -C${world_pop_cpt} -Li -G0/250 -O -K -V >> ${output}
 #-D9.8c/7.05c/-1.2c/0.35c
-gmt psscale --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${world_pop_psscale_2} -C${world_pop_cpt} -Li -G25/1100 -O -K -V >> ${output}
+gmt psscale --MAP_FRAME_PEN=0.02c,black --FONT_ANNOT_PRIMARY=10p,Helvetica,black ${world_pop_psscale_2} -C${world_pop_cpt} -Li -G250/1100 -O -K -V >> ${output}
 fi
 
 
@@ -124,7 +126,7 @@ L 10p Helvetica L Persons per city
 G 0.05c
 S 0c c 0.2c ${cities_fill} 0.01c,${cities_stroke} 0.3c < 1.5Mio
 G 0.03c
-S 0c c 0.25c ${cities_fill} 0.01c,${cities_stroke} 0.3c 1.5Mio - 3Mio
+S 0c c 0.25c ${cities_fill} 0.01c,${cities_stroke} 0.3c 1.5-3Mio
 G 0.03c
 S 0c c 0.3c ${cities_fill} 0.01c,${cities_stroke} 0.3c > 3Mio
 EOF
@@ -138,12 +140,8 @@ EOF
 
 if [ ${plot_quake} == Y ]
 then
-awk "BEGIN {FS=\",\"}; NR >= 2 {print 0, 0, \$4, \$6, \$7, \$8, \$3, 0, 0;}" ${quake} | gmt psmeca -R-0.45/0.45/-0.45/0.45 -JM0.9c -M -Sa0.8c -G85/97/134 -E238/238/238 -W0.01c,0/0/0 -P -K -O -V -Ya${beachball_y}c -Xa0.7c >> ${output} 
-
-quake_date=$(awk "BEGIN {FS=\",\"}; NR >= 2 {print \$5}" ${quake})
-quake_date=$(date -d"${quake_date}" +'%Y, %B %d, %H:%M')
-quake_text=$(awk "BEGIN {FS=\",\"}; NR >= 2 {print \"Lat: \"\$2, \"Lon: \"\$1,\" Depth: \"\$4\" km, M: \"\$3}" ${quake})
-gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -Dx0.7c/${quake_y}c/15c/BL -O -K <<EOF>> ${output}
-S 1.1c a 0.55c ${quake_fill} 0.01c,35/35/35 1.6c ${quake_date} UTC, ${quake_text}
+awk "BEGIN {FS=\",\"}; NR >= 2 {print 0, 0, \$4, \$6, \$7, \$8, \$3, 0, 0;}" ${quake} | gmt psmeca -R-0.45/0.45/-0.45/0.45 -JM0.9c -M -Sa0.8c -G85/97/134 -E238/238/238 -W0.01c,0/0/0 -P -K -O -V -Ya${beachball_y}c -Xa0.6c >> ${output} 
+gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -Dx0.6c/${quake_y}c/15c/BL -O -K <<EOF>> ${output}
+S 1.1c a 0.55c ${quake_fill} 0.01c,35/35/35 1.6c ${quake_string}
 EOF
 fi
