@@ -61,8 +61,9 @@ def calc_extent_for_w_time(wave_time, extent, tempdir):
     subprocess.call(['gdal_calc.py', '-A', wave_time, '--outfile=%s' % temp_calc_tif, '--calc=logical_and(A>=0.0000001, A<=%s)' % (wave_time_max_extent)]) 
     subprocess.call(['gdal_polygonize.py', temp_calc_tif, '-f', 'GMT', temp_calc_gmt])
         #liest die GMT-File ien und speichert die zweite Zeile
-    gmt_file = open(temp_calc_gmt)
+    gmt_file = open(temp_calc_gmt, "r")
     extent_line = gmt_file.readlines()[1]
+    gmt_file.close()    
 	#liest die Koordinaten fuer die Ausdehnung aus der zweiten Zeile der GMT-File
     extent_w_time = re.findall("(-?\d+.\d+)",extent_line)
    
@@ -80,8 +81,9 @@ def calc_extent_for_w_time(wave_time, extent, tempdir):
 ######## calc cfz extent ###########
 ####################################
 def cfz_extent(cfz, extent):
-    cfz_gmt_file = open(cfz)
+    cfz_gmt_file = open(cfz, "r")
     cfz_extent_line = cfz_gmt_file.readlines()[1]
+    cfz_gmt_file.close()    
 	#liest die Koordinaten fuer die Ausdehnung aus der zweiten Zeile der GMT-File
     extent_cfz = re.findall("(-?\d+.\d+)",cfz_extent_line)
 
@@ -98,7 +100,9 @@ def cfz_extent(cfz, extent):
 ######### calc tfp extent ##########
 ####################################	
 def tfp_extent(tfp, extent):
-    tfp_csv = open(tfp).readlines()[1:]
+    tfp_csv_file = open(tfp, "r")
+    tfp_csv = tfp_csv_file.readlines()[1:]  
+    tfp_csv_file.close()  
     tfp_count = 0    
     tfp_lon_list = []
     tfp_lat_list = []
@@ -135,8 +139,9 @@ def tfp_extent(tfp, extent):
 ######### calc quake extent ########
 ####################################
 def quake_extent(quake, extent):
-    quake_file = open(quake, "r").readlines()[1].strip()
-    quake_file_split = quake_file.split(',')	
+    quake_file = open(quake, "r")
+    quake_file_split = quake_file.readlines()[1].strip().split(',')
+    quake_file.close()	
     quake_lon = quake_file_split[0]	
     quake_lat = quake_file_split[1]	
     print ('quake lon: ', quake_lon, '\nquake lat: ', quake_lat)

@@ -455,10 +455,10 @@ def tsunami_report(\
     if plot_quake=="Y":
         #creates Infotext for the earthquake for Legend based on the csv-file    
         def build_quake_legend_string(quake):
-            quake_file = open(quake, "r").readlines()[1].strip()
-            quake_file_split = quake_file.split(',')
+            quake_file = open(quake, "r")              	    
+            quake_file_split = quake_file.readlines()[1].strip().split(',')
             quake_date, quake_lat, quake_lon, quake_depth, quake_mag = quake_file_split[4], round(float(quake_file_split[1]), 2), round(float(quake_file_split[0]), 2), quake_file_split[3], quake_file_split[2]
-
+            quake_file.close()
             if quake_lon > 0:
                 quake_lon = '%s\\260E' % quake_lon
             elif quake_lon < 0:
