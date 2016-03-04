@@ -1,0 +1,45 @@
+/* HtmlDropDown */
+.html-dropdown button {
+	line-height: normal;
+	height: inherit;
+}
+
+.html-dropdown .dropdown-menu {
+	width: 100%;
+	text-align: center;
+}
+
+.html-dropdown .caret {
+	margin-left: 10px;
+}
+
+/* HtmlTextGroup */
+.html-textgroup .html-btn > button {
+	background-color: #eeeeee;
+}
+
+.html-textgroup .html-btn > button:hover {
+	background-color: #fcfcfc;
+}
+
+/* HtmlTextArea */
+.html-textarea {
+	
+}
+
+/* Label */
+.prop-label {
+	width: 100%;
+	padding-top: 0.25em;
+	padding-bottom: 0.25em;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+}
+
+.prop-label .input-group-addon {
+	width: 20%;
+}
+
+.prop-label .prop-right {
+	width: 10%;
+}
