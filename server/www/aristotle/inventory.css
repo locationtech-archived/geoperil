@@ -38,7 +38,7 @@ body {
 
 .denied {
 	font-size: 24px;
-    margin-top: 200px;
+    margin-top: 100px;
     width: 1100px;
     margin-left: 150px;
     text-align: center;
@@ -143,6 +143,15 @@ body {
 	width: 30%;
 }
 
+.details .footer .status {
+	color: #dd4b39;
+	text-align: center;
+    margin-bottom: 20px;
+    margin-top: -20px;
+	display: none;
+	font-size: 17px;
+}
+
 .clear {
 	clear: both;
 }
@@ -187,10 +196,15 @@ img {
 	font-size: 22px;
 }
 
+.snapin a {
+	text-decoration: underline;
+}
+
 .custom-popover .popover {
 	display: block;
 	margin-left: -145px;
     width: 130px;
+    z-index: 100;
 }
 
 .custom-popover .popover-title span {
@@ -273,6 +287,10 @@ img {
 	margin-top: 20px;
 }
 
+.details .fields {
+	margin-bottom: 20px;
+}
+
 .alert {
 	position: absolute;
     width: 120px;
@@ -293,6 +311,12 @@ img {
 	margin-top: 15px;
 	margin-bottom: 15px;
 	font-weight: bold;
+}
+
+.content .center {
+	width: 86%;
+	margin: auto;
+	margin-bottom: 15px;
 }
 
 .hazard-types .head {
@@ -316,7 +340,7 @@ img {
 }
 
 .imprint {
-	margin-left: 100px;
+	margin-left: 150px;
     margin-bottom: 60px;
 	width: 500px;
 }
@@ -324,7 +348,7 @@ img {
 .navigation {
 	position: absolute;
 	top: 0px;
-	left: 1070px;
+	left: 960px;
 }
 
 .block {
@@ -351,4 +375,8 @@ img {
 
 .popover-content {
 	padding-bottom: 0px;
+}
+
+.modal-dialog {
+	margin-top: 250px;
 }

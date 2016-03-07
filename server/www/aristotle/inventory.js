@@ -44,48 +44,59 @@ function Inventory(div) {
 	this.items = new Container();
 	this.ts = 0;
 	this.tid = null;
+	this.curview = null;
+	
+	this.save_dialog = new SaveDialog();
 	
 	this.div.find('.sec-persons button').click((function() {
-		ajax(wsgi + '/new/', {role: 'person'}, (function(res) {
-			var view = this.load_details(
-				new Person(res.obj)
-			);
-			view.edit_mode(true);
-		}).bind(this));
+		this.load_details(
+			new Person(), true
+		);
 	}).bind(this));
 	
 	this.div.find('.sec-offices button').click((function() {
-		var view = this.load_details(
-			new Office({})
-		);
-		view.edit_mode(true);
+		ajax(wsgi + '/new/', {role: 'office'}, (function(res) {
+			this.load_details(
+				new Office(res.obj), true
+			);
+		}).bind(this));
 	}).bind(this));
 	
 	this.div.find('.sec-decisions button').click((function() {
-		var view = this.load_details(
-			new Decision({})
+		this.load_details(
+			new Decision({}), true
 		);
-		view.edit_mode(true);
 	}).bind(this));
 	
 	this.div.find('.sec-advices button').click((function() {
-		var view = this.load_details(
-			new Advice({})
+		this.load_details(
+			new Advice({}), true
 		);
-		view.edit_mode(true);
 	}).bind(this));
 	
 	this.load_details(null);
 }
 Inventory.prototype = {
 	get_apikey: function() {
-		/* TODO: just a hack for now! */
-		return window.location.search == '' ? '598b66a6ef3882c73998b598e7e2c17c' : window.location.search.slice(1);
-		//return window.location.search == '' ? null : window.location.search.slice(1);
+		return window.location.search == '' ? null : window.location.search.slice(1);
 	},
 	
-	load_details: function(data) {
+	load_details: function(data, edit) {
 		var view = null;
+		if( this.curview != null && this.curview.mode_edit ) {
+			this.save_dialog.show(
+				(function(data, edit) {
+					this.curview.save();
+					this.curview = null;
+					this.load_details(data, edit);
+				}).bind(this, data, edit),
+				(function(data, edit) {
+					this.curview = null;
+					this.load_details(data, edit);
+				}).bind(this, data, edit)
+			);
+			return view;
+		}
 		if( data instanceof Person )
 			view = new PersonDetailView(this, data);
 		else if( data instanceof Office )
@@ -96,7 +107,9 @@ Inventory.prototype = {
 			view = new DecisionDetailView(this, data);
 		else if( data instanceof Advice )
 			view = new AdviceDetailView(this, data);
+		this.curview = view;
 		if( view != null ) {
+			view.edit_mode(edit);
 			this.div.find('.details').html( view.div );
 			this.goto_details();
 		} else {
@@ -109,7 +122,8 @@ Inventory.prototype = {
 	
 	goto_details: function() {
 		/* Jump to details view. */
-		$('body').animate({scrollTop: this.div.find('.details').offset().top}, 500);
+		if( $('body').scrollTop() > this.div.find('.details').offset().top )
+			$('body').animate({scrollTop: this.div.find('.details').offset().top}, 500);
 	},
 	
 	new_item: function(item) {
@@ -136,6 +150,7 @@ Inventory.prototype = {
 			}
 			var items = res.items;
 			for(var i = 0; i < items.length; i++) {
+				console.log(this.new_item(items[i]));
 				this.items.replaceByFun( function(o1, o2) {
 					return o1['_id']['$oid'] == o2['_id']['$oid'];
 				}, this.new_item(items[i]) );
@@ -247,7 +262,7 @@ function Advice(data) {
 }
 Advice.prototype.items = {
 	a: ["telephone", "video briefing", "mail", "expert on site", "customer web portal"],
-	b: ["type", "intensity", "color-coded danger level", "timing", "impact"]
+	b: ["type", "intensity", "color-coded danger level", "timing", "impact", "uncertainties", "recommended actions"]
 };
 
 
@@ -334,7 +349,10 @@ function PersonItem(inventory, data) {
 	this.div = this.templ();
 	this.div.find('.title').html(data.name);
 	this.div.find('.subtitle').html(
-		this.pretty(data.kind, data.mail) + '<br>' + this.pretty( ['Tel ', data.phone] , ['Fax ', data.fax])
+		$('<div>', {html: this.pretty(data.kind, data.mail)})
+	);
+	this.div.find('.subtitle').append(
+		$('<div>', {html: this.pretty(['Tel ', data.phone] , ['Fax ', data.fax])})
 	);
 	this.div.find('.text').html( this.pretty(inst.acronym, inst.name, office.name) );
 	
@@ -347,14 +365,15 @@ PersonItem.prototype.constructor = PersonItem;
 
 
 function DetailsView(inventory, data) {
+	this.mode_edit = false;
 	this.div = this.templ();
 	this.inventory = inventory;
 	this.data = data;
-	this.fields = [];
+	this.fields = new Container();
 	this.layout();
 	this.create();
 	this.fill();
-	this.edit_mode(false);
+	this.edit_mode(this.mode_edit);
 	this.auth(this.div.find('.edit'));
 }
 DetailsView.prototype = {
@@ -364,7 +383,8 @@ DetailsView.prototype = {
 				$('<div>', {'class': 'banner'}),
 				$('<div>', {'class': 'content'}),
 				$('<div>', {'class': 'footer'}).append(
-					$('<button>', {'class': 'btn btn-default pull-left cancel', html: 'Cancel'}),
+					$('<div>', {'class': 'status'}),
+					$('<button>', {'class': 'btn btn-default pull-left cancel', html: 'Discard'}),
 					$('<button>', {'class': 'btn btn-primary pull-right edit', html: 'Edit', disabled: true}),
 					$('<button>', {'class': 'btn btn-primary pull-right save', html: 'Save', disabled: true})
 				)
@@ -381,18 +401,19 @@ DetailsView.prototype = {
 	edit_mode: function(yes) {
 		var edit_buttons = this.div.find('.footer .cancel, .footer .save');
 		if( yes ) {
-			/* TODO: Enable all input fields. */
-			for(var i = 0; i < this.fields.length; i++)
-				this.fields[i].html.readonly(false);
+			/* Enable all input fields. */
+			for(var i = 0; i < this.fields.length(); i++)
+				this.fields.get(i).html.readonly(false);
 			edit_buttons.show();
 			this.div.find('.footer .edit').hide();
 		} else {
-			/* TODO: Disable all input fields. */
-			for(var i = 0; i < this.fields.length; i++)
-				this.fields[i].html.readonly();
+			/* Disable all input fields. */
+			for(var i = 0; i < this.fields.length(); i++)
+				this.fields.get(i).html.readonly();
 			edit_buttons.hide();
 			this.div.find('.footer .edit').show();
 		}
+		this.mode_edit = yes; 
 	},
 	
 	edit: function() {
@@ -406,6 +427,14 @@ DetailsView.prototype = {
 	},
 	
 	save: function() {
+		var reason = this.verify();
+		if( reason ) {
+			this.div.find('.footer .status').html('Save unsuccessful: ' + reason);
+			this.div.find('.footer .status').show();
+			return;
+		} else {
+			this.div.find('.footer .status').hide();
+		}
 		/* Copy contents to data object. */
 		this.extract();
 		/* Request server to store the data. */
@@ -421,13 +450,17 @@ DetailsView.prototype = {
 	},
 	
 	verify: function() {
-		return true;
+		return null;
 	},
 	
 	cancel: function() {
 		
-		if( ! this.data._id )
-			return this.inventory.load_details(null);
+		if( ! this.data._id ) {
+			this.inventory.curview = null;
+			this.inventory.load_details(null);
+			this.inventory.goto_details();
+			return;
+		}
 		
 		this.fill();
 		this.inventory.goto_details();
@@ -435,8 +468,8 @@ DetailsView.prototype = {
 	},
 	
 	extract: function() {
-		for(var i = 0; i < this.fields.length; i++) {
-			var field = this.fields[i];
+		for(var i = 0; i < this.fields.length(); i++) {
+			var field = this.fields.get(i);
 			if( field.key == 'kind1' || field.key == 'kind2' )
 				continue;
 			if( field.html instanceof HtmlTextGroup )
@@ -445,21 +478,25 @@ DetailsView.prototype = {
 				this.data[field.key] = field.html.value();
 			if( field.html instanceof HtmlTextArea )
 				this.data[field.key] = field.html.value();
+			if( field.html instanceof HtmlCheckBox )
+				this.data[field.key] = field.html.value();
 		}
 	},
-	
+		
 	fill: function() {
 		
 		this.div.find('.content').empty();
 		this.div.find('.content').append($('<div>', {'class': 'fields'}));
-		for(var i = 0; i < this.fields.length; i++) {
-			var field = this.fields[i];
+		for(var i = 0; i < this.fields.length(); i++) {
+			var field = this.fields.get(i);
 			this.div.find('.content .fields').append(
 				field.html.div
 			);
 			if( field.html instanceof HtmlTextGroup )
 				field.html.value( this.data[field.key] );
 			if( field.html instanceof HtmlTextArea )
+				field.html.value( this.data[field.key] );
+			if( field.html instanceof HtmlCheckBox )
 				field.html.value( this.data[field.key] );
 		}
 	},
@@ -510,17 +547,11 @@ PersonDetailView.prototype.layout = function() {
     ]));
 	var fun = function(drpbox, txt) {
 		if( drpbox.value() == 'Other' )
-			txt.div.show();
+			txt.div.css('display', '');
 		else
 			txt.div.hide();
 	};
 	drp1.setCallback('change', fun.bind(this, drp1, txt1));
-	
-	var txt2 = new HtmlTextGroup('Kind');
-	txt2.div.hide();
-	var drp2 = new HtmlDropDownGroup('Kind');
-	drp2.setSource(new Container().setList(["Severe Weather", "Flooding", "Droughts", "Forest Fires", "Earthquakes", "Volcanic Hazards"]));
-	drp2.setCallback('change', fun.bind(this, drp2, txt2));
 	
 	var drp3 = new HtmlDropDownGroup('Office');
 	drp3.setToString(function(o) {
@@ -544,94 +575,64 @@ PersonDetailView.prototype.layout = function() {
 		this.data.office = html.value()._id;
 		DetailsView.prototype.auth.call(this, this.div.find('.save'));
 	}).bind(this, drp3));
+		
+	var chk = new HtmlCheckBox('24/7 operational service');	
 	
-	/* TODO: use a container here */
-	this.fields = [
-   	    {key: 'name', html: new HtmlTextGroup('Name')},
+	this.fields = new Container().setList([
+   	    {key: 'name', html: new HtmlTextGroup('Name').validate('^.+$')},
    	    {key: 'office', html: drp3},
    	    {key: 'mail', html: new HtmlTextGroup('Mail')},
    	    {key: 'phone', html: new HtmlTextGroup('Phone')},
    	    {key: 'fax', html: new HtmlTextGroup('Fax')},   	    
    	    {key: 'kind1', html: drp1},
    	    {key: 'kind2', html: txt1},
+   	    {key: '247', html: chk},
    	    {key: 'hours', html: new HtmlTextArea()},
    	    {key: 'explanation', html: new HtmlTextArea()},
-   	];
+   	]);
+	
 	
 };
 	
 PersonDetailView.prototype.create = function() {
 	DetailsView.prototype.create.call(this);
-	this.boxes = new Container();
-	this.boxes.setSortFun( function(a, b) {
-		var order = ["Severe Weather", "Flooding", "Droughts", "Forest Fires", "Earthquakes", "Volcanic Hazards"];
-		var idx_a = order.indexOf(a.name);
-		var idx_b = order.indexOf(b.name);
-		if( idx_a > idx_b )  return 1;
-		if( idx_a < idx_b )  return -1;
-		return 0;
-	});
-	
-	var groups = this.data.hazard_types;
-	for(var attr in groups) {
-		var container = new Container();
-		container.setSortFun( function(a, b) {
-			var order = ["High temperatures", "Low temperatures", "Wind gusts land", "Wind gusts coast", "Wind gusts sea",
-			             "Mean windspeed gusts land", "Mean windspeed gusts coast", "Mean windspeed gusts sea", "Visibility",
-			             "Lightning", "Gusts in thunderstorms/showers", "Hail", "Ice", "Heavy rain", "Road conditions (black ice)",
-			             "Snow(accumulation/load)", "Ice accretion on vessel structures", "Orographic winds", "Tornadoes",
-			             "Sand storm", "Dust storm", "Tephra/Ash", "Lava Flows", "Lahars", "Volcanic Gas", "Pyroclastic Flows",
-			             "Volcanic Landslides", "Coastal flooding/storm surge", "River flooding", "Flash flooding",
-			             "Earthquake (regional/local)", "Tsunami (basin wide/regional/local)", "Meteorological Drought",
-			             "Crown fires", "Surface fires", "Ground fires"].reverse();
-			if( order.indexOf(a.name) < order.indexOf(b.name) ) return 1;
-			if( order.indexOf(a.name) > order.indexOf(b.name) ) return -1;
-			return 0;
-		});
-		this.boxes.insert( {name: attr, data: container} );
-		for(var name in groups[attr]) {
-			container.insert( {name: name, html: new HtmlCheckBox(name, groups[attr][name])} );
-		}
-	}
 };
 
 PersonDetailView.prototype.edit_mode = function(yes) {
 	
 	DetailsView.prototype.edit_mode.call(this, yes);
 	
-	for(var i = 0; i < this.fields.length; i++) {
-		var field = this.fields[i];
+	for(var i = 0; i < this.fields.length(); i++) {
+		var field = this.fields.get(i);
 		if( field.key == 'office' )
 			field.html.selectByFun( (function(o1, o2) {
 				if( ! o1 ) return true;
 				return o1['$oid'] == o2['_id']['$oid'];
 			}).bind(this, this.data[field.key]) );
-		if( field.key == 'kind1' )
-			field.html.selectByVal(null, this.data['kind']);
 	}
 	
-	this.div.find('.hazard-types').remove();
+	var drp = this.fields.findItem('key', 'kind1').html;
+	if( ! drp.source.findItem(null, this.data['kind']) ) {
+		drp.selectByVal(null, 'Other');
+		this.fields.findItem('key', 'kind2').html.value( this.data['kind'] );
+	} else {
+		drp.selectByVal(null, this.data['kind']);
+	}
 	
 	if( yes ) {
 		
-//		this.div.find('.content').prepend($('<div>', {
-//			'class': 'info',
-//			html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities for the following hazard types.'
-//		}));
-		
 		/* Find dropdown box for office. */
-		for(var i = 0; i < this.fields.length; i++) {
-			var field = this.fields[i];
+		for(var i = 0; i < this.fields.length(); i++) {
+			var field = this.fields.get(i);
 			if( field.key == 'office' )
 				if( field.html.size() == 0 ) {
 					this.div.find('.content').empty();
 					this.div.find('.content').append(
 						$('<div>', {'class': 'intro2', html: 'Create an office first.'}),
 						$('<button>', {'class': 'btn btn-primary btn-new-office', html: 'New Office', click: (function() {
-							var view = this.inventory.load_details(
-									new Office({})
+								this.inventory.load_details(
+									new Office({}), true
 								);
-								view.edit_mode(true);
 							}).bind(this)
 						})
 					);
@@ -640,64 +641,37 @@ PersonDetailView.prototype.edit_mode = function(yes) {
 				}
 		}
 		
-		var blk1 = $('<div>', {'class': 'hazard-types'});
-		blk1.append($('<div>', {
-			'class': 'info',
-			html: 'For the following hazard types please select the items for which warnings are issued and/or advice is supplied'
-		}));
-		for(var i = 0; i < this.boxes.length(); i++) {
-			var sub = this.boxes.get(i);
-			var container = sub.data;
-			var attr = sub.name;
-			blk1.append( $('<b>', {'class': 'head', html: attr}) );
-			for(var j = 0; j < container.length(); j++) {
-				blk1.append( container.get(j).html.div );
-			}
-			var text = new HtmlTextGroup('Other:').setButton('plus');
-			text.validate('^.+$');
-			text.getButton().click( (function(html, attr) {
-				if( ! html.valid() ) return;
-				var pos = $('body').scrollTop();
-				this.boxes.findItem('name', attr).data.insert({name: html.value(), html: new HtmlCheckBox(html.value(), true)});
-				this.edit_mode(true);
-				$('body').scrollTop( pos );
-			}).bind(this, text, attr));
-			blk1.append( text.div );
-		}
-		this.div.find('.content').append(blk1);
-		
-	} else {
-		
-		var blk1 = $('<div>', {'class': 'hazard-types'});
-		var groups = this.data.hazard_types;
-		for(var attr in groups) {
-			blk1.append( $('<b>', {'class': 'head', html: attr}) );
-			for(var name in groups[attr]) {
-				if( groups[attr][name] == true ) {
-					blk1.append( $('<span>', {'class': 'text', html: name}) );
-					blk1.append( $('<span>', {'class': 'dot', html: '&bull;'}) );
-				}
-			}
-			blk1.children().last().remove();
-		}
-		this.div.find('.content').append(blk1);
 	}
 	
+	this.div.find('.hazard-types').remove();
+	this.div.find('.content').append( $('<div>', {'class': 'hazard-types'}) );
+	
 	/* Adapt 24/7 textarea. */
-	var container = new Container().setList(this.fields);
-	this.div.find('.hazard-types').prepend(
-		$('<h5>', {
-			'class': 'comment-head',
-			html: yes ? 'Please specify working hours if the institute doesn’t provide a 24/7 operational service.' : 'Working hours'
-		}),
-		container.findItem('key', 'hours').html.div
-	);
+	var chk247 = this.fields.findItem('key', '247').html;
+	this.div.find('.hazard-types').append( chk247.div );	
+	/* TODO: setCallback() does not work here! Probably because the div is not in the DOM when the handler is set internally! */
+	this.fields.findItem('key', '247').html.div.find('.html-check').change((function() {
+		var pos = $('body').scrollTop();
+		this.edit_mode(true);
+		$('body').scrollTop( pos );
+	}).bind(this));
+	
+	if( ! chk247.value() ) {
+		this.div.find('.hazard-types').append(
+			$('<h5>', {
+				'class': 'comment-head',
+				html: yes ? 'Please specify working hours if the institute doesn’t provide a 24/7 operational service.' : 'Working hours if not 24/7 operational service.'
+			}),
+			this.fields.findItem('key', 'hours').html.div
+		);
+	} else {
+		this.fields.findItem('key', 'hours').html.div.remove();
+	}
 	
 	/* Move explanantion textarea to the end. */
-	var container = new Container().setList(this.fields);
 	this.div.find('.hazard-types').append(
 		$('<h5>', {'class': 'comment-head', html: 'Additional explanation.'}),
-		container.findItem('key', 'explanation').html.div
+		this.fields.findItem('key', 'explanation').html.div
 	);
 };
 
@@ -708,33 +682,28 @@ PersonDetailView.prototype.cancel = function() {
 
 PersonDetailView.prototype.fill = function() {
 	DetailsView.prototype.fill.call(this);
+	
+	this.div.find('.content').prepend($('<div>', {
+		'class': 'info center',
+		html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities.'
+	}));
 };
 
 PersonDetailView.prototype.extract = function() {
 	DetailsView.prototype.extract.call(this);
 	
-	var hazards = {};
-	for(var i = 0; i < this.boxes.length(); i++) {
-		var sub = this.boxes.get(i);
-		hazards[sub.name] = {};
-		for(var j = 0; j < sub.data.length(); j++) {
-			var item = sub.data.get(j);
-			hazards[sub.name][item.name] = item.html.value();
-		}
-	}
-	this.data.hazard_types = hazards;
-	
-	for(var i = 0; i < this.fields.length; i++) {
-		var field = this.fields[i];
+	for(var i = 0; i < this.fields.length(); i++) {
+		var field = this.fields.get(i);
 		if( field.key == 'office' )
 			this.data[field.key] = field.html.value()._id;
-		if( field.key == 'kind1' )
-			this.data['kind'] = field.html.value();
 	}
+	
+	var kind1 = this.fields.findItem('key', 'kind1').html.value();
+	this.data['kind'] = kind1 == 'Other' ? this.fields.findItem('key', 'kind2').html.value() : kind1;
 };
 
 PersonDetailView.prototype.verify = function() {
-	
+	return this.fields.findItem('key', 'name').html.valid() ? null : 'Please provide a name.';
 };
 
 PersonDetailView.prototype.auth = function(divs) {
@@ -777,8 +746,8 @@ OfficeDetailView.prototype.layout = function() {
 		DetailsView.prototype.auth.call(this, this.div.find('.save'));
 	}).bind(this, drp1));
 	
-	this.fields = [
-   	    {key: 'name', html: new HtmlTextGroup('Name')},
+	this.fields = new Container().setList([
+   	    {key: 'name', html: new HtmlTextGroup('Name').validate('^.+$')},
    	    {key: 'institute', html: drp1},
    	    {key: 'address', html: new HtmlTextGroup('Address')},
    	    {key: 'address2', html: new HtmlTextGroup('Address 2')},
@@ -786,14 +755,69 @@ OfficeDetailView.prototype.layout = function() {
    	    {key: 'zip', html: new HtmlTextGroup('ZIP Code')},
    	    {key: 'country', html: new HtmlTextGroup('Country')},
    	    {key: 'explanation', html: new HtmlTextArea()},
-   	    
-   	];
+   	]);
+};
+
+OfficeDetailView.prototype.edit_mode = function(yes) {
+	DetailsView.prototype.edit_mode.call(this, yes);
+	
+	this.div.find('.hazard-types').remove();
+	
+	if(yes) {
+		var blk1 = $('<div>', {'class': 'hazard-types'});
+		blk1.append($('<div>', {
+			'class': 'info',
+			html: 'For the following hazard types please select the items for which warnings are issued and/or advice is supplied'
+		}));
+		for(var i = 0; i < this.boxes.length(); i++) {
+			var sub = this.boxes.get(i);
+			var container = sub.data;
+			var attr = sub.name;
+			blk1.append( $('<b>', {'class': 'head', html: attr}) );
+			for(var j = 0; j < container.length(); j++) {
+				blk1.append( container.get(j).html.div );
+			}
+			var text = new HtmlTextGroup('Other:').setButton('plus');
+			text.validate('^.+$');
+			text.getButton().click( (function(html, attr) {
+				if( ! html.valid() ) return;
+				var pos = $('body').scrollTop();
+				this.boxes.findItem('name', attr).data.insert({name: html.value(), html: new HtmlCheckBox(html.value(), true)});
+				this.edit_mode(true);
+				$('body').scrollTop( pos );
+			}).bind(this, text, attr));
+			blk1.append( text.div );
+		}
+		this.div.find('.content').append(blk1);
+	
+	} else {
+	
+		var blk1 = $('<div>', {'class': 'hazard-types'});
+		var groups = this.data.hazard_types;
+		for(var attr in groups) {
+			blk1.append( $('<b>', {'class': 'head', html: attr}) );
+			for(var name in groups[attr]) {
+				if( groups[attr][name] == true ) {
+					blk1.append( $('<span>', {'class': 'text', html: name}) );
+					blk1.append( $('<span>', {'class': 'dot', html: '&bull;'}) );
+				}
+			}
+			blk1.children().last().remove();
+		}
+		this.div.find('.content').append(blk1);
+	}
+
+	/* Move explanantion textarea to the end. */	
+	this.div.find('.hazard-types').append(
+		$('<h5>', {'class': 'comment-head', html: 'Additional explanation.'}),
+		this.fields.findItem('key', 'explanation').html.div
+	);
 };
 
 OfficeDetailView.prototype.fill = function() {
 	DetailsView.prototype.fill.call(this);
-	for(var i = 0; i < this.fields.length; i++) {
-		var field = this.fields[i];
+	for(var i = 0; i < this.fields.length(); i++) {
+		var field = this.fields.get(i);
 		if( field.html instanceof HtmlDropDown ) {			
 			field.html.selectByFun( (function(o1, o2) {
 				if( ! o1 || ! o2 ) return;
@@ -801,22 +825,65 @@ OfficeDetailView.prototype.fill = function() {
 			}).bind(null, this.data[field.key]) );
 		}
 	}
-	/* Move textarea to the end. */
-	var container = new Container().setList(this.fields);
-	this.div.find('.content').append(
-		$('<h5>', {'class': 'comment-head comment-office', html: 'Additional explanation.'}),
-		container.findItem('key', 'explanation').html.div
-	);
 };
 
-OfficeDetailView.prototype.create = function(divs) {
-	DetailsView.prototype.create.call(this, divs);
+OfficeDetailView.prototype.create = function() {
+	DetailsView.prototype.create.call(this);
+	this.boxes = new Container();
+	this.boxes.setSortFun( function(a, b) {
+		var order = ["Severe Weather", "Flooding", "Droughts", "Forest Fires", "Earthquakes", "Volcanic Hazards"];
+		var idx_a = order.indexOf(a.name);
+		var idx_b = order.indexOf(b.name);
+		if( idx_a > idx_b )  return 1;
+		if( idx_a < idx_b )  return -1;
+		return 0;
+	});
+	
+	var groups = this.data.hazard_types;
+	for(var attr in groups) {
+		var container = new Container();
+		container.setSortFun( function(a, b) {
+			var order = ["High temperatures", "Low temperatures", "Wind gusts land", "Wind gusts coast", "Wind gusts sea",
+			             "Mean windspeed gusts land", "Mean windspeed gusts coast", "Mean windspeed gusts sea", "Visibility",
+			             "Lightning", "Gusts in thunderstorms/showers", "Hail", "Ice", "Heavy rain", "Road conditions (black ice)",
+			             "Snow(accumulation/load)", "Ice accretion on vessel structures", "Orographic winds", "Tornadoes",
+			             "Sand storm", "Dust storm", "Tephra/Ash", "Lava Flows", "Lahars", "Volcanic Gas", "Pyroclastic Flows",
+			             "Volcanic Landslides", "Coastal flooding/storm surge", "River flooding", "Flash flooding",
+			             "Earthquake (regional/local)", "Tsunami (basin wide/regional/local)", "Meteorological Drought",
+			             "Crown fires", "Surface fires", "Ground fires"].reverse();
+			if( order.indexOf(a.name) < order.indexOf(b.name) ) return 1;
+			if( order.indexOf(a.name) > order.indexOf(b.name) ) return -1;
+			return 0;
+		});
+		this.boxes.insert( {name: attr, data: container} );
+		for(var name in groups[attr]) {
+			container.insert( {name: name, html: new HtmlCheckBox(name, groups[attr][name])} );
+		}
+	}
+	console.log(this.boxes);
 };
 
 OfficeDetailView.prototype.auth = function(divs) {
 	DetailsView.prototype.auth.call(this, divs);
 };
 
+OfficeDetailView.prototype.extract = function() {
+	DetailsView.prototype.extract.call(this);
+	var hazards = {};
+	for(var i = 0; i < this.boxes.length(); i++) {
+		var sub = this.boxes.get(i);
+		hazards[sub.name] = {};
+		for(var j = 0; j < sub.data.length(); j++) {
+			var item = sub.data.get(j);
+			hazards[sub.name][item.name] = item.html.value();
+		}
+	}
+	this.data.hazard_types = hazards;
+};
+
+OfficeDetailView.prototype.verify = function() {
+	return this.fields.findItem('key', 'name').html.valid() ? null : 'Please provide a name.';
+};
 
 
 
@@ -827,12 +894,16 @@ InstDetailView.prototype = Object.create(DetailsView.prototype);
 InstDetailView.prototype.constructor = InstDetailView;
 InstDetailView.prototype.layout = function() {
 	this.div.find('.banner').html('Institute');
-	this.fields = [
-   	    {key: 'name', html: new HtmlTextGroup('Name')},
+	this.fields = new Container().setList([
+   	    {key: 'name', html: new HtmlTextGroup('Name').validate('^.+$')},
    	    {key: 'acronym', html: new HtmlTextGroup('Acronym')},
    	    {key: 'website', html: new HtmlTextGroup('Website')}
-   	];
+   	]);
 	this.div.find('.footer .save').attr('disabled', false);
+};
+
+InstDetailView.prototype.verify = function() {
+	return this.fields.findItem('key', 'name').html.valid() ? null : 'Please provide a name.';
 };
 
 
@@ -851,7 +922,7 @@ DecisionDetailView.prototype.create = function() {
 };
 
 DecisionDetailView.prototype.edit_mode = function(yes) {
-	
+		
 	DetailsView.prototype.edit_mode.call(this, yes);
 	
 	var sub1 = new Container().setList([
@@ -903,8 +974,6 @@ DecisionDetailView.prototype.edit_mode = function(yes) {
         },
 	]);
 	
-	
-	
 	this.div.find('.content').empty();
 	this.div.find('.content').append(
 		$('<div>', {'class': 'survey'})
@@ -918,6 +987,8 @@ DecisionDetailView.prototype.edit_mode = function(yes) {
 		);
 	}
 	this.list(this.div.find('.content .survey'), yes, this.titles, 0, this.data);
+	
+	this.titles.findItem('key', 'name').html.validate('^.+$');
 	
 	if( yes )
 		return;
@@ -1040,6 +1111,10 @@ DecisionDetailView.prototype.auth = function(divs) {
 	DetailsView.prototype.auth.call(this, divs);
 };
 
+DecisionDetailView.prototype.verify = function() {
+	return this.titles.findItem('key', 'name').html.valid() ? null : 'Please provide a name.';
+};
+
 
 
 /* Class DecisionItem extends Item. */
@@ -1098,11 +1173,11 @@ AdviceDetailView.prototype.edit_mode = function(yes) {
 	this.titles = new Container().setList([
         {key: 'institute', title: 'Institute', type: 'dropdown', source: source},
         {key: 'name', title: 'Name of Advice', type: 'text'},
-        {key: 'a', title: 'Communication channels (telephone, video briefing, mail, expert on site, customer web portal etc.)', type: 'boxes'},
-        {key: 'b', title: 'Description of content (e.g. type/intensity/ color-coded danger level/ timing/impact description, uncertainties, recommended actions, etc.)', type: 'boxes'},
+        {key: 'a', title: 'Communication channels', type: 'boxes'},
+        {key: 'b', title: 'Content', type: 'boxes'},
         {key: 'c', title: 'Is this the case for every hazard type? If not, please describe how you provide advice for specific hazards.', type: 'section',
         	content: new Container().setList([
-                {key: 'i', title: 'Description', type: 'text'}
+                {key: 'i', title: 'Description', type: 'textarea'}
             ])
         },
         {key: 'explanation', title: 'Additional explanation.', type: 'section',
@@ -1125,6 +1200,8 @@ AdviceDetailView.prototype.edit_mode = function(yes) {
 		);
 	}
 	this.list(this.div.find('.content .survey'), yes, this.titles, 0, this.data);
+	
+	this.titles.findItem('key', 'name').html.validate('^.+$');
 	
 	if( yes )
 		return;
@@ -1160,6 +1237,12 @@ AdviceDetailView.prototype.add_boxes = function(yes, div, container) {
 	}
 };
 
+AdviceDetailView.prototype.verify = function() {
+	return this.titles.findItem('key', 'name').html.valid() ? null : 'Please provide a name.';
+};
+
+
+
 /* Class AdviceItem extends Item. */
 function AdviceItem(inventory, data) {
 	/* Call super constructor! */
@@ -1176,3 +1259,36 @@ AdviceItem.prototype.constructor = AdviceItem;
 /* ********* */
 
 
+
+function SaveDialog() {
+	this.div = $('.modal');
+	this.dialog = this.div.modal('hide');
+	this.handlers = {};
+	
+	this.div.find('.btn-save').click( (function() {
+		if( this.handlers.on_save )
+			this.handlers.on_save();
+	}).bind(this));
+	
+	this.div.find('.btn-discard').click( (function() {
+		if( this.handlers.on_discard )
+			this.handlers.on_discard();
+	}).bind(this));
+	
+	this.div.find('.btn-cancel').click( (function() {
+		if( this.handlers.on_cancel )
+			this.handlers.on_cancel();
+	}).bind(this));
+}
+SaveDialog.prototype = {
+	show: function(on_save, on_discard, on_cancel) {
+		this.handlers.on_save = on_save;
+		this.handlers.on_discard = on_discard;
+		this.handlers.on_cancel = on_cancel;
+		this.div.modal('show');
+	},
+	
+	hide: function() {
+		this.div.modal('hide');
+	}
+};

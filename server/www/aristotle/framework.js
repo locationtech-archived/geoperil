@@ -521,9 +521,9 @@ function HtmlTextGroup(label, icon, readonly) {
 	this.templ = function() {
 		return (
 			$('<div>', {'class': 'html-textgroup input-group input-group-sm prop-label'}).append(
-				$('<spin>', {'class': 'html-label input-group-addon'}),
+				$('<span>', {'class': 'html-label input-group-addon'}),
 				$('<input>', {'class': 'html-text form-control', 'type': 'text'}),
-				$('<spin>', {'class': 'html-icon input-group-addon'}).append(
+				$('<span>', {'class': 'html-icon input-group-addon'}).append(
 					$('<span>', {'class': 'glyphicon'})
 				),
 				$('<span>', {'class': 'html-btn input-group-btn'}).append(
@@ -558,7 +558,8 @@ function HtmlTextGroup(label, icon, readonly) {
 	};
 
 	this.validate = function(regex) {
-		return this.text.validate(regex);
+		this.text.validate(regex);
+		return this;
 	};
 	
 	this.validate_numeric = function(min, max) {
