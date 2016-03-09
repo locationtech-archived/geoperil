@@ -16,7 +16,7 @@ ICallbacks.prototype = new IUtils();
 function ICallbacks() {
 	
 	IUtils.call(this);
-
+	
 	this.callbacks = {};
 	this.uid = ICallbacks.next_uid++;
 
@@ -71,25 +71,13 @@ function ICallbacks() {
 		
 		var cnt = this.callbacks[action].cnt;
 		
-		for(var i = 0; i < cnt; i++)
-			if( this.callbacks[action][i] ) {
-				/* TODO: Check this part on production system. */
-//				if( vargs.length == 0 ) {
-//					setTimeout( this.callbacks[action][i].bind(this), 0);
-//				} else if ( vargs.length == 1 )
-//					setTimeout( this.callbacks[action][i].bind(this, vargs[0]), 0 );
-//				else if ( vargs.length == 2 )
-//					setTimeout( this.callbacks[action][i].bind(this, vargs[0], vargs[1]), 0 );
-				
-				ICallbacks.total++;
-				if( ICallbacks.total % 20 == 0 )
-					console.log('Total notfifications: ' + ICallbacks.total);
+		for(var i = 0; i < cnt; i++) {
+			if( this.callbacks[action][i] )
 				this.callbacks[action][i].apply(this, vargs);
-			}
+		}
 	};
 }
 ICallbacks.next_uid = 1;
-ICallbacks.total = 0;
 
 function Container(sortFun) {
 
@@ -221,8 +209,8 @@ function Container(sortFun) {
 	};
 
 	this.setSortFun = function(sortFun) {
-
 		this.sortFun = sortFun;
+		return this;
 	};
 
 	this.print = function() {
@@ -277,6 +265,10 @@ function HtmlCheckBox(label, checked) {
 		);
 	};
 
+	this.label = function() {
+		return this.div.find('> .html-label').html();
+	};
+	
 	this.value = function(checked,notify) {
 		var curval = this.check.prop('checked');		
 		if(arguments.length < 1)
@@ -384,6 +376,12 @@ function HtmlDropDown() {
 	
 	this.selectByVal = function(key, val) {
 		var item = this.source.getByKey(key, val);
+		var idx = item.idx >= 0 ? item.idx : 0;
+		this.select( idx ); 
+	};
+	
+	this.selectByOid = function(key, val) {
+		var item = this.source.getByOid(key, val);
 		var idx = item.idx >= 0 ? item.idx : 0;
 		this.select( idx ); 
 	};

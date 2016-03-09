@@ -238,7 +238,7 @@ img {
 }
 
 .details .html-checkbox {
-	min-width: 210px;
+	min-width: 50%;
 	display: inline-block;
 	margin-bottom: 10px;
 }
@@ -317,6 +317,15 @@ img {
 	width: 86%;
 	margin: auto;
 	margin-bottom: 15px;
+}
+
+.fields .html-checkbox {
+	display: block;
+	text-align: center;
+	width: 86%;
+	margin: auto;
+	margin-top: 20px;
+	margin-bottom: 28px;
 }
 
 .hazard-types .head {
