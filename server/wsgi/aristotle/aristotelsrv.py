@@ -141,10 +141,11 @@ class AristotleSrv(BaseSrv):
             data["created"] = ts
             if dest == 'person':
                 self.default_perm(data)
-            self._db[dest].insert(data)
+            id = self._db[dest].insert(data)
         else:
             self._db[dest].update({"_id": obj["_id"]}, data)
-        return jssuccess()
+            id = obj["_id"]
+        return jssuccess(id=id)
 
     def remove_custom_hazards(self, data):
         if data.get("type") != "office":
