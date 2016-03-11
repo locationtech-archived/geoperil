@@ -79,13 +79,18 @@ function ICallbacks() {
 }
 ICallbacks.next_uid = 1;
 
-function Container(sortFun) {
+Container.prototype = new ICallbacks();
+function Container(arg0) {
 
 	ICallbacks.call( this );
 	
 	this.list = [];
-	this.sortFun = sortFun;
-
+	if( typeof arg0 === 'function' ) {
+		this.sortFun = arg0;
+	} else if( typeof arg0 !== 'undefined' ) {
+		this.list = arg0;
+	}
+	
 	this.handler = [];
 
 	this.length = function() {
@@ -160,11 +165,11 @@ function Container(sortFun) {
 		for (var i = 0; i < this.list.length; i++) {
 			if( fun(this.list[i], item) ) {
 				this.list[i] = item;
-				console.log(this.list[i], item);
-				return;
+				return true;
 			}
 		}
 		this.list.push(item);
+		return false;
 	};
 	
 	this.replace = function(key, item) {
@@ -241,10 +246,17 @@ function Container(sortFun) {
 	};
 }
 
-HtmlCheckBox.prototype = new ICallbacks();
+HtmlElement.prototype = new ICallbacks();
+function HtmlElement() {
+	ICallbacks.call(this);
+	
+	this.value = function() {};
+}
+
+HtmlCheckBox.prototype = new HtmlElement();
 function HtmlCheckBox(label, checked) {
 
-	ICallbacks.call(this);
+	HtmlElement.call(this);
 	
 	this.init = function(label, checked) {
 		this.div = this.templ();
@@ -302,10 +314,10 @@ function HtmlCheckBox(label, checked) {
 	this.init(label, checked);
 }
 
-HtmlDropDown.prototype = new ICallbacks();
+HtmlDropDown.prototype = new HtmlElement();
 function HtmlDropDown() {
 	
-	ICallbacks.call(this);
+	HtmlElement.call(this);
 	
 	this.init = function() {
 		this.div = this.templ();
@@ -426,9 +438,9 @@ function HtmlDropDown() {
 	this.init();
 };
 
-HtmlTextField.prototype = new ICallbacks();
+HtmlTextField.prototype = new HtmlElement();
 function HtmlTextField(field, defaultText) {
-	ICallbacks.call(this);
+	HtmlElement.call(this);
 	
 	this.init = function(field, defaultText) {
 		this.regex = null;
@@ -489,10 +501,10 @@ function HtmlTextField(field, defaultText) {
 	this.init.apply(this, arguments);
 }
 
-HtmlTextGroup.prototype = new ICallbacks();
+HtmlTextGroup.prototype = new HtmlElement();
 function HtmlTextGroup(label, icon, readonly) {
 	
-	ICallbacks.call(this);
+	HtmlElement.call(this);
 	
 	this.regex = null;
 
@@ -552,7 +564,9 @@ function HtmlTextGroup(label, icon, readonly) {
 	};
 
 	this.value = function(newValue) {
-		return this.text.value(newValue);
+		if( arguments.length == 1 )
+			return this.text.value(newValue);
+		else return this.text.value();
 	};
 
 	this.validate = function(regex) {
@@ -580,10 +594,10 @@ function HtmlTextGroup(label, icon, readonly) {
 	this.init.apply(this, arguments);
 }
 
-HtmlInputGroup.prototype = new ICallbacks();
+HtmlInputGroup.prototype = new HtmlElement();
 function HtmlInputGroup(label, icon, box) {
 
-	ICallbacks.call(this);
+	HtmlElement.call(this);
 	
 	this.init = function(label, icon, box) {
 		this.div = this.templ();
@@ -638,9 +652,9 @@ function HtmlDropDownGroup(label, icon) {
 	this.init(label, icon);
 }
 
-HtmlTextArea.prototype = new ICallbacks();
+HtmlTextArea.prototype = new HtmlElement();
 function HtmlTextArea() {
-	ICallbacks.call(this);
+	HtmlElement.call(this);
 	
 	this.templ = function() {
 		return (
@@ -743,3 +757,27 @@ function ajaxCascade() {
 	ajaxObj.callback = f;
 	ajax(ajaxObj);
 }
+
+function FunCascade() {
+	this.callb = null;
+}
+FunCascade.prototype = {
+	callback: function(callb) {
+		this.callb = callb;
+		return this;
+	},
+	
+	/* Supports a list of functions each one taking a callback as the only argument and returning exactly one argument. */
+	invoke: function(funs, reslst) {
+		if(funs.length < 1)
+			return this.callb ? this.callb(reslst) : null;
+		if( ! reslst ) reslst = [];
+		var fun = funs[0];
+		funs.shift();
+		var f = (function(funs, reslst, res) {
+			reslst.push(res);
+			this.invoke(funs, reslst);
+		}).bind(this, funs, reslst);
+		fun(f);
+	}
+};

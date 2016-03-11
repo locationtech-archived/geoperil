@@ -81,7 +81,7 @@ Inventory.prototype = {
 		return window.location.search == '' ? null : window.location.search.slice(1);
 	},
 	
-	load_details: function(data, edit) {
+	load_details: function(data, edit, noscroll) {
 		var view = null;
 		if( this.curview != null && this.curview.mode_edit ) {
 			this.save_dialog.show(
@@ -111,7 +111,8 @@ Inventory.prototype = {
 		if( view != null ) {
 			view.edit_mode(edit);
 			this.div.find('.details').html( view.div );
-			this.goto_details();
+			if( ! noscroll )
+				this.goto_details();
 		} else {
 			this.div.find('.details').html(
 				$('<div>', {'class': 'intro', html: 'Select an Institute, Office or Contact.'})
@@ -122,8 +123,10 @@ Inventory.prototype = {
 	
 	goto_details: function() {
 		/* Jump to details view. */
-		if( $('body').scrollTop() > this.div.find('.details').offset().top )
-			$('body').animate({scrollTop: this.div.find('.details').offset().top}, 500);
+		/* Cross browser fix: Chrome uses 'body', Firefox 'html'! */
+		var elem = $('body').scrollTop() ? $('body') : $('html');
+		if( elem.scrollTop() > this.div.find('.details').offset().top )
+			elem.animate({scrollTop: this.div.find('.details').offset().top}, 500);
 	},
 	
 	new_item: function(item) {
@@ -150,9 +153,17 @@ Inventory.prototype = {
 			}
 			var items = res.items;
 			for(var i = 0; i < items.length; i++) {
-				this.items.replaceByFun( function(o1, o2) {
+				var item = this.new_item(items[i]);
+				var ret = this.items.replaceByFun( function(o1, o2) {
 					return o1['_id']['$oid'] == o2['_id']['$oid'];
-				}, this.new_item(items[i]) );
+				}, item);
+				if( ret && this.curview != null && this.curview.data._id['$oid'] == item._id['$oid'] ) {
+					if( ! this.curview.mode_edit ) {
+						this.load_details(item, false, true);
+					} else {
+						/* TODO: This page is editing an item which was updated on another site! What to do in this case? */
+					}
+				}
 			}
 			if( items.length > 0 || this.ts == 0)
 				this.draw();
@@ -456,6 +467,8 @@ DetailsView.prototype = {
 	
 	cancel: function() {
 		
+		this.div.find('.footer .status').hide();
+		
 		if( ! this.data._id ) {
 			this.inventory.curview = null;
 			this.inventory.load_details(null);
@@ -485,7 +498,6 @@ DetailsView.prototype = {
 	},
 		
 	fill: function() {
-		
 		this.clear();
 		this.div.find('.content').append($('<div>', {'class': 'fields'}));
 		for(var i = 0; i < this.fields.length(); i++) {
@@ -493,6 +505,8 @@ DetailsView.prototype = {
 			this.div.find('.content .fields').append(
 				field.html.div
 			);
+			if( typeof this.data[field.key] == 'undefined')
+				this.data[field.key] = '';			
 			if( field.html instanceof HtmlTextGroup )
 				field.html.value( this.data[field.key] );
 			if( field.html instanceof HtmlTextArea )
@@ -524,12 +538,27 @@ DetailsView.prototype = {
 		}).bind(this, fun, item));
 	},
 	
+	auth3:  function(item, fun) {
+		data = {
+			data: JSON.stringify(item),
+			perm: "edit",
+			apikey: this.inventory.get_apikey()
+		};
+		ajax(wsgi + '/auth/', data, (function(fun, item, res) {
+			fun({item: item, res: res.status == 'success'});
+		}).bind(this, fun, item));
+	},
+	
 	layout: function() {},
 	
 	clear: function() {
 		/* Do not use empty() here because it removes all event listeners from the child elements
 		 * which is quite not a good idea if the children are still used. */
 		this.div.find('.content').children().detach();
+	},
+	
+	getField: function(key) {
+		return this.fields.findItem('key', key).html;
 	}
 };
 
@@ -567,20 +596,6 @@ PersonDetailView.prototype.layout = function() {
 		return inst.acronym ? inst.acronym + ' - ' + o.name : o.name;
 	}).bind(this));
 	drp3.setSource( this.inventory.items.filter('type', 'office') );
-	
-	/* TODO: Implement this over a funtion cascade. */
-	for(var i = 0; i < drp3.source.length(); i++) {
-		var item = drp3.source.get(i);
-		this.auth2(item, (function(html, item, res) {
-			if( ! res ) {
-				html.source.remove('name', item.name);
-				html.source.notifyOn('change');
-				html.select(0);
-			} else {
-				this.div.find('.save').attr('disabled', false);
-			}
-		}).bind(this, drp3));
-	}
 	drp3.select(0);
 		
 	var chk = new HtmlCheckBox('24/7 operational service');
@@ -603,11 +618,19 @@ PersonDetailView.prototype.layout = function() {
    	    {key: 'explanation', html: new HtmlTextArea()},
    	]);
 };
-	
-PersonDetailView.prototype.create = function() {
-	DetailsView.prototype.create.call(this);
-};
 
+PersonDetailView.prototype.fill = function() {	
+	DetailsView.prototype.fill.call(this);
+	
+	if( this.data['office'] )
+		this.fields.findItem('key', 'office').html.selectByOid('_id', this.data['office']);
+	
+	this.div.find('.content').prepend($('<div>', {
+		'class': 'info center',
+		html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities.'
+	}));
+};
+	
 PersonDetailView.prototype.edit_mode = function(yes) {
 	
 	DetailsView.prototype.edit_mode.call(this, yes);
@@ -620,6 +643,35 @@ PersonDetailView.prototype.edit_mode = function(yes) {
 		} else {
 			drp.selectByVal(null, this.data['kind']);
 		}
+	}
+	
+	var drp3 = this.getField('office');
+	if(yes) {
+		var funs = [];
+		for(var i = 0; i < drp3.source.length(); i++) {
+			funs.push( this.auth3.bind(this, drp3.source.get(i)) );
+		}
+		new FunCascade().callback(
+			(function(drp, reslst) {
+				for(var i = 0; i < reslst.length; i++) {
+					var ret = reslst[i];
+					if( ! ret.res ) {
+						console.log('Denied:', ret.item.name);
+						drp.source.remove('name', ret.item.name);
+						drp.source.notifyOn('change');
+						drp.select(0);
+					} else {
+						this.div.find('.save').attr('disabled', false);
+					}
+				}
+				/* All checks are performed, thus select the right office now. */
+				if( this.data.office )
+					drp3.selectByOid('_id', this.data.office);
+			}).bind(this, drp3)
+		).invoke(funs);
+	} else {
+		if( this.data.office )
+			drp3.selectByOid('_id', this.data.office);
 	}
 	
 	if( yes ) {
@@ -666,22 +718,6 @@ PersonDetailView.prototype.edit_mode = function(yes) {
 	);
 };
 
-PersonDetailView.prototype.cancel = function() {
-	DetailsView.prototype.cancel.call(this);
-};
-
-PersonDetailView.prototype.fill = function() {
-	DetailsView.prototype.fill.call(this);
-	
-	if( this.data['office'] )
-		this.fields.findItem('key', 'office').html.selectByOid('_id', this.data['office']);
-	
-	this.div.find('.content').prepend($('<div>', {
-		'class': 'info center',
-		html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities.'
-	}));
-};
-
 PersonDetailView.prototype.extract = function() {
 	DetailsView.prototype.extract.call(this);
 	
@@ -700,10 +736,6 @@ PersonDetailView.prototype.verify = function() {
 	return this.fields.findItem('key', 'name').html.valid() ? null : 'Please provide a name.';
 };
 
-PersonDetailView.prototype.auth = function(divs) {
-	DetailsView.prototype.auth.call(this, divs);
-};
-
 
 
 function OfficeDetailView(inventory, data) {
@@ -711,36 +743,18 @@ function OfficeDetailView(inventory, data) {
 }
 OfficeDetailView.prototype = Object.create(DetailsView.prototype);
 OfficeDetailView.prototype.constructor = OfficeDetailView;
-OfficeDetailView.prototype.layout = function() {
-	this.div.find('.banner').html('Office');
+
+OfficeDetailView.prototype.fill = function() {
 	
+	/* Create institute dropdown box. */
 	var drp1 = new HtmlDropDownGroup('Institute');
-	drp1.setToString( function(o) {
-		return o.name;
-	});
-	drp1.setAsValue( function(o) {
-		return o._id;
-	});
+	drp1.setToString( function(o) { return o.name; });
+	drp1.setAsValue( function(o) { return o._id; });
 	drp1.setSource( this.inventory.items.filter('type', 'institute') );
-	
-	/* TODO: Implement this over a funtion cascade. */
-	for(var i = 0; i < drp1.source.length(); i++) {
-		var item = drp1.source.get(i);
-		this.auth2(item, (function(html, item, res) {
-			if( ! res ) {
-				html.source.remove('name', item.name);
-				html.source.notifyOn('change');
-				html.select(0);
-			}
-		}).bind(this, drp1));
-	}
-	
-	drp1.setCallback('change', (function(html, idx) {
-		this.data.institute = html.value();
-		DetailsView.prototype.auth.call(this, this.div.find('.save'));
-	}).bind(this, drp1));
-	
-	this.fields = new Container().setList([
+	drp1.select(0);
+		
+	/* Set field elements which are handled by the parent class. */
+	this.fields = new Container([
    	    {key: 'name', html: new HtmlTextGroup('Office Name').validate('^.+$')},
    	    {key: 'institute', html: drp1},
    	    {key: 'address', html: new HtmlTextGroup('Address')},
@@ -751,27 +765,94 @@ OfficeDetailView.prototype.layout = function() {
    	    {key: 'explanation', html: new HtmlTextArea()},
    	    {key: 'lawfully_mandated', html: new HtmlCheckBox('Advices/warnings are provided as <b>lawfully</b> mandated services')},
    	]);
+	
+	this.div.find('.banner').html('Office');
+	
+	/* Parent class handles field elements. */
+	DetailsView.prototype.fill.call(this);
+	
+	/* Create  */
+	this.boxes = new Container( SortFuns.prototype.byArray(
+		["Severe Weather", "Flooding", "Droughts", "Forest Fires", "Earthquakes", "Volcanic Eruption"],
+        'name'
+    ));
+
+	this.valid_types = ["High temperatures", "Low temperatures", "Wind gusts land", "Wind gusts coast", "Wind gusts sea",
+     "Mean windspeed gusts land", "Mean windspeed gusts coast", "Mean windspeed gusts sea", "Visibility",
+     "Lightning", "Gusts in thunderstorms/showers", "Hail", "Ice", "Heavy rain", "Road conditions (black ice)",
+     "Snow(accumulation/load)", "Ice accretion on vessel structures", "Orographic winds", "Tornadoes",
+     "Sand storm", "Dust storm", "Tephra/Ash", "Lava Flows", "Lahars", "Gas", "Pyroclastic Flows",
+     "Landslides", "Coastal flooding/storm surge", "River flooding", "Flash flooding",
+     "Earthquake (regional/local)", "Earthquake Focal Parameters", "Seismic Intensity", "Shake Maps",
+     "Focal Mechanism", "Tsunami (basin wide/regional/local)", "Meteorological Drought",
+     "Crown fires", "Surface fires", "Ground fires"];
+	
+	var groups = this.data.hazard_types;
+	for(var attr in groups) {
+		var container = new Container( SortFuns.prototype.byArray(this.valid_types, 'name'));
+		for(var name in groups[attr]) {
+			container.insert( {name: name, html: new HtmlCheckBox(name, groups[attr][name])} );
+		}
+		this.boxes.insert( {name: attr, data: container} );
+	}
 };
 
 OfficeDetailView.prototype.edit_mode = function(yes) {
 	DetailsView.prototype.edit_mode.call(this, yes);
 	
+	/* Remove all institutes for which the user has no 'edit' permission in edit mode. */
+	var drp1 = this.getField('institute');
+	if( yes ) {
+		var funs = [];
+		for(var i = 0; i < drp1.source.length(); i++) {
+			funs.push( this.auth3.bind(this, drp1.source.get(i)) );
+		}
+		new FunCascade().callback(
+			(function(drp, reslst) {
+				for(var i = 0; i < reslst.length; i++) {
+					var ret = reslst[i];
+					if( ! ret.res ) {
+						console.log('Denied:', ret.item.name);
+						drp.source.remove('name', ret.item.name);
+						drp.source.notifyOn('change');
+					} else {
+						this.div.find('.save').attr('disabled', false);
+					}
+				}
+				if( this.data.institute )
+					drp1.selectByOid('_id', this.data.institute);
+			}).bind(this, drp1)
+		).invoke(funs);
+	} else {
+		if( this.data.institute )
+			drp1.selectByOid('_id', this.data.institute);
+	}
+	
 	this.div.find('.hazard-types').detach();
 	
-	if(yes) {
-		var blk1 = $('<div>', {'class': 'hazard-types'});
-		blk1.append($('<div>', {
-			'class': 'info',
-			html: 'For the following hazardous phenomena please select the items for which warnings are issued and/or advice is supplied'
-		}));
-		for(var i = 0; i < this.boxes.length(); i++) {
-			var sub = this.boxes.get(i);
-			var container = sub.data;
-			var attr = sub.name;
-			blk1.append( $('<b>', {'class': 'head', html: attr}) );
-			for(var j = 0; j < container.length(); j++) {
-				blk1.append( container.get(j).html.div );
+	var blk1 = $('<div>', {'class': 'hazard-types'});
+	blk1.append($('<div>', {
+		'class': 'info',
+		html: 'For the following hazardous phenomena please select the items for which warnings are issued and/or advice is supplied'
+	}));
+	for(var i = 0; i < this.boxes.length(); i++) {
+		var sub = this.boxes.get(i);
+		var container = sub.data;
+		var attr = sub.name;
+		blk1.append( $('<b>', {'class': 'head', html: attr}) );
+		for(var j = 0; j < container.length(); j++) {
+			var item = container.get(j);
+			if( yes ) {
+				blk1.append( item.html.div );
+			} else if( item.html.value() == true ) {
+				blk1.append(
+					$('<span>', {'class': 'text', html: item.name}).append(
+						$('<span>', {'class': 'dot', html: '&bull;'})
+					)
+				);
 			}
+		}
+		if(yes) {
 			var text = new HtmlTextGroup('Other:').setButton('plus');
 			text.validate('^.+$');
 			text.getButton().click( (function(html, attr) {
@@ -782,88 +863,24 @@ OfficeDetailView.prototype.edit_mode = function(yes) {
 				$('body').scrollTop( pos );
 			}).bind(this, text, attr));
 			blk1.append( text.div );
+		} else {
+			var last = blk1.children().last();
+			last.find('.dot').length ? last.find('.dot').remove() : last.remove();
 		}
-		this.div.find('.content').append(blk1);
-	
-	} else {
-	
-		var blk1 = $('<div>', {'class': 'hazard-types'});
-		var groups = this.data.hazard_types;
-		for(var attr in groups) {
-			blk1.append( $('<b>', {'class': 'head', html: attr}) );
-			for(var name in groups[attr]) {
-				if( groups[attr][name] == true ) {
-					blk1.append( $('<span>', {'class': 'text', html: name}) );
-					blk1.append( $('<span>', {'class': 'dot', html: '&bull;'}) );
-				}
-			}
-			blk1.children().last().remove();
-		}
-		this.div.find('.content').append(blk1);
 	}
+	this.div.find('.content').append(blk1);
 
-	/* Move explanantion textarea to the end. */	
+	/* Move explanantion textarea to the end. */
 	this.div.find('.hazard-types').append(
 		$('<h5>', {'class': 'comment-head', html: 'Additional explanation.'}),
 		this.fields.findItem('key', 'explanation').html.div
 	);
 };
 
-OfficeDetailView.prototype.fill = function() {
-	DetailsView.prototype.fill.call(this);
-	for(var i = 0; i < this.fields.length(); i++) {
-		var field = this.fields.get(i);
-		if( field.html instanceof HtmlDropDown ) {			
-			field.html.selectByFun( (function(o1, o2) {
-				if( ! o1 || ! o2 ) return;
-				return o1['$oid'] == o2['_id']['$oid'];
-			}).bind(null, this.data[field.key]) );
-		}
-	}
-};
-
-OfficeDetailView.prototype.create = function() {
-	DetailsView.prototype.create.call(this);
-	this.boxes = new Container();
-	this.boxes.setSortFun( function(a, b) {
-		var order = ["Severe Weather", "Flooding", "Droughts", "Forest Fires", "Earthquakes", "Volcanic Eruption"];
-		var idx_a = order.indexOf(a.name);
-		var idx_b = order.indexOf(b.name);
-		if( idx_a > idx_b )  return 1;
-		if( idx_a < idx_b )  return -1;
-		return 0;
-	});
-	
-	var groups = this.data.hazard_types;
-	for(var attr in groups) {
-		var container = new Container();
-		container.setSortFun( function(a, b) {
-			var order = ["High temperatures", "Low temperatures", "Wind gusts land", "Wind gusts coast", "Wind gusts sea",
-			             "Mean windspeed gusts land", "Mean windspeed gusts coast", "Mean windspeed gusts sea", "Visibility",
-			             "Lightning", "Gusts in thunderstorms/showers", "Hail", "Ice", "Heavy rain", "Road conditions (black ice)",
-			             "Snow(accumulation/load)", "Ice accretion on vessel structures", "Orographic winds", "Tornadoes",
-			             "Sand storm", "Dust storm", "Tephra/Ash", "Lava Flows", "Lahars", "Gas", "Pyroclastic Flows",
-			             "Landslides", "Coastal flooding/storm surge", "River flooding", "Flash flooding",
-			             "Earthquake (regional/local)", "Earthquake Focal Parameters", "Seismic Intensity", "Shake Maps",
-			             "Focal Mechanism", "Tsunami (basin wide/regional/local)", "Meteorological Drought",
-			             "Crown fires", "Surface fires", "Ground fires"].reverse();
-			if( order.indexOf(a.name) < order.indexOf(b.name) ) return 1;
-			if( order.indexOf(a.name) > order.indexOf(b.name) ) return -1;
-			return 0;
-		});
-		this.boxes.insert( {name: attr, data: container} );
-		for(var name in groups[attr]) {
-			container.insert( {name: name, html: new HtmlCheckBox(name, groups[attr][name])} );
-		}
-	}	
-};
-
-OfficeDetailView.prototype.auth = function(divs) {
-	DetailsView.prototype.auth.call(this, divs);
-};
-
 OfficeDetailView.prototype.extract = function() {
+	/* Field elements are extracted by the parent class. */
 	DetailsView.prototype.extract.call(this);
+	/* Handle hazard type checkboxes at this point. */
 	var hazards = {};
 	for(var i = 0; i < this.boxes.length(); i++) {
 		var sub = this.boxes.get(i);
@@ -871,6 +888,8 @@ OfficeDetailView.prototype.extract = function() {
 		for(var j = 0; j < sub.data.length(); j++) {
 			var item = sub.data.get(j);
 			hazards[sub.name][item.name] = item.html.value();
+			if( this.valid_types.indexOf(item.name) < 0 && ! item.html.value() )
+				delete hazards[sub.name][item.name];
 		}
 	}
 	this.data.hazard_types = hazards;
@@ -947,16 +966,20 @@ DecisionDetailView.prototype.edit_mode = function(yes) {
 	var source = this.inventory.items.filter('type', 'institute');
 	
 	/* TODO: Implement this with a funtion cascade. */
-	for(var i = 0; i < source.length(); i++) {
-		var item = source.get(i);
-		this.auth2(item, (function(source, item, res) {			
-			if( ! res ) {
-				source.remove('name', item.name);
-				source.notifyOn('change');
-			}
-		}).bind(this, source));
+	if(yes) {
+		for(var i = 0; i < source.length(); i++) {
+			var item = source.get(i);
+			this.auth2(item, (function(source, item, res) {			
+				if( ! res ) {
+					source.remove('name', item.name);
+					source.notifyOn('change');
+				} else  {
+					this.div.find('.save').attr('disabled', false);
+				}
+			}).bind(this, source));
+		}
 	}
-	
+		
 	this.titles = new Container().setList([
         {key: 'institute', title: 'Institute', type: 'dropdown', source: source},
         {key: 'name', title: 'Name of Process', type: 'text'},
@@ -1019,17 +1042,10 @@ DecisionDetailView.prototype.list = function(div, edit_mode, list, tab, subdata)
 			item.html = new HtmlDropDownGroup(item.title);
 			item.html.setToString( function(o) { return o.name; } );
 			item.html.setSource(item.source);
-			item.source.setCallback('change', (function(html) {
-				html.select(0);
-			}).bind(this, item.html));
-			item.html.setCallback('change', (function(html, idx) {
-				this.data.institute = html.value()._id;
-				DetailsView.prototype.auth.call(this, this.div.find('.save'));
-			}).bind(this, item.html));
-			item.html.selectByFun( (function(o1, o2) {
-				if( ! o1 || ! o2 ) return;
-				return o1['$oid'] == o2['_id']['$oid'];
-			}).bind(null, subdata[item.key]) );
+			item.source.setCallback('change', (function(html, val) {
+				val ? html.selectByOid('_id', val) : html.select(0);
+			}).bind(this, item.html, subdata[item.key]));
+			subdata[item.key] ? item.html.selectByOid('_id', subdata[item.key]) : item.html.select(0);
 			div.append(item.html.div);
 		} else if( item.type == 'boxes' ) {
 			var subdiv = $('<div>', {'class': 'block'});
@@ -1092,14 +1108,7 @@ DecisionDetailView.prototype.store = function(list, subdata) {
 
 DecisionDetailView.prototype.extract = function() {
 	DetailsView.prototype.extract.call(this);
-	
 	this.store(this.titles, this.data);
-};
-
-DecisionDetailView.prototype.auth = function(divs) {
-	/* Find institute field! */
-	this.data.institute = this.titles.findItem('key', 'institute').html.value()._id;
-	DetailsView.prototype.auth.call(this, divs);
 };
 
 DecisionDetailView.prototype.verify = function() {
@@ -1136,10 +1145,10 @@ function AdviceDetailView(inventory, data) {
 AdviceDetailView.prototype = Object.create(DecisionDetailView.prototype);
 AdviceDetailView.prototype.constructor = AdviceDetailView;
 AdviceDetailView.prototype.layout = function() {
-	this.div.find('.banner').html('Type of Advice');
+	this.div.find('.banner').html('Type of Advice');	
 };
 
-AdviceDetailView.prototype.create = function() {
+AdviceDetailView.prototype.fill = function() {
 	this.boxes = {};
 	for(attr in Advice.prototype.items) {
 		this.boxes[attr] = new Container().setSortFun(SortFuns.prototype.byArray(Advice.prototype.items[attr], 'name'));
@@ -1149,7 +1158,7 @@ AdviceDetailView.prototype.create = function() {
 				this.boxes[attr].insert( {name: name, html: new HtmlCheckBox(name, val)} );
 		}
 	}
-	DecisionDetailView.prototype.create.call(this);
+	DecisionDetailView.prototype.fill.call(this);
 };
 
 AdviceDetailView.prototype.edit_mode = function(yes) {
@@ -1157,15 +1166,19 @@ AdviceDetailView.prototype.edit_mode = function(yes) {
 	DetailsView.prototype.edit_mode.call(this, yes);
 	    
 	var source = this.inventory.items.filter('type', 'institute');
-	/* TODO: Implement this over a funtion cascade. */
-	for(var i = 0; i < source.length(); i++) {
-		var item = source.get(i);
-		this.auth2(item, (function(source, item, res) {			
-			if( ! res ) {
-				source.remove('name', item.name);
-				source.notifyOn('change');
-			}
-		}).bind(this, source));
+	
+	if(yes) {
+		for(var i = 0; i < source.length(); i++) {
+			var item = source.get(i);
+			this.auth2(item, (function(source, item, res) {			
+				if( ! res ) {
+					source.remove('name', item.name);
+					source.notifyOn('change');
+				} else  {
+					this.div.find('.save').attr('disabled', false);
+				}
+			}).bind(this, source));
+		}
 	}
 	
 	this.titles = new Container().setList([
