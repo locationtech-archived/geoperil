@@ -136,7 +136,6 @@ class AristotleSrv(BaseSrv):
         ts = int(time.time())
         data["changed"] = ts
         self.ensure_apikey(data, obj.get("apikey") if obj is not None else None)
-        self.remove_custom_hazards(data)
         if obj is None:
             data["created"] = ts
             if dest == 'person':
@@ -146,25 +145,6 @@ class AristotleSrv(BaseSrv):
             self._db[dest].update({"_id": obj["_id"]}, data)
             id = obj["_id"]
         return jssuccess(id=id)
-
-    def remove_custom_hazards(self, data):
-        if data.get("type") != "office":
-            return
-        default_hazards = self._db["hazard_types"].find_one()
-        default_hazards.pop("_id")
-        hazard_groups = data.get("hazard_types")
-        map = {}
-        for k1 in default_hazards:
-            map[k1] = {}
-            group = hazard_groups.get(k1)
-            if group is None:
-                map[k1] = default_hazards[k1]
-                continue
-            for k2 in group:
-                hazard = group[k2]
-                if hazard or k2 in default_hazards[k1]:
-                    map[k1][k2] = hazard
-        data["hazard_types"] = map
 
     @cherrypy.expose
     def load(self, ts, apikey=None):
