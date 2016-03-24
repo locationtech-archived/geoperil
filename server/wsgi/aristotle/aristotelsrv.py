@@ -135,6 +135,8 @@ class AristotleSrv(BaseSrv):
         obj = self._db[dest].find_one({"_id": data.get("_id")})
         ts = int(time.time())
         data["changed"] = ts
+        data.pop("__show", None)
+        data["__text"] = self.get_text(data)
         self.ensure_apikey(data, obj.get("apikey") if obj is not None else None)
         if obj is None:
             data["created"] = ts
@@ -145,6 +147,24 @@ class AristotleSrv(BaseSrv):
             self._db[dest].update({"_id": obj["_id"]}, data)
             id = obj["_id"]
         return jssuccess(id=id)
+
+    def to_text(self, id):
+        data = self.find_one({"_id": id})
+        data["__text"] = self.gen_text(data)
+        # update
+        
+    def get_text(self, data):
+        return ' '.join( self.get_words(data) ).replace('_', ' ') 
+    
+    def get_words(self, data):
+        words = []
+        for key in data:
+            if data[key] == True:
+                words.append(key)
+            elif isinstance(data[key], dict):
+                subwords = self.get_words(data[key])
+                words = words + subwords + ([key] if subwords else [])
+        return words
 
     @cherrypy.expose
     def load(self, ts, apikey=None):
@@ -171,6 +191,86 @@ class AristotleSrv(BaseSrv):
             office["hazard_types"] = ht
             return jssuccess(obj=office)
         return jsfail()
+    
+    @cherrypy.expose
+    def delete(self, data, apikey=None):
+        data = loads(data)
+        dest = data.get("type")
+        if data["_id"] not in self.valid_ids("delete", apikey) or not self.check_type(dest):
+            return jsdeny()
+        # check that office or institute has no children anymore
+        if self.find({"$or": [{"office": data["_id"]}, {"institute": data["_id"]}], "deleted": {"$ne": True}}):
+            return jsfail(msg="The item has child elements assigned.")
+        data["changed"] = int(time.time())
+        data["deleted"] = True;
+        self._db[dest].update({"_id": data["_id"]}, data)        
+        return jssuccess()
+    
+    @cherrypy.expose
+    def search(self, ts, apikey=None, text=None, set_in="", set_id=""):
+        ids = self.valid_ids("view", apikey)
+        if ids is None:
+            return jssuccess(items=[], ts=ts)
+        
+        ts = int(ts)
+        types = set(["institute", "office", "person", "decision", "advice"])
+        set_in = set(set_in.split(",")) if set_in != "" else types
+        
+        query = {"_id": {"$in": ids}}
+        filt = {"apikey": 0}
+        
+        all = self.find({"_id": {"$in": ids}, "changed": {"$gt": ts}}, {"apikey": 0})
+        
+        if text is not None and text.strip() != "":
+            query.update( {"$text": {"$search": text}} )
+            filt.update( {"score": {"$meta": "textScore"}} )
+        
+        # direct search
+        res = []
+        for kind in set_in.intersection(types):
+            res += list(self._db[kind].find(query, filt))
+        # resolving
+        res += [self._db["office"].find_one({"_id": v["office"]}, filt) for v in res if "office" in v]
+        res += [self._db["institute"].find_one({"_id": v["institute"]}, filt) for v in res if "institute" in v]
+        
+        # ID search
+        if set_id != "":
+            acronym_ids = [v["_id"] for v in list( self._db["institute"].find({"acronym": {"$in": set_id.split(",")}}) )]
+            set_id = set( [ObjectId(v) for v in set_id.split(",") + acronym_ids if ObjectId.is_valid(v)] )
+            query = {"_id": {"$in": list(set_id.intersection(ids))} }
+            filt = {"apikey": 0}
+            res_id = self.find(query, filt)
+            res_id_ids = [v["_id"] for v in res_id]
+            # resolving upwards
+            res_up = []
+            res_up += [self._db["office"].find_one({"_id": v["office"]}, filt) for v in res_id if "office" in v]
+            res_up += [self._db["institute"].find_one({"_id": v["institute"]}, filt) for v in res_id if "institute" in v]
+            # resolving downwards
+            res_dn = []
+            res_dn += self.find({"institute": {"$in": res_id_ids}}, filt)
+            res_id_ids += [v["_id"] for v in res_dn]
+            res_dn += self.find({"office": {"$in": res_id_ids}}, filt)
+            
+            res_id = res_id + res_up + res_dn
+            # intersection of 'in' and 'id' search
+            res = [x for x in res + res_id if x["_id"] in [x["_id"] for x in res] and x["_id"] in [x["_id"] for x in res_id]]
+        
+        # remove duplicates
+        res = [i for n, i in enumerate(res) if i["_id"] not in [x["_id"] for x in res[n + 1:]]]
+        # deliver new and updated items only
+        res = [x for x in res if x["changed"] > ts]
+        # difference between 'all' and 'res'
+        rem = [v for v in all if v["_id"] not in [x["_id"] for x in res]]
+        # mark found items as visible in the final list
+        [v.update({"__show": True}) for v in res]
+        print(len(all))
+        print(len(res))
+        print(len(rem))
+        assert len(all) == len(res) + len(rem)
+        res = res + rem
+        # find max time stamp and return results
+        maxts = max([r["changed"] for r in res] + [ts])
+        return jssuccess(items=res, ts=maxts)
     
     @cherrypy.expose
     def invite(self, data, text, apikey=None):            
@@ -261,6 +361,15 @@ class AristotleSrv(BaseSrv):
     # generates a random key of 32 hexadecimal characters 
     def generate_apikey(self):
         return binascii.b2a_hex(os.urandom(16)).decode("ascii")
+    
+    @cherrypy.expose
+    def get_texts(self):
+        cwd = os.path.dirname(os.path.realpath(__file__))
+        res = {}
+        for group in ["meteo", "geo"]:
+            with open(cwd + "/invite_" + group + ".txt") as f:
+                res[group] = f.read()
+        return jssuccess(texts=res)
 
 application = startapp( AristotleSrv )
 
