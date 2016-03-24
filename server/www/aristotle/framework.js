@@ -85,10 +85,16 @@ function Container(arg0) {
 	ICallbacks.call( this );
 	
 	this.list = [];
-	if( typeof arg0 === 'function' ) {
-		this.sortFun = arg0;
-	} else if( typeof arg0 !== 'undefined' ) {
-		this.list = arg0;
+	if( arguments.length == 1 ) {
+		if( typeof arg0 === 'function' ) {
+			this.sortFun = arg0;
+		} else if( arg0.constructor === Array ) {
+			this.list = arg0;
+		} else {
+			this.list = [arg0];
+		}
+	} else if( arguments.length > 1 ) {
+		this.list = Array.prototype.slice.call(arguments);
 	}
 	
 	this.handler = [];
@@ -99,6 +105,12 @@ function Container(arg0) {
 
 	this.get = function(i) {
 		return this.list[i];
+	};
+	
+	this.last = function() {
+		if( this.length() == 0 )
+			return null;
+		return this.list[ this.length() - 1 ];
 	};
 
 	this.findItem = function(key, val) {
@@ -126,12 +138,18 @@ function Container(arg0) {
 		return {idx: -1, item: null};
 	};
 	
+	/* You can redefine this method to provide custom equals() functionality. */
+	this.equals = function(obj1, obj2) {
+		var id_match = typeof obj1 === 'object' && typeof obj2 === 'object' && '$oid' in obj1 && '$oid' in obj2 && obj1['$oid'] == obj2['$oid'];
+		return obj1 == obj2 || id_match;
+	};
+	
 	this.getByKey = function(key, val) {
 
 		for (var i = 0; i < this.list.length; i++) {
 
-			var mkey = key ? this.list[i][key] : this.list[i];
-			if(mkey == val)
+			var mkey = key ? this.list[i][key] : this.list[i];			
+			if( this.equals(mkey, val) )
 				return {
 					idx : i,
 					item : this.list[i]
@@ -173,16 +191,14 @@ function Container(arg0) {
 	};
 	
 	this.replace = function(key, item) {
-
 		for (var i = 0; i < this.list.length; i++) {
-
-			if (this.list[i][key] == item[key]) {
+			if( this.equals( this.list[i][key], item[key]) ) {
 				this.list[i] = item;
-				return;
+				return true;
 			}
 		}
-
 		this.list.push(item);
+		return false;
 	};
 	
 	this.remove = function(key, val) {
@@ -191,11 +207,15 @@ function Container(arg0) {
 			this.list.splice(idx, 1);
 	};
 	
+	this.removeIdx = function(idx) {
+		this.list.splice(idx, 1);
+	};
+	
 	this.filter = function(attr,val) {
 		var ret = [];
 		var f = attr;
 		if (typeof(attr) != 'function')
-			f = function(o){return o[attr] == val;};
+			f = (function(o){ return this.equals(o[attr], val); }).bind(this);
 			
 		for (var i = 0; i < this.list.length; i++) {
 			if( f(this.list[i]) )
@@ -206,6 +226,7 @@ function Container(arg0) {
 
 	this.clear = function() {
 		this.list.length = 0;
+		return this;
 	};
 
 	this.sort = function() {
@@ -251,6 +272,21 @@ function HtmlElement() {
 	ICallbacks.call(this);
 	
 	this.value = function() {};
+	this.find = function(str) {
+		return this.div.find(str);
+	};
+	this.$find = function(str) { return this.find(str); };
+	this.addClass = function(clazz) {
+		this.div.addClass(clazz);
+		return this;
+	};
+	this.$show = function(no) {
+		!no ? this.div.show() : this.div.hide();
+		return this;
+	};
+	this.$hide = function() {
+		return this.$show(true);
+	};
 }
 
 HtmlCheckBox.prototype = new HtmlElement();
@@ -342,7 +378,9 @@ function HtmlDropDown() {
 		this.idx = -1;
 		this.source = source;
 		this.source.setCallback('change',this.display.bind(this));
+		this.notifyOn('source');
 		this.display();
+		this.select(0);
 		return this;
 	};
 	
@@ -526,6 +564,12 @@ function HtmlTextGroup(label, icon, readonly) {
 		this.div.find('> .html-btn').hide();
 		/* Forward change event of embedded text field. */
 		this.text.setCallback('change', this.notifyOn.bind(this, 'change'));
+		this.text.div.keyup( (function(event) {
+			if(event.keyCode == '13') {
+				this.btn.click();
+				return false;
+			}
+		}).bind(this));
 	};
 	
 	this.templ = function() {
@@ -690,6 +734,18 @@ function HtmlTextArea() {
 	this.init.apply(this, arguments);
 }
 
+HtmlCustom.prototype = new HtmlElement();
+function HtmlCustom(div) {
+	HtmlElement.call(this);
+	
+	this.div = arguments.length >= 1 ? div : $('<div>');
+	
+	this.append = function() {
+		this.div.append.apply(this.div, arguments);
+		return this;
+	};
+}
+
 /* ajax related framework functions */
 function getAjax(url, data, callback) {
 
@@ -769,9 +825,9 @@ FunCascade.prototype = {
 	
 	/* Supports a list of functions each one taking a callback as the only argument and returning exactly one argument. */
 	invoke: function(funs, reslst) {
+		if( ! reslst ) reslst = [];
 		if(funs.length < 1)
 			return this.callb ? this.callb(reslst) : null;
-		if( ! reslst ) reslst = [];
 		var fun = funs[0];
 		funs.shift();
 		var f = (function(funs, reslst, res) {

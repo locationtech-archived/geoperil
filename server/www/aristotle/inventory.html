@@ -4,10 +4,13 @@
    	<title>ARISTOTLE</title>
     <meta charset="UTF-8">
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
+    <link href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" rel="stylesheet">
     <link href="inventory.css" rel="stylesheet">
     <link href="framework.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+    <script src="ext/js.cookie.js"></script>
     <script src="framework.js"></script>
     <script src="inventory.js"></script>
 </head>
@@ -15,13 +18,20 @@
 	<div class="frame">
 		<div class="header">
 			<span class="navigation">
-				<a href="mailto:aristotle-inventory@gfz-potsdam.de?subject=ARISTOTLE%20Questionnaire%20-%20Report%20an%20Issue">Ask a question or report a problem</a>
-				&nbsp; &#183; &nbsp;
-				<a href="imprint.html">Imprint</a>
+				<span>
+					<a href="mailto:aristotle-inventory@gfz-potsdam.de?subject=ARISTOTLE%20Questionnaire%20-%20Report%20an%20Issue">Ask a question or report a problem</a>
+					&nbsp; &#183; &nbsp;
+					<a href="imprint.html">Imprint</a>
+				</span>
 			</span>
-			<div class="tabs1">European Multi‐Hazard Scientific Partnership</div>
+			<div class="tabs1">
+				<span>European Multi‐Hazard Scientific Partnership</span>
+			</div>
 			<img src="logo_en.gif"></img>
-			<div class="banner"></div>
+			<div class="banner">
+				<button class="map-btn"></button>
+				<span class="refresh spin"><i class="glyphicon glyphicon-refresh"></i></span>
+			</div>
 			<div class="snapin">
 				<span class="x">&#215;</span>
 				This enquiry is sent to you to get important input from you for the
@@ -70,7 +80,19 @@
 				<br>
 				In case of questions or problems, please do not hesitate to <a href="mailto:aristotle-inventory@gfz-potsdam.de?subject=ARISTOTLE%20Questionnaire%20-%20Report%20an%20Issue">contact us</a>.
 			</div>
-			<div class="tabs"></div>
+			<div class="stub map-stub">
+				<div class="tile map-tile static">
+					<div id="map"></div>
+					<button class="btn btn-default btn-push"><span><i class="glyphicon glyphicon-pushpin"></i></span></button>
+				</div>
+			</div>
+			<div class="stub tabs">
+				<div class="tile search static">
+					<div class="search-box"></div>
+					<a href="help.html">Help</a>
+					<button class="btn btn-default btn-push"><span><i class="glyphicon glyphicon-pushpin"></i></span></button>
+				</div>
+			</div>
 		</div>
 		<div class="list">
 			<div class="sec sec-insts">
@@ -115,7 +137,8 @@
 				<div class="head">Contacts and Experts</div>
 				<div class="items"></div>
 				<div class="footer">
-					<button class="btn btn-primary">Add Contact</button>
+					<button class="btn btn-primary invite">Invite</button>
+					<button class="btn btn-primary add">Add Contact</button>
 				</div>
 			</div>
 			<div class="sec sec-decisions">
@@ -155,8 +178,8 @@
 		<div class="clear"></div>
 		<div class="denied">No permission.</div>
 	</div>
-	<!-- dialog box -->
-	<div class="modal fade">
+	<!-- SaveDialog -->
+	<div class="modal fade modal-save">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
 	      <div class="modal-header">
@@ -167,6 +190,21 @@
 	        <button type="button" class="btn btn-default btn-close" data-dismiss="modal">Cancel</button>
 	        <button type="button" class="btn btn-primary btn-save" data-dismiss="modal">Save changes</button>
 	        <button type="button" class="btn btn-danger btn-discard pull-left" data-dismiss="modal">Discard changes</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+	<!-- DeleteDialog -->
+	<div class="modal fade modal-delete">
+	  <div class="modal-dialog">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <button type="button" class="close btn-close" data-dismiss="modal">&#215;</button>
+	        <h4 class="modal-title">Are you sure you want to delete this item?</h4>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-default btn-close" data-dismiss="modal">Cancel</button>
+	        <button type="button" class="btn btn-danger btn-confirm" data-dismiss="modal">Delete</button>
 	      </div>
 	    </div>
 	  </div>
