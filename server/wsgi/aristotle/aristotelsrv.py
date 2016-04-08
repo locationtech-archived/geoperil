@@ -73,6 +73,15 @@ class AristotleSrv(BaseSrv):
         return jssuccess()
 
     @cherrypy.expose
+    def auth_many(self, data, perm, apikey=None):
+        data = loads(data)
+        data = [v["_id"] for v in data]
+        ids = self.valid_ids(perm, apikey)
+        valid = set(data).intersection(ids)
+        invalid = set(data).difference(ids)
+        return jssuccess(valid=valid, invalid=invalid)
+
+    @cherrypy.expose
     def auth(self, data, perm, apikey=None):
         data = loads(data)
         ids = self.valid_ids(perm, apikey)
@@ -109,7 +118,10 @@ class AristotleSrv(BaseSrv):
         advices = list(self._db["advice"].find({
             "institute": {"$in": [o["_id"] for o in insts]}
         }))
-        return [o["_id"] for o in insts + offices + persons + decisions + advices]
+        invites = []
+        if self._db["person"].find_one({"apikey": apikey, "perms.confirm": True}) is not None:              
+            invites = list(self._db["invite"].find())
+        return [o["_id"] for o in insts + offices + persons + decisions + advices + invites]
 
     def default_perm(self, obj):
         office = self._db["office"].find_one({"_id": obj["office"]})
@@ -121,7 +133,7 @@ class AristotleSrv(BaseSrv):
         }
 
     def check_type(self, type):
-        return type == "person" or type == "office" or type == "institute" or type == "decision" or type == "advice"
+        return type == "person" or type == "office" or type == "institute" or type == "decision" or type == "advice" or type == "invite"
 
     @cherrypy.expose
     def save(self, data, apikey=None):
@@ -130,7 +142,7 @@ class AristotleSrv(BaseSrv):
         ids = self.valid_ids("edit", apikey)
         if ("_id" in data and data["_id"] not in ids) or not self.check_type(dest):
             return jsdeny()
-        if "_id" not in data and data.get("office") not in ids and data.get("institute") not in ids:
+        if "_id" not in data and data.get("office") not in ids and data.get("institute") not in ids and dest != 'invite':
             return jsdeny()
         obj = self._db[dest].find_one({"_id": data.get("_id")})
         ts = int(time.time())
@@ -161,6 +173,8 @@ class AristotleSrv(BaseSrv):
         for key in data:
             if data[key] == True:
                 words.append(key)
+            elif isinstance(data[key], str) and key != "__text":
+                words.extend( data[key].split() )
             elif isinstance(data[key], dict):
                 subwords = self.get_words(data[key])
                 words = words + subwords + ([key] if subwords else [])
@@ -213,7 +227,7 @@ class AristotleSrv(BaseSrv):
             return jssuccess(items=[], ts=ts)
         
         ts = int(ts)
-        types = set(["institute", "office", "person", "decision", "advice"])
+        types = set(["institute", "office", "person", "decision", "advice", "invite"])
         set_in = set(set_in.split(",")) if set_in != "" else types
         
         query = {"_id": {"$in": ids}}
@@ -230,7 +244,7 @@ class AristotleSrv(BaseSrv):
         for kind in set_in.intersection(types):
             res += list(self._db[kind].find(query, filt))
         # resolving
-        res += [self._db["office"].find_one({"_id": v["office"]}, filt) for v in res if "office" in v]
+        res += [self._db["office"].find_one({"_id": v["office"]}, filt) for v in res if "office" in v]        
         res += [self._db["institute"].find_one({"_id": v["institute"]}, filt) for v in res if "institute" in v]
         
         # ID search
@@ -273,13 +287,15 @@ class AristotleSrv(BaseSrv):
         return jssuccess(items=res, ts=maxts)
     
     @cherrypy.expose
-    def invite(self, data, text, apikey=None):            
-        if apikey is None or self._db["person"].find_one({"apikey": apikey}) is None:
-            return jsdeny()
+    def invite(self, data, text, apikey=None, mail=False):
         data = loads(data)
+        return jssuccess() if self._invite(data, text, apikey, mail) else jsdeny() 
+    
+    def _invite(self, data, text, apikey=None, mail=False):
+        if apikey is None or self._db["person"].find_one({"apikey": apikey}) is None:
+            return False
         # search institute
-        obj = {
-            "acronym": data["inst_acronym"],
+        obj = {            
             "name": data["inst_name"]
         }
         inst = self._db["institute"].find_one(obj)
@@ -287,12 +303,13 @@ class AristotleSrv(BaseSrv):
             ts = int(time.time())
             obj["created"] = ts
             obj["changed"] = ts
+            obj["acronym"] = data["inst_acronym"],
             obj["type"] = "institute";
             #inst = self._db["institute"].insert_one(obj).raw_result
             self._db["institute"].insert(obj)
             inst = self._db["institute"].find_one(obj)
         elif inst["_id"] not in self.valid_ids("edit", apikey):
-            return jsdeny()
+            return False
         # search office
         obj = {
             "name": data["office_name"],
@@ -331,19 +348,46 @@ class AristotleSrv(BaseSrv):
             person = self._db["person"].find_one(obj)
             
         # send mails
-        res = sendmail(
-            data["from"],
-            data["mail"],
-            "ERCC cooperation with national institutes lawfully mandated to provide warnings and expert advice",
-            text % ("http://trideccloud.gfz-potsdam.de/aristotle/inventory.html?" + person["apikey"]),
-            data["cc"]
-        )
-        print(res)
-        
+        if mail:
+            res = sendmail(
+                data["from"],
+                data["mail"],
+                "ERCC cooperation with national institutes lawfully mandated to provide warnings and expert advice",
+                text % ("http://trideccloud.gfz-potsdam.de/aristotle/inventory.html?" + person["apikey"]),
+                data["cc"]
+            )
+            print(res)
+        return True
+    
+    @cherrypy.expose
+    def confirm(self, id, apikey=None):
+        id = loads(id)
+        if id not in self.valid_ids("edit", apikey):
+            return jsdeny()
+        item = self._db["invite"].find_one({"_id": id})
+        if item is None:
+            return jsfail()
+        # create contact, office, institute and optionally send mails
+        data = {
+            "inst_acronym": "",
+            "inst_name": item["new_institute"],
+            "office_name": item["new_office"],
+            "name": item["name"],
+            "mail": item["to"],
+            "phone": "",
+            "from": item["from"],
+            "cc": item["cc"]
+        }
+        self._invite(data, item["text"], apikey)
+        # mark invite as deleted and confirmed
+        item["deleted"] = True
+        item["confirmed"] = True
+        item["changed"] = int(time.time())
+        self._db["invite"].update({"_id": id}, item);
         return jssuccess()
 
     def find_one(self, query, filt={}):
-        for dest in ["person", "office", "institute", "decision", "advice"]:
+        for dest in ["person", "office", "institute", "decision", "advice", "invite"]:
             obj = self._db[dest].find_one(query, filt)
             if obj is not None:
                 return obj;
@@ -351,7 +395,7 @@ class AristotleSrv(BaseSrv):
     
     def find(self, query, filt={}):
         res = []
-        for dest in ["person", "office", "institute", "decision", "advice"]:
+        for dest in ["person", "office", "institute", "decision", "advice", "invite"]:
             res += list(self._db[dest].find(query, filt))
         return res
 
