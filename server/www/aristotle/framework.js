@@ -124,7 +124,7 @@ function Container(arg0) {
 	this.getByOid = function(key, oid) {
 		for (var i = 0; i < this.list.length; i++) {
 			var item = this.list[i][key];			
-			if( item['$oid'] && item['$oid'] == oid['$oid'] )
+			if( item && oid && item['$oid'] == oid['$oid'] )
 				return {idx: i, item: this.list[i]};
 		}
 		return {idx: -1, item: null};
@@ -440,6 +440,11 @@ function HtmlDropDown() {
 		var item = this.source.getByFun(fun);
 		var idx = item.idx >= 0 ? item.idx : 0;
 		this.select( idx ); 
+	};
+	
+	this.selectByObj = function(obj) {
+		var idx = Math.max( this.source.list.indexOf(obj), 0);
+		this.select( idx );
 	};
 	
 	/* Just a wrapper to provide a common interface. */
@@ -758,6 +763,27 @@ function getAjax(url, data, callback) {
 	return ajaxObj;
 }
 
+function deferred_ajax(deferred, url, data, callback) {
+	$.ajax({
+		type : 'POST',
+		url : url,
+		dataType : "json",
+		data : data,
+		success : function(result) {
+			if (callback)
+				callback(result);
+			deferred.resolve(result);
+		},
+		error : function() {
+			console.log('Internal error in ajax request: ', url);
+			var result = {status: 'failed'};
+			if (callback)
+				callback(result);
+			deferred.reject(result);
+		}
+	});
+}
+
 function ajax( /* url, data, callback || ajaxObj */) {
 
 	var ajaxObj;
@@ -787,6 +813,9 @@ function ajax_internal(ajaxObj) {
 		},
 		error : function() {
 			console.log('Internal error in ajax request: ', ajaxObj);
+			var result = {status: 'failed'};
+			if (ajaxObj.callback)
+				ajaxObj.callback(result);
 		}
 	});
 }

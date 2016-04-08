@@ -27,7 +27,7 @@ body {
 	position: relative;
 	background: #fff;
 	border-bottom: 1px solid #ebebeb;
-	height: 59px;
+	height: 69px;
 	width: 100%;
 }
 
@@ -103,13 +103,32 @@ body {
     border-color: #8c8c8c;
 }
 
-.search a {
+.search > a {
 	position: absolute;
 	top: 0px;
 	bottom: 0px;
 	left: 1050px;
 	margin: auto;
 	height: 20px;
+}
+
+.search .invite-text {
+	display: none;
+    text-align: center;
+}
+
+.search .invite-text span {
+	background-color: white;
+	font-size: 10pt;
+    margin: 0px;
+    padding: 0px 2px;
+    border-bottom-left-radius: 2px;
+    border-bottom-right-radius: 2px;
+    color: #777;
+}
+
+.search .invite-text a {
+	cursor: pointer;
 }
 
 .map-stub, .map-tile {
@@ -268,16 +287,6 @@ body {
 	display: none;
 }
 
-.sec-persons .footer .invite {	
-	margin-left: calc(100% - 300px - 30px);
-    float: left;
-    margin-right: 10px;
-}
-
-.sec-persons .footer .add {
-	margin-left: 0px;
-}
-
 .denied {
 	font-size: 24px;
     margin-top: 100px;
@@ -313,6 +322,10 @@ body {
 	margin-left: calc(100% - 150px - 20px);
 }
 
+.sec-invites .item .title {
+	color: #a94442;
+}
+
 .item {
 	margin-bottom: 25px;
 }
@@ -331,6 +344,17 @@ body {
 .item .text {
 	color: #545454;
 	font-size: small;
+}
+
+.item .id-search {
+	margin-left: 15px;
+	font-size: 15px;
+	cursor: pointer;
+	color: #0065a2;
+}
+
+.item .id-search:hover {
+	color: #286090;
 }
 
 .details {
@@ -437,6 +461,18 @@ body {
 
 .details .btn-group .btn {
 	width: 100px;
+}
+
+.details .invite-url-info {
+	width: 95%;
+	margin-left: 5%;
+	margin-top: 7px;
+}
+
+.details .invite-url-info b {
+	font-weight: normal;
+	font-size: 14px;
+	font-family: monospace;
 }
 
 .clear {
@@ -577,7 +613,7 @@ img {
 	margin-top: 20px;
 }
 
-.details .btn.delete {
+.details .footer .btn {
 	margin-right: 5px; 
 }
 
@@ -660,6 +696,69 @@ img {
 	margin-left: 150px;
     margin-bottom: 40px;
 	width: 500px;
+}
+
+.banner-large {
+	height: 359px;
+}
+
+.help {
+	top: 159px;
+    position: absolute;
+    background-color: #fff;
+	margin-top: 25px;
+	padding: 50px;
+	box-shadow: 0 2px 5px 0;
+	width: 800px;
+}
+
+.help .intro-text {
+	padding-top: 20px;
+	padding-bottom: 25px;
+}
+
+.help table {
+	border-collapse: collapse;
+	border-spacing: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	outline: 0;
+	width: 700px;
+}
+
+.help th {
+    background-color: #f5f5f5;
+}
+
+.help .col-op {
+	width: 30%;
+}
+
+.help .col-def {
+    width: 30%;
+}
+
+.help .col-ex {
+	width: 40%;
+}
+
+.help td, .help th {
+	border: 1px solid #e0e0e0;
+	padding: 6px 12px;
+	vertical-align: top;
+}
+
+.help td:nth-child(1) {
+	font-weight: bold;
+}
+
+.help tr:nth-child(even) {
+	background-color: #fff;
+}
+
+.help tr:nth-child(odd) {
+	background-color: #e6e6e6;
 }
 
 .indent {
@@ -750,6 +849,16 @@ img {
 		left: 100px;
 		top: 90px
 	}
+	
+	.help {
+		width: calc(100% - 100px);
+		margin-left: 50px;
+		padding: 15px;
+	}
+	
+	.help table {
+		width: 100%;
+	}
 }
 
 @media (max-width: 650px) {
@@ -769,6 +878,17 @@ img {
 @media (max-width: 500px) {
 	.tabs1 span {
 		display: none;
+	}
+	
+	.help {
+		width: calc(100% - 20px);		
+		margin-left: 10px;
+		padding-left: 5px;
+		padding-right: 5px;
+	}
+		
+	.help td, .help th {
+		padding: 3px 4px;
 	}
 }
 

@@ -66,15 +66,15 @@ function Inventory(div) {
 	this.save_dialog = new SaveDialog();
 	this.delete_dialog = new DeleteDialog();
 	
-	this.div.find('.sec-persons button.add').click((function() {
+	this.div.find('.invite-text a').click((function() {
 		this.load_details(
-			new Person(), true
+			new Invite(), true
 		);
 	}).bind(this));
 	
-	this.div.find('.sec-persons button.invite').click((function() {
+	this.div.find('.sec-persons button.add').click((function() {
 		this.load_details(
-			new Invite(), true
+			new Person(), true
 		);
 	}).bind(this));
 	
@@ -104,7 +104,8 @@ function Inventory(div) {
 		this.update_url( this.btn_search.value() );
 	}).bind(this));
 	var toogle_clear_btn = function() {
-		this.btn_search.find('.btn-clear')[this.btn_search.value() != '' ? 'show' : 'hide']({duration: 400});
+		this.btn_search.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']({duration: 400});
+		this.div.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']();
 		this.update_url( this.btn_search.value() );
 	};
 	var fun = function() {
@@ -113,7 +114,8 @@ function Inventory(div) {
 			clearTimeout(tid);
 			var delay = (e.which == 13 || e.which == 32 || this.btn_search.value() == '') ? 0 : 1000;
 			tid = setTimeout( (function(){ this.btn_search.text.div.change(); }).bind(this), delay);
-			this.btn_search.find('.btn-clear')[this.btn_search.value() != '' ? 'show' : 'hide']({duration: 400});
+			this.btn_search.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']({duration: 400});
+			this.div.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']();
 		};
 		this.btn_search.find('.html-btn').append($('<div>', {
 			'class': 'btn-clear', html: '&times;', click: (function() {
@@ -125,7 +127,7 @@ function Inventory(div) {
 	};
 	this.btn_search.text.div.change( toogle_clear_btn.bind(this) );
 	this.btn_search.text.div.keyup( fun.call(this) );
-	this.div.find('.search-box').append( this.btn_search.div );
+	this.div.find('.search-box').prepend( this.btn_search.div );
 		
 	for(attr in {'search': '', 'map-tile': ''}) {
 		/* Pin search bar at the top of the page if requested. */
@@ -244,6 +246,12 @@ Inventory.prototype = {
 		elem.animate({scrollTop: top}, 500);
 	},
 	
+	goto_top: function() {
+		var elem = $('body').scrollTop() ? $('body') : $('html');
+		var top = $('.banner').offset().top + $('.banner').height();
+		elem.animate({scrollTop: top}, 500);
+	},
+	
 	new_item: function(item) {
 		if( item.type == 'person' ) {
 			return new Person(item);
@@ -255,6 +263,8 @@ Inventory.prototype = {
 			return new Decision(item);
 		} else if( item.type == 'advice' ) {
 			return new Advice(item);
+		} else if( item.type == 'invite' ) {
+			return new Invite(item);
 		}
 		/* Should never be reached. */
 		return null;
@@ -275,6 +285,10 @@ Inventory.prototype = {
 		$('.refresh').show();
 		ajax(wsgi + '/search/', data, (function(res) {
 			$('.refresh').hide();
+			if( res.status != 'success' ) {
+				this.tid = setTimeout( this.load_data.bind(this), 5000 );
+				return;
+			}
 			var items = res.items;
 			for(var i = 0; i < items.length; i++) {
 				var item = this.new_item(items[i]);
@@ -354,9 +368,9 @@ Inventory.prototype = {
 				this.div.find('.sec-insts .items').append(
 					new InstItem(this, insts.get(i)).div
 				);
-				/* Disable 'new' button if there is no possibility to create something. */
-				this.auth(insts.get(i), divs);
 			}
+			/* Disable 'new' button if there is no possibility to create something. */
+			this.auth_many(insts.list, divs);
 		}
 		var divs = this.div.find('.sec-persons button').attr('disabled', true);
 		if( this.visible('office') ) {
@@ -365,9 +379,9 @@ Inventory.prototype = {
 				this.div.find('.sec-offices .items').append(
 					new OfficeItem(this, insts.get(i)).div
 				);
-				/* Disable 'new' button if there is no possibility to create something. */
-				this.auth(insts.get(i), divs);
 			}
+			/* Disable 'new' button if there is no possibility to create something. */
+			this.auth_many(insts.list, divs);
 			new Geocoder().get_locations( insts, this.map.set_offices.bind(this.map) );
 		}
 		if( this.visible('person') ) {
@@ -394,20 +408,29 @@ Inventory.prototype = {
 				);
 			}
 		}
+		if( this.visible('invite') ) {
+			var insts = this.items.filter( filtfun('invite') );
+			for(var i = 0; i < insts.length(); i++) {			
+				this.div.find('.sec-invites .items').append(
+					new InviteItem(this, insts.get(i)).div
+				);
+			}
+			this.div.find('.sec-invites')[insts.length() > 0 ? 'show' : 'hide']();
+		}
 	},
 	
 	visible: function(type) {
 		return this.search_data.display.length == 0 || this.search_data.display.indexOf(type) >= 0;
 	},
-	
-	auth: function(item, divs) {
+		
+	auth_many: function(items, divs) {
 		data = {
-			data: JSON.stringify(item),
+			data: JSON.stringify(items),
 			perm: "edit",
 			apikey: this.get_apikey()
 		};
-		ajax(wsgi + '/auth/', data, (function(divs, res) {
-			if( res.status == 'success' )
+		ajax(wsgi + '/auth_many/', data, (function(divs, res) {
+			if( res.status == 'success' && res.valid.length > 0 )
 				divs.attr('disabled', false);
 		}).bind(this, divs));
 	}
@@ -570,8 +593,15 @@ function Invite(data) {
 
 
 /* Class Item. */
-function Item(inventory) {
+function Item(inventory, data) {
 	this.inventory = inventory;
+	this.data = data;
+	this.div = this.templ();
+	this.div.find('.title').click( this.onTitleClick.bind(this) );
+	this.div.find('.id-search').click( (function() {
+		this.inventory.update_url('id:' + (this.data.acronym || this.data._id['$oid']));
+		this.inventory.goto_top();
+	}).bind(this));
 }
 Item.prototype = {
 	inventory: null,
@@ -579,6 +609,7 @@ Item.prototype = {
 		return (
 			$('<div>', {'class': 'item'}).append(
 				$('<span>', {'class': 'title'}),
+				$('<span>', {'class': 'id-search glyphicon glyphicon-search'}),
 				$('<div>', {'class': 'subtitle'}),
 				$('<div>', {'class': 'text'})
 			)
@@ -605,14 +636,10 @@ Item.prototype = {
 /* Class InstItem extends Item. */
 function InstItem(inventory, data) {
 	/* Call super constructor! */
-	Item.call(this, inventory);
-	this.data = data;
-	/* Set fields. */	
-	this.div = this.templ();
+	Item.call(this, inventory, data);
+	/* Set fields. */
 	this.div.find('.title').html(data.name);
 	this.div.find('.subtitle').html( this.pretty(data.acronym, data.website) );
-	
-	this.div.find('.title').click( this.onTitleClick.bind(this) );
 }
 InstItem.prototype = Object.create(Item.prototype);
 InstItem.prototype.constructor = InstItem;
@@ -623,17 +650,13 @@ InstItem.prototype.constructor = InstItem;
 /* Class OfficeItem extends Item. */
 function OfficeItem(inventory, data) {
 	/* Call super constructor! */
-	Item.call(this, inventory);
-	this.data = data;
-	/* Set fields. */	
-	this.div = this.templ();
+	Item.call(this, inventory, data);
+	/* Set fields. */
 	this.div.find('.title').html(data.name);
 	this.div.find('.subtitle').html( this.pretty(data.address, data.zip, data.city, data.country) );
 	
 	var inst = this.inventory.items.getByOid('_id', data.institute).item;
 	this.div.find('.text').html( this.pretty(inst.acronym, inst.name) );
-	
-	this.div.find('.title').click( this.onTitleClick.bind(this) );
 }
 OfficeItem.prototype = Object.create(Item.prototype);
 OfficeItem.prototype.constructor = OfficeItem;
@@ -644,12 +667,10 @@ OfficeItem.prototype.constructor = OfficeItem;
 /* Class PersonItem extends Item. */
 function PersonItem(inventory, data) {
 	/* Call super constructor! */
-	Item.call(this, inventory);
-	this.data = data;
+	Item.call(this, inventory, data);
 	/* Set fields. */
 	var office = this.inventory.items.getByOid('_id', data.office).item;
 	var inst = this.inventory.items.getByOid('_id', office.institute).item;
-	this.div = this.templ();
 	this.div.find('.title').html(data.name);
 	this.div.find('.subtitle').html(
 		$('<div>', {html: this.pretty(data.kind, data.mail)})
@@ -658,8 +679,6 @@ function PersonItem(inventory, data) {
 		$('<div>', {html: this.pretty(['Tel ', data.phone] , ['Fax ', data.fax])})
 	);
 	this.div.find('.text').html( this.pretty(inst.acronym, inst.name, office.name) );
-	
-	this.div.find('.title').click( this.onTitleClick.bind(this) );
 }
 PersonItem.prototype = Object.create(Item.prototype);
 PersonItem.prototype.constructor = PersonItem;
@@ -727,8 +746,10 @@ DetailsView.prototype = {
 	edit: function() {
 		ajax(wsgi + '/lock/', {data: JSON.stringify(this.data)}, (function(res) {
 			console.log(res);
-			if(res.status == 'success')
+			if(res.status == 'success') {
+				this.inventory.goto_details();
 				return this.fill(true);
+			}
 			/* TODO: Show error message! */
 			console.log('Someone else is editing the data!');
 		}).bind(this));
@@ -800,21 +821,11 @@ DetailsView.prototype = {
 			apikey: this.inventory.get_apikey()
 		};
 		ajax(wsgi + '/auth/', data, (function(divs, res) {
+			console.log(res);
 			divs.attr('disabled', res.status != 'success');
 		}).bind(this, divs));
 	},
-		
-	auth3:  function(item, fun) {
-		data = {
-			data: JSON.stringify(item),
-			perm: "edit",
-			apikey: this.inventory.get_apikey()
-		};
-		ajax(wsgi + '/auth/', data, (function(fun, item, res) {
-			fun({item: item, res: res.status == 'success'});
-		}).bind(this, fun, item));
-	},
-	
+			
 	add_callback: function(obj, event, fun) {
 		var cid = obj.setCallback( event, fun );
 		this.cids.push({obj: obj, cid: cid});
@@ -826,49 +837,93 @@ DetailsView.prototype = {
 		}
 	},
 	
+	new_dropdown2: function(d, label, type, edit) {
+		var drp = new HtmlDropDownGroup(label);
+		drp.setAsValue( function(o) { return o._id; });
+		drp.setToString( function(o) { return o.name; });
+		drp.setSource( this.inventory.items.filter('type', type) );
+		this.auth_dropdown2(d, edit, drp, type);
+		return drp;
+	},
+	
 	new_dropdown: function(label, type, edit) {
 		var drp = new HtmlDropDownGroup(label);
 		drp.setAsValue( function(o) { return o._id; });
 		drp.setToString( function(o) { return o.name; });
 		drp.setSource( this.inventory.items.filter('type', type) );
 		this.auth_dropdown(edit, drp, type);
-		this.add_callback(this.inventory.items, 'data_change', (function(drp) {
-			var item = drp.selectedItem();
-			drp.setSource( this.inventory.items.filter('type', type) );
-			/* Try to setting the selection back to the previous one. */
-			drp.selectByOid('_id', item._id);
-		}).bind(this, drp));
+		/* TODO: makes problems, is it really neccessary? */
+//		this.add_callback(this.inventory.items, 'data_change', (function() {
+//			var item = drp.selectedItem();
+//			drp.setSource( this.inventory.items.filter('type', type) );
+//			/* Try to set the selection back to the previous one. */
+//			if( item != null )
+//				drp.selectByOid('_id', item._id);
+//		}).bind(this));
 		return drp;
+	},
+	
+	auth_dropdown2: function(d, edit, drp, key) {
+		if( edit ) {
+			data = {
+				data: JSON.stringify(drp.source.list),
+				perm: "edit",
+				apikey: this.inventory.get_apikey()
+			};
+			deferred_ajax(d, wsgi + '/auth_many/', data, (function(drp, res) {
+				console.log(res);
+				var selected = drp.selectedItem();
+				if( res.status == 'success' ) {
+					for(var i = 0; i < res.invalid.length; i++) {
+						var id = res.invalid[i];
+						console.log('Denied:', id);
+						drp.source.remove('_id', id);
+						drp.source.notifyOn('change');
+					}
+					if( res.valid.length > 0 )
+						this.div.find('.save').attr('disabled', false);
+				}
+				drp.selectByObj(selected);
+				if( this.data[key] )
+					drp.selectByOid('_id', this.data[key]);
+			}).bind(this, drp));
+		} else {			
+			if( this.data[key] )
+				drp.selectByOid('_id', this.data[key]);
+			d.resolve();
+		}
 	},
 	
 	auth_dropdown: function(edit, drp, key) {
 		if( edit ) {
-			var funs = [];
-			for(var i = 0; i < drp.source.length(); i++) {
-				funs.push( this.auth3.bind(this, drp.source.get(i)) );
-			}
-			new FunCascade().callback(
-				(function(drp, reslst) {
-					for(var i = 0; i < reslst.length; i++) {
-						var ret = reslst[i];
-						if( ! ret.res ) {
-							console.log('Denied:', ret.item.name);
-							drp.source.remove('name', ret.item.name);
-							drp.source.notifyOn('change');
-						} else {
-							this.div.find('.save').attr('disabled', false);
-						}
+			data = {
+				data: JSON.stringify(drp.source.list),
+				perm: "edit",
+				apikey: this.inventory.get_apikey()
+			};
+			ajax(wsgi + '/auth_many/', data, (function(drp, res) {
+				console.log(res);
+				var selected = drp.selectedItem();
+				if( res.status == 'success' ) {
+					for(var i = 0; i < res.invalid.length; i++) {
+						var id = res.invalid[i];
+						console.log('Denied:', id);
+						drp.source.remove('_id', id);
+						drp.source.notifyOn('change');
 					}
-					if( this.data[key] )
-						drp.selectByOid('_id', this.data[key]);
-				}).bind(this, drp)
-			).invoke(funs);
-		} else {
+					if( res.valid.length > 0 )
+						this.div.find('.save').attr('disabled', false);
+				}
+				drp.selectByObj(selected);
+				if( this.data[key] )
+					drp.selectByOid('_id', this.data[key]);
+			}).bind(this, drp));
+		} else {			
 			if( this.data[key] )
 				drp.selectByOid('_id', this.data[key]);
 		}
 	},
-	
+		
 	clear: function() {
 		/* Do not use empty() here because it removes all event listeners from the child elements
 		 * which is quite not a good idea if the children are still used. */
@@ -886,10 +941,8 @@ DetailsView.prototype = {
 /* Class DecisionItem extends Item. */
 function DecisionItem(inventory, data) {
 	/* Call super constructor! */
-	Item.call(this, inventory);
-	this.data = data;
+	Item.call(this, inventory, data);
 	/* Set fields. */	
-	this.div = this.templ();
 	this.div.find('.title').html(data.name);
 	this.div.find('.subtitle').html(
 		this.pretty(this.data.a.i ? 'Severity of the event' : '', this.data.a.ii ? 'Impact of the event' : '', this.data.a.iv ? 'Impending or imminent event' : '')
@@ -897,8 +950,6 @@ function DecisionItem(inventory, data) {
 	
 	var inst = this.inventory.items.getByOid('_id', data.institute).item;
 	this.div.find('.text').html( this.pretty(inst.acronym, inst.name) );
-	
-	this.div.find('.title').click( this.onTitleClick.bind(this) );
 }
 DecisionItem.prototype = Object.create(Item.prototype);
 DecisionItem.prototype.constructor = DecisionItem;
@@ -909,10 +960,8 @@ DecisionItem.prototype.constructor = DecisionItem;
 /* Class AdviceItem extends Item. */
 function AdviceItem(inventory, data) {
 	/* Call super constructor! */
-	Item.call(this, inventory);
-	this.data = data;
-	/* Set fields. */	
-	this.div = this.templ();
+	Item.call(this, inventory, data);
+	/* Set fields. */		
 	this.div.find('.title').html(data.name);
 	
 	/* Display list of channels. */
@@ -941,12 +990,20 @@ function AdviceItem(inventory, data) {
 	
 	var inst = this.inventory.items.getByOid('_id', data.institute).item;
 	this.div.find('.text').html( this.pretty(inst.acronym, inst.name) );
-	
-	this.div.find('.title').click( this.onTitleClick.bind(this) );
 }
 AdviceItem.prototype = Object.create(Item.prototype);
 AdviceItem.prototype.constructor = AdviceItem;
 
+
+/* Class AdviceItem extends Item. */
+function InviteItem(inventory, data) {
+	/* Call super constructor! */
+	Item.call(this, inventory, data);	
+	/* Set fields. */		
+	this.div.find('.title').html(data.name);
+}
+InviteItem.prototype = Object.create(Item.prototype);
+InviteItem.prototype.constructor = InviteItem;
 
 
 function InstDetailView(inventory, data) {
@@ -964,6 +1021,7 @@ InstDetailView.prototype.fill = function(edit) {
 	
 	this.div.find('.banner').html('Institute');
 	this.sec = new Section(fields);
+	this.div.find('.save').attr('disabled', false);
 	
 	DetailsView.prototype.fill.call(this, edit);
 };
@@ -987,7 +1045,6 @@ PersonDetailView.prototype.fill = function(edit) {
 		return inst.acronym ? inst.acronym + ' - ' + o.name : o.name;
 	}).bind(this));
 	drp1.display();
-	drp1.select(0);
 	
 	var txt1 = new HtmlTextGroup('Other Resp.');
 	txt1.div.hide();
@@ -1228,40 +1285,62 @@ OfficeDetailView.prototype.verify = function() {
 
 
 function InviteDetailView(inventory, data) {
-	DetailsView.call(this, inventory, data);
+	DetailsView.call(this, inventory, data);	
 }
 InviteDetailView.prototype = Object.create(DetailsView.prototype);
 InviteDetailView.prototype.constructor = InviteDetailView;
 
+InviteDetailView.prototype.create = function() {
+	DetailsView.prototype.create.call(this);
+	this.div.find('.footer').prepend(
+		$('<button>', {'class': 'btn btn-success pull-right confirm', html: 'Confirm', click: this.confirm.bind(this)})
+	);
+};
+
+InviteDetailView.prototype.confirm = function() {
+	ajax(wsgi + '/confirm/', {id: JSON.stringify(this.data._id), apikey: this.inventory.get_apikey()}, (function(res) {
+		console.log(res);
+		if( res.status == 'success' ) {
+			this.inventory.load_data();
+			this.inventory.load_details(null);
+			this.inventory.goto_details();
+		}
+	}).bind(this));
+};
+
 InviteDetailView.prototype.fill = function(edit) {
-	var drp1 = this.new_dropdown('Institute', 'institute', edit);
-	var drp2 = this.new_dropdown('Office', 'office', edit);
+	var d1 = $.Deferred();
+	var d2 = $.Deferred();
+	var drp1 = this.new_dropdown2(d1, 'Institute', 'institute', edit);
+	var drp2 = this.new_dropdown2(d2, 'Office', 'office', edit);
 	var txt1 = new HtmlTextGroup('New Institute').validate('^.+$').$hide();
 	var txt2 = new HtmlTextGroup('New Office').validate('^.+$').$hide();
 	
-	var fun_add_other = function() {
-		this.source.replace('name', new Institute({name: 'New'}));
-		return this;
-	};
-	
-	drp1.setCallback('source', fun_add_other.bind(drp1));
-	drp1.setCallback('change', (function(drp, txt, drp_offices) {
-		drp.value() ? txt.div.hide() : txt.div.css('display', '');
-		drp_offices.setSource( this.inventory.items.filter('type', 'office').filter('institute', drp.value()) );
-	}).bind(this, drp1, txt1, drp2));
-	
-	fun_add_other.call(drp1).display();
-	
-	drp2.setCallback('source', (function() {
-		this.source.replace('name', new Office({name: 'New'}));
-	}).bind(drp2));
-	
-	drp2.setCallback('change', (function(drp, txt) {		
-		drp.value() ? txt.div.hide() : txt.div.css('display', '');
-	}).bind(this, drp2, txt2));
-	
-	drp1.setSource( drp1.source );
-	drp2.setSource( drp2.source );
+	$.when( d1, d2 ).always((function() {
+		drp1.source.replace('name', new Institute({name: 'New'}));
+		drp1.source.notifyOn('change');
+		
+		drp1.setCallback('change', (function(drp, txt, drp_offices) {
+			drp.value() ? txt.div.hide() : txt.div.css('display', '');
+			drp_offices.setSource( this.inventory.items.filter('type', 'office').filter('institute', drp.value()) );
+		}).bind(this, drp1, txt1, drp2));
+		
+		drp2.setCallback('source', (function() {
+			this.source.replace('name', new Office({name: 'New'}));
+		}).bind(drp2));
+		
+		drp2.setCallback('change', (function(drp, txt) {		
+			drp.value() ? txt.div.hide() : txt.div.css('display', '');		
+		}).bind(this, drp2, txt2));
+		
+		var known_inst = drp1.source.findItem('name', this.data.new_institute) != null;
+		drp1.selectByVal('name', known_inst ? this.data.new_institute : 'New');
+		txt1.value(known_inst ? '' : this.data.new_institute);
+		
+		var known_office = drp2.source.findItem('name', this.data.new_office) != null;
+		drp2.selectByVal('name', known_office ? this.data.new_office : 'New');
+		txt2.value(known_office ? '' : this.data.new_office);
+	}).bind(this));
 	
 	var btn_meteo = $('<label class="btn btn-default active"><input type="radio">Meteo</label>');
 	var btn_geo = $('<label class="btn btn-default"><input type="radio">Geo</label>');
@@ -1286,26 +1365,38 @@ InviteDetailView.prototype.fill = function(edit) {
 	
 	btn_meteo.click();
 	
+	this.data.from = this.data.from || 'something@test.de';
+	
 	var fields = new Container(
 		{key: 'institute', html: drp1, nodata: true},
 		{key: 'institute-new', html: txt1, nodata: true},
 		{key: 'office', html: drp2, nodata: true},
 		{key: 'office-new', html: txt2, nodata: true},
 	    {key: 'name', html: new HtmlTextGroup('Contact Name').validate('^.+$')},
-	    {key: 'mail', html: new HtmlTextGroup('Mail').validate('^.+$')},
+	    {key: 'to', html: new HtmlTextGroup('Mail/To').validate('^.+$')},
+	    {key: 'from', html: new HtmlTextGroup('From').validate('^.+$')},
+	    {key: 'cc', html: new HtmlTextGroup('CC').validate('^.+$')},
 	    {key: 'version', html: custom},
-	    {key: 'text', html: text_area}
+	    {key: 'text', html: text_area},
+	    {html: new HtmlCustom($('<div class="invite-url-info">Use <b>%s</b> to define the position of the URL which can be used by the invited recipient to open this website.</div>'))}
 	);
 	
 	this.div.find('.banner').html('Invite');
-	this.div.find('.btn.save').html('Invite');
+	if( !('_id' in this.data) ) {
+		/* Request invite. */
+		this.div.find('.btn.save').html('Request Invite').css('width', '120px');
+	}
+	this.div.find('.btn.confirm')[ !('_id' in this.data) || edit ? 'hide' : 'show' ]();
 	this.sec = new Section(fields);
 	
 	DetailsView.prototype.fill.call(this, edit);
+	
+	this.getField('from').readonly();
 };
 
 InviteDetailView.prototype.verify = function() {
-	var required = {'name': 'a name', 'mail': 'a mail address'};
+	console.log( 'verify', this.getField('institute').value() );
+	var required = {'name': 'a name', 'to': 'a mail address', 'from': 'a mail address'};
 	if( ! this.getField('institute').value() )
 		required['institute-new'] = 'an institute name';
 	if( ! this.getField('office').value() )
@@ -1318,8 +1409,9 @@ InviteDetailView.prototype.verify = function() {
 
 InviteDetailView.prototype.extract = function() {
 	DetailsView.prototype.extract.call(this);
-	this.data.institute = this.getField('institute').value() ?  this.getField('institute').selectedItem().name : this.getField('institute-new').value();
-	this.data.office = this.getField('office').value() ?  this.getField('office').selectedItem().name : this.getField('office-new').value();
+	this.data.new_institute = this.getField('institute').value() ?  this.getField('institute').selectedItem().name : this.getField('institute-new').value();
+	this.data.new_office = this.getField('office').value() ?  this.getField('office').selectedItem().name : this.getField('office-new').value();
+	console.log(this.data);
 };
 
 

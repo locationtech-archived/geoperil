@@ -7,9 +7,11 @@
     <link href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" rel="stylesheet">
     <link href="inventory.css" rel="stylesheet">
     <link href="framework.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery.js"></script>
+    <!-- <script src="https://code.jquery.com/jquery.js"></script> -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-    <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+    <!-- <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script> -->
+    <script src="ext/leaflet/leaflet.js"></script>
     <script src="ext/js.cookie.js"></script>
     <script src="framework.js"></script>
     <script src="inventory.js"></script>
@@ -88,13 +90,21 @@
 			</div>
 			<div class="stub tabs">
 				<div class="tile search static">
-					<div class="search-box"></div>
+					<div class="search-box">
+						<div class="invite-text">
+							<span>Not found what you are looking for? <a>Invite</a> others!</span>
+						</div>
+					</div>
 					<a href="help.html">Help</a>
 					<button class="btn btn-default btn-push"><span><i class="glyphicon glyphicon-pushpin"></i></span></button>
 				</div>
 			</div>
 		</div>
 		<div class="list">
+			<div class="sec sec-invites">
+				<div class="head">Invites</div>
+				<div class="items"></div>
+			</div>
 			<div class="sec sec-insts">
 				<div class="custom-popover">
 				  <div class="popover left">
@@ -137,7 +147,6 @@
 				<div class="head">Contacts and Experts</div>
 				<div class="items"></div>
 				<div class="footer">
-					<button class="btn btn-primary invite">Invite</button>
 					<button class="btn btn-primary add">Add Contact</button>
 				</div>
 			</div>

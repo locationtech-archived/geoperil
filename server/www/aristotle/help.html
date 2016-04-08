@@ -15,11 +15,56 @@
 				<span>European Multi‐Hazard Scientific Partnership</span>
 			</div>
 			<img src="logo_en.gif" alt="logo">
-			<div class="banner"></div>
+			<div class="banner banner-large"></div>
 			<div class="tabs"></div>
 		</div>
 		<div class="help">
-			<h3>Help</h3>
+			<h3>Search Help</h3>
+			<div class="intro-text">
+				<b>By default, the search performs a logical OR operation</b> based on the given terms.				
+				There exist some advanced search operators which can be used to guide the search according to your needs.
+				The following table gives an overview of the available operators.
+			</div>
+			<table>
+				<tbody>
+					<tr>
+						<th class="col-op">Operator</th>
+						<th class="col-def">Definition</th>
+						<th class="col-ex">Example</th>
+					</tr>
+					<tr>
+						<td>"" (quotes)</td>
+						<td>Performs an exact search and can be used to combine terms with AND semantics.</td>
+						<td>Example 1: <b>"dust storm"</b><br>
+							Meaning: Search for items that include the exact phrase "dust storm".<br>
+							<br>
+							Example 2: <b>"dust" "sand"</b><br>
+							Meaning: Search for items that include both terms "dust" and "sand".<br>
+						</td>
+					</tr>
+					<tr>
+						<td>in:institute<br>in:office<br>in:person<br>in:decision<br>in:advice</td>
+						<td>Search for items in <b>institutes</b>, <b>offices</b>, <b>persons</b>, <b>decisions</b> or <b>advices</b>.</td>
+						<td>Example: <b>in:office earthquake storm</b><br>
+							Meaning: Search for offices which are responsible for earthquakes or storms.<b></b>
+						</td>
+					</tr>
+					<tr>
+						<td>display:institute<br>display:office<br>display:person<br>display:decision<br>display:advice</td>
+						<td>Limit results to <b>institutes</b>, <b>offices</b>, <b>persons</b>, <b>decisions</b> or <b>advices</b>.</td>
+						<td>Example: <b>display:office in:person "crisis coordinator"</b><br>
+							Meaning: Show all offices which have a crisis coordinator assigned.
+						</td>
+					</tr>
+					<tr>
+						<td>id:</td>
+						<td>List all items that belong to the institute identified by the acronym provided.</td>
+						<td>Example: <b>id:ERCC</b><br>
+							Meaning: Show all items that are related to the Emergency Response Coordination Centre (ERCC).
+						</td>
+					</tr>
+				</tbody>
+			</table>
 			<br><br><br>
 			<a href="javascript:history.back()" class="btn btn-default">&lt;&lt; Back</a>
 		</div>
