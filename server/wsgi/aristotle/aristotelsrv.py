@@ -84,6 +84,7 @@ class AristotleSrv(BaseSrv):
     @cherrypy.expose
     def auth(self, data, perm, apikey=None):
         data = loads(data)
+        print("[ARIST] auth", apikey, data.get("name", None), data.get("_id",None))
         ids = self.valid_ids(perm, apikey)
         if "_id" in data:   # edit operation
             return jssuccess() if data["_id"] in ids else jsdeny()
@@ -100,28 +101,28 @@ class AristotleSrv(BaseSrv):
             "perms.inst." + perm: {"$exists": True}
         })
         
-        if apikey is None or person is None:
-            return []
-        
-        ids = person["perms"]["inst"][perm]
-        query = {} if ids is None else {"_id": {"$in": ids}}
-        insts = list(self._db["institute"].find(query))
-        offices = list(self._db["office"].find({
-            "institute": {"$in": [o["_id"] for o in insts]}
-        }))        
-        persons = list(self._db["person"].find({
-            "office": {"$in": [o["_id"] for o in offices]}
-        }))
-        decisions = list(self._db["decision"].find({
-            "institute": {"$in": [o["_id"] for o in insts]}
-        }))
-        advices = list(self._db["advice"].find({
-            "institute": {"$in": [o["_id"] for o in insts]}
-        }))
-        invites = []
+        res = []
         if self._db["person"].find_one({"apikey": apikey, "perms.confirm": True}) is not None:              
-            invites = list(self._db["invite"].find())
-        return [o["_id"] for o in insts + offices + persons + decisions + advices + invites]
+            res += list(self._db["invite"].find())
+        
+        if apikey is not None and person is not None:
+            ids = person["perms"]["inst"][perm]
+            query = {} if ids is None else {"_id": {"$in": ids}}
+            insts = list(self._db["institute"].find(query))
+            offices = list(self._db["office"].find({
+                "institute": {"$in": [o["_id"] for o in insts]}
+            }))        
+            persons = list(self._db["person"].find({
+                "office": {"$in": [o["_id"] for o in offices]}
+            }))
+            decisions = list(self._db["decision"].find({
+                "institute": {"$in": [o["_id"] for o in insts]}
+            }))
+            advices = list(self._db["advice"].find({
+                "institute": {"$in": [o["_id"] for o in insts]}
+            }))
+            res += insts + offices + persons + decisions + advices
+        return [o["_id"] for o in res]
 
     def default_perm(self, obj):
         office = self._db["office"].find_one({"_id": obj["office"]})
@@ -158,12 +159,56 @@ class AristotleSrv(BaseSrv):
         else:
             self._db[dest].update({"_id": obj["_id"]}, data)
             id = obj["_id"]
+        print("[ARIST] save", apikey, id)
         return jssuccess(id=id)
 
-    def to_text(self, id):
+    @cherrypy.expose
+    def whoami(self, apikey=None):
+        return jssuccess(person=self._db["person"].find_one({"apikey": apikey}, {"__text": 0}))
+
+    @cherrypy.expose
+    def fix_all_entries(self):
+        res = self.find({})
+        cnt = 0
+        for data in res:
+            if self.fix_entry(dumps(data["_id"])):
+                cnt += 1
+        return jssuccess(count=cnt)
+
+    @cherrypy.expose
+    def fix_entry(self, id):        
+        id = loads(id)
+        print(id)
         data = self.find_one({"_id": id})
-        data["__text"] = self.gen_text(data)
-        # update
+        if data["type"] == "decision":
+            if "i" in data["a"]:
+                data["a"]["severity of the event"] = data["a"].pop("i")
+            if "ii" in data["a"]:
+                data["a"]["impact of the event"] = data["a"].pop("ii")
+            if "iii" in data["a"]:
+                data["a"]["details"] = data["a"].pop("iii")
+            if "iv" in data["a"]:
+                data["a"]["impending or imminent event"] = data["a"].pop("iv")
+            # update        
+            self._db[data["type"]].update({"_id": data["_id"]}, data)
+            return True
+        return False
+
+    @cherrypy.expose
+    def gen_all_texts(self):
+        res = self.find({})
+        for data in res:
+            self.to_text(data["_id"])
+        return jssuccess(count=len(res))
+
+    @cherrypy.expose
+    def gen_text(self, id):
+        self.to_text(loads(id))
+
+    def to_text(self, id):
+        data = self.find_one({"_id": id})        
+        # update        
+        self._db[data["type"]].update({"_id": data["_id"]}, {"$set": {"__text": self.get_text(data)}})
         
     def get_text(self, data):
         return ' '.join( self.get_words(data) ).replace('_', ' ') 
@@ -173,7 +218,7 @@ class AristotleSrv(BaseSrv):
         for key in data:
             if data[key] == True:
                 words.append(key)
-            elif isinstance(data[key], str) and key != "__text":
+            elif isinstance(data[key], str) and key != "__text" and key != "apikey":
                 words.extend( data[key].split() )
             elif isinstance(data[key], dict):
                 subwords = self.get_words(data[key])
@@ -182,6 +227,7 @@ class AristotleSrv(BaseSrv):
 
     @cherrypy.expose
     def load(self, ts, apikey=None):
+        print("[ARIST] load", apikey)
         ids = self.valid_ids("view", apikey)
         if ids is None:
             return jssuccess(items=[], ts=ts)
@@ -231,21 +277,26 @@ class AristotleSrv(BaseSrv):
         set_in = set(set_in.split(",")) if set_in != "" else types
         
         query = {"_id": {"$in": ids}}
-        filt = {"apikey": 0}
+        filt = {"apikey": 0, "__text": 0}
         
-        all = self.find({"_id": {"$in": ids}, "changed": {"$gt": ts}}, {"apikey": 0})
+        all = self.find({"_id": {"$in": ids}, "changed": {"$gt": ts}}, {"apikey": 0})        
         
-        if text is not None and text.strip() != "":
-            query.update( {"$text": {"$search": text}} )
-            filt.update( {"score": {"$meta": "textScore"}} )
+        # TODO: enable with MongoDB 2.6
+        #if text is not None and text.strip() != "":
+            #query.update( {"$text": {"$search": text}} )
+            ##filt.update( {"score": {"$meta": "textScore"}} )
         
         # direct search
         res = []
         for kind in set_in.intersection(types):
-            res += list(self._db[kind].find(query, filt))
+            if text is None or text.strip() == "":
+                res += list(self._db[kind].find(query, filt))
+            else:
+                # TODO: workaround until we have MongoDB 2.6
+                res += [v["obj"] for v in self._db.command("text", kind, search=text, filter=query, project=filt)["results"]]
         # resolving
-        res += [self._db["office"].find_one({"_id": v["office"]}, filt) for v in res if "office" in v]        
-        res += [self._db["institute"].find_one({"_id": v["institute"]}, filt) for v in res if "institute" in v]
+        res += list(self._db["office"].find({"_id": { "$in": [v["office"] for v in res if "office" in v]} }, filt))
+        res += list(self._db["institute"].find({"_id": { "$in": [v["institute"] for v in res if "institute" in v]} }, filt))
         
         # ID search
         if set_id != "":
@@ -257,8 +308,8 @@ class AristotleSrv(BaseSrv):
             res_id_ids = [v["_id"] for v in res_id]
             # resolving upwards
             res_up = []
-            res_up += [self._db["office"].find_one({"_id": v["office"]}, filt) for v in res_id if "office" in v]
-            res_up += [self._db["institute"].find_one({"_id": v["institute"]}, filt) for v in res_id if "institute" in v]
+            res_up += list(self._db["office"].find({"_id": { "$in": [v["office"] for v in res_id if "office" in v]} }, filt))
+            res_up += list(self._db["institute"].find({"_id": { "$in": [v["institute"] for v in (res_id + res_up) if "institute" in v]} }, filt))
             # resolving downwards
             res_dn = []
             res_dn += self.find({"institute": {"$in": res_id_ids}}, filt)
@@ -277,9 +328,6 @@ class AristotleSrv(BaseSrv):
         rem = [v for v in all if v["_id"] not in [x["_id"] for x in res]]
         # mark found items as visible in the final list
         [v.update({"__show": True}) for v in res]
-        print(len(all))
-        print(len(res))
-        print(len(rem))
         assert len(all) == len(res) + len(rem)
         res = res + rem
         # find max time stamp and return results
@@ -289,7 +337,7 @@ class AristotleSrv(BaseSrv):
     @cherrypy.expose
     def invite(self, data, text, apikey=None, mail=False):
         data = loads(data)
-        return jssuccess() if self._invite(data, text, apikey, mail) else jsdeny() 
+        return jssuccess() if self._invite(data, text, apikey, mail) else jsdeny()
     
     def _invite(self, data, text, apikey=None, mail=False):
         if apikey is None or self._db["person"].find_one({"apikey": apikey}) is None:
@@ -378,22 +426,52 @@ class AristotleSrv(BaseSrv):
             "from": item["from"],
             "cc": item["cc"]
         }
-        self._invite(data, item["text"], apikey)
+        self._invite(data, item["text"], apikey, mail=True)
         # mark invite as deleted and confirmed
         item["deleted"] = True
         item["confirmed"] = True
         item["changed"] = int(time.time())
         self._db["invite"].update({"_id": id}, item);
         return jssuccess()
+    
+    @cherrypy.expose
+    def remind(self, data, text, apikey=None, mail=False):
+        if apikey is None or self._db["person"].find_one({"apikey": apikey}) is None:
+            return jsdeny()
+        ids = self.valid_ids("edit", apikey)
+        data = loads(data)
+        # search person
+        obj1 = {"name": data["name"]}
+        obj2 = {"mail": data["mail"]}
+        obj3 = obj1.copy()
+        obj3.update(obj2)
+        objs = [obj3, obj2, obj1]
+        for obj in objs:
+            res = list(self._db["person"].find(obj))
+            if False in [(v["_id"] in ids) for v in res]:
+                return jsdeny(matches=[])
+            if len(res) > 1:
+                return jsfail(matches=res)
+            if len(res) == 1:
+                # unique match found
+                stat = None if not mail else sendmail(
+                    data["from"],
+                    data["mail"],
+                    "Reminder: ERCC cooperation with national institutes lawfully mandated to provide warnings and expert advice",
+                    text % ("http://trideccloud.gfz-potsdam.de/aristotle/inventory.html?" + res[0]["apikey"]),
+                    data["cc"]
+                )
+                return jssuccess(matches=res, mail=stat)
+        return jsfail(matches=[])
 
-    def find_one(self, query, filt={}):
+    def find_one(self, query, filt=None):
         for dest in ["person", "office", "institute", "decision", "advice", "invite"]:
             obj = self._db[dest].find_one(query, filt)
             if obj is not None:
                 return obj;
         return None
     
-    def find(self, query, filt={}):
+    def find(self, query, filt=None):
         res = []
         for dest in ["person", "office", "institute", "decision", "advice", "invite"]:
             res += list(self._db[dest].find(query, filt))
