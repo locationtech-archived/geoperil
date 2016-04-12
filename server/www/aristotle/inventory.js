@@ -1,9 +1,6 @@
-var wsgi = '../aristotlesrv/';
+var wsgi = '../aristotel/';
 var texts = null;
-
-ajax(wsgi + '/get_texts/', {}, function(res) {
-	texts = res.texts;
-});
+var user = null;
 
 $(document).ready(function () {
 	
@@ -13,18 +10,34 @@ $(document).ready(function () {
 	});
 	
 	var inv = new Inventory($('.frame'));
-	window.onpopstate = inv.search.bind(inv);
-	inv.search();
+	
+	var d1 = $.Deferred();
+	var d2 = $.Deferred();
+	deferred_ajax(d1, wsgi + '/whoami/', {apikey: inv.get_apikey()});
+	deferred_ajax(d2, wsgi + '/get_texts/', {});
+	$.when(d1, d2).always(function(res1, res2) {
+		user = res1.person;
+		texts = res2.texts;
+	
+		if( ! user ) {
+			inv.div.find('.denied').show();
+			return;
+		}
 		
-	$('.custom-popover').hide();
-	$('.custom-popover .popover-title span').click( function() {
-		$(this).closest('.custom-popover').hide(500);
+		inv.div.find('.list, .details').show();
+		window.onpopstate = inv.search.bind(inv);
+		inv.search();
+		
+		$('.custom-popover').hide();
+		$('.custom-popover .popover-title span').click( function() {
+			$(this).closest('.custom-popover').hide(500);
+		});
 	});
 	
 //	setTimeout( function() {
 //		$('.snapin').show(800);
 //	}, 500 );
-	
+
 	$('.snapin .x').click( function() { $('.snapin').hide(500);} );
 	
 //	setTimeout( function() {
@@ -141,7 +154,7 @@ function Inventory(div) {
 				top += $(this).outerHeight();
 			});
 		    if ($(window).scrollTop() > threshold) {
-		    	this.div.find('.' + attr).addClass('fixed');		    	
+		    	this.div.find('.' + attr).addClass('fixed');
 		    } else {
 		    	this.div.find('.' + attr).removeClass('fixed');
 		    }
@@ -248,7 +261,7 @@ Inventory.prototype = {
 	
 	goto_top: function() {
 		var elem = $('body').scrollTop() ? $('body') : $('html');
-		var top = $('.banner').offset().top + $('.banner').height();
+		var top = $('.tabs1').offset().top;
 		elem.animate({scrollTop: top}, 500);
 	},
 	
@@ -309,9 +322,10 @@ Inventory.prototype = {
 			if( items.length > 0 || this.ts == 0) {
 				this.draw();
 				/* Inform all interested components about the changes. */
-				console.log("notify");
 				this.items.notifyOn('data_change');
 			}
+			/* Show notification bell if there are open invites. */
+			$('.notification')[this.items.findItem('type', 'invite') != null ? 'show' : 'hide']();
 			this.ts = res.ts;
 			this.tid = setTimeout( this.load_data.bind(this), 5000 );
 		}).bind(this));
@@ -348,20 +362,12 @@ Inventory.prototype = {
 	
 	draw: function() {
 		this.clear();
-		if( this.items.length() > 0 ) {
-			this.div.find('.list, .details').show();
-			this.div.find('.denied').hide();
-		} else {
-			this.div.find('.list, .details').hide();
-			this.div.find('.denied').show();
-		}
 		var filtfun = function(type) {
 			var f =  function(type, obj) {
 				return obj.type == type && obj.__show && ! obj.deleted;
 			};
 			return f.bind(null, type);
 		};
-		var divs = this.div.find('.sec-offices button, .sec-decisions button, .sec-advices button').attr('disabled', true);
 		if( this.visible('institute') ) {
 			var insts = this.items.filter( filtfun('institute') );
 			for(var i = 0; i < insts.length(); i++) {
@@ -369,10 +375,7 @@ Inventory.prototype = {
 					new InstItem(this, insts.get(i)).div
 				);
 			}
-			/* Disable 'new' button if there is no possibility to create something. */
-			this.auth_many(insts.list, divs);
 		}
-		var divs = this.div.find('.sec-persons button').attr('disabled', true);
 		if( this.visible('office') ) {
 			var insts = this.items.filter( filtfun('office') );
 			for(var i = 0; i < insts.length(); i++) {
@@ -380,8 +383,6 @@ Inventory.prototype = {
 					new OfficeItem(this, insts.get(i)).div
 				);
 			}
-			/* Disable 'new' button if there is no possibility to create something. */
-			this.auth_many(insts.list, divs);
 			new Geocoder().get_locations( insts, this.map.set_offices.bind(this.map) );
 		}
 		if( this.visible('person') ) {
@@ -417,6 +418,13 @@ Inventory.prototype = {
 			}
 			this.div.find('.sec-invites')[insts.length() > 0 ? 'show' : 'hide']();
 		}
+		
+		var divs = this.div.find('.sec-offices button, .sec-decisions button, .sec-advices button').attr('disabled', true);
+		/* Disable 'new' button if there is no possibility to create something. */
+		this.auth_many(this.items.filter('type', 'institute').list, divs);
+		var divs = this.div.find('.sec-persons button').attr('disabled', true);
+		/* Disable 'new' button if there is no possibility to create something. */
+		this.auth_many(this.items.filter('type', 'office').list, divs);
 	},
 	
 	visible: function(type) {
@@ -686,8 +694,7 @@ PersonItem.prototype.constructor = PersonItem;
 
 
 
-function DetailsView(inventory, data) {
-	console.log(this);
+function DetailsView(inventory, data) {	
 	this.mode_edit = false;
 	this.div = this.templ();
 	this.inventory = inventory;
@@ -781,7 +788,6 @@ DetailsView.prototype = {
 		/* Copy contents to data object. */
 		this.extract();
 		/* Request server to store the data. */
-		console.log(this.data);
 		ajax(wsgi + '/save/', {data: JSON.stringify(this.data), apikey: this.inventory.get_apikey()}, (function(res) {
 			console.log(res);
 			if(res.status == 'success') {
@@ -876,10 +882,10 @@ DetailsView.prototype = {
 				if( res.status == 'success' ) {
 					for(var i = 0; i < res.invalid.length; i++) {
 						var id = res.invalid[i];
-						console.log('Denied:', id);
 						drp.source.remove('_id', id);
-						drp.source.notifyOn('change');
 					}
+					if( res.invalid.length > 0 )
+						drp.source.notifyOn('change');
 					if( res.valid.length > 0 )
 						this.div.find('.save').attr('disabled', false);
 				}
@@ -907,7 +913,6 @@ DetailsView.prototype = {
 				if( res.status == 'success' ) {
 					for(var i = 0; i < res.invalid.length; i++) {
 						var id = res.invalid[i];
-						console.log('Denied:', id);
 						drp.source.remove('_id', id);
 						drp.source.notifyOn('change');
 					}
@@ -945,7 +950,7 @@ function DecisionItem(inventory, data) {
 	/* Set fields. */	
 	this.div.find('.title').html(data.name);
 	this.div.find('.subtitle').html(
-		this.pretty(this.data.a.i ? 'Severity of the event' : '', this.data.a.ii ? 'Impact of the event' : '', this.data.a.iv ? 'Impending or imminent event' : '')
+		this.pretty(this.data.a['severity of the event'] ? 'Severity of the event' : '', this.data.a['impact of the event'] ? 'Impact of the event' : '', this.data.a['impending or imminent event'] ? 'Impending or imminent event' : '')
 	);
 	
 	var inst = this.inventory.items.getByOid('_id', data.institute).item;
@@ -1039,12 +1044,16 @@ PersonDetailView.prototype = Object.create(DetailsView.prototype);
 PersonDetailView.prototype.constructor = PersonDetailView;
 PersonDetailView.prototype.fill = function(edit) {
 	/* Create initial html elements and fill them with data. */
-	var drp1 = this.new_dropdown('Office', 'office', edit);
-	drp1.setToString( (function(o) {
-		var inst = this.inventory.items.getByOid('_id', o.institute).item;		
-		return inst.acronym ? inst.acronym + ' - ' + o.name : o.name;
+	var d1 = $.Deferred();
+	var drp1 = this.new_dropdown2(d1, 'Office', 'office', edit);
+	
+	$.when(d1).always((function() {
+		drp1.setToString( (function(o) {
+			var inst = this.inventory.items.getByOid('_id', o.institute).item;		
+			return inst.acronym && inst.acronym != '' ? inst.acronym + ' - ' + o.name : o.name;
+		}).bind(this));
+		drp1.display();
 	}).bind(this));
-	drp1.display();
 	
 	var txt1 = new HtmlTextGroup('Other Resp.');
 	txt1.div.hide();
@@ -1073,7 +1082,7 @@ PersonDetailView.prototype.fill = function(edit) {
 	var label = new HtmlCustom($('<h5>', {
 		html: edit ? 'Please specify working hours if the institute doesn’t provide a 24/7 operational service.' : 'Working hours if not 24/7 operational service.'
 	}) );
-	
+		
 	var fields = new Container(
 		{html: new HtmlCustom( $('<h5>', {html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities.'}) )},
 		{key: 'name', html: new HtmlTextGroup('Contact Name').validate('^.+$')},
@@ -1103,7 +1112,7 @@ PersonDetailView.prototype.fill = function(edit) {
 		} else {
 			drp2.selectByVal(null, this.data['kind']);
 		}
-	}
+	}	
 };
 
 PersonDetailView.prototype.extract = function() {
@@ -1133,8 +1142,8 @@ AdviceDetailView.prototype.fill = function(edit) {
 	
 	/* Create initial html elements and fill them with data. */
 	var drp1 = this.new_dropdown('Institute', 'institute', edit);
-	var sel1 = new Selection( Advice.prototype.items.b, 'Communication channels');
-	var sel2 = new Selection( Advice.prototype.items.a, 'Content'); 
+	var sel1 = new Selection( Advice.prototype.items.a, 'Communication channels');
+	var sel2 = new Selection( Advice.prototype.items.b, 'Content'); 
 	var label = new HtmlCustom( $('<h5>', {
 		html: edit ? 'Give a brief description of the following with regard to the type of information you provide.' : ''
 	}) );
@@ -1181,10 +1190,10 @@ ProcessDetailView.prototype.fill = function(edit) {
 		{key: 'name', html: new HtmlTextGroup('Name of Process').validate('^.+$')},
 		{key: 'a', html: new Section(
 			new Container(
-	    		{key: 'i', html: new HtmlCheckBox('Severity of the event')},
-				{key: 'ii', html: new HtmlCheckBox('Impact of the event')},
-				{key: 'iv', html: new HtmlCheckBox('Impending or imminent event')},
-				{key: 'iii', html: new Section(
+	    		{key: 'severity of the event', html: new HtmlCheckBox('Severity of the event')},
+				{key: 'impact of the event', html: new HtmlCheckBox('Impact of the event')},
+				{key: 'impending or imminent event', html: new HtmlCheckBox('Impending or imminent event')},
+				{key: 'details', html: new Section(
 					new Container({key: 'a', html: new HtmlTextArea('Description')}),
 					'Is this the case for every hazard type? If not, please specify:'
 				)}
@@ -1298,14 +1307,22 @@ InviteDetailView.prototype.create = function() {
 };
 
 InviteDetailView.prototype.confirm = function() {
-	ajax(wsgi + '/confirm/', {id: JSON.stringify(this.data._id), apikey: this.inventory.get_apikey()}, (function(res) {
-		console.log(res);
+	ajax(wsgi + '/confirm/', {id: JSON.stringify(this.data._id), apikey: this.inventory.get_apikey()}, (function(res) {		
 		if( res.status == 'success' ) {
 			this.inventory.load_data();
 			this.inventory.load_details(null);
 			this.inventory.goto_details();
 		}
 	}).bind(this));
+};
+
+InviteDetailView.prototype.save = function() {
+	if( !('_id' in this.data) && ! this.verify() ) {
+		this.inventory.curview = null;
+		this.inventory.load_details(null);
+		this.inventory.goto_details();
+	}
+	DetailsView.prototype.save.call(this);
 };
 
 InviteDetailView.prototype.fill = function(edit) {
@@ -1365,7 +1382,7 @@ InviteDetailView.prototype.fill = function(edit) {
 	
 	btn_meteo.click();
 	
-	this.data.from = this.data.from || 'something@test.de';
+	this.data.from = this.data.from || user.mail;
 	
 	var fields = new Container(
 		{key: 'institute', html: drp1, nodata: true},
@@ -1394,9 +1411,8 @@ InviteDetailView.prototype.fill = function(edit) {
 	this.getField('from').readonly();
 };
 
-InviteDetailView.prototype.verify = function() {
-	console.log( 'verify', this.getField('institute').value() );
-	var required = {'name': 'a name', 'to': 'a mail address', 'from': 'a mail address'};
+InviteDetailView.prototype.verify = function() {	
+	var required = {'name': 'a name', 'to': 'a mail address (to)', 'from': 'a mail address (from)'};
 	if( ! this.getField('institute').value() )
 		required['institute-new'] = 'an institute name';
 	if( ! this.getField('office').value() )
@@ -1410,8 +1426,7 @@ InviteDetailView.prototype.verify = function() {
 InviteDetailView.prototype.extract = function() {
 	DetailsView.prototype.extract.call(this);
 	this.data.new_institute = this.getField('institute').value() ?  this.getField('institute').selectedItem().name : this.getField('institute-new').value();
-	this.data.new_office = this.getField('office').value() ?  this.getField('office').selectedItem().name : this.getField('office-new').value();
-	console.log(this.data);
+	this.data.new_office = this.getField('office').value() ?  this.getField('office').selectedItem().name : this.getField('office-new').value();	
 };
 
 

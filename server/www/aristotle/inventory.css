@@ -129,6 +129,7 @@ body {
 
 .search .invite-text a {
 	cursor: pointer;
+	text-decoration: underline;
 }
 
 .map-stub, .map-tile {
@@ -240,6 +241,19 @@ body {
     top: 0px;
     bottom: 0px;
     margin: auto;
+    display: none;
+}
+
+.notification {
+	position: absolute;
+    font-size: 24px;
+    height: 28px;
+    color: red;
+    left: 90px;
+    top: 0px;
+    bottom: 0px;
+    margin: auto;
+    text-shadow: 2px 2px 3px black;
     display: none;
 }
 

@@ -242,7 +242,6 @@ function Container(arg0) {
 	this.print = function() {
 
 		for (var i = 0; i < this.list.length; i++) {
-
 			console.log(this.list[i]);
 		}
 	};
@@ -393,13 +392,14 @@ function HtmlDropDown() {
 	};
 	
 	this.display = function() {
-		this.content.empty();
+		this.content.empty();		
 		for( var i = 0; i < this.source.length(); i++ ) {
 			var obj = this.source.get(i);
 			var item = $('<li><a href="#">' + this.toString(obj) + '</a></li>');
 			item.find('a').click(this.onChange.bind(this));
 			this.content.append(item);
 		}
+		this.select(this.idx);
 	};
 
 	this.onChange = function(e) {
@@ -661,7 +661,6 @@ function HtmlInputGroup(label, icon, box) {
 		this.input = this.div.find('> .html-input');
 		
 		if( box ) {
-			console.log(box.find('> .content').children());
 			this.input.replaceWith( box.find('> .content').children() );
 			box.html(this.div);
 		}
