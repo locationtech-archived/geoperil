@@ -45,8 +45,10 @@ import FloodPrototype.FloodTask;
 import FloodPrototype.Location;
 import Misc.IDataProvider;
 import Misc.User;
+import Misc.GsonUTCdateAdapter;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
@@ -187,7 +189,8 @@ public class Services {
 	  	  
 	  loadInstitutions();
 	  
-	  gson = new Gson();
+	  /* Required to deliver dates in UTC instead of simply dropping the time zone as per default !!! */
+	  gson = new GsonBuilder().registerTypeAdapter(Date.class, new GsonUTCdateAdapter()).create();
 	  
 	  /* TODO: find right place */
 	  providers = new HashMap<String, IDataProvider>();
@@ -859,7 +862,6 @@ public class Services {
 		  }
 	  } else {
 		  task.setSlots(IScheduler.SLOT_NORMAL);
-		  task.dt_out = 0;
 	  }
 	  return request( id, task );
   }
@@ -1612,6 +1614,7 @@ public class Services {
 						
 			/* check if entry belongs to general or user specific list */
 			if( user != null && obj.get("user").equals( user.objId ) ) {
+				
 				ulist.add( obj );
 			} else {
 				mlist.add( obj );
@@ -1629,7 +1632,7 @@ public class Services {
 	}
 			
 	/* create new JSON object that can be used directly within JavaScript */
-	JsonObject jsonObj = new JsonObject();	
+	JsonObject jsonObj = new JsonObject();
 	jsonObj.add( "main", gson.toJsonTree( mlist ) );	
 	jsonObj.add( "user", gson.toJsonTree( ulist ) );
 		

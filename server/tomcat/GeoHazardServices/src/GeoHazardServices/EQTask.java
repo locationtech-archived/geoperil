@@ -32,8 +32,8 @@ public class EQTask extends Task {
 	public float progress;
 	public float calcTime;
 	public float prevCalcTime;
-	public float curSimTime;
-	public float prevSimTime;
+	public int curSimTime;
+	public int prevSimTime;
 	
 	public EQTask( EQParameter eqp ) {
 		super();

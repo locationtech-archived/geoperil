@@ -56,13 +56,19 @@ public abstract class TsunamiAdapter implements IAdapter {
 			prepareLocations(task);
 			writeLocations(task);
 			simulate(task);
+			System.out.println("createJets");
 			/* Create tsunami jets. */
 			for( Double ewh: GlobalParameter.jets.keySet() )
 				createJets(task, ewh.toString());
+			System.out.println("readLocations");
 			readLocations(task);
+			System.out.println("finalizeLocations");
 			finalizeLocations(task);
+			System.out.println("updateProgress");
 			updateProgress(task, true);
+			System.out.println("finalize");
 			finalize(task);
+			System.out.println("cleanup");
 			cleanup(task);
 			return 0;
 		} catch(IOException e) {
@@ -86,9 +92,9 @@ public abstract class TsunamiAdapter implements IAdapter {
 			return 0;
 		
 		/* create a kml file if at least 10 minutes of simulation are done */
-		/* TODO: what if file is missing? */
-		if( task.curSimTime > 10 && task.dt_out > 0 )
-			createIsolines(task, (int) task.curSimTime);
+		System.out.println(task.prevSimTime + " -> " + task.curSimTime);
+		if( task.curSimTime > task.prevSimTime && task.dt_out > 0 )
+			createIsolines(task, task.curSimTime);
 		
 		/* DB object to find current earthquake ID */
 		BasicDBObject obj = new BasicDBObject("_id", task.id );
@@ -252,7 +258,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 	
 	protected void cleanup(EQTask task) throws IOException {
 		sshCon[0].runCmd(
-			String.format("rm -f heights.*.kml fault.inp locations.inp eWave.2D.sshmax range.grd")
+			String.format("rm -f heights.*.kml arrival.*.kml fault.inp locations.inp eWave.2D.sshmax range.grd")
 		);
 	}
 	
@@ -445,14 +451,13 @@ public abstract class TsunamiAdapter implements IAdapter {
 		return 0;
 	}
 	
-	private int createIsolines(EQTask task, int time) throws IOException {
+	protected int createIsolines(EQTask task, int time) throws IOException {
 		/* Nothing to do if a raw computation was requested. */
 		if( task.raw > 0 )
 			return 0;
 		
 		/* Use second ssh connection. */
-		sshCon[1].runCmds(
-			String.format("gdal_contour -f kml -i 10 -fl %1$d eWave.2D.%2$05d.time arrival.%1$d.kml", time - 10, time * 60),
+		sshCon[1].runCmd(
 			String.format("ogr2ogr -f kml -simplify 0.001 arrival.%1$d.kml arrival.%1$d.kml", time - 10)
 		);
 		String kml_file = String.format("arrival.%d.kml", time - 10);

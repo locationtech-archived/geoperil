@@ -108,7 +108,7 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 			task.gridres, task.dt_out, simTime, args
 		);
 		String line;
-		task.curSimTime = 0.0f;
+		task.curSimTime = 0;
 		task.calcTime = 0.0f;
 		sshCon[0].runLiveCmd("easywave " + cmdParams);
 		while( (line = sshCon[0].nextLine()) != null) {
@@ -142,5 +142,21 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 			updateProgress(task);
 		}
 		return 0;
+	}
+	
+	protected int createIsolines(EQTask task, int time) throws IOException {
+		/* Generate travel times as KML file. */
+		sshCon[1].runCmd(
+			String.format("gdal_contour -f kml -i 10 -fl %1$d eWave.2D.%2$05d.time arrival.%1$d.kml", time - 10, time * 60)
+		);
+		return super.createIsolines(task, time);
+	}
+	
+	@Override
+	protected void cleanup(EQTask task) throws IOException {
+		sshCon[0].runCmd(
+			String.format("rm -f eWave.* easywave.log")
+		);
+		super.cleanup(task);
 	}
 }

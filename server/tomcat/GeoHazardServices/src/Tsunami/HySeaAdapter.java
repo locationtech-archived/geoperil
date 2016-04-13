@@ -82,7 +82,8 @@ public class HySeaAdapter extends TsunamiAdapter {
 		strFault.appendln("1");
 		strFault.appendln("1");
 		strFault.appendln((task.duration * 60 + 2));
-		strFault.appendln(task.duration * 60);
+		//strFault.appendln(task.duration * 60);
+		strFault.appendln(task.dt_out * 60);
 		strFault.appendln("1 # readFromFile");
 		strFault.appendln("locations.inp # file with locations");
 		strFault.appendln("60 # saving time of locations");
@@ -124,6 +125,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 			"ts_bin2txt.sh hysea_out_ts.bin > hysea_out_ts.txt"
 		);
 		
+		System.out.println("readLocations 1");
 		HashMap<String, DBObject> locations = getLocations();
 		/* Read TFPs and TSPs from text file. */
 		List<String> lines = sshCon[0].readFile("hysea_out_ts_minmax.txt");
@@ -136,6 +138,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 				loc.put("ewh", Double.valueOf( data[2*i+1] ));
 		}
 		
+		System.out.println("readLocations 2");
 		/* Process stations! */
 		lines = sshCon[0].readFile("hysea_out_ts.txt");
 		List<Double> initialValues = new ArrayList<Double>();
@@ -184,15 +187,23 @@ public class HySeaAdapter extends TsunamiAdapter {
 		long start = System.nanoTime();
 		boolean finished = false;
 		int lnr = 1;
+		task.curSimTime = 0;
 		while( ! finished ) {
 			boolean changed = false;
 			/* TODO: No idea why '\n\004' is needed here. Must have something to do with the embedded ssh command in hysea_status.sh. */
 			for( String line: sshCon[0].runCmd("hysea_status.sh " + jobid + " | tail -n +" + lnr + "; echo '\n\004'") ) {
 				Matcher matcher = Pattern.compile("Time = (\\d+\\.?\\d*) sec").matcher(line);
 				if( matcher.find() ) {
-					task.progress = Math.min( Float.valueOf( matcher.group(1) ) / (task.duration * 60.0f), 1.0f) * 100.0f;
+					float time = Float.valueOf(matcher.group(1));
+					task.progress = Math.min( time / (task.duration * 60.0f), 1.0f) * 100.0f;
 					task.calcTime = (System.nanoTime() - start) / 1000000.0f;
 					changed = true;
+					if( time % (task.dt_out * 60.0f) < 5.0f ) {
+						task.prevSimTime = task.curSimTime;
+						task.curSimTime = (int) (time / (task.dt_out * 60.0f)) * task.dt_out;
+						updateProgress(task);
+						changed = false;
+					}
 				}
 				if( line.startsWith("Runtime") )
 					finished = true;
@@ -219,6 +230,21 @@ public class HySeaAdapter extends TsunamiAdapter {
 			)
 		);
 		return 0;
+	}
+	
+	protected int createIsolines(EQTask task, int time) throws IOException {
+		/* Generate travel times as KML file. */		
+		sshCon[1].runCmds(
+			String.format(
+				"gdal_calc.py -A NETCDF:\"%1$s_eta.nc\":bathymetry -B NETCDF:\"%1$s_eta.nc\":eta --B_band %2$d " + 
+			    "--calc=\"((A>0)*B)!=0\" --overwrite --outfile=arrival.%3$d.tiff",
+				outfile, time / task.dt_out + 1, time
+			),
+			String.format(
+				"gdal_contour -f kml -fl 0.5 arrival.%1$d.tiff arrival.%1$d.kml", time
+			)
+		);
+		return super.createIsolines(task, time);
 	}
 
 	protected void cleanup(EQTask task) throws IOException {
