@@ -150,6 +150,9 @@ class AristotleSrv(BaseSrv):
         data["changed"] = ts
         data.pop("__show", None)
         data["__text"] = self.get_text(data)
+        # get office location and store it in the database
+        if dest == "office":
+            data.update( self._get_location(data) )
         self.ensure_apikey(data, obj.get("apikey") if obj is not None else None)
         if obj is None:
             data["created"] = ts
@@ -161,6 +164,51 @@ class AristotleSrv(BaseSrv):
             id = obj["_id"]
         print("[ARIST] save", apikey, id)
         return jssuccess(id=id)
+
+    @cherrypy.expose
+    def update_all_locations(self):
+        res = self._db["office"].find()
+        for r in res:
+            self.update_location(dumps(r))
+            # avoid running into API restrictions
+            time.sleep(0.5)
+        return jssuccess()
+
+    @cherrypy.expose
+    def update_location(self, office):
+        office = loads(office)
+        loc = self._get_location(office)
+        self._db["office"].update({"_id": office["_id"]}, {"$set": {"lat": loc["lat"], "lon": loc["lon"]}})
+        return jssuccess(res=loc)
+    
+    def _get_location(self, office, provider="google"):
+        if provider == "osm":
+            data = {
+                "format": "json",
+                "city": office.get("city", None),
+                "country": office.get("country", None),
+                "street": office.get("address", None),
+                "postalcode": office.get("zip", None)
+            }
+            res = requests.get("http://nominatim.openstreetmap.org/search", params=data)
+            locs = json.loads(res.text)
+            lat = locs[0].get("lat", None) if len(locs) > 0 else None
+            lon = locs[0].get("lon", None) if len(locs) > 0 else None
+            if lat is not None:
+                lat = float(lat)
+            if lon is not None:
+                lon = float(lon)
+            return {"lat": lat, "lon": lon}
+        elif provider == "google":            
+            data = {
+                "address": " ".join([office.get("address", ""), office.get("zip", ""), office.get("city", ""), office.get("country", "")])
+            }
+            res = requests.get("https://maps.googleapis.com/maps/api/geocode/json", params=data)
+            res = json.loads(res.text)
+            loc = res["results"][0]["geometry"]["location"] if res["status"] == "OK" else {"lat": None, "lng": None}
+            return {"lat": loc["lat"], "lon": loc["lng"]}
+        else:
+            return {"lat": None, "lon": None}
 
     @cherrypy.expose
     def whoami(self, apikey=None):
