@@ -79,6 +79,13 @@ function Inventory(div) {
 	this.save_dialog = new SaveDialog();
 	this.delete_dialog = new DeleteDialog();
 	
+	this.div.find('.go-to-top').click(this.goto_top.bind(this));
+	this.div.find('.navigation > div').click(function() {
+		var target =  $(this).data('target');
+		($('body').scrollTop() ? $('body') : $('html')).animate({scrollTop: $(target).offset().top}, 500);
+	});
+	this.div.find('.notification').click(this.update_url.bind(this,'display:invite'));
+	
 	this.div.find('.invite-text a').click((function() {
 		this.load_details(
 			new Invite(), true
@@ -125,7 +132,7 @@ function Inventory(div) {
 		var tid = null;
 		var fun = function(e) {
 			clearTimeout(tid);
-			var delay = (e.which == 13 || e.which == 32 || this.btn_search.value() == '') ? 0 : 1000;
+			var delay = (e.which == 13 || e.which == 32 || this.btn_search.value() == '') ? 0 : 2000;
 			tid = setTimeout( (function(){ this.btn_search.text.div.change(); }).bind(this), delay);
 			this.btn_search.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']({duration: 400});
 			this.div.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']();
@@ -142,7 +149,7 @@ function Inventory(div) {
 	this.btn_search.text.div.keyup( fun.call(this) );
 	this.div.find('.search-box').prepend( this.btn_search.div );
 		
-	for(attr in {'search': '', 'map-tile': ''}) {
+	for(attr in {'search': '', 'map-tile': '', 'navigation-tile': ''}) {
 		/* Pin search bar at the top of the page if requested. */
 		$(window).bind('scroll', (function (attr) {
 			var threshold = this.div.find('.header .banner').position().top + this.div.find('.header .banner').outerHeight();
@@ -240,6 +247,9 @@ Inventory.prototype = {
 			this.div.find('.details').html( view.div );
 			if( ! noscroll )
 				this.goto_details();
+			/* effect */
+			this.div.find('.details .banner').addClass('effect');
+			setTimeout( (function() { this.div.find('.details .banner').removeClass('effect'); }).bind(this), 400 );
 		} else {
 			this.div.find('.details').html(
 				$('<div>', {'class': 'intro', html: 'Select an Institute, Office or Contact.'})
@@ -383,7 +393,7 @@ Inventory.prototype = {
 					new OfficeItem(this, insts.get(i)).div
 				);
 			}
-			new Geocoder().get_locations( insts, this.map.set_offices.bind(this.map) );
+			this.map.set_offices(insts);
 		}
 		if( this.visible('person') ) {
 			var insts = this.items.filter( filtfun('person') );
@@ -498,62 +508,31 @@ Map.prototype = {
 	},
 	
 	set_offices: function(items) {
-		for(var i = 0; i < items.length; i++) {
-			var ret = items[i];
-			if( ! ret ) continue;
+		for(var i = 0; i < items.length(); i++) {
+			var office = items.get(i);
+			if( ! office.lat || ! office.lon ) continue;
 			var popup = $('<span class="popup-content">' +
-				'<a>' + ret.office.name + '</a>' +
-				'<div>' + ret.office.address + '</div>' +
-				'<div>' + ret.office.zip + ' ' + ret.office.city + '</div>' + 
-				'<div>' + ret.office.country + '</div>' +
+				'<a>' + office.name +'</a>' +
+				'<span class="id-search glyphicon glyphicon-search"></span>' +
+				'<div>' + office.address + '</div>' +
+				'<div>' + office.zip + ' ' + office.city + '</div>' + 
+				'<div>' + office.country + '</div>' +
 			'</span>');
 			popup.find('> a').click( (function(popup, office) {
 				this.inventory.load_details(office);
 				popup.closest('.leaflet-popup').find('> .leaflet-popup-close-button').get(0).click();
-			}).bind(this, popup, ret.office));
-			var marker = L.marker([ret.res.lat, ret.res.lon]).addTo(this.map).bindPopup( popup.get(0) );			
+			}).bind(this, popup, office));
+			popup.find('.id-search').click( (function(popup, office) {
+				this.inventory.update_url('id:' + (office.acronym || office._id['$oid']));
+				popup.closest('.leaflet-popup').find('> .leaflet-popup-close-button').get(0).click();
+				this.inventory.goto_top();
+			}).bind(this, popup, office));
+			var marker = L.marker([office.lat, office.lon]).addTo(this.map).bindPopup( popup.get(0) );			
 			this.markers.insert(marker);
 		}
 	}
 };
 Map.prototype.constructor = Map;
-
-
-
-function Geocoder() {
-	
-}
-Geocoder.prototype = {
-	from_address: function(office, callback) {
-		var data = {
-			format: 'json',
-			city: office.city,
-			country: office.country,
-			street: office.address,
-			postalcode: office.zip
-		};
-		$.ajax({
-			url: 'http://nominatim.openstreetmap.org/search',
-			type: 'GET',
-			jsonp: 'json_callback',
-			data: data,
-			dataType: "jsonp",
-			success: (function(callback, office, ret) {
-				callback( ret.length > 0 ? {res: ret[0], office: office} : null);
-			}).bind(this, callback, office)
-		});
-	},
-	
-	get_locations: function(items, callback) {
-		var funs = [];
-		for(var i = 0; i < items.length(); i++) {
-			var item = items.get(i);
-			funs.push( this.from_address.bind(this, item) );
-		}
-		new FunCascade().callback( callback ).invoke(funs);
-	}
-};
-Geocoder.prototype.constructor = Geocoder;
 
 
 
@@ -709,7 +688,7 @@ DetailsView.prototype = {
 		return (
 			$('<div>', {'class': 'inst'}).append(
 				$('<div>', {'class': 'banner'}),
-				$('<div>', {'class': 'content'}),
+				$('<div>', {'class': 'content', html: '<span = class="busy"><i class="glyphicon glyphicon-repeat spin"></i></span>'}),
 				$('<div>', {'class': 'footer'}).append(
 					$('<div>', {'class': 'status'}),
 					$('<button>', {'class': 'btn btn-default pull-left cancel', html: 'Discard'}),
@@ -728,12 +707,10 @@ DetailsView.prototype = {
 		this.div.find('.delete').click( (function() {
 			this.inventory.delete_dialog.show(this.remove.bind(this));
 		}).bind(this));
+		this.div.find('.footer').hide();
 	},
 	
 	fill: function(edit) {
-		this.sec.fill(edit, this.data);
-		this.div.find('.content').html(this.sec.div);
-		
 		var edit_buttons = this.div.find('.footer .cancel, .footer .save');
 		var other_buttons = this.div.find('.footer .edit, .footer .delete');
 		if( edit ) {
@@ -744,6 +721,9 @@ DetailsView.prototype = {
 			other_buttons.show();
 		}
 		this.mode_edit = edit;
+		this.sec.fill(edit, this.data);
+		this.div.find('.content').html(this.sec.div);
+		this.div.find('.footer').show();
 	},
 
 	extract: function() {
@@ -1294,7 +1274,8 @@ OfficeDetailView.prototype.verify = function() {
 
 
 function InviteDetailView(inventory, data) {
-	DetailsView.call(this, inventory, data);	
+	DetailsView.call(this, inventory, data);
+	this.div.addClass('invite');
 }
 InviteDetailView.prototype = Object.create(DetailsView.prototype);
 InviteDetailView.prototype.constructor = InviteDetailView;
@@ -1357,7 +1338,6 @@ InviteDetailView.prototype.fill = function(edit) {
 		var known_office = drp2.source.findItem('name', this.data.new_office) != null;
 		drp2.selectByVal('name', known_office ? this.data.new_office : 'New');
 		txt2.value(known_office ? '' : this.data.new_office);
-	}).bind(this));
 	
 	var btn_meteo = $('<label class="btn btn-default active"><input type="radio">Meteo</label>');
 	var btn_geo = $('<label class="btn btn-default"><input type="radio">Geo</label>');
@@ -1409,6 +1389,8 @@ InviteDetailView.prototype.fill = function(edit) {
 	DetailsView.prototype.fill.call(this, edit);
 	
 	this.getField('from').readonly();
+	
+	}).bind(this));
 };
 
 InviteDetailView.prototype.verify = function() {	

@@ -3,23 +3,21 @@
 <head>
    	<title>ARISTOTLE</title>
     <meta charset="UTF-8">
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
-    <link href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" rel="stylesheet">
+    <link href="ext/bootstrap_3.3.6/bootstrap.min.css" rel="stylesheet">
+    <link href="ext/leaflet_0.7.7/leaflet.css" rel="stylesheet">
     <link href="inventory.css" rel="stylesheet">
     <link href="framework.css" rel="stylesheet">
-    <!-- <script src="https://code.jquery.com/jquery.js"></script> -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-    <!-- <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script> -->
-    <script src="ext/leaflet/leaflet.js"></script>
-    <script src="ext/js.cookie.js"></script>
+    <script src="ext/jquery_1.12.3/jquery.min.js"></script>
+    <script src="ext/bootstrap_3.3.6/bootstrap.min.js"></script>
+    <script src="ext/leaflet_0.7.7/leaflet.js"></script>
+    <script src="ext/jscookie_2.1.0/jscookie.js"></script>
     <script src="framework.js"></script>
     <script src="inventory.js"></script>
 </head>
 <body>
 	<div class="frame">
 		<div class="header">
-			<span class="navigation">
+			<span class="links">
 				<span>
 					<a href="mailto:aristotle-inventory@gfz-potsdam.de?subject=ARISTOTLE%20Questionnaire%20-%20Report%20an%20Issue">Ask a question or report a problem</a>
 					&nbsp; &#183; &nbsp;
@@ -98,6 +96,17 @@
 					</div>
 					<a href="help.html">Help</a>
 					<button class="btn btn-default btn-push"><span><i class="glyphicon glyphicon-pushpin"></i></span></button>
+				</div>
+			</div>
+			<div class="stub navigation-stub">
+				<div class="tile navigation-tile static pinned">
+					<div class="navigation">
+						<div data-target=".sec-insts">Institutes</div>
+						<div data-target=".sec-offices">Offices</div>
+						<div data-target=".sec-persons">Contacts</div>
+						<div data-target=".sec-decisions">Processes</div>
+						<div data-target=".sec-advices">Advices</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -187,6 +196,7 @@
 		<div class="details"></div>
 		<div class="clear"></div>
 		<div class="denied">No permission.</div>
+		<span class="go-to-top"><i class="glyphicon glyphicon-circle-arrow-up"></i></span>
 	</div>
 	<!-- SaveDialog -->
 	<div class="modal fade modal-save">
