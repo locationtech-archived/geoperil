@@ -68,7 +68,7 @@ function Inventory(div) {
 	ICallbacks.call(this);
 	
 	this.div = div;
-	this.items = new Container();
+	this.items = new Container( function(a,b) { return a.name.localeCompare(b.name); });
 	this.ts = 0;
 	this.tid = null;
 	this.curview = null;
@@ -82,7 +82,11 @@ function Inventory(div) {
 	this.div.find('.go-to-top').click(this.goto_top.bind(this));
 	this.div.find('.navigation > div').click(function() {
 		var target =  $(this).data('target');
-		($('body').scrollTop() ? $('body') : $('html')).animate({scrollTop: $(target).offset().top}, 500);
+		var top = $(target).offset().top;
+		$('.stub').find('.static.pinned').each(function() {
+			top -= $(this).outerHeight();
+		});
+		$('html, body').animate({scrollTop: top}, 500);
 	});
 	this.div.find('.notification').click(this.update_url.bind(this,'display:invite'));
 	
@@ -260,19 +264,17 @@ Inventory.prototype = {
 	
 	goto_details: function() {
 		/* Jump to details view. */
-		/* Cross browser fix: Chrome uses 'body', Firefox 'html'! */
-		var elem = $('body').scrollTop() ? $('body') : $('html');
 		var top = $('.details').offset().top - 40;
 		this.div.find('.stub').find('.static.pinned').each(function() {
 			top -= $(this).outerHeight();
 		});
-		elem.animate({scrollTop: top}, 500);
+		/* Cross browser fix: Chrome uses 'body', Firefox 'html'! */
+		$('html, body').animate({scrollTop: top}, 500);
 	},
 	
 	goto_top: function() {
-		var elem = $('body').scrollTop() ? $('body') : $('html');
 		var top = $('.tabs1').offset().top;
-		elem.animate({scrollTop: top}, 500);
+		$('html, body').animate({scrollTop: top}, 500);
 	},
 	
 	new_item: function(item) {
@@ -320,6 +322,7 @@ Inventory.prototype = {
 				/* TODO: better handle this over a callback */
 				if( ret && this.curview != null && '_id' in this.curview.data && this.curview.data._id['$oid'] == item._id['$oid'] ) {
 					if( ! this.curview.mode_edit ) {
+						console.log('load currently displayed item');
 						this.load_details(item, false, true);
 					} else {
 						/* TODO: This page is editing an item which was updated on another site! What to do in this case? */
@@ -684,7 +687,7 @@ function DetailsView(inventory, data) {
 	this.auth(this.div.find('.delete'), 'delete');
 }
 DetailsView.prototype = {
-	templ: function() {
+	templ: function() {		
 		return (
 			$('<div>', {'class': 'inst'}).append(
 				$('<div>', {'class': 'banner'}),
@@ -773,6 +776,8 @@ DetailsView.prototype = {
 			if(res.status == 'success') {
 				/* Update id of currently loaded item to identify it as already present. */
 				this.data._id = res.id;
+				this.auth(this.div.find('.edit'));
+				this.auth(this.div.find('.delete'), 'delete');
 				this.inventory.load_data();
 				this.inventory.goto_details();
 				return this.fill(false);
@@ -827,16 +832,29 @@ DetailsView.prototype = {
 		var drp = new HtmlDropDownGroup(label);
 		drp.setAsValue( function(o) { return o._id; });
 		drp.setToString( function(o) { return o.name; });
-		drp.setSource( this.inventory.items.filter('type', type) );
+		drp.setSource( this.inventory.items.filter('type', type).setSortFun(this.alpha_sort.bind(this)).sort() );
 		this.auth_dropdown2(d, edit, drp, type);
 		return drp;
+	},
+	
+	alpha_sort: function(a, b) {
+		var fun = (function(o) {
+			if( ! o.institute ) return o.name;
+			var inst = this.inventory.items.getByOid('_id', o.institute).item;
+			return (inst.acronym ? inst.acronym : inst.name) + ' - ' + o.name;
+		}).bind(this);
+		if ( fun(a) < fun(b) )
+			return -1;
+		if ( fun(a) > fun(b) )
+			return 1;
+		return 0;
 	},
 	
 	new_dropdown: function(label, type, edit) {
 		var drp = new HtmlDropDownGroup(label);
 		drp.setAsValue( function(o) { return o._id; });
 		drp.setToString( function(o) { return o.name; });
-		drp.setSource( this.inventory.items.filter('type', type) );
+		drp.setSource( this.inventory.items.filter('type', type).setSortFun(this.alpha_sort.bind(this)).sort() );
 		this.auth_dropdown(edit, drp, type);
 		/* TODO: makes problems, is it really neccessary? */
 //		this.add_callback(this.inventory.items, 'data_change', (function() {
@@ -986,6 +1004,10 @@ function InviteItem(inventory, data) {
 	Item.call(this, inventory, data);	
 	/* Set fields. */		
 	this.div.find('.title').html(data.name);
+	this.div.find('.subtitle').html(
+		$('<div>', {html: this.pretty(data.to)})
+	);
+	this.div.find('.text').html( this.pretty(data.new_institute, data.new_office) );
 }
 InviteItem.prototype = Object.create(Item.prototype);
 InviteItem.prototype.constructor = InviteItem;
@@ -1029,70 +1051,71 @@ PersonDetailView.prototype.fill = function(edit) {
 	
 	$.when(d1).always((function() {
 		drp1.setToString( (function(o) {
-			var inst = this.inventory.items.getByOid('_id', o.institute).item;		
-			return inst.acronym && inst.acronym != '' ? inst.acronym + ' - ' + o.name : o.name;
+			var inst = this.inventory.items.getByOid('_id', o.institute).item;
+			return (inst.acronym != '' ? inst.acronym : inst.name) + ' - ' + o.name;
 		}).bind(this));
 		drp1.display();
-	}).bind(this));
 	
-	var txt1 = new HtmlTextGroup('Other Resp.');
-	txt1.div.hide();
-	
-	var drp2 = new HtmlDropDownGroup('Responsibility');
-	drp2.setSource(new Container(
-        'Crisis coordinator',
-        'Operational service',
-        'Civil protection authority',
-        'Other'
-    ));
-	drp2.setCallback('change', (function(drpbox, txt) {
-		if( drpbox.value() == 'Other' )
-			txt.div.css('display', '');
-		else
-			txt.div.hide();
-	}).bind(this, drp2, txt1));
-	drp2.select(0);
-	
-	var chk = new HtmlCheckBox('24/7 operational service').addClass('operational');
-	chk.setCallback('change', (function(chk) {
-		chk.value() ? this.getField('hours').div.hide() : this.getField('hours').div.show();
-		chk.value() ? this.getField('hours_label').div.hide() : this.getField('hours_label').div.show();
-	}).bind(this, chk));
-	
-	var label = new HtmlCustom($('<h5>', {
-		html: edit ? 'Please specify working hours if the institute doesn’t provide a 24/7 operational service.' : 'Working hours if not 24/7 operational service.'
-	}) );
+		var txt1 = new HtmlTextGroup('Other Resp.');
+		txt1.div.hide();
 		
-	var fields = new Container(
-		{html: new HtmlCustom( $('<h5>', {html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities.'}) )},
-		{key: 'name', html: new HtmlTextGroup('Contact Name').validate('^.+$')},
-   	    {key: 'office', html: drp1},
-   	    {key: 'mail', html: new HtmlTextGroup('Mail')},
-   	    {key: 'phone', html: new HtmlTextGroup('Phone')},
-   	    {key: 'fax', html: new HtmlTextGroup('Fax')},   	    
-   	    {key: 'kind1', html: drp2, nodata: true},
-   	    {key: 'kind2', html: txt1, nodata: true},
-   	    {key: '247', html: chk},
-   	    {key: 'hours_label', html: label, nodata: true},
-   	    {key: 'hours', html: new HtmlTextArea()},
-   	    {html: new HtmlCustom($('<h5>', {html: 'Additional explanation.'}))},
-   	    {key: 'explanation', html: new HtmlTextArea()}
-	);
+		var drp2 = new HtmlDropDownGroup('Responsibility');
+		drp2.setSource(new Container(
+	        'Crisis coordinator',
+	        'Operational service',
+	        'Civil protection authority',
+	        'Other'
+	    ));
+		drp2.setCallback('change', (function(drpbox, txt) {
+			if( drpbox.value() == 'Other' )
+				txt.div.css('display', '');
+			else
+				txt.div.hide();
+		}).bind(this, drp2, txt1));
+		drp2.select(0);
 		
-	this.div.find('.banner').html('Contact');
-	this.sec = new Section(fields);
-	
-	DetailsView.prototype.fill.call(this, edit);
-	
-	chk.notifyOn('change');
-	if( this.data['kind'] ) {
-		if( ! drp2.source.findItem(null, this.data['kind']) ) {
-			drp2.selectByVal(null, 'Other');
-			txt1.value( this.data['kind'] );
-		} else {
-			drp2.selectByVal(null, this.data['kind']);
+		var chk = new HtmlCheckBox('24/7 operational service').addClass('operational');
+		chk.setCallback('change', (function(chk) {
+			chk.value() ? this.getField('hours').div.hide() : this.getField('hours').div.show();
+			chk.value() ? this.getField('hours_label').div.hide() : this.getField('hours_label').div.show();
+		}).bind(this, chk));
+		
+		var label = new HtmlCustom($('<h5>', {
+			html: edit ? 'Please specify working hours if the institute doesn’t provide a 24/7 operational service.' : 'Working hours if not 24/7 operational service.'
+		}) );
+			
+		var fields = new Container(
+			{html: new HtmlCustom( $('<h5>', {html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities.'}) )},
+			{key: 'name', html: new HtmlTextGroup('Contact Name').validate('^.+$')},
+	   	    {key: 'office', html: drp1},
+	   	    {key: 'mail', html: new HtmlTextGroup('E-Mail')},
+	   	    {key: 'phone', html: new HtmlTextGroup('Phone')},
+	   	    {key: 'fax', html: new HtmlTextGroup('Fax')},   	    
+	   	    {key: 'kind1', html: drp2, nodata: true},
+	   	    {key: 'kind2', html: txt1, nodata: true},
+	   	    {key: '247', html: chk},
+	   	    {key: 'hours_label', html: label, nodata: true},
+	   	    {key: 'hours', html: new HtmlTextArea()},
+	   	    {html: new HtmlCustom($('<h5>', {html: 'Additional explanation.'}))},
+	   	    {key: 'explanation', html: new HtmlTextArea()}
+		);
+			
+		this.div.find('.banner').html('Contact');
+		this.sec = new Section(fields);
+		
+		DetailsView.prototype.fill.call(this, edit);
+		
+		chk.notifyOn('change');
+		if( this.data['kind'] ) {
+			if( ! drp2.source.findItem(null, this.data['kind']) ) {
+				drp2.selectByVal(null, 'Other');
+				txt1.value( this.data['kind'] );
+			} else {
+				drp2.selectByVal(null, this.data['kind']);
+			}
 		}
-	}	
+	
+	}).bind(this));
 };
 
 PersonDetailView.prototype.extract = function() {
@@ -1339,56 +1362,71 @@ InviteDetailView.prototype.fill = function(edit) {
 		drp2.selectByVal('name', known_office ? this.data.new_office : 'New');
 		txt2.value(known_office ? '' : this.data.new_office);
 	
-	var btn_meteo = $('<label class="btn btn-default active"><input type="radio">Meteo</label>');
-	var btn_geo = $('<label class="btn btn-default"><input type="radio">Geo</label>');
-	var custom = new HtmlCustom( $('<div class="btn-group" data-toggle="buttons"></div>') );
-	custom.append(btn_meteo).append(btn_geo);
-	
-	var text_area = new HtmlTextArea();
-	
-	var area_resize = function() {
-		$(this).innerHeight(0);
-		$(this).innerHeight( $(this).prop('scrollHeight') );
-	};
-	text_area.$find('textarea').bind('input onpropertychange', area_resize);
-	
-	var load_text = (function(txt, group) {
-		txt.value(texts[group]);
-		/* In order to do the initial resizing of the textarea, the engine needs to render the html elements on the screen first. */
-		setTimeout( area_resize.bind(text_area.$find('textarea')), 0 );
-	}).bind(this, text_area);
-	btn_meteo.click( load_text.bind(this, 'meteo') );
-	btn_geo.click( load_text.bind(this, 'geo') );
-	
-	btn_meteo.click();
-	
-	this.data.from = this.data.from || user.mail;
-	
-	var fields = new Container(
-		{key: 'institute', html: drp1, nodata: true},
-		{key: 'institute-new', html: txt1, nodata: true},
-		{key: 'office', html: drp2, nodata: true},
-		{key: 'office-new', html: txt2, nodata: true},
-	    {key: 'name', html: new HtmlTextGroup('Contact Name').validate('^.+$')},
-	    {key: 'to', html: new HtmlTextGroup('Mail/To').validate('^.+$')},
-	    {key: 'from', html: new HtmlTextGroup('From').validate('^.+$')},
-	    {key: 'cc', html: new HtmlTextGroup('CC').validate('^.+$')},
-	    {key: 'version', html: custom},
-	    {key: 'text', html: text_area},
-	    {html: new HtmlCustom($('<div class="invite-url-info">Use <b>%s</b> to define the position of the URL which can be used by the invited recipient to open this website.</div>'))}
-	);
-	
-	this.div.find('.banner').html('Invite');
-	if( !('_id' in this.data) ) {
-		/* Request invite. */
-		this.div.find('.btn.save').html('Request Invite').css('width', '120px');
-	}
-	this.div.find('.btn.confirm')[ !('_id' in this.data) || edit ? 'hide' : 'show' ]();
-	this.sec = new Section(fields);
-	
-	DetailsView.prototype.fill.call(this, edit);
-	
-	this.getField('from').readonly();
+		var btn_meteo = $('<label class="btn btn-default active"><input type="radio">Meteo</label>');
+		var btn_geo = $('<label class="btn btn-default"><input type="radio">Geo</label>');
+		var btn_custom = $('<label class="btn btn-default"><input type="radio">Custom</label>');
+		var custom = new HtmlCustom( $('<div class="btn-group" data-toggle="buttons"></div>') );
+		custom.append(btn_meteo).append(btn_geo).append(btn_custom);
+		custom.div.css('display', edit ? '' : 'none');
+		
+		var text_area = new HtmlTextArea();
+		
+		var area_resize = function() {
+			/* Cross-browser! */
+			var pos1 = $('body').scrollTop();
+			var pos2 = $('html').scrollTop();
+			$(this).innerHeight(0);
+			$(this).innerHeight( $(this).prop('scrollHeight') );
+			$('body').scrollTop(pos1);
+			$('html').scrollTop(pos2);
+		};
+		text_area.$find('textarea').bind('input onpropertychange', area_resize);
+		text_area.$find('textarea').bind('input onpropertychange', (function(btn) { btn.click(); }).bind(this, btn_custom));
+		
+		var load_text = (function(txt, group) {
+			if( group ) txt.value(texts[group]);
+			/* In order to do the initial resizing of the textarea, the engine needs to render the html elements on the screen first. */
+			setTimeout( area_resize.bind(text_area.$find('textarea')), 0 );
+		}).bind(this, text_area);
+		btn_meteo.click( load_text.bind(this, 'meteo') );
+		btn_geo.click( load_text.bind(this, 'geo') );
+		btn_custom.click( load_text.bind(this) );
+			
+		this.data.from = this.data.from || user.mail;
+		
+		var fields = new Container(
+			{key: 'institute', html: drp1, nodata: true},
+			{key: 'institute-new', html: txt1, nodata: true},
+			{key: 'office', html: drp2, nodata: true},
+			{key: 'office-new', html: txt2, nodata: true},
+		    {key: 'name', html: new HtmlTextGroup('Contact Name').validate('^.+$')},
+		    {key: 'to', html: new HtmlTextGroup('Mail/To').validate('^.+$')},
+		    {key: 'from', html: new HtmlTextGroup('From').validate('^.+$')},
+		    {key: 'cc', html: new HtmlTextGroup('CC').validate('^.+$')},
+		    {key: 'version', html: custom},
+		    {key: 'text', html: text_area},
+		    {html: new HtmlCustom($('<div class="invite-url-info">Use <b>%s</b> to define the position of the URL which can be used by the invited recipient to open this website.</div>'))}
+		);
+		
+		this.div.find('.banner').html('Invite');
+		if( !('_id' in this.data) ) {
+			/* Request invite. */
+			this.div.find('.btn.save').html('Request Invite').css('width', '120px');
+		}
+		this.div.find('.btn.confirm')[ !('_id' in this.data) || edit ? 'hide' : 'show' ]();
+		this.sec = new Section(fields);
+		
+		DetailsView.prototype.fill.call(this, edit);
+		
+		if( !('_id' in this.data) ) {
+			/* Load meteo text for new entries. */
+			btn_meteo.click();
+		} else {
+			/* Assume custom otherwise. */
+			btn_custom.click();
+		}
+		
+		this.getField('from').readonly();
 	
 	}).bind(this));
 };

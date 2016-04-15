@@ -232,6 +232,7 @@ function Container(arg0) {
 	this.sort = function() {
 		if( this.sortFun )
 			this.list.sort(this.sortFun);
+		return this;
 	};
 
 	this.setSortFun = function(sortFun) {
@@ -413,10 +414,12 @@ function HtmlDropDown() {
 	this.select = function(idx) {
 		if (arguments.length > 0) {
 			var items = this.content.find('> li');
+			items.removeClass('active');
 			if (idx < items.length) {
 				var item = $(items[idx]);
 				this.button.find('> .html-text').html(
 						item.find('a').html());
+				item.addClass('active');
 				this.idx = idx;
 				this.notifyOn('change', this.idx);
 			}

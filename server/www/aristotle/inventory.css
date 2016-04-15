@@ -241,17 +241,15 @@ body {
 .navigation {
 	position: absolute;
 	top: 25px;
-	left: 15px;
-	width: 110px;
+	left: 10px;
+	width: 100px;
 	border: 5px;
 }
 
 .navigation > div {
-	width: 100%;
-	background-color: #0065a2;
+	width: 100%;	
 	padding: 5px 10px;
-	color: white;
-	font-weight: bold;
+	color: #0065a2;
 	cursor: pointer;
 	border-bottom: 1px solid #4ca8cd;
 	font-size: 16px;
@@ -265,6 +263,7 @@ body {
 .navigation > div:last-child {
 	border-bottom-left-radius: 5px;
     border-bottom-right-radius: 5px;
+    border-bottom: none;
 }
 
 .navigation > div:hover {
@@ -870,6 +869,7 @@ img {
 	position: absolute;
 	top: 0px;
 	width: 1234px;
+	z-index: 100;
 }
 
 .links span {
@@ -921,17 +921,21 @@ img {
 	color: #286090;	
 }
 
+.html-dropdown li.active {
+	background-color: #0065a2;
+}
+
 @media (max-width: 1199px) {
 	.frame {
 		min-width: 0px;		
 	}
 	
-	#map, .list, .details {
+	#map, .list, .details, .denied {
 		width: calc(100% - 14px);
 		margin-left: 7px;
 		margin-right: 7px; 
 	}
-	
+		
 	.details {
 		max-width: 500px;
 		margin: 0 auto;
@@ -962,6 +966,11 @@ img {
 	.navigation {
 		display: none;
 	}
+	
+	.go-to-top {
+		left: 0px;
+		font-size: 25px;
+	}
 }
 
 @media (max-width: 950px) {
@@ -982,6 +991,14 @@ img {
 	.help table {
 		width: 100%;
 	}
+	
+	.refresh {
+		left: 15px;
+	}
+	
+	.notification {
+		left: 50px;
+	}
 }
 
 @media (max-width: 650px) {
@@ -995,6 +1012,12 @@ img {
 		width: calc(100% - 50px);
 		max-width: 500px;
 		margin-left: 50px;
+	}
+	
+	.details .section .block {
+		padding-left: 5px;
+		padding-right: 5px;
+		margin: 5px;
 	}
 }
 
