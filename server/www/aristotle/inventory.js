@@ -187,6 +187,21 @@ function Inventory(div) {
 			push.click();
 	}
 	
+	/* Print mode detection. */
+	this.print_mode = false;
+//	window.onbeforeprint = this.change_print_mode.bind(this, true);
+//	window.onafterprint = this.change_print_mode.bind(this, false);
+//	if(window.matchMedia) {
+//		window.matchMedia('print').addListener((function(mql) {
+//			this.change_print_mode(mql.matches);
+//		}).bind(this));
+//	}
+	
+	/* Toogle print mode. */
+	$('a.print').click( (function() {
+		this.change_print_mode();
+	}).bind(this) );
+	
 	this.load_details(null);
 }
 Inventory.prototype = {
@@ -374,6 +389,8 @@ Inventory.prototype = {
 	},
 	
 	draw: function() {
+		console.log('start drawing');
+		var t0 = performance.now();
 		this.clear();
 		var filtfun = function(type) {
 			var f =  function(type, obj) {
@@ -383,61 +400,68 @@ Inventory.prototype = {
 		};
 		if( this.visible('institute') ) {
 			var insts = this.items.filter( filtfun('institute') );
-			for(var i = 0; i < insts.length(); i++) {
-				this.div.find('.sec-insts .items').append(
-					new InstItem(this, insts.get(i)).div
-				);
-			}
+			var div = this.div.find('.sec-insts .items');
+			for(var i = 0; i < insts.length(); i++)
+				div.append( new InstItem(this, insts.get(i)).div );
 		}
-		if( this.visible('office') ) {
+		if( this.visible('office')) {
 			var insts = this.items.filter( filtfun('office') );
-			for(var i = 0; i < insts.length(); i++) {
-				this.div.find('.sec-offices .items').append(
-					new OfficeItem(this, insts.get(i)).div
-				);
+			if( ! this.print_mode  ) {
+				var div = this.div.find('.sec-offices .items');
+				for(var i = 0; i < insts.length(); i++)
+					div.append(	new OfficeItem(this, insts.get(i)).div );
 			}
 			this.map.set_offices(insts);
 		}
-		if( this.visible('person') ) {
+		if( this.visible('person') && ! this.print_mode  ) {
 			var insts = this.items.filter( filtfun('person') );
+			var div = this.div.find('.sec-persons .items');
 			for(var i = 0; i < insts.length(); i++) {
-				this.div.find('.sec-persons .items').append(
+				div.append(
 					new PersonItem(this, insts.get(i)).div
 				);
 			}
 		}
-		if( this.visible('decision') ) {
+		if( this.visible('decision') && ! this.print_mode ) {
 			var insts = this.items.filter( filtfun('decision') );
+			var div = this.div.find('.sec-decisions .items');
 			for(var i = 0; i < insts.length(); i++) {			
-				this.div.find('.sec-decisions .items').append(
+				div.append(
 					new DecisionItem(this, insts.get(i)).div
 				);
 			}
 		}
-		if( this.visible('advice') ) {
+		if( this.visible('advice') && ! this.print_mode ) {
 			var insts = this.items.filter( filtfun('advice') );
+			var div = this.div.find('.sec-advices .items');
 			for(var i = 0; i < insts.length(); i++) {			
-				this.div.find('.sec-advices .items').append(
+				div.append(
 					new AdviceItem(this, insts.get(i)).div
 				);
 			}
 		}
-		if( this.visible('invite') ) {
+		if( this.visible('invite') && ! this.print_mode ) {
 			var insts = this.items.filter( filtfun('invite') );
+			var div = this.div.find('.sec-invites .items');
 			for(var i = 0; i < insts.length(); i++) {			
-				this.div.find('.sec-invites .items').append(
+				div.append(
 					new InviteItem(this, insts.get(i)).div
 				);
 			}
 			this.div.find('.sec-invites')[insts.length() > 0 ? 'show' : 'hide']();
 		}
 		
-		var divs = this.div.find('.sec-offices button, .sec-decisions button, .sec-advices button').attr('disabled', true);
-		/* Disable 'new' button if there is no possibility to create something. */
-		this.auth_many(this.items.filter('type', 'institute').list, divs);
-		var divs = this.div.find('.sec-persons button').attr('disabled', true);
-		/* Disable 'new' button if there is no possibility to create something. */
-		this.auth_many(this.items.filter('type', 'office').list, divs);
+		if( ! this.print_mode ) {
+			var divs = this.div.find('.sec-offices button, .sec-decisions button, .sec-advices button').attr('disabled', true);
+			/* Disable 'new' button if there is no possibility to create something. */
+			this.auth_many(this.items.filter('type', 'institute').list, divs);
+			var divs = this.div.find('.sec-persons button').attr('disabled', true);
+			/* Disable 'new' button if there is no possibility to create something. */
+			this.auth_many(this.items.filter('type', 'office').list, divs);
+		}
+		
+		var t1 = performance.now();
+		console.log("Call to draw() took " + (t1 - t0) + " milliseconds.");
 	},
 	
 	visible: function(type) {
@@ -454,7 +478,15 @@ Inventory.prototype = {
 			if( res.status == 'success' && res.valid.length > 0 )
 				divs.attr('disabled', false);
 		}).bind(this, divs));
-	}
+	},
+	
+	/* Set or toggle the print mode. */
+	change_print_mode: function(res) {
+		this.print_mode = arguments.length > 0 ? res : ! this.print_mode;
+		var fun = this.print_mode ? 'hide' : 'show';
+		$('.sec-invites, .sec-offices, .sec-persons, .sec-advices, .sec-decisions, .navigation, .notification')[fun]();
+		this.draw();
+	},
 };
 Inventory.prototype.constructor = Inventory;
 
@@ -594,14 +626,16 @@ function Item(inventory, data) {
 	}).bind(this));
 }
 Item.prototype = {
-	inventory: null,
+	inventory: null,	
 	templ: function() {
 		return (
 			$('<div>', {'class': 'item'}).append(
 				$('<span>', {'class': 'title'}),
 				$('<span>', {'class': 'id-search glyphicon glyphicon-search'}),
 				$('<div>', {'class': 'subtitle'}),
-				$('<div>', {'class': 'text'})
+				$('<div>', {'class': 'text'}),
+				$('<div>', {'class': 'content'}),
+				$('<div>', {'class': 'subitems'})
 			)
 		);
 	},
@@ -617,10 +651,21 @@ Item.prototype = {
 			if( item[1] ) strs.push(item.join(''));
 		}
 		return strs.join(' &#183; ');
+	},
+	
+	print_content: function(fields) {
+		for(var i = 0; i < fields.length(); i++) {
+			var item = fields.get(i);
+			var data = item.data || this.data;
+			if( data[item.key] ) {
+				var head = item.head ? $('<div class="head">' + item.head + '</div>') : null;
+				var text = $('<div class="text">' + (item.text || data[item.key]) + '</div>');
+				this.div.find('> .content').append(head).append(text);
+			}
+		}
 	}
 };
 /* ********* */
-
 
 
 /* Class InstItem extends Item. */
@@ -630,6 +675,27 @@ function InstItem(inventory, data) {
 	/* Set fields. */
 	this.div.find('.title').html(data.name);
 	this.div.find('.subtitle').html( this.pretty(data.acronym, data.website) );
+	
+	/* List subitems. */
+	if( this.inventory.print_mode ) {
+		var subitems = this.inventory.items.filter('institute', this.data._id).filter('__show', true);
+		var kinds = new Container(
+			{type: 'office', head: 'Offices', ctor: 'OfficeItem'},
+			{type: 'advice', head: 'Advices', ctor: 'AdviceItem'},
+			{type: 'decision', head: 'Processes', ctor: 'DecisionItem' }
+		);
+		var div = this.div.find('> .subitems');
+		for(var k = 0; k < kinds.length(); k++) {
+			var sublist = subitems.filter('type', kinds.get(k).type);
+			if( sublist.length() > 0 )
+				div.append('<h3>' + kinds.get(k).head + '</h3>');
+			for(var i = 0; i < sublist.length(); i++) {
+				var ctor = window[kinds.get(k).ctor];
+				div.append( new ctor(this.inventory, sublist.get(i)).div);
+			}
+		}
+	}
+	this.inventory.print_mode ? this.div.addClass('item-print') : this.div.removeClass('item-print');
 }
 InstItem.prototype = Object.create(Item.prototype);
 InstItem.prototype.constructor = InstItem;
@@ -647,6 +713,37 @@ function OfficeItem(inventory, data) {
 	
 	var inst = this.inventory.items.getByOid('_id', data.institute).item;
 	this.div.find('.text').html( this.pretty(inst.acronym, inst.name) );
+		
+	/* Print contents. */
+	if( this.inventory.print_mode ) {
+		
+		var fields = new Container(
+			{key: 'lawfully_mandated', text: 'Advices/warnings are provided as <b>lawfully</b> mandated services'}
+		);
+		this.print_content(fields);
+		
+		var hazards = new Section(OfficeDetailView.prototype.hazards());
+		hazards.fill(false, this.data.hazard_types);
+		hazards.draw();
+		if( hazards.div.text() != '' ) {
+			this.div.find('> .content').append('<div class="head">For the following hazardous phenomena warnings are issued and/or advice is supplied</div>');
+			this.div.find('> .content').append(hazards.div);
+		}
+		
+		fields = new Container(
+			{key: 'explanation', head: 'Additional explanation', 'class': 'wrap'}
+		);
+		this.print_content(fields);
+		
+		/* List subitems. */
+		var persons = this.inventory.items.filter('office', this.data._id).filter('type', 'person').filter('__show', true);
+		if( persons.length() > 0 )
+			this.div.find('> .subitems').append('<h3>Contacts</h3>');
+		for(var i = 0; i < persons.length(); i++)
+			this.div.find('> .subitems').append(
+				new PersonItem(	this.inventory, persons.get(i) ).div
+			);
+	}
 }
 OfficeItem.prototype = Object.create(Item.prototype);
 OfficeItem.prototype.constructor = OfficeItem;
@@ -669,6 +766,16 @@ function PersonItem(inventory, data) {
 		$('<div>', {html: this.pretty(['Tel ', data.phone] , ['Fax ', data.fax])})
 	);
 	this.div.find('.text').html( this.pretty(inst.acronym, inst.name, office.name) );
+	
+	/* Print contents. */
+	if( this.inventory.print_mode ) {
+		var fields = new Container(
+			{key: '247', text: 'Provides 24/7 operational service'},
+			{key: 'hours', head: 'Working hours'},
+			{key: 'explanation', head: 'Additional explanation'}
+		);
+		this.print_content(fields);
+	}
 }
 PersonItem.prototype = Object.create(Item.prototype);
 PersonItem.prototype.constructor = PersonItem;
@@ -726,7 +833,7 @@ DetailsView.prototype = {
 		this.mode_edit = edit;
 		this.sec.fill(edit, this.data);
 		this.div.find('.content').html(this.sec.div);
-		this.div.find('.footer').show();
+		this.div.find('.footer').css('display', '');
 	},
 
 	extract: function() {
@@ -950,9 +1057,25 @@ function DecisionItem(inventory, data) {
 	this.div.find('.subtitle').html(
 		this.pretty(this.data.a['severity of the event'] ? 'Severity of the event' : '', this.data.a['impact of the event'] ? 'Impact of the event' : '', this.data.a['impending or imminent event'] ? 'Impending or imminent event' : '')
 	);
-	
 	var inst = this.inventory.items.getByOid('_id', data.institute).item;
 	this.div.find('.text').html( this.pretty(inst.acronym, inst.name) );
+	
+	/* Print contents. */
+	if( this.inventory.print_mode ) {
+		this.div.find('.content').append('<div class="head">Criteria that trigger the issue of a warning</div>');
+		this.div.find('.content').append('<div class="text">' +
+			this.pretty(this.data.a['severity of the event'] ? 'Severity of the event' : '', this.data.a['impact of the event'] ? 'Impact of the event' : '', this.data.a['impending or imminent event'] ? 'Impending or imminent event' : '') +
+			'</div>'
+		);
+		var fields = new Container(
+			{key: 'a', head: 'Is this the case for every hazard type?', data: this.data.a.details},
+			{key: 'i', head: 'Are emergency responders/civil crisis managers involved within the decision process for issuing  warnings?', data: this.data.b},
+			{key: 'a', head: 'Does your institute communicate with other entities?', data: this.data.c.i },
+			{key: 'a', head: 'Is there a coordinated approach to communicate multiple hazards/warnings?', data: this.data.c.ii },
+			{key: 'text', head: 'Additional explanation', data: this.data.explanation }
+		);
+		this.print_content(fields);
+	}
 }
 DecisionItem.prototype = Object.create(Item.prototype);
 DecisionItem.prototype.constructor = DecisionItem;
@@ -993,6 +1116,24 @@ function AdviceItem(inventory, data) {
 	
 	var inst = this.inventory.items.getByOid('_id', data.institute).item;
 	this.div.find('.text').html( this.pretty(inst.acronym, inst.name) );
+	
+	/* Print contents. */
+	if( this.inventory.print_mode ) {
+		var sel1 = new Selection( Advice.prototype.items.a, 'Communication channels');
+		var sel2 = new Selection( Advice.prototype.items.b, 'Content');
+		sel1.fill(false, this.data.a);
+		sel1.draw();
+		sel2.fill(false, this.data.b);
+		sel2.draw();
+	
+		this.div.find('> .content').append(sel1.div).append(sel2.div);
+		
+		var fields = new Container(
+			{key: 'i', head: 'Advice for specific hazards', data: this.data.c},
+			{key: 'text', head: 'Additional explanation', 'class': 'wrap', data: this.data.explanation }
+		);
+		this.print_content(fields);
+	}
 }
 AdviceItem.prototype = Object.create(Item.prototype);
 AdviceItem.prototype.constructor = AdviceItem;
@@ -1044,10 +1185,33 @@ function PersonDetailView(inventory, data) {
 }
 PersonDetailView.prototype = Object.create(DetailsView.prototype);
 PersonDetailView.prototype.constructor = PersonDetailView;
+
+PersonDetailView.prototype.fields = function(edit) {
+	var label = new HtmlCustom($('<h5>', {
+		html: edit ? 'Please specify working hours if the institute doesn’t provide a 24/7 operational service.' : 'Working hours if not 24/7 operational service.'
+	}) );
+	var fields = new Container(
+		{html: new HtmlCustom( $('<h5>', {html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities.'}) )},
+		{key: 'name', html: new HtmlTextGroup('Contact Name').validate('^.+$')},
+   	    {key: 'office', html: null},
+   	    {key: 'mail', html: new HtmlTextGroup('E-Mail')},
+   	    {key: 'phone', html: new HtmlTextGroup('Phone')},
+   	    {key: 'fax', html: new HtmlTextGroup('Fax')},   	    
+   	    {key: 'kind1', html: null},
+   	    {key: 'kind2', html: null},
+   	    {key: '247', html: null},
+   	    {key: 'hours_label', html: label},
+   	    {key: 'hours', html: new HtmlTextArea()},
+   	    {html: new HtmlCustom($('<h5>', {html: 'Additional explanation.'}))},
+   	    {key: 'explanation', html: new HtmlTextArea()}
+	);
+	return fields;
+};
+
 PersonDetailView.prototype.fill = function(edit) {
 	/* Create initial html elements and fill them with data. */
 	var d1 = $.Deferred();
-	var drp1 = this.new_dropdown2(d1, 'Office', 'office', edit);
+	var drp1 = this.new_dropdown2(d1, 'Office', 'office', edit);	
 	
 	$.when(d1).always((function() {
 		drp1.setToString( (function(o) {
@@ -1099,7 +1263,7 @@ PersonDetailView.prototype.fill = function(edit) {
 	   	    {html: new HtmlCustom($('<h5>', {html: 'Additional explanation.'}))},
 	   	    {key: 'explanation', html: new HtmlTextArea()}
 		);
-			
+		
 		this.div.find('.banner').html('Contact');
 		this.sec = new Section(fields);
 		
@@ -1150,7 +1314,7 @@ AdviceDetailView.prototype.fill = function(edit) {
 	var label = new HtmlCustom( $('<h5>', {
 		html: edit ? 'Give a brief description of the following with regard to the type of information you provide.' : ''
 	}) );
-	
+		
 	var fields = new Container(
 		{html: label},
 		{key: 'institute', html: drp1},
@@ -1242,11 +1406,8 @@ function OfficeDetailView(inventory, data) {
 }
 OfficeDetailView.prototype = Object.create(DetailsView.prototype);
 OfficeDetailView.prototype.constructor = OfficeDetailView;
-OfficeDetailView.prototype.fill = function(edit) {
 
-	/* Create initial html elements and fill them with data. */
-	var drp1 = this.new_dropdown('Institute', 'institute', edit);
-	
+OfficeDetailView.prototype.hazards = function() {
 	var groups = new Container(
 	     {key: 'Severe Weather', list: ['High temperatures', 'Low temperatures', 'Wind gusts land', 'Wind gusts coast', 'Wind gusts sea',
 	     'Mean windspeed gusts land', 'Mean windspeed gusts coast', 'Mean windspeed gusts sea', 'Visibility', 'Lightning',
@@ -1259,7 +1420,6 @@ OfficeDetailView.prototype.fill = function(edit) {
 	     'Focal Mechanism', 'Tsunami (basin wide/regional/local)']},
 	     {key: 'Volcanic Eruption', list: ['Tephra/Ash', 'Lava Flows', 'Lahars', 'Gas', 'Pyroclastic Flows', 'Landslides']}
 	);
-	
 	var selections = new Container();
 	for(var i = 0; i < groups.length(); i++) {
 		var item = groups.get(i);
@@ -1268,6 +1428,13 @@ OfficeDetailView.prototype.fill = function(edit) {
 			html: new Selection(item.list, item.key)
 		});
 	}
+	return selections;
+};
+
+OfficeDetailView.prototype.fill = function(edit, span) {
+	/* Create initial html elements and fill them with data. */
+	var drp1 = this.new_dropdown('Institute', 'institute', edit);
+	var selections = this.hazards();
 	
 	var fields = new Container(
 		{key: 'name', html: new HtmlTextGroup('Office Name').validate('^.+$')},
@@ -1526,7 +1693,7 @@ Selection.prototype = {
 				html = new HtmlCustom($('<span>')).append(
 					$('<span>', {'class': 'text', html: attr}),
 					$('<span>', {'class': 'dot', html: '&bull;'})
-				);		
+				);
 			}
 			if( html )
 				this.htmls.insert( {key: attr, html: html} );
@@ -1558,7 +1725,7 @@ Selection.prototype = {
 	},
 	
 	draw: function() {
-		var blk = $('<div>' /*, {'class': 'block'}*/);
+		var blk = $('<div>');
 		for(var i = 0; i < this.htmls.length(); i++) {
 			var item = this.htmls.get(i);
 			blk.append(item.html.div);
@@ -1576,7 +1743,7 @@ Selection.prototype = {
 				data[item.key] = item.html.value();
 			else
 				delete data[item.key];
-		}
+		}		
 	}
 };
 

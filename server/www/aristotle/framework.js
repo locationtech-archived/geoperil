@@ -458,6 +458,11 @@ function HtmlDropDown() {
 		return val;
 	};
 	
+	this.strValue = function() {
+		var val = this.selectedItem();
+		return this.toString ? this.toString(val) : val;
+	};
+	
 	this.selectedItem = function() {
 		return (this.idx > -1 ? this.source.get(this.idx) : null);
 	};

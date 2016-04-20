@@ -386,6 +386,15 @@ body {
 	margin-bottom: 25px;
 }
 
+.subitems h3 {
+	margin-left: -12px;
+	font-size: 24px;
+}
+
+.item-print {
+	border-bottom: 1px solid #ddd;
+}
+
 .item .title {
 	color: #0065a2;
 	font-size: 18px;
@@ -397,9 +406,14 @@ body {
 	font-size: 14px;
 }
 
-.item .text {
+.item > .text {
 	color: #545454;
 	font-size: small;
+}
+
+.item .subitems {
+	margin-top: 20px;
+	margin-left: 25px;
 }
 
 .item .id-search {
@@ -411,6 +425,39 @@ body {
 
 .item .id-search:hover {
 	color: #286090;
+}
+
+.item .content {
+	margin-top: 5px;	
+}
+
+.item .content .head,
+.item .content .section h5 {
+	font-size: 14px;
+    font-weight: bold;
+    padding-top: 5px;
+    margin: 0px;
+}
+
+.item .content .head + .text {
+	font-size: 14px;
+	padding-left: 5px;
+	padding-bottom: 5px;
+	white-space: pre-wrap;
+}
+
+.item .content .section > div {
+	padding: 5px;
+}
+
+.item .content .section .block {
+	margin: 0px;
+	padding-left: 10px;
+}
+
+.item .content .section .dot {
+	padding-left: 10px;
+	padding-right: 10px;
 }
 
 .details {
@@ -1038,3 +1085,16 @@ img {
 	}
 }
 
+@media print {
+	.html, .body {
+		height: 100%;
+	}
+	
+	.search, .tabs, .links, .map-btn, .go-to-top, .id-search, .footer, .details, .notification, .refresh {
+		display: none !important;
+	}
+	
+	.sec {
+		border-bottom: none;
+	}
+}
