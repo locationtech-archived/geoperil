@@ -19,12 +19,14 @@ $(document).ready(function () {
 		user = res1.person;
 		texts = res2.texts;
 	
-		if( ! user ) {
+		if( ! user ) {			
 			inv.div.find('.denied').show();
+			new SignInForm($('.login-form'));
 			return;
 		}
 		
-		inv.div.find('.list, .details').show();
+		inv.div.find('.list, .details, .stub, .navigation, .go-to-top, .map-btn, .links .print, .links .change-pwd').show();
+		inv.init();
 		window.onpopstate = inv.search.bind(inv);
 		inv.search();
 		
@@ -32,6 +34,12 @@ $(document).ready(function () {
 		$('.custom-popover .popover-title span').click( function() {
 			$(this).closest('.custom-popover').hide(500);
 		});
+		
+		$('a.sign-out').click( function() {
+			Cookies.remove('apikey');
+			location.reload();
+		});
+		$('.sign-out').show();
 	});
 	
 //	setTimeout( function() {
@@ -62,160 +70,243 @@ $(document).ready(function () {
 });
 
 
+function SignInForm(div) {
+	this.div = div;
+	this.div.find('.btn-next').click( this.next.bind(this) );
+	this.div.find('.inp-mail').keypress( (function(e) {
+		if(e.which == 13) this.next();
+	}).bind(this));
+	this.div.find('.btn-sign-in').click( this.sign_in.bind(this) );
+	this.div.find('.btn-sign-in').keypress( (function(e) {
+		if(e.which == 13) this.sign_in();
+	}).bind(this));
+	this.div.find('.lnk-back').click( this.back.bind(this) );
+	this.div.find('.lnk-reset-pwd').click( this.reset_pwd.bind(this) );
+	this.div.find('.inp-mail, .btn-next').show();
+}
+SignInForm.prototype = {
+	next: function() {
+		var d = $.Deferred();
+		deferred_ajax(d, wsgi + '/login/', {username: this.div.find('.inp-mail').val()});
+		$.when(d).always( (function(res) {
+			if( res.status == 'success' ) {
+				this.div.find('.btn-next, .inp-mail').hide();
+				this.div.find('.btn-sign-in, .lnk-back, .lnk-reset-pwd, .inp-pwd').show();
+				this.div.find('.status').html('');
+			} else {
+				this.div.find('.status').html('Unknown email address.');
+			}
+		}).bind(this));
+	},
+	
+	back: function() {
+		this.div.find('.status, .success').html('');
+		this.div.find('.btn-sign-in, .lnk-back, .lnk-reset-pwd, .inp-pwd').hide();
+		this.div.find('.btn-next, .inp-mail').show();
+	},
+	
+	sign_in: function() {
+		var d = $.Deferred();
+		deferred_ajax(d, wsgi + '/login/', {username: this.div.find('.inp-mail').val(), password: this.div.find('.inp-pwd').val()});
+		$.when(d).always( (function(res) {
+			if( res.status == 'success' ) {
+				this.div.find('.status').html('');
+				location.reload();
+			} else {
+				this.div.find('.status').html('Sign in failed.');
+			}
+		}).bind(this));
+	},
+	
+	reset_pwd: function() {
+		var d = $.Deferred();
+		deferred_ajax(d, wsgi + '/reset_pwd/', {username: this.div.find('.inp-mail').val()});
+		$.when(d).always( (function(res) {
+			if( res.status == 'success' ) {
+				console.log(res);
+				this.div.find('.status').html('');
+				this.div.find('input, button, a').hide();
+				this.div.find('.success').html(
+					'Password successfully reset. Check your mail account ' + this.div.find('.inp-mail').val() + '.'
+				);
+				this.div.find('.lnk-back').show();
+			} else {
+				this.div.find('.status').html('Failed to reset your password.');
+			}
+		}).bind(this));
+	}
+};
+SignInForm.prototype.constructor = SignInForm;
+
+
 
 function Inventory(div) {
-	
 	ICallbacks.call(this);
-	
 	this.div = div;
-	this.items = new Container( function(a,b) { return a.name.localeCompare(b.name); });
-	this.ts = 0;
-	this.tid = null;
-	this.curview = null;
-	this.search_data = {'in': [], id: [], display: [], text: ''};
-	
-	this.map = new Map('map', this);
-	
-	this.save_dialog = new SaveDialog();
-	this.delete_dialog = new DeleteDialog();
-	
-	this.div.find('.go-to-top').click(this.goto_top.bind(this));
-	this.div.find('.navigation > div').click(function() {
-		var target =  $(this).data('target');
-		var top = $(target).offset().top;
-		$('.stub').find('.static.pinned').each(function() {
-			top -= $(this).outerHeight();
-		});
-		$('html, body').animate({scrollTop: top}, 500);
-	});
-	this.div.find('.notification').click(this.update_url.bind(this,'display:invite'));
-	
-	this.div.find('.invite-text a').click((function() {
-		this.load_details(
-			new Invite(), true
-		);
-	}).bind(this));
-	
-	this.div.find('.sec-persons button.add').click((function() {
-		this.load_details(
-			new Person(), true
-		);
-	}).bind(this));
-	
-	this.div.find('.sec-offices button').click((function() {
-		ajax(wsgi + '/new/', {role: 'office'}, (function(res) {
-			this.load_details(
-				new Office(res.obj), true
-			);
-		}).bind(this));
-	}).bind(this));
-	
-	this.div.find('.sec-decisions button').click((function() {
-		this.load_details(
-			new Decision({}), true
-		);
-	}).bind(this));
-	
-	this.div.find('.sec-advices button').click((function() {
-		this.load_details(
-			new Advice({}), true
-		);
-	}).bind(this));
-	
-	/* Search field - TODO: should this go into a separate class? */
-	this.btn_search = new HtmlTextGroup('Search').setButton('search');
-	this.btn_search.getButton().click( (function() {
-		this.update_url( this.btn_search.value() );
-	}).bind(this));
-	var toogle_clear_btn = function() {
-		this.btn_search.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']({duration: 400});
-		this.div.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']();
-		this.update_url( this.btn_search.value() );
-	};
-	var fun = function() {
-		var tid = null;
-		var fun = function(e) {
-			clearTimeout(tid);
-			var delay = (e.which == 13 || e.which == 32 || this.btn_search.value() == '') ? 0 : 2000;
-			tid = setTimeout( (function(){ this.btn_search.text.div.change(); }).bind(this), delay);
-			this.btn_search.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']({duration: 400});
-			this.div.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']();
-		};
-		this.btn_search.find('.html-btn').append($('<div>', {
-			'class': 'btn-clear', html: '&times;', click: (function() {
-				clearTimeout(tid); 
-				this.btn_search.value('');
-			}).bind(this)
-		}));
-		return fun.bind(this);
-	};
-	this.btn_search.text.div.change( toogle_clear_btn.bind(this) );
-	this.btn_search.text.div.keyup( fun.call(this) );
-	this.div.find('.search-box').prepend( this.btn_search.div );
-		
-	for(attr in {'search': '', 'map-tile': '', 'navigation-tile': ''}) {
-		/* Pin search bar at the top of the page if requested. */
-		$(window).bind('scroll', (function (attr) {
-			var threshold = this.div.find('.header .banner').position().top + this.div.find('.header .banner').outerHeight();
-			this.div.find('.' + attr).parent().prevAll().find('.static:not(.pinned)').each(function() {
-				threshold += $(this).outerHeight();
-			});
-			var top = 0;
-			this.div.find('.' + attr).parent().prevAll().find('.static.pinned').each(function() {
-				top += $(this).outerHeight();
-			});
-		    if ($(window).scrollTop() > threshold) {
-		    	this.div.find('.' + attr).addClass('fixed');
-		    } else {
-		    	this.div.find('.' + attr).removeClass('fixed');
-		    }
-		    this.div.find('.' + attr).css('top', this.div.find('.' + attr).is('.fixed.pinned') ? top : '');
-		    /* Make pinned bar move horizontally while scrolling. */
-		    var left = this.div.find('.' + attr).is('.fixed.pinned') ? -$(window).scrollLeft() : 0;
-		    this.div.find('.' + attr).css({'left': left});
-		    this.div.find('.' + attr).css({'width': 'calc(100% - ' + left + 'px)'});
-		}).bind(this, attr));
-		
-		var push = this.div.find('.' + attr).find('.btn-push');
-		push.click( (function(attr) {
-			$(this).toggleClass('active');
-			$(this).closest('.' + attr).toggleClass('pinned');
-			$(this).hasClass('active') ? Cookies.set('pin-' + attr, 1) : Cookies.remove('pin-' + attr);
-			$(window).scroll();
-		}).bind(push, attr));
-		if( Cookies.get('pin-' + attr) )
-			push.click();
-	}
-	
-	/* Print mode detection. */
-	this.print_mode = false;
-//	window.onbeforeprint = this.change_print_mode.bind(this, true);
-//	window.onafterprint = this.change_print_mode.bind(this, false);
-//	if(window.matchMedia) {
-//		window.matchMedia('print').addListener((function(mql) {
-//			this.change_print_mode(mql.matches);
-//		}).bind(this));
-//	}
-	
-	/* Toogle print mode. */
-	$('a.print').click( (function() {
-		this.change_print_mode();
-	}).bind(this) );
-	
-	this.load_details(null);
 }
 Inventory.prototype = {
+	init: function() {
+		this.items = new Container( function(a,b) { return a.name.localeCompare(b.name); });
+		this.ts = 0;
+		this.tid = null;
+		this.curview = null;
+		this.search_data = {'in': [], id: [], display: [], text: ''};
+		
+		this.map = new Map('map', this);
+		
+		this.save_dialog = new SaveDialog();
+		this.delete_dialog = new DeleteDialog();
+		this.change_pwd_dialog = new ChangePwdDialog();
+		
+		this.div.find('.go-to-top').click(this.goto_top.bind(this));
+		this.div.find('.navigation > div').click(function() {
+			var target =  $(this).data('target');
+			var top = $(target).offset().top;
+			$('.stub').find('.static.pinned').each(function() {
+				top -= $(this).outerHeight();
+			});
+			$('html, body').animate({scrollTop: top}, 500);
+		});
+		this.div.find('.notification').click(this.update_url.bind(this,'display:invite'));
+		
+		this.div.find('.invite-text a').click((function() {
+			this.load_details(
+				new Invite(), true
+			);
+		}).bind(this));
+		
+		this.div.find('.sec-persons button.add').click((function() {
+			this.load_details(
+				new Person(), true
+			);
+		}).bind(this));
+		
+		this.div.find('.sec-offices button').click((function() {
+			ajax(wsgi + '/new/', {role: 'office'}, (function(res) {
+				this.load_details(
+					new Office(res.obj), true
+				);
+			}).bind(this));
+		}).bind(this));
+		
+		this.div.find('.sec-decisions button').click((function() {
+			this.load_details(
+				new Decision({}), true
+			);
+		}).bind(this));
+		
+		this.div.find('.sec-advices button').click((function() {
+			this.load_details(
+				new Advice({}), true
+			);
+		}).bind(this));
+		
+		/* Search field - TODO: should this go into a separate class? */
+		this.btn_search = new HtmlTextGroup('Search').setButton('search');
+		this.btn_search.getButton().click( (function() {
+			this.update_url( this.btn_search.value() );
+		}).bind(this));
+		var toogle_clear_btn = function() {
+			this.btn_search.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']({duration: 400});
+			this.div.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']();
+			this.update_url( this.btn_search.value() );
+		};
+		var fun = function() {
+			var tid = null;
+			var fun = function(e) {
+				clearTimeout(tid);
+				var delay = (e.which == 13 || e.which == 32 || this.btn_search.value() == '') ? 0 : 2000;
+				tid = setTimeout( (function(){ this.btn_search.text.div.change(); }).bind(this), delay);
+				this.btn_search.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']({duration: 400});
+				this.div.find('.btn-clear, .invite-text')[this.btn_search.value() != '' ? 'show' : 'hide']();
+			};
+			this.btn_search.find('.html-btn').append($('<div>', {
+				'class': 'btn-clear', html: '&times;', click: (function() {
+					clearTimeout(tid); 
+					this.btn_search.value('');
+				}).bind(this)
+			}));
+			return fun.bind(this);
+		};
+		this.btn_search.text.div.change( toogle_clear_btn.bind(this) );
+		this.btn_search.text.div.keyup( fun.call(this) );
+		this.div.find('.search-box').prepend( this.btn_search.div );
+			
+		for(attr in {'search': '', 'map-tile': '', 'navigation-tile': ''}) {
+			/* Pin search bar at the top of the page if requested. */
+			$(window).bind('scroll', (function (attr) {
+				var threshold = this.div.find('.header .banner').position().top + this.div.find('.header .banner').outerHeight();
+				this.div.find('.' + attr).parent().prevAll().find('.static:not(.pinned)').each(function() {
+					threshold += $(this).outerHeight();
+				});
+				var top = 0;
+				this.div.find('.' + attr).parent().prevAll().find('.static.pinned').each(function() {
+					top += $(this).outerHeight();
+				});
+			    if ($(window).scrollTop() > threshold) {
+			    	this.div.find('.' + attr).addClass('fixed');
+			    } else {
+			    	this.div.find('.' + attr).removeClass('fixed');
+			    }
+			    this.div.find('.' + attr).css('top', this.div.find('.' + attr).is('.fixed.pinned') ? top : '');
+			    /* Make pinned bar move horizontally while scrolling. */
+			    var left = this.div.find('.' + attr).is('.fixed.pinned') ? -$(window).scrollLeft() : 0;
+			    this.div.find('.' + attr).css({'left': left});
+			    this.div.find('.' + attr).css({'width': 'calc(100% - ' + left + 'px)'});
+			}).bind(this, attr));
+			
+			var push = this.div.find('.' + attr).find('.btn-push');
+			push.click( (function(attr) {
+				$(this).toggleClass('active');
+				$(this).closest('.' + attr).toggleClass('pinned');
+				$(this).hasClass('active') ? Cookies.set('pin-' + attr, 1) : Cookies.remove('pin-' + attr);
+				$(window).scroll();
+			}).bind(push, attr));
+			if( Cookies.get('pin-' + attr) )
+				push.click();
+		}
+		
+		/* Print mode detection. */
+		this.print_mode = false;
+	//	window.onbeforeprint = this.change_print_mode.bind(this, true);
+	//	window.onafterprint = this.change_print_mode.bind(this, false);
+	//	if(window.matchMedia) {
+	//		window.matchMedia('print').addListener((function(mql) {
+	//			this.change_print_mode(mql.matches);
+	//		}).bind(this));
+	//	}
+		
+		/* Toogle print mode. */
+		$('a.print').click( (function() {
+			this.change_print_mode();
+		}).bind(this) );
+		
+		
+		$('a.change-pwd').click( (function() {
+			this.change_pwd_dialog.show();
+		}).bind(this) );
+		
+		this.load_details(null);
+	},
+	
 	split_url: function() {
 		var parts = window.location.search.split(/[?&]/);
-		var ret = {
-			apikey: parts.length >= 2 ? parts[1] : null,
-			search: parts.length >= 3 ? decodeURIComponent(parts[2]) : ''
-		};
+		var ret = {search: ''};
+		var search_prefix = 'search=';
+		for(var i = 0; i < parts.length; i++) {
+			if( parts[i].startsWith(search_prefix) )
+				ret.search = decodeURIComponent(parts[i].substr(search_prefix.length));
+			else
+				ret.apikey = parts[i];
+		}
 		return ret;
 	},
 		
 	get_apikey: function() {
-		return this.split_url().apikey;
+		var urlkey = this.split_url().apikey;
+		if( urlkey )
+			Cookies.set('apikey', urlkey);
+		return Cookies.get('apikey');
 	},
 	
 	get_search_string: function() {
@@ -227,7 +318,10 @@ Inventory.prototype = {
 		/* Do not store history if the URL has not change. */
 		if( this.split_url().search == search_text )
 			return;
-		var url = window.location.pathname.split("/").pop() + '?' + this.get_apikey() + '&' + encodeURIComponent(search_text);
+		var urlkey = this.split_url().apikey;
+		var api_comp = urlkey ? urlkey + '&' : '';
+		var search_comp = 'search=' + encodeURIComponent(search_text);
+		var url = window.location.pathname.split("/").pop() + '?' + api_comp + search_comp;
 		history.pushState(null, '', url);
 		this.search();
 	},
@@ -359,7 +453,7 @@ Inventory.prototype = {
 		}).bind(this));
 	},
 	
-	search: function(text) {
+	search: function() {
 		/* Determine search data. */
 		var text = this.split_url().search;
 		var regex = /(?:^|\s)((id|in|display):([^ "]+|"[^"]+"))/g;
@@ -485,6 +579,7 @@ Inventory.prototype = {
 		this.print_mode = arguments.length > 0 ? res : ! this.print_mode;
 		var fun = this.print_mode ? 'hide' : 'show';
 		$('.sec-invites, .sec-offices, .sec-persons, .sec-advices, .sec-decisions, .navigation, .notification')[fun]();
+		$('a.print').html(this.print_mode ? 'Edit mode' : 'Print mode');
 		this.draw();
 	},
 };
@@ -888,6 +983,9 @@ DetailsView.prototype = {
 				this.inventory.load_data();
 				this.inventory.goto_details();
 				return this.fill(false);
+			} else {
+				this.div.find('.footer .status').html('Save unsuccessful: ' + res.reason);
+				this.div.find('.footer .status').show();
 			}
 			//ajax(wsgi + '/unlock/', {data: JSON.stringify(this.data)});
 		}).bind(this));
@@ -1252,7 +1350,7 @@ PersonDetailView.prototype.fill = function(edit) {
 			{html: new HtmlCustom( $('<h5>', {html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities.'}) )},
 			{key: 'name', html: new HtmlTextGroup('Contact Name').validate('^.+$')},
 	   	    {key: 'office', html: drp1},
-	   	    {key: 'mail', html: new HtmlTextGroup('E-Mail')},
+	   	    {key: 'mail', html: new HtmlTextGroup('E-Mail').validate('^.+$')},
 	   	    {key: 'phone', html: new HtmlTextGroup('Phone')},
 	   	    {key: 'fax', html: new HtmlTextGroup('Fax')},   	    
 	   	    {key: 'kind1', html: drp2, nodata: true},
@@ -1295,7 +1393,9 @@ PersonDetailView.prototype.extract = function() {
 };
 
 PersonDetailView.prototype.verify = function() {
-	return this.getField('name').valid() ? null : 'Please provide a name.';
+	if( ! this.getField('name').valid() ) return 'Please provide a name.';
+	if( ! this.getField('mail').valid() ) return 'Please provide an email address.';
+	return null;
 };
 
 
@@ -1810,6 +1910,50 @@ DeleteDialog.prototype = {
 	
 	hide: function() {
 		this.div.modal('hide');
+	}
+};
+
+
+
+function ChangePwdDialog() {
+	this.div = $('.modal-change-pwd');
+	this.dialog = this.div.modal('hide');
+	this.handlers = {};
+	
+	this.div.find('.btn-change-pwd').click( (function() {
+		this.save();
+		if( this.handlers.on_save )
+			this.handlers.on_save();
+	}).bind(this));
+}
+ChangePwdDialog.prototype = {
+	show: function(on_save) {
+		this.handlers.on_save = on_save;
+		this.div.modal('show');
+	},
+	
+	hide: function() {
+		this.div.modal('hide');
+	},
+	
+	save: function() {
+		var cur_pwd = this.div.find('.inp-cur-pwd').val();
+		var new_pwd_1 = this.div.find('.inp-new-pwd').val();
+		var new_pwd_2 = this.div.find('.inp-new-pwd-confirm').val();
+		if( new_pwd_1 != new_pwd_2 ) {
+			this.div.find('.status').html('Mismatch in new password.');
+			return false;
+		}
+		var d = $.Deferred();
+		deferred_ajax(d, wsgi + '/change_pwd/', {username: user.mail, curpwd: cur_pwd, newpwd: new_pwd_1});
+		$.when(d).always( (function(res) {
+			if( res.status == 'success' ) {
+				this.div.find('.status').html('');
+				this.hide();
+			} else {
+				this.div.find('.status').html('Failed to change your password.');
+			}
+		}).bind(this));
 	}
 };
 

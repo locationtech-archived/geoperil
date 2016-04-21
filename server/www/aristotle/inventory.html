@@ -20,10 +20,14 @@
 		<div class="header">
 			<span class="links">
 				<span>
-					<a href="javascript:void(null);" class="print">Print Mode</a>
-					&nbsp; &#183; &nbsp;
+					<a href="javascript:void(null);" class="change-pwd">Change password</a>
+					<span class="bullet change-pwd">&nbsp; &#183; &nbsp;</span>
+					<a href="javascript:void(null);" class="sign-out">Sign out</a>
+					<span class="bullet sign-out">&nbsp; &#183; &nbsp;</span>
+					<a href="javascript:void(null);" class="print">Print mode</a>
+					<span class="bullet print">&nbsp; &#183; &nbsp;</span>
 					<a href="mailto:aristotle-inventory@gfz-potsdam.de?subject=ARISTOTLE%20Questionnaire%20-%20Report%20an%20Issue">Ask a question or report a problem</a>
-					&nbsp; &#183; &nbsp;
+					<span class="bullet">&nbsp; &#183; &nbsp;</span>
 					<a href="imprint.html">Imprint</a>
 				</span>
 			</span>
@@ -198,7 +202,20 @@
 		</div>
 		<div class="details"></div>
 		<div class="clear"></div>
-		<div class="denied">No permission.</div>
+		<div class="denied">
+			<div class="login-form">
+				<div class="head">Sign in to ARISTOTLE</div>
+				<div class="glyphicon glyphicon-user"></div>
+				<input type="text" class="form-control inp-mail" placeholder="Please enter your email address">
+				<input type="password" class="form-control inp-pwd" placeholder="Please enter your password">
+				<div class="status"></div>
+				<div class="success"></div>
+				<button type="button" class="form-control btn btn-primary btn-next">Next</button>
+				<button type="button" class="form-control btn btn-primary btn-sign-in">Sign in</button>
+				<a href="#" class="lnk-back pull-left">&lt; Back</a>
+				<a href="#" class="lnk-reset-pwd pull-right">Reset password</a>
+			</div>
+		</div>
 		<span class="go-to-top"><i class="glyphicon glyphicon-circle-arrow-up"></i></span>
 	</div>
 	<!-- SaveDialog -->
@@ -228,6 +245,24 @@
 	      <div class="modal-footer">
 	        <button type="button" class="btn btn-default btn-close" data-dismiss="modal">Cancel</button>
 	        <button type="button" class="btn btn-danger btn-confirm" data-dismiss="modal">Delete</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+	<!-- ChangePwdDialog -->
+	<div class="modal fade modal-change-pwd">
+	  <div class="modal-dialog">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <button type="button" class="close btn-close" data-dismiss="modal">&#215;</button>
+	        <h4 class="modal-title">Change your password</h4>
+	      </div>
+	      <div class="modal-body">
+	        <input type="password" class="form-control inp-cur-pwd" placeholder="Enter current password">
+			<input type="password" class="form-control inp-new-pwd" placeholder="Enter new password">
+			<input type="password" class="form-control inp-new-pwd-confirm" placeholder="Confirm new password">
+			<div class="status"></div>
+			<button type="button" class="form-control btn btn-primary btn-change-pwd">Change password</button>
 	      </div>
 	    </div>
 	  </div>
