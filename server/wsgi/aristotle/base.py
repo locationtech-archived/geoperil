@@ -43,7 +43,8 @@ if cherrypy.__version__.startswith('3.0') and cherrypy.engine.state == 0:
 def startapp(app):
     if config["mongodb"].getboolean('replicaset'):
         print("Connecting to MongoDB ReplicaSet: %s" % config["mongodb"]["url"])
-        dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority")
+        dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority",
+            max_pool_size=64,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=32)
         atexit.register(dbe.close)
     else:
         print("Connecting to MongoDB: %s" % config["mongodb"]["url"])
@@ -60,6 +61,14 @@ def recursivelistdir(d):
         else:
             files.append(f)
     return files
+
+def checkpassword(password,pwsalt,pwhash):
+    return pwhash == createsaltpwhash(password,pwsalt)
+
+def createsaltpwhash(password,salt=None):
+    salt = b64encode(os.urandom(8)).decode("ascii") if salt is None else salt
+    pwhash = b64encode(hashlib.new("sha256",bytes(salt + ":" + password,"utf-8")).digest()).decode("ascii")
+    return salt + ':' + pwhash
 
 def jssuccess(**d):
     cherrypy.response.headers['Content-Type'] = 'application/json'

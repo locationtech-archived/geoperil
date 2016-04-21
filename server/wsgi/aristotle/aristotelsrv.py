@@ -8,6 +8,8 @@ from email.utils import formatdate, make_msgid
 import smtplib
 from bson.json_util import loads
 import binascii
+import string
+import random
 
 logger = logging.getLogger("AristotleSrv")
 
@@ -146,6 +148,9 @@ class AristotleSrv(BaseSrv):
         if "_id" not in data and data.get("office") not in ids and data.get("institute") not in ids and dest != 'invite':
             return jsdeny()
         obj = self._db[dest].find_one({"_id": data.get("_id")})
+        # check for unique email address
+        if dest == "person" and self._db[dest].find_one({"mail": data.get("mail"), "_id": {"$ne": data.get("_id")}}) is not None:
+             return jsfail(reason="email address already existent")
         ts = int(time.time())
         data["changed"] = ts
         data.pop("__show", None)
@@ -212,7 +217,7 @@ class AristotleSrv(BaseSrv):
 
     @cherrypy.expose
     def whoami(self, apikey=None):
-        return jssuccess(person=self._db["person"].find_one({"apikey": apikey}, {"__text": 0}))
+        return jssuccess(person=self._db["person"].find_one({"apikey": apikey, "deleted": {"$ne": True}}, {"__text": 0, "password": 0}))
 
     @cherrypy.expose
     def fix_all_entries(self):
@@ -311,6 +316,8 @@ class AristotleSrv(BaseSrv):
             return jsfail(msg="The item has child elements assigned.")
         data["changed"] = int(time.time())
         data["deleted"] = True;
+        data["old_mail"] = data["mail"]
+        del data["mail"]
         self._db[dest].update({"_id": data["_id"]}, data)        
         return jssuccess()
     
@@ -325,7 +332,7 @@ class AristotleSrv(BaseSrv):
         set_in = set(set_in.split(",")) if set_in != "" else types
         
         query = {"_id": {"$in": ids}}
-        filt = {"apikey": 0, "__text": 0}
+        filt = {"apikey": 0, "__text": 0, "password": 0}
         
         all = self.find({"_id": {"$in": ids}, "changed": {"$gt": ts}}, {"apikey": 0})        
         
@@ -540,6 +547,57 @@ class AristotleSrv(BaseSrv):
             with open(cwd + "/invite_" + group + ".txt") as f:
                 res[group] = f.read()
         return jssuccess(texts=res)
+    
+    @cherrypy.expose
+    def login(self, username, password=None):
+        if username == "":
+            return jsdeny()
+        obj = self._db["person"].find_one({"mail": username})
+        if password is None:
+            return jsdeny() if obj is None else jssuccess(user=obj["mail"]) 
+        if obj is not None and "password" in obj:
+            parts = obj["password"].partition(":")
+            if checkpassword(password, parts[0], obj["password"]):
+                cookie = cherrypy.response.cookie
+                cookie['apikey'] = obj.get("apikey", "")
+                cookie['apikey']['path'] = '/'
+                return jssuccess(apikey=obj.get("apikey", ""))
+        return jsdeny()
+    
+    def _new_password(self, length = 8):
+        charset = string.ascii_uppercase + string.digits + "!@#$%&*"
+        return ''.join(random.SystemRandom().choice(charset) for _ in range(length))
+    
+    @cherrypy.expose
+    def reset_pwd(self, username):
+        if username == "":
+            return jsdeny()
+        obj = self._db["person"].find_one({"mail": username})
+        if obj is not None:
+            pwd = self._new_password()
+            hash = createsaltpwhash(pwd)
+            self._db["person"].update({"_id": obj["_id"]}, {"$set": {"password": hash}})
+            sendmail(
+                "aristotle-inventory@gfz-potsdam.de",
+                obj["mail"],
+                "ARISTOTLE: password reset",
+                "Your password was set to:\n\n\t%s\n\nPlease sign in and change your password." % pwd                
+            )
+            return jssuccess()
+        return jsfail()
+    
+    @cherrypy.expose
+    def change_pwd(self, username, curpwd, newpwd):
+        if username == "":
+            return jsdeny()
+        obj = self._db["person"].find_one({"mail": username})
+        if obj is not None and "password" in obj:
+            parts = obj["password"].partition(":")
+            if checkpassword(curpwd, parts[0], obj["password"]):
+                hash = createsaltpwhash(newpwd)
+                self._db["person"].update({"_id": obj["_id"]}, {"$set": {"password": hash}})
+                return jssuccess()
+        return jsdeny()
 
 application = startapp( AristotleSrv )
 
