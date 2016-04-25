@@ -176,8 +176,9 @@ def tfp_extent(tfp, extent):
     
     #checks for best extent (because of data that crosses dateline)
     #shorter extent will be used
-    if (tfp_extent_pos[1] - tfp_extent_pos[0]) < (tfp_extent[1] - tfp_extent[0]):
-        tfp_extent = tfp_extent_pos            	    
+    if not tfp_lon_list_pos==[]:
+        if (tfp_extent_pos[1] - tfp_extent_pos[0]) < (tfp_extent[1] - tfp_extent[0]):
+            tfp_extent = tfp_extent_pos            	    
     if tfp_extent[0] or tfp_extent[1] or tfp_extent[2] or tfp_extent[3]:
         extent[0].append(float(tfp_extent[0]))
         extent[1].append(float(tfp_extent[1]))
