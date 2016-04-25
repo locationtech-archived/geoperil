@@ -33,7 +33,12 @@ def calc_extent_for_w_height(wave_height, wave_height_expression, extent, tempdi
     subprocess.call(['rm', temp_extent_file3])
     
     extent_w_height = re.findall("\((-?\d+.\d+), (-?\d+.\d+)\)", extent_info)
-
+    '''
+    if float(extent_w_height[0][0]) > 180:
+        extent_w_height[0][0] = float(extent_w_height[0][0]) - 360 
+    if float(extent_w_height[1][0]) > 180:
+        extent_w_height[1][0] = float(extent_w_height[1][0]) - 360
+    '''
     extent[0].append(float(extent_w_height[0][0]))
     extent[1].append(float(extent_w_height[1][0]))
     extent[2].append(float(extent_w_height[0][1]))
@@ -70,6 +75,12 @@ def calc_extent_for_w_time(wave_time, extent, tempdir):
     subprocess.call(['rm', temp_calc_tif])
     subprocess.call(['rm', temp_calc_gmt])
     if extent_w_time!=['0/0', '0/0']:
+        '''
+        if float(extent_w_time[0]) > 180:
+            extent_w_time[0] = float(extent_w_time[0]) - 360 
+        if float(extent_w_time[1]) > 180:
+            extent_w_time[1] = float(extent_w_time[1]) - 360
+        '''
         extent[0].append(float(extent_w_time[0]))
         extent[1].append(float(extent_w_time[1]))
         extent[2].append(float(extent_w_time[2]))
@@ -86,7 +97,12 @@ def cfz_extent(cfz, extent):
     cfz_gmt_file.close()    
 	#liest die Koordinaten fuer die Ausdehnung aus der zweiten Zeile der GMT-File
     extent_cfz = re.findall("(-?\d+.\d+)",cfz_extent_line)
-
+    '''
+    if float(extent_cfz[0]) > 180:
+        extent_cfz[0] = float(extent_cfz[0]) - 360 
+    if float(extent_cfz[1]) > 180:
+        extent_cfz[1] = float(extent_cfz[1]) - 360
+    '''
     if extent_cfz!=['180.000000', '-180.000000', '90.000000', '-90.000000']:
         extent[0].append(float(extent_cfz[0]))
         extent[1].append(float(extent_cfz[1]))
@@ -106,29 +122,62 @@ def tfp_extent(tfp, extent):
     tfp_count = 0    
     tfp_lon_list = []
     tfp_lat_list = []
-    tfp_extent = [None, None, None, None]   
+    tfp_extent = [None, None, None, None] 
+ 
+    #-->    
+    tfp_lat_list_pos = []
+    tfp_lon_list_pos = []  
+    tfp_extent_pos = [None, None, None, None]       
     for line in tfp_csv:
         tfp_csv_split = line.split(",")
         if float(tfp_csv_split[3]) >= 0:
             tfp_count += 1	
             tfp_lon_list.append(float(tfp_csv_split[0]))
             tfp_lat_list.append(float(tfp_csv_split[1]))
+	    
+            #-->
+            if(float(tfp_csv_split[0]) < 0):
+                tfp_lon_list_pos.append(float(tfp_csv_split[0]) + 360)	
+            else:
+                tfp_lon_list_pos.append(float(tfp_csv_split[0]))	    			
+            tfp_lat_list_pos.append(float(tfp_csv_split[1]))	    
     if not tfp_lon_list==[]: 	    
         if min(tfp_lon_list) != max(tfp_lon_list):
             tfp_extent[0] = min(tfp_lon_list)
             tfp_extent[1] = max(tfp_lon_list)
+	    
+            #-->
+            tfp_extent_pos[0] = min(tfp_lon_list_pos)
+            tfp_extent_pos[1] = max(tfp_lon_list_pos)
         elif tfp_count==1:
             #falls nur ein tfp von welle getroffen 		
             tfp_extent[0] = tfp_lon_list[0] - 2
-            tfp_extent[1] = tfp_lon_list[0] + 2	    
+            tfp_extent[1] = tfp_lon_list[0] + 2	
+	    
+            #-->	    
+            tfp_extent_pos[0] = tfp_lon_list_pos[0] - 2
+            tfp_extent_pos[1] = tfp_lon_list_pos[0] + 2  
     if not tfp_lat_list==[]: 
         if min(tfp_lat_list) != max(tfp_lat_list):
             tfp_extent[2] = min(tfp_lat_list)
             tfp_extent[3] = max(tfp_lat_list)
+
+	    #-->	    
+            tfp_extent_pos[2] = min(tfp_lat_list_pos)
+            tfp_extent_pos[3] = max(tfp_lat_list_pos)
         elif tfp_count==1:
             #falls nur ein tfp von welle getroffen 	
             tfp_extent[2] = tfp_lat_list[0] - 2
-            tfp_extent[3] = tfp_lat_list[0] + 2		             	    
+            tfp_extent[3] = tfp_lat_list[0] + 2	
+	    
+	    #-->	    
+            tfp_extent_pos[2] = tfp_lat_list_pos[0] - 2
+            tfp_extent_pos[3] = tfp_lat_list_pos[0] + 2 	
+    
+    #checks for best extent (because of data that crosses dateline)
+    #shorter extent will be used
+    if (tfp_extent_pos[1] - tfp_extent_pos[0]) < (tfp_extent[1] - tfp_extent[0]):
+        tfp_extent = tfp_extent_pos            	    
     if tfp_extent[0] or tfp_extent[1] or tfp_extent[2] or tfp_extent[3]:
         extent[0].append(float(tfp_extent[0]))
         extent[1].append(float(tfp_extent[1]))
