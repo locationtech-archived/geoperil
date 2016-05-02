@@ -43,8 +43,7 @@ if cherrypy.__version__.startswith('3.0') and cherrypy.engine.state == 0:
 def startapp(app):
     if config["mongodb"].getboolean('replicaset'):
         print("Connecting to MongoDB ReplicaSet: %s" % config["mongodb"]["url"])
-        dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority",
-            max_pool_size=64,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=32)
+        dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority")
         atexit.register(dbe.close)
     else:
         print("Connecting to MongoDB: %s" % config["mongodb"]["url"])

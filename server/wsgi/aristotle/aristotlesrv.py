@@ -1,4 +1,4 @@
-from basesrv import *
+from base import *
 import glob
 import requests
 from email.mime.multipart import MIMEMultipart
@@ -30,7 +30,7 @@ def sendmail(send_from, send_to, send_subject, send_text, send_cc = "", send_dat
     msg["Message-ID"] = make_msgid() if send_msgid is None else send_msgid
     msg.attach(MIMEText(send_text,_charset='utf-8'))
 
-    smtp = smtplib.SMTP('cgp1.gfz-potsdam.de')
+    smtp = smtplib.SMTP(config["mail"]["server"])
     errors = []
     success = False
     try:
@@ -48,24 +48,11 @@ def sendmail(send_from, send_to, send_subject, send_text, send_cc = "", send_dat
     smtp.quit()
     return success,errors
 
-class AristotleSrv(BaseSrv):
-    @cherrypy.expose
-    def saveformdata(self,_form,**kwargs):
-        doc = kwargs.copy()
-        doc.pop("_id",None)
-        doc["_ip"] = cherrypy.request.headers["X-Forwarded-For"] if "X-Forwarded-For" in cherrypy.request.headers else cherrypy.request.remote.ip
-        doc["_form"] = _form
-        doc["_time"] = datetime.datetime.now()
-        self._db["formdata"].insert(doc)
-        return jssuccess()
-        
-    @cherrypy.expose
-    def queryformdata(self,_form=None,**kwargs):
-        if _form is not None:
-            kwargs["_form"] = _form
-        data = list(self._db["formdata"].find(kwargs))
-        return jssuccess(data=data)
-
+class AristotleSrv:
+    
+    def __init__(self,db):
+        self._db = db
+    
     @cherrypy.expose
     def lock(self, data):
         return jssuccess()
@@ -278,6 +265,7 @@ class AristotleSrv(BaseSrv):
                 words = words + subwords + ([key] if subwords else [])
         return words
 
+    # deprecated, replaced by 'search'
     @cherrypy.expose
     def load(self, ts, apikey=None):
         print("[ARIST] load", apikey)
@@ -295,6 +283,7 @@ class AristotleSrv(BaseSrv):
         maxts = max([r["changed"] for r in res] + [ts])
         return jssuccess(items=res, ts=maxts)
 
+    # deprecated, defined in user interface
     @cherrypy.expose
     def new(self, role):
         if role == "office":
@@ -316,8 +305,9 @@ class AristotleSrv(BaseSrv):
             return jsfail(msg="The item has child elements assigned.")
         data["changed"] = int(time.time())
         data["deleted"] = True;
-        data["old_mail"] = data["mail"]
-        del data["mail"]
+        if "mail" in data:
+            data["old_mail"] = data["mail"]
+            del data["mail"]
         self._db[dest].update({"_id": data["_id"]}, data)        
         return jssuccess()
     
@@ -456,7 +446,7 @@ class AristotleSrv(BaseSrv):
                 data["from"],
                 data["mail"],
                 "ERCC cooperation with national institutes lawfully mandated to provide warnings and expert advice",
-                text % ("http://trideccloud.gfz-potsdam.de/aristotle/inventory.html?" + person["apikey"]),
+                text % (config["global"]["hostname"] + "/inventory.html"),
                 data["cc"]
             )
             print(res)
@@ -513,7 +503,7 @@ class AristotleSrv(BaseSrv):
                     data["from"],
                     data["mail"],
                     "Reminder: ERCC cooperation with national institutes lawfully mandated to provide warnings and expert advice",
-                    text % ("http://trideccloud.gfz-potsdam.de/aristotle/inventory.html?" + res[0]["apikey"]),
+                    text % (config["global"]["hostname"] + "inventory.html?" + res[0]["apikey"]),
                     data["cc"]
                 )
                 return jssuccess(matches=res, mail=stat)

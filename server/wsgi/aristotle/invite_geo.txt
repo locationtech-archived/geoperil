@@ -1,0 +1,18 @@
+Dear colleague,
+
+This E-mail is sent to you to get important input from you for the European ARISTOTLE project. This project has been awarded by EC DG ECHO to a consortium of National (Hydro-) Meteorological Institutes and Geophysical Institutes to set-up a 24/7 pilot to better support the EC Emergency Response Crisis Centre (ERCC) in Brussels with important and more complete country information on expected and occurring (hydro) meteorological and geophysical hazards. As decided internally by ARISTOTLE the National Observatory of Athens (NOA, Greece) is coordinating the geophysical part of an inquiry on the lawfully mandated national warning responsibilities and contact information within the UCPM region:
+http://trideccloud.gfz-potsdam.de/aristotle/ucpm.png
+
+Since your institute likely holds such national responsibilities in your country for earthquake, tsunami and volcanic eruptions related hazards and warnings we herewith ask you to respond to the linked enquiry.
+
+Your prompt response is obviously key to the success of this project and thus to an even better performance of ERCC in its cooperation with the national institutes which are lawfully mandated to provide warnings and expert advice to their respective national Civil Protection authorities, to support countries suffering the consequences of major geophysical hazards.
+
+It might be the case that in your country part of the responsibility is given to regional offices or to a separate institutional bodies (e.g. national or regional geophysical institutes or other legal entities). If this is the case we kindly request you to inform us so that we send an invitation for this enquiry to these bodies or institute for that specific hazard type(s). You should still give your enquiry answers for the hazard for which you have warning responsibilities.
+
+The enquiry should be filled in using this URL:
+%s
+
+Please enter your email address, press "Next" and click "Reset password" to obtain a generated password which will be sent to your mail address. You can then sign in to the website and fill in your requested data.
+
+With best regards,
+Gerassimos A. Papadopoulos (on behalf of the Aristotle Task 2 Enquiry project, geophysical part)
