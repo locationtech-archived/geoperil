@@ -1,24 +1,6 @@
-function IUtils() {
-	this.toNull = function(expr) {
-		return expr ? expr : null;
-	};
-	
-	/* Removes attributes with a null value in place! */
-	this.removeNulls = function(obj) {
-		for(var key in obj)
-			if( obj[key] === null || obj[key] === undefined )
-				delete obj[key];
-		return obj;
-	};
-}
-
-ICallbacks.prototype = new IUtils();
 function ICallbacks() {
-	
-	IUtils.call(this);
-	
+		
 	this.callbacks = {};
-	this.uid = ICallbacks.next_uid++;
 
 	this.setCallbacks = function(callbacks) {
 		for( var action in callbacks )
@@ -33,21 +15,6 @@ function ICallbacks() {
 		/* create new object for this kind of action if not already done */
 		if(! (action in this.callbacks) )
 			this.callbacks[action] = {cnt: 0};
-		/* get next id that identifies this callback - can be used to deregister later */
-		var cnt = this.callbacks[action].cnt++;
-		this.callbacks[action][cnt] = func;
-		return cnt;
-	};
-	
-	/* TODO: fix! */
-	this.setUniqueCallback = function(action, func, uid) {
-		if( ! (action in this.callbacks) )
-			this.callbacks[action] = {cnt: 0};
-		/* TODO: requires combination of function and uid */
-		for( var i = 0; i < this.callbacks[action].cnt; i++) {
-			if( this.callbacks[action].uid == uid )
-				return;
-		}
 		/* get next id that identifies this callback - can be used to deregister later */
 		var cnt = this.callbacks[action].cnt++;
 		this.callbacks[action][cnt] = func;
@@ -77,7 +44,6 @@ function ICallbacks() {
 		}
 	};
 }
-ICallbacks.next_uid = 1;
 
 Container.prototype = new ICallbacks();
 function Container(arg0) {
@@ -145,9 +111,7 @@ function Container(arg0) {
 	};
 	
 	this.getByKey = function(key, val) {
-
 		for (var i = 0; i < this.list.length; i++) {
-
 			var mkey = key ? this.list[i][key] : this.list[i];			
 			if( this.equals(mkey, val) )
 				return {
@@ -155,7 +119,6 @@ function Container(arg0) {
 					item : this.list[i]
 				};
 		}
-
 		return {
 			idx : -1,
 			item : null
@@ -163,19 +126,15 @@ function Container(arg0) {
 	};
 
 	this.insert = function(item) {
-		
 		for (var i = 0; i < this.list.length; i++) {
-
 			if( ! this.sortFun )
 				break;
 			
-			if (this.sortFun(item, this.list[i]) == -1) {
-				
+			if (this.sortFun(item, this.list[i]) == -1) {				
 				this.list.splice(i, 0, item);
 				return;
 			}
 		}
-
 		this.list.push(item);
 	};
 
@@ -241,7 +200,6 @@ function Container(arg0) {
 	};
 
 	this.print = function() {
-
 		for (var i = 0; i < this.list.length; i++) {
 			console.log(this.list[i]);
 		}
@@ -759,18 +717,29 @@ function HtmlCustom(div) {
 }
 
 /* ajax related framework functions */
-function getAjax(url, data, callback) {
+function ajax(url, data, callback) {
 
-	var ajaxObj = {
+	$.ajax({
+		type : 'POST',
 		url : url,
+		dataType : "json",
 		data : data,
-		callback : callback
-	};
+		success : function(result) {
 
-	return ajaxObj;
+			if (callback)
+				callback(result);
+		},
+		error : function() {
+			console.log('Internal error in ajax request: ', url);
+			var result = {status: 'failed'};
+			if (callback)
+				callback(result);
+		}
+	});
 }
 
-function deferred_ajax(deferred, url, data, callback) {
+function deferred_ajax(url, data, callback, deferred) {
+	if( !deferred ) deferred = $.Deferred();
 	$.ajax({
 		type : 'POST',
 		url : url,
@@ -789,87 +758,5 @@ function deferred_ajax(deferred, url, data, callback) {
 			deferred.reject(result);
 		}
 	});
+	return deferred;
 }
-
-function ajax( /* url, data, callback || ajaxObj */) {
-
-	var ajaxObj;
-
-	if (arguments.length == 1) {
-		ajaxObj = arguments[0];
-	} else if (arguments.length == 3) {
-		ajaxObj = getAjax.apply(this, arguments);
-	} else {
-		return;
-	}
-
-	ajax_internal(ajaxObj);
-}
-
-function ajax_internal(ajaxObj) {
-
-	$.ajax({
-		type : 'POST',
-		url : ajaxObj.url,
-		dataType : "json",
-		data : ajaxObj.data,
-		success : function(result) {
-
-			if (ajaxObj.callback)
-				ajaxObj.callback(result);
-		},
-		error : function() {
-			console.log('Internal error in ajax request: ', ajaxObj);
-			var result = {status: 'failed'};
-			if (ajaxObj.callback)
-				ajaxObj.callback(result);
-		}
-	});
-}
-
-function ajaxCascade() {
-
-	var remaining = [];
-
-	if (arguments.length < 1)
-		return;
-
-	for (var i = 1; i < arguments.length; i++) {
-		remaining.push(arguments[i]);
-	}
-
-	var ajaxObj = arguments[0];
-	var callback = ajaxObj.callback;
-	var f = function(result) {
-		if (callback)
-			callback(result);
-		ajaxCascade.apply(this, remaining);
-	};
-
-	ajaxObj.callback = f;
-	ajax(ajaxObj);
-}
-
-function FunCascade() {
-	this.callb = null;
-}
-FunCascade.prototype = {
-	callback: function(callb) {
-		this.callb = callb;
-		return this;
-	},
-	
-	/* Supports a list of functions each one taking a callback as the only argument and returning exactly one argument. */
-	invoke: function(funs, reslst) {
-		if( ! reslst ) reslst = [];
-		if(funs.length < 1)
-			return this.callb ? this.callb(reslst) : null;
-		var fun = funs[0];
-		funs.shift();
-		var f = (function(funs, reslst, res) {
-			reslst.push(res);
-			this.invoke(funs, reslst);
-		}).bind(this, funs, reslst);
-		fun(f);
-	}
-};
