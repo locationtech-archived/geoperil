@@ -34,16 +34,12 @@ $(document).ready(function () {
 		window.onpopstate = inv.search.bind(inv);
 		/* Initial search. */
 		inv.search();
-		
-		$('.custom-popover').hide();
-		$('.custom-popover .popover-title span').click( function() {
-			$(this).closest('.custom-popover').hide(500);
-		});
-		
+				
 		/* Remove cookie and reload page if 'Sign out' link is clicked. */
 		$('a.sign-out').click( function() {
 			Cookies.remove('apikey');
-			location.reload();
+			/* Remove all parameters from the URL. It is important to remove at least the API key. */
+			location.href = location.href.split('?')[0];
 		});
 		$('.sign-out').show();
 	});
@@ -313,7 +309,7 @@ Inventory.prototype = {
 	
 	/* Scroll to top. */
 	goto_top: function() {
-		var top = $('.tabs1').offset().top;
+		var top = $('.headline').offset().top;
 		$('html, body').animate({scrollTop: top}, 500);
 	},
 	
@@ -363,7 +359,6 @@ Inventory.prototype = {
 			for(var i = 0; i < items.length; i++) {
 				var item = this.new_item(items[i]);
 				var ret = this.items.replace('_id', item);
-				if(ret) console.log(item);
 				if( ret && this.curview != null && '_id' in this.curview.data && this.curview.data._id['$oid'] == item._id['$oid'] ) {
 					if( ! this.curview.mode_edit ) {
 						/* Reload details if an item is currently loaded in 'view' mode and was updated somewhere else. */
@@ -1030,20 +1025,17 @@ DetailView.prototype = {
 	/* Switch to edit mode and redraw view's content. */
 	edit: function() {
 		ajax(wsgi + '/lock/', {data: JSON.stringify(this.data)}, (function(res) {
-			console.log(res);
 			if(res.status == 'success') {
 				this.inventory.goto_details();
 				return this.fill(true);
 			}
-			/* TODO: Show error message! */
-			console.log('Someone else is editing the data!');
+			/* TODO: Someone else is editing the data! What to do in this case? */
 		}).bind(this));
 	},
 	
 	/* Remove item from database. */
 	remove: function() {
-		ajax(wsgi + '/delete/', {data: JSON.stringify(this.data), apikey: this.inventory.get_apikey()}, (function(res) {
-			console.log(res);
+		ajax(wsgi + '/delete/', {data: JSON.stringify(this.data), apikey: this.inventory.get_apikey()}, (function(res) {			
 			if(res.status == 'success') {
 				this.data = {};
 				this.inventory.load_data();
@@ -1068,8 +1060,7 @@ DetailView.prototype = {
 		/* Copy contents to data object. */
 		this.extract();
 		/* Request server to store the data. */
-		ajax(wsgi + '/save/', {data: JSON.stringify(this.data), apikey: this.inventory.get_apikey()}, (function(res) {
-			console.log(res);
+		ajax(wsgi + '/save/', {data: JSON.stringify(this.data), apikey: this.inventory.get_apikey()}, (function(res) {			
 			if(res.status == 'success') {
 				/* Update id of currently loaded item to identify it as already present. */
 				this.data._id = res.id;
@@ -1114,8 +1105,7 @@ DetailView.prototype = {
 			perm: perm || "edit",
 			apikey: this.inventory.get_apikey()
 		};
-		ajax(wsgi + '/auth/', data, (function(divs, res) {
-			console.log(res);
+		ajax(wsgi + '/auth/', data, (function(divs, res) {			
 			divs.attr('disabled', res.status != 'success');
 		}).bind(this, divs));
 	},
@@ -1139,8 +1129,7 @@ DetailView.prototype = {
 				perm: "edit",
 				apikey: this.inventory.get_apikey()
 			};
-			deferred_ajax(wsgi + '/auth_many/', data, (function(drp, res) {
-				console.log(res);
+			deferred_ajax(wsgi + '/auth_many/', data, (function(drp, res) {				
 				var selected = drp.selectedItem();
 				if( res.status == 'success' ) {
 					for(var i = 0; i < res.invalid.length; i++) {
@@ -1191,14 +1180,16 @@ DetailView.prototype = {
 };
 
 
-
+/* Class InstituteDetailView extends DetailView. */
 function InstituteDetailView(inventory, data) {
 	DetailView.call(this, inventory, data);
 }
 InstituteDetailView.prototype = Object.create(DetailView.prototype);
 InstituteDetailView.prototype.constructor = InstituteDetailView;
 
+/* Draw content of this view either in view or in edit mode. */
 InstituteDetailView.prototype.fill = function(edit) {
+	/* Define a mapping between item properties and HTML elements which are used to view and edit the item's data. */
 	var fields = new Container(
 	    {key: 'name', html: new HtmlTextGroup('Name').validate('^.+$')},
 	    {key: 'acronym', html: new HtmlTextGroup('Acronym')},
@@ -1206,24 +1197,30 @@ InstituteDetailView.prototype.fill = function(edit) {
 	);
 	
 	this.div.find('.banner').html('Institute');
+	/* Create a dynamic section that contains all HTML elements defined above. */
 	this.sec = new Section(fields);
+	/* Save is always allowed after entering the edit mode. */
 	this.div.find('.save').attr('disabled', false);
 	
+	/* Call parent method. */
 	DetailView.prototype.fill.call(this, edit);
 };
 
+/* Verfiy input. Return an error mesage in case of invalid data or 'null' otherwise. */
 InstituteDetailView.prototype.verify = function() {
 	return this.sec.htmls.findItem('key', 'name').html.valid() ? null : 'Please provide a name.';
 };
+/* ********* */
 
 
-
+/* Class OfficeDetailView extends DetailView. */
 function OfficeDetailView(inventory, data) {
 	DetailView.call(this, inventory, data);
 }
 OfficeDetailView.prototype = Object.create(DetailView.prototype);
 OfficeDetailView.prototype.constructor = OfficeDetailView;
 
+/* Create a list of selections based on the pre-defined hazard types and their surrounding groups. */
 OfficeDetailView.prototype.hazards = function() {
 	var groups = Office.prototype.groups;
 	var selections = new Container();
@@ -1237,11 +1234,14 @@ OfficeDetailView.prototype.hazards = function() {
 	return selections;
 };
 
+/* Draw content of this view in view or edit mode. */
 OfficeDetailView.prototype.fill = function(edit, span) {
-	/* Create initial html elements and fill them with data. */
+	/* Create a dropdown box used to select the parent institute. */
 	var drp1 = this.new_dropdown('Institute', 'institute', edit);
+	/* Obtain hazard types separated in groups. */
 	var selections = this.hazards();
 	
+	/* Define HTML elements and their corresponding item properties. */
 	var fields = new Container(
 		{key: 'name', html: new HtmlTextGroup('Office Name').validate('^.+$')},
 		{key: 'institute', html: drp1},
@@ -1251,65 +1251,50 @@ OfficeDetailView.prototype.fill = function(edit, span) {
    	    {key: 'zip', html: new HtmlTextGroup('ZIP Code')},
    	    {key: 'country', html: new HtmlTextGroup('Country')},
    	    {key: 'lawfully_mandated', html: new HtmlCheckBox('Advices/warnings are provided as <b>lawfully</b> mandated services').addClass('lawfully')},
-   	    {key: 'hazard_types', html: new Section(selections, 'For the following hazardous phenomena please select the items for which warnings are issued and/or advice is supplied').intend(false) },
+   	    {key: 'hazard_types', html: new Section(selections, 'For the following hazardous phenomena please select the items for which warnings are issued and/or advice is supplied').indent(false) },
    	    {html: new HtmlCustom($('<h5>', {html: 'Additional explanation.'}))},
    	    {key: 'explanation', html: new HtmlTextArea()}
 	);
 	
 	this.div.find('.banner').html('Office');
+	/* Draw defined HTML elements. */
 	this.sec = new Section(fields);
 	
+	/* Call parent method. */
 	DetailView.prototype.fill.call(this, edit);
 };
 
+/* Verify user input. */
 OfficeDetailView.prototype.verify = function() {
 	return this.sec.htmls.findItem('key', 'name').html.valid() ? null : 'Please provide a name.';
 };
+/* ********* */
 
 
+/* Class PersonDetailView extends DetailView. */
 function PersonDetailView(inventory, data) {
 	DetailView.call(this, inventory, data);
 }
 PersonDetailView.prototype = Object.create(DetailView.prototype);
 PersonDetailView.prototype.constructor = PersonDetailView;
 
-PersonDetailView.prototype.fields = function(edit) {
-	var label = new HtmlCustom($('<h5>', {
-		html: edit ? 'Please specify working hours if the institute doesn’t provide a 24/7 operational service.' : 'Working hours if not 24/7 operational service.'
-	}) );
-	var fields = new Container(
-		{html: new HtmlCustom( $('<h5>', {html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities.'}) )},
-		{key: 'name', html: new HtmlTextGroup('Contact Name').validate('^.+$')},
-   	    {key: 'office', html: null},
-   	    {key: 'mail', html: new HtmlTextGroup('E-Mail')},
-   	    {key: 'phone', html: new HtmlTextGroup('Phone')},
-   	    {key: 'fax', html: new HtmlTextGroup('Fax')},   	    
-   	    {key: 'kind1', html: null},
-   	    {key: 'kind2', html: null},
-   	    {key: '247', html: null},
-   	    {key: 'hours_label', html: label},
-   	    {key: 'hours', html: new HtmlTextArea()},
-   	    {html: new HtmlCustom($('<h5>', {html: 'Additional explanation.'}))},
-   	    {key: 'explanation', html: new HtmlTextArea()}
-	);
-	return fields;
-};
-
 PersonDetailView.prototype.fill = function(edit) {
-	/* Create initial html elements and fill them with data. */
+	/* Create a new dropdown box containing all valid offices. Use object 'd1' to identify when the asynchronous method has finished loading. */
 	var d1 = $.Deferred();
 	var drp1 = this.new_dropdown('Office', 'office', edit, d1);	
 	
+	/* Execute the inner part after the dropdown box is loaded completely. */
 	$.when(d1).always((function() {
+		/* Adapt string representation of dropdown box. */
 		drp1.setToString( (function(o) {
+			/* Search institute item based on institute ID. */
 			var inst = this.inventory.items.getByOid('_id', o.institute).item;
 			return (inst.acronym != '' ? inst.acronym : inst.name) + ' - ' + o.name;
 		}).bind(this));
+		/* Redraw box. */
 		drp1.display();
-	
-		var txt1 = new HtmlTextGroup('Other Resp.');
-		txt1.div.hide();
 		
+		/* Create a dropdown box that contains the pre-defined responsibilities. */
 		var drp2 = new HtmlDropDownGroup('Responsibility');
 		drp2.setSource(new Container(
 	        'Crisis coordinator',
@@ -1317,24 +1302,35 @@ PersonDetailView.prototype.fill = function(edit) {
 	        'Civil protection authority',
 	        'Other'
 	    ));
+		
+		/* Create a text box for other responsibilities and make it invisible first. */
+		var txt1 = new HtmlTextGroup('Other Resp.');
+		txt1.div.hide();
+		
+		/* Show this text box if and only if 'Other' is choosen as responsibility. */
 		drp2.setCallback('change', (function(drpbox, txt) {
 			if( drpbox.value() == 'Other' )
 				txt.div.css('display', '');
 			else
 				txt.div.hide();
 		}).bind(this, drp2, txt1));
+		/* Select first entry of dropdown box. */
 		drp2.select(0);
 		
+		/* Checkbox to choose 24/7 operational service. */
 		var chk = new HtmlCheckBox('24/7 operational service').addClass('operational');
+		/* Show additional text field and corresponding label if and only if 24/7 service is provided. */
 		chk.setCallback('change', (function(chk) {
 			chk.value() ? this.getField('hours').div.hide() : this.getField('hours').div.show();
 			chk.value() ? this.getField('hours_label').div.hide() : this.getField('hours_label').div.show();
 		}).bind(this, chk));
 		
+		/* Shortcut. */
 		var label = new HtmlCustom($('<h5>', {
 			html: edit ? 'Please specify working hours if the institute doesn’t provide a 24/7 operational service.' : 'Working hours if not 24/7 operational service.'
 		}) );
-			
+		
+		/* Define view's layout. HTML elements defined above are embedded into this structure. */
 		var fields = new Container(
 			{html: new HtmlCustom( $('<h5>', {html: 'Provide contact details for the bodies that are responsible for issuing warnings and advice to civil protection authorities.'}) )},
 			{key: 'name', html: new HtmlTextGroup('Contact Name').validate('^.+$')},
@@ -1351,12 +1347,18 @@ PersonDetailView.prototype.fill = function(edit) {
 	   	    {key: 'explanation', html: new HtmlTextArea()}
 		);
 		
+		/* Set banner. */
 		this.div.find('.banner').html('Contact');
+		/* Draw HTML elements according to the defined layout. */
 		this.sec = new Section(fields);
 		
+		/* Call parent method. */
 		DetailView.prototype.fill.call(this, edit);
 		
+		/* Notify all listeners about the initial checkbox value. */
 		chk.notifyOn('change');
+		
+		/* Display responsibility. */
 		if( this.data['kind'] ) {
 			if( ! drp2.source.findItem(null, this.data['kind']) ) {
 				drp2.selectByVal(null, 'Other');
@@ -1369,27 +1371,31 @@ PersonDetailView.prototype.fill = function(edit) {
 	}).bind(this));
 };
 
+/* Override parent method to define custom save functionality required to handle special fields. */
 PersonDetailView.prototype.extract = function() {
 	DetailView.prototype.extract.call(this);
-		
+	
+	/* Use custom text value if responsibility is set to 'Other'. */
 	var kind1 = this.getField('kind1').value();
 	this.data['kind'] = kind1 == 'Other' ? this.getField('kind2').value() : kind1;
 	
+	/* Clear additional text field if 24/7 service is provided. */
 	if( this.getField('247').value() ) {
 		this.getField('hours').value('');
 		this.data['hours'] = '';
 	}
 };
 
+/* Verify user input. Required: Contact Name, E-Mail. */
 PersonDetailView.prototype.verify = function() {
 	if( ! this.getField('name').valid() ) return 'Please provide a name.';
 	if( ! this.getField('mail').valid() ) return 'Please provide an email address.';
 	return null;
 };
+/* ********* */
 
 
-
-
+/* Class DecisionDetailView extends DetailView. */
 function DecisionDetailView(inventory, data) {
 	DetailView.call(this, inventory, data);
 }
@@ -1397,12 +1403,16 @@ DecisionDetailView.prototype = Object.create(DetailView.prototype);
 DecisionDetailView.prototype.constructor = DecisionDetailView;
 DecisionDetailView.prototype.fill = function(edit) {
 
-	/* Create initial html elements and fill them with data. */
-	var drp1 = this.new_dropdown('Institute', 'institute', edit);	
+	/* Create a dropdown box with a list of valid institutes. */
+	var drp1 = this.new_dropdown('Institute', 'institute', edit);
+	
+	/* Shortcut. */
 	var label = new HtmlCustom( $('<h5>', {
 		html: edit ? 'Give a brief description of the following with regard to your decision making process.' : ''
 	}));
 	
+	/* Define HTML fields and corresponding item properties. */
+	/* This becomes a nested structure if embedded sections are used. */
 	var fields = new Container(
 		{html: label},
 		{key: 'institute', html: drp1},
@@ -1442,18 +1452,23 @@ DecisionDetailView.prototype.fill = function(edit) {
 		)}
 	);
 	
+	/* Set banner. */
 	this.div.find('.banner').html('Decision Making Process');
+	/* Draw HTML elements. */
 	this.sec = new Section(fields);
 	
+	/* Call parent method. */
 	DetailView.prototype.fill.call(this, edit);
 };
+
+/* Verify user input. Required: Name */
 DecisionDetailView.prototype.verify = function() {
 	return this.getField('name').valid() ? null : 'Please provide a name.';
 };
+/* ********* */
 
 
-
-
+/* Class AdviceDetailView extends DetailView. */
 function AdviceDetailView(inventory, data) {
 	DetailView.call(this, inventory, data);
 }
@@ -1461,14 +1476,19 @@ AdviceDetailView.prototype = Object.create(DetailView.prototype);
 AdviceDetailView.prototype.constructor = AdviceDetailView;
 AdviceDetailView.prototype.fill = function(edit) {
 	
-	/* Create initial html elements and fill them with data. */
+	/* Create a dropdown box with a list of valid institutes. */
 	var drp1 = this.new_dropdown('Institute', 'institute', edit);
+	/* Create selection for communication channels. */
 	var sel1 = new Selection( Advice.prototype.items.a, 'Communication channels');
-	var sel2 = new Selection( Advice.prototype.items.b, 'Content'); 
+	/* Create selection for content. */
+	var sel2 = new Selection( Advice.prototype.items.b, 'Content');
+	
+	/* Shortcut. */
 	var label = new HtmlCustom( $('<h5>', {
 		html: edit ? 'Give a brief description of the following with regard to the type of information you provide.' : ''
 	}) );
-		
+	
+	/* Define HTML fields and corresponding item properties in anested structure. */
 	var fields = new Container(
 		{html: label},
 		{key: 'institute', html: drp1},
@@ -1479,27 +1499,33 @@ AdviceDetailView.prototype.fill = function(edit) {
 		{key: 'explanation', html: new Section( new Container({key: 'text', html: new HtmlTextArea()}), 'Additional explanation.')}
 	);
 	
+	/* Set banner. */
 	this.div.find('.banner').html('Type of Advice');
+	/* Draw HTML elements. */
 	this.sec = new Section(fields);
 	
+	/* Call parent method. */
 	DetailView.prototype.fill.call(this, edit);
 };
 
+/* Verify user input. Required: Name */
 AdviceDetailView.prototype.verify = function() {
 	return this.getField('name').valid() ? null : 'Please provide a name.';
 };
+/* ********* */
 
 
 
-
-
+/* Class InviteDetailView extends DetailView. */
 function InviteDetailView(inventory, data) {
 	DetailView.call(this, inventory, data);
+	/* Extra class used to specialize the layout with CSS. */
 	this.div.addClass('invite');
 }
 InviteDetailView.prototype = Object.create(DetailView.prototype);
 InviteDetailView.prototype.constructor = InviteDetailView;
 
+/* Override parent method to add a 'Confirm' button. */
 InviteDetailView.prototype.create = function() {
 	DetailView.prototype.create.call(this);
 	this.div.find('.footer').prepend(
@@ -1507,7 +1533,9 @@ InviteDetailView.prototype.create = function() {
 	);
 };
 
+/* This method gets executed if the user confirms the requested invite. */
 InviteDetailView.prototype.confirm = function() {
+	/* Redirect request to the web server and clear the details view. */
 	ajax(wsgi + '/confirm/', {id: JSON.stringify(this.data._id), apikey: this.inventory.get_apikey()}, (function(res) {		
 		if( res.status == 'success' ) {
 			this.inventory.load_data();
@@ -1517,6 +1545,7 @@ InviteDetailView.prototype.confirm = function() {
 	}).bind(this));
 };
 
+/* Clear details if the user clicks the 'Request' button. */
 InviteDetailView.prototype.save = function() {
 	if( !('_id' in this.data) && ! this.verify() ) {
 		this.inventory.curview = null;
@@ -1527,38 +1556,49 @@ InviteDetailView.prototype.save = function() {
 };
 
 InviteDetailView.prototype.fill = function(edit) {
+	/* Create two dropdown boxes that hold an office and an institute list respectively. */
 	var d1 = $.Deferred();
 	var d2 = $.Deferred();
 	var drp1 = this.new_dropdown('Institute', 'institute', edit, d1);
 	var drp2 = this.new_dropdown('Office', 'office', edit, d2);
+	/* Custom text fields used to specify a new institute and/or office. */
 	var txt1 = new HtmlTextGroup('New Institute').validate('^.+$').$hide();
 	var txt2 = new HtmlTextGroup('New Office').validate('^.+$').$hide();
 	
+	/* The inner part is executed after both dropdown boxes are completely loaded. */
 	$.when( d1, d2 ).always((function() {
+		/* Add a 'New' entry to the dropdown box. */
 		drp1.source.replace('name', new Institute({name: 'New'}));
 		drp1.source.notifyOn('change');
 		
+		/* Show custom text box if and only if the dummy 'New' entry was choosen.
+		 * Reload office dropdown box if the institute selection changes. */
 		drp1.setCallback('change', (function(drp, txt, drp_offices) {
 			drp.value() ? txt.div.hide() : txt.div.css('display', '');
 			drp_offices.setSource( this.inventory.items.filter('type', 'office').filter('institute', drp.value()) );
 		}).bind(this, drp1, txt1, drp2));
 		
+		/* Add a 'New' entry to the office dropdown box. */
 		drp2.setCallback('source', (function() {
 			this.source.replace('name', new Office({name: 'New'}));
 		}).bind(drp2));
 		
+		/* Show custom text box if and only if the dummy 'New' entry was choosen. */
 		drp2.setCallback('change', (function(drp, txt) {		
 			drp.value() ? txt.div.hide() : txt.div.css('display', '');		
 		}).bind(this, drp2, txt2));
 		
+		/* Fill institute dropdown and corresponding custom text field. */
 		var known_inst = drp1.source.findItem('name', this.data.new_institute) != null;
 		drp1.selectByVal('name', known_inst ? this.data.new_institute : 'New');
 		txt1.value(known_inst ? '' : this.data.new_institute);
 		
+		/* Fill office dropdown and corresponding custom text field. */
 		var known_office = drp2.source.findItem('name', this.data.new_office) != null;
 		drp2.selectByVal('name', known_office ? this.data.new_office : 'New');
 		txt2.value(known_office ? '' : this.data.new_office);
 	
+		/* Create radio buttons used to switch bertween pre-defined text fragments. */
 		var btn_meteo = $('<label class="btn btn-default active"><input type="radio">Meteo</label>');
 		var btn_geo = $('<label class="btn btn-default"><input type="radio">Geo</label>');
 		var btn_custom = $('<label class="btn btn-default"><input type="radio">Custom</label>');
@@ -1566,8 +1606,8 @@ InviteDetailView.prototype.fill = function(edit) {
 		custom.append(btn_meteo).append(btn_geo).append(btn_custom);
 		custom.div.css('display', edit ? '' : 'none');
 		
+		/* Create text area and set up automatic resizing. */
 		var text_area = new HtmlTextArea();
-		
 		var area_resize = function() {
 			/* Cross-browser! */
 			var pos1 = $('body').scrollTop();
@@ -1577,9 +1617,11 @@ InviteDetailView.prototype.fill = function(edit) {
 			$('body').scrollTop(pos1);
 			$('html').scrollTop(pos2);
 		};
+		/* Resize text area and select the 'Custom' button as soon as the input text changes. */
 		text_area.$find('textarea').bind('input onpropertychange', area_resize);
 		text_area.$find('textarea').bind('input onpropertychange', (function(btn) { btn.click(); }).bind(this, btn_custom));
 		
+		/* Load text if a radio button was pressed. */
 		var load_text = (function(txt, group) {
 			if( group ) txt.value(texts[group]);
 			/* In order to do the initial resizing of the textarea, the engine needs to render the html elements on the screen first. */
@@ -1588,9 +1630,11 @@ InviteDetailView.prototype.fill = function(edit) {
 		btn_meteo.click( load_text.bind(this, 'meteo') );
 		btn_geo.click( load_text.bind(this, 'geo') );
 		btn_custom.click( load_text.bind(this) );
-			
+		
+		/* Pre-fill the 'From' address with the user's email address. */
 		this.data.from = this.data.from || user.mail;
 		
+		/* Define HTML fields. */
 		var fields = new Container(
 			{key: 'institute', html: drp1, nodata: true},
 			{key: 'institute-new', html: txt1, nodata: true},
@@ -1605,16 +1649,22 @@ InviteDetailView.prototype.fill = function(edit) {
 		    {html: new HtmlCustom($('<div class="invite-url-info">Use <b>%s</b> to define the position of the URL which can be used by the invited recipient to open this website.</div>'))}
 		);
 		
-		this.div.find('.banner').html('Invite');
+		/* Switch between 'Request' and 'Confirm' mode according to the '_id' field which is not set if an invite is requested. */
 		if( !('_id' in this.data) ) {
 			/* Request invite. */
 			this.div.find('.btn.save').html('Request Invite').css('width', '120px');
 		}
 		this.div.find('.btn.confirm')[ !('_id' in this.data) || edit ? 'hide' : 'show' ]();
+		
+		/* Set banner. */
+		this.div.find('.banner').html('Invite');
+		/* Draw HTML elements. */
 		this.sec = new Section(fields);
 		
+		/* Call parent method. */
 		DetailView.prototype.fill.call(this, edit);
 		
+		/* Load mail text from data. */
 		if( !('_id' in this.data) ) {
 			/* Load meteo text for new entries. */
 			btn_meteo.click();
@@ -1623,11 +1673,13 @@ InviteDetailView.prototype.fill = function(edit) {
 			btn_custom.click();
 		}
 		
+		/* Deactivate HTML text field 'Form'. */
 		this.getField('from').readonly();
 	
 	}).bind(this));
 };
 
+/* Verify user input. Required: Office Name, Institute Name, Mail addresses */
 InviteDetailView.prototype.verify = function() {	
 	var required = {'name': 'a name', 'to': 'a mail address (to)', 'from': 'a mail address (from)'};
 	if( ! this.getField('institute').value() )
@@ -1640,13 +1692,16 @@ InviteDetailView.prototype.verify = function() {
 	}
 };
 
+/* In case of a request, store office and institute as temporary attributes 'new_office' and 'new_institute' respectively. */
 InviteDetailView.prototype.extract = function() {
 	DetailView.prototype.extract.call(this);
 	this.data.new_institute = this.getField('institute').value() ?  this.getField('institute').selectedItem().name : this.getField('institute-new').value();
 	this.data.new_office = this.getField('office').value() ?  this.getField('office').selectedItem().name : this.getField('office-new').value();	
 };
+/* ********* */
 
 
+/* This class provides functionality to draw a list of HTML elements, fill them with initial content and extract customized content back to the data object. */
 function Section(htmls, title) {
 	this.div = $('<div>', {'class': 'section'}).append(
 		$('<h5>', {html: arguments.length > 1 ? title : ''}),
@@ -1655,24 +1710,29 @@ function Section(htmls, title) {
 	this.htmls = htmls;
 }
 Section.prototype = {
+	/* Recursively walk through a list of HTML elements to fill them according to the corresponding properties. */
 	fill: function(edit, data) {
-		/* html elements need to be set from outside */
 		for(var i = 0; i < this.htmls.length(); i++) {
 			var item = this.htmls.get(i);
 			if( item.html instanceof HtmlCustom )
 				continue;
+			/* Set value of HTML element to the value of the corresponding item property (unless 'nodata' is specified). */
 			if( item.html instanceof HtmlElement ) {
 				if( ! item.nodata )
 					item.html.value( data[item.key] );
+				/* Set readonly attribute according to the current view mode. */
 				item.html.readonly(!edit);
 			} else {
+				/* Recursive call for objects of class Section and Selection. */
 				if( ! (item.key in data) ) data[item.key] = {};
 				item.html.fill(edit, data[item.key]);
 			}
 		}
+		/* Draw the elements. */
 		this.draw();
 	},
 	
+	/* Draw all HTML elements by recursively traversing the nested list structure. */
 	draw: function() {
 		var blk = this.div.find('> div');
 		blk.children().detach();
@@ -1684,6 +1744,7 @@ Section.prototype = {
 		}
 	},
 	
+	/* Extract values of HTML elements and store them in the corresponding item properties. */
 	extract: function(data) {
 		for(var i = 0; i < this.htmls.length(); i++) {
 			var item = this.htmls.get(i);
@@ -1692,11 +1753,13 @@ Section.prototype = {
 			if( item.html instanceof HtmlElement ) {
 				data[item.key] = item.html.value();
 			} else
+				/* Recursive call for objects of class Section and Selection. */
 				item.html.extract(data[item.key]);
 		}
 	},
 	
-	intend: function(yes) {
+	/* Used to indent or unindent a section. */
+	indent: function(yes) {
 		var blk = this.div.find('> div');
 		yes ? blk.addClass('block') : blk.removeClass('block');
 		return this;
@@ -1704,8 +1767,8 @@ Section.prototype = {
 };
 
 
-
-/* Input: A Container that includes items of the form {key: String, value: Boolean} */
+/* This class is used to display selected values consistently in view and edit mode.
+ * Input: A Container that includes items of the form {key: String, value: Boolean} */
 function Selection(sortarr, title) {
 	this.div = $('<div>', {'class': 'section'});
 	this.sortarr = sortarr;
@@ -1716,10 +1779,12 @@ Selection.prototype = {
 		this.htmls = new Container().setSortFun(SortFuns.prototype.byArray(this.sortarr, 'key'));
 		for(var attr in data) {
 			var html = null;
+			/* Display selection either as pure text (view mode) or as checkboxes (edit mode). */
 			if(edit) {
 				if( this.sortarr.indexOf(attr) >= 0 || data[attr] )
 					html = new HtmlCheckBox(attr, data[attr]);
 			} else if( data[attr] ) {
+				/* In view mode, values are separated by dots. */
 				html = new HtmlCustom($('<span>')).append(
 					$('<span>', {'class': 'text', html: attr}),
 					$('<span>', {'class': 'dot', html: '&bull;'})
@@ -1731,29 +1796,37 @@ Selection.prototype = {
 		this.other = new HtmlCustom();
 		var last = this.htmls.last();
 		if(edit) {
+			/* Add button 'Other' (only in edit mode) that is used to add custom values to the pre-defined list. */
 			this.other = new HtmlTextGroup('Other:').setButton('plus').validate('^.+$');
 			this.other.getButton().click( (function(html, data) {
+				/* Ignore invalid values. */
 				if( ! html.valid() ) return;
+				/* Create a new checked checkbox. */
 				var chk = new HtmlCheckBox(html.value(), true);
+				/* Remove the value again if the box gets unchecked. */
 				chk.setCallback('change', (function(chk, data) {					
 					data.remove('key', chk.label());
 					this.draw();
 				}).bind(this, chk, data));
+				/* Add new checkbox only if the value does not already exist. */
 				var item = data.findItem('key', html.value());
 				if( item ) {
 					item.html.value(true);
 				} else {
 					data.insert({key: html.value(), html: chk});
 				}
+				/* Clear text field. */
 				html.value('');
+				/* Redraw the selection. */
 				this.draw();
 			}).bind(this, this.other, this.htmls));
 		} else if(last) {
-			/* remove last dot */
+			/* Remove last dot. */
 			last.html.find('.dot').detach();
 		}
 	},
 	
+	/* Draw the HTML elements previously created in the 'fill' method. */
 	draw: function() {
 		var blk = $('<div>');
 		for(var i = 0; i < this.htmls.length(); i++) {
@@ -1766,6 +1839,7 @@ Selection.prototype = {
 			this.div.append($('<h5>', {html: this.title}), blk);
 	},
 
+	/* Used to extract the values of the selection and store them in the data object. */
 	extract: function(data) {
 		for(var i = 0; i < this.htmls.length(); i++) {
 			var item = this.htmls.get(i);
@@ -1777,14 +1851,20 @@ Selection.prototype = {
 	}
 };
 /* ********* */
+
+
+/* Class that encapsulates the sign in functionality. */
 function SignInForm(div) {
 	this.div = div;
+	/* Set click callbacks. */
 	this.div.find('.btn-next').click( this.next.bind(this) );
+	/* Accept enter key on mail field. */
 	this.div.find('.inp-mail').keypress( (function(e) {
 		if(e.which == 13) this.next();
 	}).bind(this));
 	this.div.find('.btn-sign-in').click( this.sign_in.bind(this) );
-	this.div.find('.btn-sign-in').keypress( (function(e) {
+	/* Accept enter key on password field.. */
+	this.div.find('.inp-pwd').keypress( (function(e) {
 		if(e.which == 13) this.sign_in();
 	}).bind(this));
 	this.div.find('.lnk-back').click( this.back.bind(this) );
@@ -1792,27 +1872,36 @@ function SignInForm(div) {
 	this.div.find('.inp-mail, .btn-next').show();
 }
 SignInForm.prototype = {
+	/* Called after email was provided. */
 	next: function() {
-		var d = deferred_ajax(wsgi + '/login/', {username: this.div.find('.inp-mail').val()});
+		/* Call the 'login' method of the web server without providing a password.
+		 * In this way, the existence of the mail address can be checked. */
+		var d = deferred_ajax(wsgi + '/login/', {mail: this.div.find('.inp-mail').val()});
 		$.when(d).always( (function(res) {
 			if( res.status == 'success' ) {
-				this.div.find('.btn-next, .inp-mail').hide();
+				this.div.find('.btn-next, .inp-mail, .mail-help').hide();
 				this.div.find('.btn-sign-in, .lnk-back, .lnk-reset-pwd, .inp-pwd').show();
 				this.div.find('.status').html('');
+				this.div.find('.inp-pwd').focus();
 			} else {
 				this.div.find('.status').html('Unknown email address.');
 			}
 		}).bind(this));
 	},
 	
+	/* Called after back link was clicked. */
 	back: function() {
+		/* Toggle visibility of some DOM elements. Reset status. */
 		this.div.find('.status, .success').html('');
 		this.div.find('.btn-sign-in, .lnk-back, .lnk-reset-pwd, .inp-pwd').hide();
-		this.div.find('.btn-next, .inp-mail').show();
+		this.div.find('.btn-next, .inp-mail, .mail-help').show();
 	},
 	
+	/* Called if sign-in is requested. */
 	sign_in: function() {
-		var d = deferred_ajax(wsgi + '/login/', {username: this.div.find('.inp-mail').val(), password: this.div.find('.inp-pwd').val()});
+		/* Call 'login' method of the web server with given email and password.
+		 * The server will sent a cookie and return 'success' if the credentials are valid. */
+		var d = deferred_ajax(wsgi + '/login/', {mail: this.div.find('.inp-mail').val(), password: this.div.find('.inp-pwd').val()});
 		$.when(d).always( (function(res) {
 			if( res.status == 'success' ) {
 				this.div.find('.status').html('');
@@ -1823,11 +1912,13 @@ SignInForm.prototype = {
 		}).bind(this));
 	},
 	
+	/* Called after 'Reset password' link was clicked. */
 	reset_pwd: function() {
-		var d = deferred_ajax(wsgi + '/reset_pwd/', {username: this.div.find('.inp-mail').val()});
+		/* Call corresponding method of the web server.
+		 * The generated password is sent to the user's mail address. */
+		var d = deferred_ajax(wsgi + '/reset_pwd/', {mail: this.div.find('.inp-mail').val()});
 		$.when(d).always( (function(res) {
 			if( res.status == 'success' ) {
-				console.log(res);
 				this.div.find('.status').html('');
 				this.div.find('input, button, a').hide();
 				this.div.find('.success').html(
@@ -1843,11 +1934,13 @@ SignInForm.prototype = {
 SignInForm.prototype.constructor = SignInForm;
 
 
+/* Controls the save dialog. */
 function SaveDialog() {
 	this.div = $('.modal-save');
 	this.dialog = this.div.modal('hide');
 	this.handlers = {};
 	
+	/* Set click callbacks. */
 	this.div.find('.btn-save').click( (function() {
 		if( this.handlers.on_save )
 			this.handlers.on_save();
@@ -1864,6 +1957,7 @@ function SaveDialog() {
 	}).bind(this));
 }
 SaveDialog.prototype = {
+	/* Pass callbacks which are executed based on the user's choice. */
 	show: function(on_save, on_discard, on_cancel) {
 		this.handlers.on_save = on_save;
 		this.handlers.on_discard = on_discard;
@@ -1877,7 +1971,7 @@ SaveDialog.prototype = {
 };
 
 
-
+/* Controls the delete dialog. */
 function DeleteDialog() {
 	this.div = $('.modal-delete');
 	this.dialog = this.div.modal('hide');
@@ -1894,6 +1988,7 @@ function DeleteDialog() {
 	}).bind(this));
 }
 DeleteDialog.prototype = {
+	/* Pass callbacks which are executed based on the user's choice. */
 	show: function(on_save, on_cancel) {
 		this.handlers.on_save = on_save;
 		this.handlers.on_cancel = on_cancel;
@@ -1906,7 +2001,7 @@ DeleteDialog.prototype = {
 };
 
 
-
+/* Controls the password dialog. */
 function ChangePwdDialog() {
 	this.div = $('.modal-change-pwd');
 	this.dialog = this.div.modal('hide');
@@ -1929,6 +2024,7 @@ ChangePwdDialog.prototype = {
 	},
 	
 	save: function() {
+		/* Client-side checks. */
 		var cur_pwd = this.div.find('.inp-cur-pwd').val();
 		var new_pwd_1 = this.div.find('.inp-new-pwd').val();
 		var new_pwd_2 = this.div.find('.inp-new-pwd-confirm').val();
@@ -1936,7 +2032,8 @@ ChangePwdDialog.prototype = {
 			this.div.find('.status').html('Mismatch in new password.');
 			return false;
 		}
-		var d = deferred_ajax(wsgi + '/change_pwd/', {username: user.mail, curpwd: cur_pwd, newpwd: new_pwd_1});
+		/* Call server method to request a password change. */
+		var d = deferred_ajax(wsgi + '/change_pwd/', {mail: user.mail, curpwd: cur_pwd, newpwd: new_pwd_1});
 		$.when(d).always( (function(res) {
 			if( res.status == 'success' ) {
 				this.div.find('.status').html('');
@@ -1949,13 +2046,14 @@ ChangePwdDialog.prototype = {
 };
 
 
-
+/* Static helper class that provides specialized search functions. */
 function SortFuns() {}
 SortFuns.prototype = {
 	byArray: function(arr, attr) {
 		return this.byArray_fun.bind(this, arr, attr);
 	},
-		
+	
+	/* Function that can be used to sort an array based on another array that defines the order. */
 	byArray_fun: function(arr, attr, a, b) {		
 		var val_a = attr ? a[attr] : a;
 		var val_b = attr ? b[attr] : b;

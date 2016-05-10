@@ -412,6 +412,10 @@ body {
     margin-bottom: 15px;
 }
 
+.denied .login-form .mail-help {
+	font-size: 13px;
+}
+
 .sec {
 	position: relative;
 	margin-top: 20px;
@@ -669,78 +673,6 @@ body {
 	font-family: monospace;
 }
 
-.clear {
-	clear: both;
-}
-
-.tabs1 {
-	position: relative;
-	margin-top: 30px;
-	height: 60px;
-}
-
-.tabs1 span {
-	position: absolute;
-	font-family: Verdana,"Helvetica Neue",Helvetica,Arial,sans-serif;
-	color: #0065a2;
-	font-size: 24px;
-	left: 360px;
-	top: 20px;
-}
-
-img {
-	position: absolute;
-    left: 150px;
-    top: 5px;
-    z-index: 8;
-    color: #000;
-    width: 172px;
-    height: 119px;
-}
-
-.snapin {
-	position: relative;
-	display: none;
-	margin-left: 150px;
-	width: 1100px;
-	background-color: #cceaf2;
-	color: #0096c0;
-	margin-top: 10px;
-    padding: 20px;
-    margin-bottom: -25px;
-}
-
-.snapin .x {
-	position: absolute;
-	top: 3px;
-	right: 10px;
-	cursor: pointer;
-	font-size: 22px;
-}
-
-.snapin a {
-	text-decoration: underline;
-}
-
-.custom-popover .popover {
-	display: block;
-	margin-left: -145px;
-    width: 130px;
-    z-index: 100;
-}
-
-.custom-popover .popover-title span {
-	position: absolute;
-	top: 4px;
-	right: 10px;
-	cursor: pointer;
-	font-size: 22px;
-}
-
-.custom-popover .popover-title span:hover {
-	color: gray;
-}
-
 .details .html-dropdown .html-text, .details .dropdown-menu {
 	font-size: 12px;
 }
@@ -813,6 +745,35 @@ img {
 
 .details .fields {
 	margin-bottom: 20px;
+}
+
+.clear {
+	clear: both;
+}
+
+.headline {
+	position: relative;
+	margin-top: 30px;
+	height: 60px;
+}
+
+.headline span {
+	position: absolute;
+	font-family: Verdana,"Helvetica Neue",Helvetica,Arial,sans-serif;
+	color: #0065a2;
+	font-size: 24px;
+	left: 360px;
+	top: 20px;
+}
+
+img {
+	position: absolute;
+    left: 150px;
+    top: 5px;
+    z-index: 8;
+    color: #000;
+    width: 172px;
+    height: 119px;
 }
 
 .popup-content a {
@@ -1107,7 +1068,7 @@ img {
 }
 
 @media (max-width: 950px) {
-	.tabs1 span {
+	.headline span {
 		color: white;
 		z-index: 1;
 		font-size: 20px;
@@ -1135,7 +1096,7 @@ img {
 }
 
 @media (max-width: 650px) {
-	.tabs1 span {
+	.headline span {
 		font-size: 18px;
 		left: 20px;
 		top: 92px;
@@ -1155,7 +1116,7 @@ img {
 }
 
 @media (max-width: 500px) {
-	.tabs1 span {
+	.headline span {
 		display: none;
 	}
 	
