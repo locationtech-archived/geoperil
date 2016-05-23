@@ -52,7 +52,9 @@ class DataSrv(BaseSrv,Products):
     @cherrypy.expose
     def default(self,eid,*args,**kwargs):
         apikey = kwargs.get("apikey",None)
-        user = self.getUser() if apikey is None else self.auth_api(apikey) 
+        user = self.getUser() if apikey is None else self.auth_api(apikey)
+        now = datetime.datetime.now()
+        self._db["log"].insert({"addr":"datasrv/*","time":now,"eid":eid,"user":user["_id"],"args":args,"kwargs":kwargs})
         if user is None:
             raise HTTPError("401 Unauthorized")
         ev = self._db["eqs"].find_one({"_id":eid})
@@ -109,25 +111,26 @@ class DataSrv(BaseSrv,Products):
             s += "<a href='%s'>%s</a><br>" % (l,l)
         return "<html><body>%s</body></html>" % s
 
-    def serve_file(self,f,content_type,**kwargs):
+    def serve_file(self,ev,f,content_type,**kwargs):
         a = 'attachment' if "download" in kwargs else None
         n = kwargs.get("download","")
-        return serve_file(f,content_type,a,n if n != "" else None)
+        n = "%s_%s" % (ev["_id"],os.path.basename(f)) if n == "" else n
+        return serve_file(f,content_type,a,n)
 
     def serve_octet_stream(self,ev,product,f,**kwargs):
         if self.mk_product(ev,product,**kwargs):
             self.rec_request(ev,product,f)
-            return self.serve_file(f,"application/octet-stream",**kwargs)
+            return self.serve_file(ev,f,"application/octet-stream",**kwargs)
 
     def serve_plain(self,ev,product,f,**kwargs):
         if self.mk_product(ev,product,**kwargs):
             self.rec_request(ev,product,f)
-            return self.serve_file(f,"text/plain",**kwargs)
+            return self.serve_file(ev,f,"text/plain",**kwargs)
 
     def serve_png(self,ev,product,f,**kwargs):
         if self.mk_product(ev,product,**kwargs):
             self.rec_request(ev,product,f)
-            return self.serve_file(f,"image/png",**kwargs)
+            return self.serve_file(ev,f,"image/png",**kwargs)
 
     def setCookie(self,ev,value,**kwargs):
         cn = 'download_%s' % ev["_id"].replace("@","_")
@@ -162,6 +165,11 @@ class DataSrv(BaseSrv,Products):
         self.setCookie(ev,product)
         print("MK: %s [%s]" % (product,",".join(["%s=%s" % x for x in kwargs.items()])))
         f = os.path.join(config["eventdata"]["eventdatadir"],ev["_id"],product)
+        try:
+            os.makedirs(os.path.dirname(f), exist_ok=True)
+            os.chmod(os.path.dirname(f), 0o777)
+        except PermissionError:
+            pass
         if os.path.isfile(f):
             return True
         try:
@@ -229,11 +237,11 @@ class DataSrv(BaseSrv,Products):
         valid_args = [ x["Flag2"].lstrip("-") for x in valid_args ]
         args = [config["GMT"]["report_bin"]]
         for k,v in kwargs.items():
-            if k in valid_args:
+            if k in valid_args and isinstance(v,str):
                 args.append("--"+k)
                 args.append(v)
             else:
-                print("Removing invalid gmt-argument: --%s %s" % (k,v))
+                print("Removing invalid gmt-argument: --%s %s" % (k,str(v)))
         print("Executing: %s" % (" ".join(args)))
         p = subprocess.Popen(args,cwd=os.path.dirname(config["GMT"]["report_bin"]),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         out,err = p.communicate()
@@ -289,6 +297,8 @@ class DataSrv(BaseSrv,Products):
         out = "# FEATURE_DATA\n"
         w = 180
         e = -180
+        w2 = 360
+        e2 = 0
         s = 90
         n = -90
         num = 0
@@ -301,20 +311,43 @@ class DataSrv(BaseSrv,Products):
                     for point in poly:
                         w = point[0] if point[0] < w else w
                         e = point[0] if point[0] > e else e
+                        w2 = point[0] % 360 if (point[0] % 360) < w2 else w2
+                        e2 = point[0] % 360 if (point[0] % 360) > e2 else e2
                         s = point[1] if point[1] < s else s
                         n = point[1] if point[1] > n else n
                         out += "%f %f\n" % (point[0], point[1])
                         num += 1
                     val = "\n# @H"
+        if e2 - w2 < e - w:
+            e = e2 if e2 <= 180 else e2 - 360
+            w = w2 if w2 <= 180 else w2 - 360
         out = "# @VGMT1.0 @GPOLYGON\n" + ("# @R%f/%f/%f/%f\n" % (w,e,s,n)) + out
         return out
 
     def export_tfps(self, evtid, minewh=0):
         out = "longitude,latitude,ewh,eta\n"
-        for tfp_comp in self._db["tfp_comp"].find({"EventID": evtid}):
+        crs = list(self._db["tfp_comp"].find({"EventID":evtid})) + list(self._db["comp"].find({"EventID":evtid, "type": "TFP"}))
+        for tfp_comp in crs:
             tfp = self._db["tfps"].find_one({"_id": ObjectId(tfp_comp["tfp"])})
             if tfp is not None and tfp_comp["ewh"] >= minewh:
                 out += "%f,%f,%f,%f\n" % (tfp["lon_real"], tfp["lat_real"], tfp_comp["ewh"], tfp_comp["eta"])
         return out
+
+    @cherrypy.expose
+    def saveformdata(self,_form,**kwargs):
+        doc = kwargs.copy()
+        doc.pop("_id",None)
+        doc["_ip"] = cherrypy.request.headers["X-Forwarded-For"] if "X-Forwarded-For" in cherrypy.request.headers else cherrypy.request.remote.ip
+        doc["_form"] = _form
+        doc["_time"] = datetime.datetime.now()
+        self._db["formdata"].insert(doc)
+        return jssuccess()
         
+    @cherrypy.expose
+    def queryformdata(self,_form=None,**kwargs):
+        if _form is not None:
+            kwargs["_form"] = _form
+        data = list(self._db["formdata"].find(kwargs))
+        return jssuccess(data=data)
+
 application = startapp( DataSrv )
