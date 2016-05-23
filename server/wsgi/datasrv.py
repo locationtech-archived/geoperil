@@ -260,7 +260,7 @@ class DataSrv(BaseSrv,Products):
         apikey = user.get("api",{}).get("key",None)
         if apikey is None:
             return False
-        r = requests.post("http://trideccloud.gfz-potsdam.de/srv/computeById",
+        r = requests.post(self.get_hostname()+"/srv/computeById",
             data={"apikey":apikey,"evtid":evid,"dt_out":dt_out,"raw":1})
 
     def event_stat(self,evid):
