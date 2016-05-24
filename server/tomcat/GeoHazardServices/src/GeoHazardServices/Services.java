@@ -171,9 +171,9 @@ public class Services {
 	  try {
 		
 		mongoClient = new MongoClient(Arrays.asList(
-		   new ServerAddress("tcnode1", 27017),
-		   new ServerAddress("tcnode2", 27017),
-		   new ServerAddress("tcnode3", 27017))
+		   new ServerAddress("localhost", 27017),
+		   new ServerAddress("localhost", 27017),
+		   new ServerAddress("localhost", 27017))
 		);
 		db = mongoClient.getDB("trideccloud");
 		
