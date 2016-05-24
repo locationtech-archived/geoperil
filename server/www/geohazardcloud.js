@@ -537,6 +537,7 @@ function Station(meta, eq) {
 	this.active = false;
 	this.curLiveTime = null;
 	this.curSimTime = null;
+	this.timer1 = null;
 
 	this.noup = 0;
 	this.noupMax = 1;
@@ -648,7 +649,7 @@ function Station(meta, eq) {
 		if (!this.active)
 			return;
 
-		//console.log("update");
+		clearTimeout(this.timer1);
 
 		var data = {
 			station : this.name,
@@ -667,11 +668,6 @@ function Station(meta, eq) {
 			dataType : 'json',
 			data : data,
 			success : (function(result) {
-
-				// console.log( this.name, ": Fetched", result.data.length,
-				// "live values in", Date.now() - this.profile1.stime, "ms");
-
-				// console.log( result );
 
 				/*
 				 * remove all elements that are out of range now - only relevant
@@ -728,10 +724,10 @@ function Station(meta, eq) {
 					//console.log(this.name, "live notifyNoUpdate");
 					this.notifyNoUpdate();
 				}
-
+			}).bind(this),
+			complete : (function(result) {
 				/* call update again after 'interval' seconds */
-				setTimeout(this.update.bind(this, interval), interval * 1000);
-
+				this.timer1 = setTimeout(this.update.bind(this, interval), interval * 1000);
 			}).bind(this)
 		});
 	};
@@ -769,9 +765,6 @@ function Station(meta, eq) {
 			data : data,
 			success : (function(result) {
 
-				// console.log( this.name, ": Fetched", result.data.length, "sim
-				// values in", Date.now() - this.profile2.stime, "ms");
-
 				if (result.data.length > 0) {
 
 					/* add new data to the simulation data table */
@@ -787,8 +780,6 @@ function Station(meta, eq) {
 					this.profile2.stime = Date.now();
 					this.table = google.visualization.data.join(this.table1,
 							this.table2, 'full', [ [ 0, 0 ] ], [ 1 ], [ 1 ]);
-					// console.log( this.name, ": Joined", result.data.length,
-					// "sim values in", Date.now() - this.profile2.stime, "ms");
 
 					/* update start time for next call */
 					if (result.last)
@@ -4444,15 +4435,11 @@ function getUpdates(timestamp) {
 			if (msgadd) {
 				messages.notifyOn('change');
 			}
-
-			timerId = setTimeout(function() {
-				getUpdates(timestamp);
-			}, 1000);
-
 		},
 		error : function() {
 		},
 		complete : function() {
+			timerId = setTimeout(function() { getUpdates(timestamp); }, 1000);
 		}
 	});
 }
@@ -5317,7 +5304,7 @@ function getRegion(country) {
 		     'MLS','MOZ','MTS','MYA','BSH','COM','MAD','SAF','SGP','YEM'],
 		NEAM: ['BEL','CYP','EGY','ESP','HEL','ISR','ITA','POR','UKR','ROM','ANT','CBV',
 		       'DEU','DMK','EIR','FRA','GRB','ISL','KNA','MLT','MNC','MRT','NOR','SEN',
-		       'SVE', 'IRL', 'PRT', 'TUR','GBR','GRC','MAR','ROU','GIB'],
+		       'SVE','IRL','PRT','TUR','GBR','GRC','MAR','ROU','GIB'],
 		CARIBE: ['BAH','BAR','CAI','COL','CRC','CUW','DOM','GRD','GUA','HAI',
 		         'JAM','MEX','MTQ','NIC','PAN','PRC','RDO','SVG','TRT','ABR'],
 		P: ['ANT','CAN','CHL','CKI','ECU','FIJ','FIL','HAW','HKG','JAP','KIR','KRS',
@@ -5758,8 +5745,11 @@ function showSplash(show) {
 
 		/* load iframes after page initialization is finished to avoid blocking */
 		/* the real src address is stored as a data member 'data-src' */
+		var cnt = 1;
 		$('iframe').each(function() {
-			$(this).attr("src", $(this).data("src"));
+			setTimeout( (function() {
+				$(this).attr("src", $(this).data("src"));
+			}).bind(this), 1000 * cnt++);
 		});
 
 	} else {
@@ -6217,7 +6207,8 @@ function MailDialog() {
 		this.dialog.lock();
 		
 		/* TODO: temporary hack */
-		form = curuser.username == 'exercise@test.de' ? 'caribe' : null;
+		form = curuser.username == 'exercise@test.de' || curuser.username == 'silvia.chacon.barrantes@una.cr' ||
+		       curuser.username == 'hammi@gfz-potsdam.de' ? 'caribe' : null;
 		
 		ajax_mt('webguisrv/get_msg_texts', {evtid: this.eq._id, kind: kind, form: form}, (function(result) {
 			this.mailText.val(result.mail);
@@ -6463,7 +6454,7 @@ function AdminDialog() {
 			'evtset': new HtmlCheckBox('Event Sets'),
 			'flood': new HtmlCheckBox('Flood Prototype'),
 			'data': new HtmlCheckBox('Data Services'),
-			'hysea': new HtmlCheckBox('HySea'),
+			'hysea': new HtmlCheckBox('HySEA'),
 			'population': new HtmlCheckBox('Population'),
 			'new_report': new HtmlCheckBox('New Report')
 		};
@@ -9701,7 +9692,7 @@ function ComposeForm(div) {
 		this.drpAlgo.setToString(function(o){ return o.desc; });
 		this.drpAlgo.setSource(	new Container().setList([
 		    {name: 'easywave', desc: 'EasyWave'},
-		    {name: 'hysea', desc: 'HySea'}
+		    {name: 'hysea', desc: 'HySEA'}
 		]));
 		this.drpAlgo.select(0);
 		
