@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -10,7 +10,7 @@ import urllib.request, urllib.error, urllib.parse
 import atexit
 import json
 
-from pymongo import MongoClient
+from pymongo import MongoReplicaSetClient
 
 class LatLon:
     def __init__(self, lat, lon):
@@ -72,9 +72,6 @@ def isPointInsidePoylgon( regions_file, t ):
         nr += 1
     
     return None
-
-def cleanup( pidfile ):
-    os.unlink( pidfile )
 
 # this is now still left in the manager to unburden the Tomcat server
 # however we could move this into the server as well
@@ -189,14 +186,6 @@ Best Double Couple:.*?
         
 def main():
         
-    pidfile = "/tmp/dbmanager.pid"
-    if os.path.isfile( pidfile ):
-        print("%s already running, exiting" % pidfile)
-        sys.exit()
-    else:
-        atexit.register( cleanup, pidfile )
-        open( pidfile, 'w' ).write("")
-    
     startTime = time.time()
     
     url = 'http://geofon.gfz-potsdam.de/eqinfo/list.php?page='
@@ -209,8 +198,9 @@ def main():
     cntSim = 0
     cntKnown = 0
         
-    client = MongoClient()
-    db = client['easywave']
+    client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0" ,w="majority",
+        socketTimeoutMS=10000,connectTimeoutMS=10000)
+    db = client['trideccloud']
     
     inst = db['institutions'].find( { "name": "gfz" } )[0]
         
@@ -305,7 +295,7 @@ def main():
             entry.update( { "comp": 180 } )
           
         data = urllib.parse.urlencode( entry ).encode('ascii')
-        req = urllib.request.Request('http://localhost:8080/GeoHazardServices/srv/data_insert', data)
+        req = urllib.request.Request('http://trideccloud.gfz-potsdam.de/srv/data_insert', data)
         res = urllib.request.urlopen( req ).read()
                                                                
         time.sleep( 0.01 )
@@ -317,6 +307,7 @@ def main():
     print('Pages: %u' % page)
     print('Simulated: %u' % cntSim)
     
+    client.close()
     endTime = time.time()
     
     print("Duration: %u" % (endTime - startTime))
