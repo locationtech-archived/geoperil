@@ -71,6 +71,11 @@ public abstract class TsunamiAdapter implements IAdapter {
 			System.out.println("cleanup");
 			cleanup(task);
 			return 0;
+		} catch(SimulationException e) {
+			markAsFailed(task);
+			System.err.println(e.getMessage());
+			e.printStackTrace();
+			return -1;
 		} catch(IOException e) {
 			return -1;
 		}
@@ -78,8 +83,21 @@ public abstract class TsunamiAdapter implements IAdapter {
 	
 	protected abstract void writeFault(EQTask task) throws IOException;
 	protected abstract void writeLocations(EQTask task) throws IOException;
-	protected abstract int simulate(EQTask task) throws IOException;
+	protected abstract int simulate(EQTask task) throws IOException, SimulationException;
 	protected abstract int readLocations(EQTask task) throws IOException;
+	
+	private void markAsFailed(EQTask task) {
+		BasicDBObject obj = new BasicDBObject("_id", task.id );
+		BasicDBObject setter = new BasicDBObject("process.0.failed", true);
+		db.getCollection("eqs").update( obj, new BasicDBObject( "$set", setter ) );
+		
+		BasicDBObject event = new BasicDBObject();
+		event.append( "id", task.id );
+		event.append( "user", task.user.objId );
+		event.append( "timestamp", new Date() );
+		event.append( "event", "update" );
+		db.getCollection("events").insert( event );
+	}
 	
 	/* Should be called by child classes if progress of simulation has changed. */
 	protected int updateProgress(EQTask task) throws IOException {
@@ -162,6 +180,9 @@ public abstract class TsunamiAdapter implements IAdapter {
 	
 	/* Should be called by child classes if the computation was successfully started. */
 	protected int initialProgress(EQTask task) {
+			if( task.raw == 1 )
+				return 0;
+		
 			/* DB object to find current earthquake ID */
 			BasicDBObject obj = new BasicDBObject("_id", task.id );
 			
@@ -447,7 +468,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 		);		
 		sshCon[0].copyFile(kml_file, workdir + "/" + kml_file);
 			
-		localCon.runCmd( String.format("python ../getEWH.py heights.%1$s.kml %1$s %2$s", ewh, task.id) );
+		localCon.runCmd( String.format("python3 ../getEWH.py heights.%1$s.kml %1$s %2$s", ewh, task.id) );
 		return 0;
 	}
 	
@@ -463,7 +484,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 		String kml_file = String.format("arrival.%d.kml", time - 10);
 		sshCon[1].copyFile(kml_file, workdir + "/" + kml_file);
 		localCon.runCmd(
-			String.format("python ../getShape.py arrival.%1$d.kml %1$d %2$s", time - 10, task.id)
+			String.format("python3 ../getShape.py arrival.%1$d.kml %1$d %2$s", time - 10, task.id)
 		);
 		
 		return 0;

@@ -101,7 +101,7 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 	}
 
 	@Override
-	protected int simulate(EQTask task) throws IOException {
+	protected int simulate(EQTask task) throws IOException, SimulationException {
 		int simTime = task.duration + 10;
 		String cmdParams = String.format(
 			"-grid ../grid_%d.grd -poi locations.inp -poi_dt_out 30 -poi_search_dist 20 -source fault.inp -propagation %d -step 1 -ssh_arrival 0.001 -time %d -verbose -adjust_ztop %s",
@@ -141,6 +141,8 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 			
 			updateProgress(task);
 		}
+		if( sshCon[0].returnValue() != 0 )
+			throw new SimulationException("EasyWave failed!");
 		return 0;
 	}
 	

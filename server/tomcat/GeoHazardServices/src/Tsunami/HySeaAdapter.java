@@ -70,19 +70,17 @@ public class HySeaAdapter extends TsunamiAdapter {
 		strFault.appendln(xsize);
 		strFault.appendln(ysize);
 		strFault.appendln("range.xyz.bin");
-		strFault.append(
-			String.format(Locale.US, "1\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n",
-				eqp.lon, eqp.lat, eqp.depth, eqp.length, eqp.width, eqp.strike, eqp.dip, eqp.rake, eqp.slip,
-				-500.0, 500.0, -500.0, 500.0
-			)
+		strFault.appendln("1");
+		strFault.appendln(
+			String.format(Locale.US, "%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f", eqp.lon, eqp.lat, eqp.depth, eqp.length, eqp.width, eqp.strike, eqp.dip, eqp.rake, eqp.slip)
 		);
+		strFault.appendln("-500.0\n500.0\n-500.0\n500.0");
 		strFault.appendln(outfile);
 		strFault.appendln("1");
 		strFault.appendln("1");
 		strFault.appendln("1");
 		strFault.appendln("1");
 		strFault.appendln((task.duration * 60 + 2));
-		//strFault.appendln(task.duration * 60);
 		strFault.appendln(task.dt_out * 60);
 		strFault.appendln("1 # readFromFile");
 		strFault.appendln("locations.inp # file with locations");
@@ -172,7 +170,45 @@ public class HySeaAdapter extends TsunamiAdapter {
 	}
 
 	@Override
-	protected int simulate(EQTask task) throws IOException {
+	protected int simulate(EQTask task) throws IOException, SimulationException {
+		
+		initialProgress(task);
+		
+		String line;
+		long start = System.nanoTime();
+		sshCon[0].runLiveCmd("hysea fault.inp");
+		while( (line = sshCon[0].nextLine()) != null) {
+			Matcher matcher = Pattern.compile("Time = (\\d+\\.?\\d*) sec").matcher(line);
+			if( matcher.find() ) {
+				float time = Float.valueOf(matcher.group(1));
+				task.progress = Math.min( time / (task.duration * 60.0f), 1.0f) * 100.0f;
+				task.calcTime = (System.nanoTime() - start) / 1000000.0f;
+				if( time % (task.dt_out * 60.0f) < 5.0f ) {
+					task.prevSimTime = task.curSimTime;
+					task.curSimTime = (int) (time / (task.dt_out * 60.0f)) * task.dt_out;
+					updateProgress(task);
+				}
+			}
+		}
+		if( sshCon[0].returnValue() != 0 )
+			throw new SimulationException("HySEA failed!");
+		
+		updateProgress(task);
+		
+		sshCon[0].runCmds(
+			String.format(
+				"gdal_calc.py -A NETCDF:\"%1$s_eta.nc\":bathymetry -B NETCDF:\"%1$s_eta.nc\":max_height --calc=\"(A<0)*A + B\" --overwrite --outfile=%2$s",
+				outfile, "eWave.2D.sshmax.tiff"
+			),
+			String.format(
+				"gdal_translate -of GSBG %s %s", "eWave.2D.sshmax.tiff", "eWave.2D.sshmax"
+			)
+		);
+		return 0;
+	}
+	
+	@Deprecated
+	protected int simulate_job(EQTask task) throws IOException {
 		jobid = 0;
 		for( String line: sshCon[0].runCmd("qsub ../run_hysea.sh -d `pwd`") ) {
 			Matcher matcher = Pattern.compile("(\\d*)\\.atlantico.local").matcher(line);
@@ -249,7 +285,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 
 	protected void cleanup(EQTask task) throws IOException {
 		sshCon[0].runCmd(
-			String.format("rm -f eWave.2D.sshmax.* range.xyz* hysea_out_* ~/HySEA.[eo]" + jobid)
+			String.format("rm -f eWave.2D.sshmax.* range.xyz* hysea_out_* arrival.*.tiff ~/HySEA.[eo]" + jobid)
 		);
 		super.cleanup(task);
 	}

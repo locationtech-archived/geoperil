@@ -79,10 +79,15 @@ public abstract class Connection {
 	
 	public void runLiveCmd(String cmd) throws IOException {
 		/* Run command. */
-		out.println( cmd );
+		out.println( cmd + "; __RET=$?" );
 		/* Force newline before \004! */
 		out.println( "echo '\n\004'" );
-		out.flush();		
+		out.flush();
+	}
+	
+	public int returnValue() throws IOException {
+		List<String> ret = this.runCmd("echo ${__RET}");
+		return Integer.valueOf(ret.get(0)).intValue();
 	}
 	
 	public String nextLine() throws IOException {

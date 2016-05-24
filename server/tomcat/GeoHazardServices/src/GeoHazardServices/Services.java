@@ -2,12 +2,13 @@ package GeoHazardServices;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
@@ -21,11 +22,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;
 
 import javax.inject.Singleton;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -167,19 +171,44 @@ public class Services {
 	  Locale.setDefault(new Locale("en", "US"));
 	  scheduler = new FairScheduler();
 	  worker = new ArrayList<WorkerThread>();
-	  	  	  
+
+	  URL config;
+	  
 	  try {
-		
-		mongoClient = new MongoClient(Arrays.asList(
-		   new ServerAddress("localhost", 27017),
-		   new ServerAddress("localhost", 27017),
-		   new ServerAddress("localhost", 27017))
-		);
-		db = mongoClient.getDB("trideccloud");
-		
-	  } catch (UnknownHostException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
+		  /* Try to load environment from context. */
+		  javax.naming.Context initCtx = new InitialContext();
+		  config = new File( (String) initCtx.lookup("java:comp/env/config") ).toURI().toURL();
+	  } catch (NamingException e1) {
+		  /* Otherwise, use the local properties file. */
+		  config = this.getClass().getClassLoader().getResource("config.properties");
+	  } catch (MalformedURLException e) {
+		  System.err.println("Malformed URL in environment context.");
+		  e.printStackTrace();
+		  return;
+	  }
+	  
+	  try {
+		  Properties prop = new Properties();
+		  prop.load( config.openStream() );
+		  String dbname = prop.getProperty("db");
+		  String url = prop.getProperty("url");
+		  if( dbname == null || url == null )
+			  throw new IOException("Could not load properties.");
+		  
+		  String nodes[] = url.split(",");
+		  List<ServerAddress> addresses = new ArrayList<ServerAddress>();
+		  for(String node: nodes)
+			  addresses.add( new ServerAddress(node) );
+		  
+		  System.out.println(addresses);
+		  
+		  mongoClient = new MongoClient( addresses );
+		  db = mongoClient.getDB( dbname );
+		  
+	  } catch (IOException e) {
+		  System.err.println(e.getMessage());
+		  e.printStackTrace();
+		  return;
 	  }
 	  
 	  loadSettings();
@@ -264,7 +293,7 @@ public class Services {
 			  
 			  WorkerThread thread;
 			  try {
-				  thread = new WorkerThread( scheduler, GlobalParameter.map.get("localdir") + "/w" + j );
+				  thread = new WorkerThread( scheduler, mongoClient.getServerAddressList(), db.getName(), GlobalParameter.map.get("localdir") + "/w" + j );
 			  } catch (IOException e) {
 				  System.err.println("Error: Could not create worker thread.");
 				  e.printStackTrace();
@@ -480,16 +509,17 @@ public class Services {
 	  
 	  /* Use same duration as in original simulation if available. */
 	  if( dur == null ) {
-		  dur = (Integer) getField(entry, "process.0.simTime");
+		  Number n = (Number) getField(entry, "process.0.simTime");
 		  /* Duration could not be determined. */
-		  if( dur == null )
+		  if( n == null )
 			  return jsfailure("Missing parameter.");
+		  dur = n.intValue();
 	  }
 	  
 	  /* Use grid resolution of original computation or default to 120 seconds. */
 	  if( gridres == null ) {
-		  Double res = (Double) getField(entry, "process.0.resolution");
-		  gridres = res == null ? 120 : (int)(res * 60);
+		  Number res = (Number) getField(entry, "process.0.resolution");
+		  gridres = res == null ? 120 : (int)(res.doubleValue() * 60);
 	  }
 	
 	  /* get properties of returned entry */

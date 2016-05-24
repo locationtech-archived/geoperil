@@ -2,8 +2,7 @@ package GeoHazardServices;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.UnknownHostException;
-import java.util.Arrays;
+import java.util.List;
 
 import FloodPrototype.FloodAdapter;
 import FloodPrototype.FloodTask;
@@ -38,7 +37,9 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 	private TsunamiAdapter hySeaAdapter;
 	private TsunamiAdapter easyWaveAdapter;
 	
-	public WorkerThread( IScheduler scheduler,
+	public WorkerThread( IScheduler scheduler,						 
+						 List<ServerAddress> addresses,
+						 String dbname,
 						 String workdir ) throws IOException {
 		
 		this.scheduler = scheduler;
@@ -46,23 +47,13 @@ public class WorkerThread implements Runnable, Comparable<WorkerThread> {
 		this.priority = new Integer( 0 );
 		
 		this.workdir = new File( workdir );
-		
-		if( this.workdir.mkdir() == false ) {
+			
+		if( this.workdir.isDirectory() == false && this.workdir.mkdir() == false ) {
 			throw new IOException( "Could not create working directory!" );
 		}
-				
-		try {
-			
-			dbclient = new MongoClient(Arrays.asList(
-			   new ServerAddress("tcnode1", 27017),
-			   new ServerAddress("tcnode2", 27017),
-			   new ServerAddress("tcnode3", 27017))
-			);
-			db = dbclient.getDB("trideccloud");
-			
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		}
+		
+		dbclient = new MongoClient(addresses);
+		db = dbclient.getDB(dbname);
 	}
 		
 	public int setRemote( String user, String host, String dir ) {
