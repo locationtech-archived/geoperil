@@ -3024,6 +3024,24 @@ function Widget() {
 		}
 	};
 	
+	this.createLayers2 = function(layers) {
+		/* create layer switcher */
+		this.chk_boxes = [];
+		this.div.find('.layers').empty();
+		for(var i = 0; i < layers.length; i++) {
+			var layer = layers[i];
+			if( ! layer ) {
+				this.div.find('.layers').append('<br>');
+				continue;
+			}
+			if( ! layer[1] ) return;
+			var cbox = new HtmlCheckBox(layer[0]);
+			cbox.bindTo( layer[1] );
+			this.div.find('.layers').append(cbox.div);
+			this.chk_boxes.push(cbox);
+		}
+	};
+	
 	this.setPopovers = function(tooltips) {
 		var options = {
 			placement : 'top',
@@ -3331,13 +3349,14 @@ function EQWidget(data, marker) {
 		this.div.find('.lnkEditEvtSet').click(this.notifyOn.bind(this, 'clk_edit_set', this.data));
 			
 		/* create layer switcher */
-		this.createLayers({
-			'Forecast zones': this.data.show.cfzs,
-			'Forecast points': this.data.show.tfps,
-			'Wave jets': this.data.show.jets,
-			'Travel times': this.data.show.isos,
-			'Cities': checkPerm('population') ? this.data.show.cities : null,
-		});
+		this.createLayers2([
+			['Forecast zones', this.data.show.cfzs],
+			['Forecast points', this.data.show.tfps],
+			['Wave jets', this.data.show.jets],
+			['Travel times', this.data.show.isos],
+			null, /* line break */
+			['Cities', checkPerm('population') ? this.data.show.cities : null]
+		]);
 		
 		/* set popovers */
 		this.setPopovers({
@@ -3375,7 +3394,7 @@ function EQWidget(data, marker) {
 	/* fill the HTML elements */
 	/* should be called if the underlying data has changed */
 	this.update = function() {
-				
+		
 		var prop = this.data.prop;
 		var date = new Date(prop.date);
 		var year = date.getUTCFullYear();
@@ -3448,7 +3467,7 @@ function EQWidget(data, marker) {
 
 			this.div.find('.status').html(simText['prepared']);
 			this.div.find('.status').show();
-
+			
 		} else {
 			
 			this.div.find('.status').hide();
@@ -3457,29 +3476,39 @@ function EQWidget(data, marker) {
 			
 			/* we still consider only one simulation per EQ */
 			var process = this.data.process[0];
-
-			var grid = process.grid_dim;
-			var latMin = grid.latMin.toFixed(2);
-			var lonMin = grid.lonMin.toFixed(2);
-			var latMax = grid.latMax.toFixed(2);
-			var lonMax = grid.lonMax.toFixed(2);
-
-			this.div.find('.progress-bar').css('width', process.progress + '%');
-			this.div.find('.resource').html(process.resources);
-			this.div.find('.algorithm').html(' &#183; ' + (process.algorithm == 'hysea' ? 'HySEA' : 'EasyWave'));
-			this.div.find('.calc').html(
-					'Runtime ' + (process.calcTime / 1000).toFixed(2)
-							+ ' sec &#183; SimDuration ' + process.simTime
-							+ ' min');
-			this.div.find('.grid').html(
-					'Grid ' + process.resolution + '&prime; &#183; BBox ('
-							+ latMin + ', ' + lonMin + '), (' + latMax + ', '
-							+ lonMax + ')');
-
-			if (process.progress == 100) {
-				this.div.find('.progress').hide();
-				this.div.find('.status').html(simText['done']);
+						
+			if( process.failed == true ) {
+				
+				this.div.find('.status').html('Simulation failed').css('color', '#d9534f');
 				this.div.find('.status').show();
+				this.div.find('.progress').hide();
+				this.div.find('.calc_data').hide();
+				
+			} else {
+
+				var grid = process.grid_dim;
+				var latMin = grid.latMin.toFixed(2);
+				var lonMin = grid.lonMin.toFixed(2);
+				var latMax = grid.latMax.toFixed(2);
+				var lonMax = grid.lonMax.toFixed(2);
+						
+				this.div.find('.progress-bar').css('width', process.progress + '%');
+				this.div.find('.resource').html(process.resources);
+				this.div.find('.algorithm').html(' &#183; ' + (process.algorithm == 'hysea' ? 'HySEA' : 'EasyWave'));
+				this.div.find('.calc').html(
+						'Runtime ' + (process.calcTime / 1000).toFixed(2)
+								+ ' sec &#183; SimDuration ' + process.simTime
+								+ ' min');
+				this.div.find('.grid').html(
+						'Grid ' + process.resolution + '&prime; &#183; BBox ('
+								+ latMin + ', ' + lonMin + '), (' + latMax + ', '
+								+ lonMax + ')');
+	
+				if (process.progress == 100) {
+					this.div.find('.progress').hide();
+					this.div.find('.status').html(simText['done']);
+					this.div.find('.status').show();
+				}
 			}
 		}
 
@@ -3735,7 +3764,7 @@ function EvtSetWidget(data, marker) {
 			this.div.find('.lnkEdit').show();
 		if (checkPerm('timeline'))
 			this.div.find('.lnkTimeline').show();
-		
+				
 		/* create layer switcher */
 		this.createLayers({			
 			'Wave Jets Accumulated': this.data.show.jets,
@@ -4364,6 +4393,7 @@ function getUpdates(timestamp) {
 						entries.get(id).notifyOn('update');
 						entries.get(id).notifyOn('progress');
 					}
+					
 				}
 			}
 			
@@ -5286,9 +5316,10 @@ function getRegion(country) {
 		IO: ['TAN','THA','IDN','IND','AUS','SRL','IRN','SEY','OMA','PAK','KEN','MDV',
 		     'MLS','MOZ','MTS','MYA','BSH','COM','MAD','SAF','SGP','YEM'],
 		NEAM: ['BEL','CYP','EGY','ESP','HEL','ISR','ITA','POR','UKR','ROM','ANT','CBV',
-		       'DEU','DMK','EIR','FRA','GRB','ISL','KNA','MLT','MNC','MRT','NOR','SEN','SVE'],
+		       'DEU','DMK','EIR','FRA','GRB','ISL','KNA','MLT','MNC','MRT','NOR','SEN',
+		       'SVE', 'IRL', 'PRT', 'TUR','GBR','GRC','MAR','ROU','GIB'],
 		CARIBE: ['BAH','BAR','CAI','COL','CRC','CUW','DOM','GRD','GUA','HAI',
-		         'JAM','MEX','MTQ','NIC','PAN','PRC','RDO','SVG','TRT'],
+		         'JAM','MEX','MTQ','NIC','PAN','PRC','RDO','SVG','TRT','ABR'],
 		P: ['ANT','CAN','CHL','CKI','ECU','FIJ','FIL','HAW','HKG','JAP','KIR','KRS',
 		    'MIC','MSI','NWZ','PAI','PER','PNG','POF','RUS','SOI','SVD','TON','TVI',
 		    'USA','VAN','VNM','WSA'],
@@ -6185,7 +6216,10 @@ function MailDialog() {
 		/* lock dialog */
 		this.dialog.lock();
 		
-		ajax_mt('webguisrv/get_msg_texts', {evtid: this.eq._id, kind: kind}, (function(result) {
+		/* TODO: temporary hack */
+		form = curuser.username == 'exercise@test.de' ? 'caribe' : null;
+		
+		ajax_mt('webguisrv/get_msg_texts', {evtid: this.eq._id, kind: kind, form: form}, (function(result) {
 			this.mailText.val(result.mail);
 			this.smsText.val(result.sms);
 			this.msgnr = result.msgnr;
@@ -9416,7 +9450,7 @@ function DownloadDialog(data) {
 		this.btnDownload.click( this.downloadData.bind(this) );
 		this.divStatus = this.dialog.content.find('.status');
 		this.divError = this.dialog.content.find('.error');
-		this.loaded = false;
+		this.loaded = 'false';
 		
 		this.categories = new Container();
 		this.params = new Container();
@@ -9427,7 +9461,6 @@ function DownloadDialog(data) {
 		var file = this.drpProducts.selectedItem().file;
 		var cookie_val = 'download_' + this.data._id.replace('@', '_');
 		
-		/* TODO */
 		var args = {};
 		if( file == 'custom.png' ) {
 			for(var i = 0; i < this.params.length(); i++) {
@@ -9474,13 +9507,12 @@ function DownloadDialog(data) {
 			ret.push( encodeURIComponent('gmt_' + key) + "=" + encodeURIComponent(args[key]) );
 		src += '&' + ret.join('&');
 		
-		console.log(args);
-		
 		/* Start download in new iframe to avoid redirects of any kind. The date parameter is necessary to suppress caching. */
 		$('<iframe>', {src: src}).appendTo('.dynamic').hide();
 	};
 	
 	this.loadProducts = function() {
+		this.loaded = 'pending';
 		ajax('datasrv/help', null, (function(result) {
 			var key = this.data instanceof EventSet ? 'evtset' : 'evt';
 			/* TODO: given by API, but show: ['evt'] is missing */
@@ -9572,7 +9604,7 @@ function DownloadDialog(data) {
 					if( param.html instanceof HtmlDropDown )
 						param.html.notifyOn('change', param.html.select());
 				}
-				this.loaded = true;
+				this.loaded = 'true';
 				this.dialog.show();
 			}).bind(this));
 			
@@ -9580,7 +9612,10 @@ function DownloadDialog(data) {
 	};
 	
 	this.show = function() {
-		this.loaded ? this.dialog.show() : this.loadProducts();
+		if( this.loaded == 'true' )
+			return this.dialog.show();
+		if( this.loaded == 'false' )
+			return this.loadProducts();
 	};
 	
 	this.init(data);
