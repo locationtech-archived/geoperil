@@ -326,7 +326,7 @@ class DataSrv(BaseSrv,Products):
 
     def export_tfps(self, evtid, minewh=0):
         out = "longitude,latitude,ewh,eta\n"
-        crs = list(self._db["tfp_comp"].find({"EventID":evtid})) + list(self._db["comp"].find({"EventID":evtid, "type": "TFP"}))
+        crs = list(self._db["comp"].find({"EventID":evtid, "type": "TFP"}))
         for tfp_comp in crs:
             tfp = self._db["tfps"].find_one({"_id": ObjectId(tfp_comp["tfp"])})
             if tfp is not None and tfp_comp["ewh"] >= minewh:

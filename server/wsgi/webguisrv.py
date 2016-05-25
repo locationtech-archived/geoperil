@@ -10,6 +10,7 @@ import re
 import binascii
 import surfer
 import pymongo
+from textwrap import wrap
 
 logger = logging.getLogger("MsgSrv")
 
@@ -71,7 +72,6 @@ class WebGuiSrv(BaseSrv):
             if inst is not None:
                 inst = str(inst)
             if self._db["users"].find_one({"username":username}) is None:
-                print(password)
                 salt, pwhash = createsaltpwhash(password)
                 newuser = {
                     "username": username,
@@ -108,7 +108,6 @@ class WebGuiSrv(BaseSrv):
                         "FtpPassword":"anonymous",
                     },
                 }
-                print(newuser["password"])
                 if inst is not None and self._db["institutions"].find_one({"name":inst}) is None:
                     self._db["institutions"].insert({"name":inst, "secret":None})
                 self._db["users"].insert(newuser)
@@ -179,11 +178,9 @@ class WebGuiSrv(BaseSrv):
                 userobj.pop("pwsalt",None)
                 userobj.pop("pwhash",None)
                 if "password" in userobj:
-                    print(userobj["password"])
                     if len(userobj["password"])>3:
                         userobj["pwsalt"], userobj["pwhash"] = createsaltpwhash(userobj["password"])
                         userobj["password"] = b64encode(hashlib.new("sha256",bytes(userobj["password"],"utf-8")).digest()).decode("ascii")
-                        print(userobj["password"])
                     else:
                         userobj.pop("password",None)
                 self._db["users"].update({"_id":userid},{"$set":userobj})
@@ -341,28 +338,19 @@ class WebGuiSrv(BaseSrv):
                 {"maxy": {"$lt": float(maxy)} }
             ]}
         total = 0
-        start1 = time.time()
         res = list( self._db["osm_buildings"].find(query).limit(3000) )
         if evtid is not None:
             fgrid = os.path.join(config["eventdata"]["eventdatadir"], evtid, "wstmax_gpu.grid")
-            print(fgrid)
             if os.path.isfile(fgrid):
                 f = open(fgrid,"rb")
                 sf = surfer.SurferFile(f)
-                start2 = time.time()
                 for building in res:
                     h = 0
-                    start3 = time.time()
                     h = max( sf.getValueAtLatLon( building["miny"], building["minx"], 0), h)
                     h = max( sf.getValueAtLatLon( building["miny"], building["maxx"], 0), h)
                     h = max( sf.getValueAtLatLon( building["maxy"], building["minx"], 0), h)
                     h = max( sf.getValueAtLatLon( building["maxy"], building["maxx"], 0), h)
                     building["height"] = h
-                    total += (time.time() - start3)
-                print( 'Elapsed1:', (time.time() - start1) )
-                print( 'Elapsed2:', (time.time() - start2) )
-                print( 'Total:', total)
-                print( 'has C:', pymongo.has_c() )
                 f.close()
             else:
                 print("CLOUD: grid file not found!")
@@ -413,7 +401,7 @@ class WebGuiSrv(BaseSrv):
     
     # for internal use
     def _gettfps(self, evid):
-        crs = list(self._db["tfp_comp"].find({"EventID":evid})) + list(self._db["comp"].find({"EventID":evid, "type": "TFP"}))
+        crs = list(self._db["comp"].find({"EventID":evid, "type": "TFP"}))
         res = []
         for tfp in crs:
             obj = self._db["tfps"].find_one({"_id":ObjectId(tfp["tfp"])})
@@ -435,13 +423,192 @@ class WebGuiSrv(BaseSrv):
         return "WATCH"
     
     @cherrypy.expose
-    def get_msg_texts(self, evtid, kind):
+    def get_msg_texts(self, evtid, kind, form=None):
         user = self.getUser()
         if user is not None:
-            msgs = self._get_msg_texts(evtid, kind, user)
+            if form == "caribe":
+                msgs = self._get_msg_texts_caribe(evtid, kind, user)
+            else:
+                msgs = self._get_msg_texts(evtid, kind, user)
             return jssuccess(**msgs)
         return jsdeny()
+
+    def _get_msg_texts_caribe(self, evid, kind, user=None):
+        eq = self._db["eqs"].find_one({"_id": evid})
+        template = self._db["settings"].find_one({"type": "msg_template_caribe"})
+        ## check previous message
+        nr = 1
+        now = eq["prop"]["date"] + (datetime.datetime.utcnow() - eq["prop"]["date"]) * 1 #eq["accel"]
+        rootid = eq["root"] if eq["root"] else eq["_id"]
+        cursor = self._db["messages_sent"].find({
+            "EventID": rootid,
+            "SenderID": user["_id"],
+            "NextMsgNr": {"$ne": None}
+        }).sort("CreatedTime", -1).limit(1)
+        prev_msg = cursor[0] if cursor.count() > 0 else None
+        if prev_msg:
+            nr = prev_msg["NextMsgNr"] + 1
+
+        # auxillary function to indent a multiline string
+        indent = lambda s,n=4: re.sub("^", " "*n, s, flags=re.M)
+
+        ## create location table
+        # get all TFPs with a real ETA value
+        tfps = sorted([ v for v in self._gettfps(evid) if v["eta"] > -1 ], key=lambda x: x["eta"])
+        tfp_text = ""
+        if tfps:
+            len_location = max( max( [len(v["name"]) for v in tfps] ), 8)
+            len_region = max( max( [len(v["country"]) for v in tfps] ), 6)
         
+            tfp_text += "%s  %s   %s    %s \n" %(
+                "LOCATION".ljust(len_location),
+                "REGION".ljust(len_region),
+                "COORDINATES", "ETA(UTC)"
+            )
+            tfp_text += "\n".rjust(len(tfp_text), "-")
+            for tfp in tfps:
+                arr_min = math.floor(tfp["eta"])
+                arr_sec = math.floor( (tfp["eta"] % 1) * 60.0 )
+                arr_time = eq["prop"]["date"] + datetime.timedelta(minutes=arr_min, seconds=arr_sec)
+                #if arr_time < now:
+                #    continue
+                tfp_text += "%s  %s  %4.1f%c %5.1f%c   %s\n" %(
+                    tfp["name"].ljust(len_location),
+                    tfp["country"].ljust(len_region),
+                    abs(tfp["lat_real"]),
+                    "S" if tfp["lat_real"] < 0 else "N",
+                    abs(tfp["lon_real"]),
+                    "W" if tfp["lon_real"] < 0 else "E",
+                    arr_time.strftime("%H%M %m/%d")
+                )
+            tfp_text = indent(tfp_text)
+
+        ## create threat categories
+        # get all CFZs with a real ETA value and create a new field "country" which is equivalent to the existing field "COUNTRY"
+        cfzs = [(v if v.update({"country": v["COUNTRY"]}) is None else None) for v in self._getcfzs(evid) if v["eta"] > -1]
+        etas = sorted(tfps + cfzs, key=lambda x: x["eta"])
+        ewhs = sorted(tfps + cfzs, key=lambda x: x["ewh"])
+
+        # auxillary function that removes duplicates while preserving order and formats the output as needed
+        # set s is only allocated once which allows to exclude already matched elements in subsquent invocations
+        # pass set() to use a fresh empty set
+        layout = lambda l,s=set(): indent("\n".join(wrap("... ".join( \
+            [x for x in [v["country"].upper() for v in l] if not (x in s or s.add(x)) ]
+        ), 55)), 6)
+
+        levels = {}
+        levels["watch"] = layout( [v for v in ewhs if v["ewh"] > 3] )
+        levels["advisory"] = layout( [v for v in ewhs if v["ewh"] > 1 and v["ewh"] <= 3] )
+        levels["info"] = layout( [v for v in ewhs if v["ewh"] > 0.3 and v["ewh"] <= 1] )
+        threat = layout(etas,set())
+        
+        ## create table of gauge locations
+        gauge_text = ""
+        has_initial_gauges = False
+        has_new_gauges = False
+        if user is not None:
+            pickings = sorted(
+                list(self._db["pickings"].find({"userid": user["_id"], "evtid": evid, "data.pick": True})),
+                key=lambda x: x["data"]["time"].replace(".", "").replace(":", ""),
+                reverse=True
+            )
+            for picking in pickings:
+                picking["station_obj"] = self._db["stations"].find_one({"name": picking["station"]})
+            if pickings:
+                len_location = max( max( [len(v["station_obj"]["name"]) for v in pickings] ), 14)
+                gauge_text += "%s     GAUGE      TIME OF   MAXIMUM     WAVE\n" % "".ljust(len_location)
+                gauge_text += "%s  COORDINATES   MEASURE   TSUNAMI   PERIOD\n" % "".ljust(len_location)
+                gauge_text += "%s   LAT   LON     (UTC)     HEIGHT    (MIN)\n" % "GAUGE LOCATION".ljust(len_location)
+                gauge_text += "\n".rjust(len(gauge_text.split("\n")[0])+1, "-")
+                has_initial_gauges = not prev_msg or not [v for v in pickings if prev_msg["CreatedTime"] > v["modified"] ]
+                has_new_gauges = prev_msg and [v for v in pickings if v["modified"] > prev_msg["CreatedTime"] ] and not has_initial_gauges
+            for picking in pickings:
+                station = picking["station_obj"]
+                gauge_text += "%s  %4.1f%c %5.1f%c    %s  %5.2fM/%4.1fFT %3d \n" %(
+                    station["name"].ljust(len_location),
+                    abs(station["lat"]), "S" if station["lat"] < 0 else "N",
+                    abs(station["lon"]), "W" if station["lon"] < 0 else "E",
+                    picking["data"]["time"].replace(":",""),
+                    picking["data"]["ampl"], picking["data"]["ampl"] * 3.28084,
+                    picking["data"]["period"]
+                )
+            if pickings:
+                gauge_text = template["observations"] % indent(gauge_text)
+        ## 
+        step = "end" if kind == "end" else "mid" if nr > 1 else "first"
+        g = lambda v,t,l: t[[ x for x in l if x in t and l.index(v) <= l.index(x)][0]]
+        f = lambda t: g(step, t, ["end", "mid", "first"])
+  
+        # find previous magnitude
+        mag = eq["prop"]["magnitude"]
+        prev_mag = self._db["eqs"].find_one({"_id": prev_msg["ParentId"]})["prop"]["magnitude"] if prev_msg else None
+
+        msg = template["header"] % (
+            nr,
+            now.strftime("%H%M UTC ON %a %b %d %Y").upper(),
+            "FINAL " if step == "end" else ""
+        )
+        updates = ""
+        if prev_mag and prev_mag != mag: # if magnitude changes
+            updates += template["updates_mag"] %(
+               "REVISED" if mag > prev_mag else "REDUCED",
+                prev_mag, # previous magnitude
+                mag  # current magnitude
+        )
+        if nr == 2:
+            updates += template["updates_ampl"]
+        if step == "end":
+            updates += template["updates_final"]
+        if has_initial_gauges: # if gauge locations the first time
+            updates += template["updates_obs_incl"]
+        if has_new_gauges: # if gauge locations updated
+            updates += template["updates_obs_up"]
+        msg += template["updates"] % updates if updates else ""
+        msg += template["params"] %(
+            eq["prop"]["magnitude"],
+            eq["prop"]["date"].strftime("%H%M UTC %b %d %Y").upper(),
+            abs(eq["prop"]["latitude"]), "SOUTH" if eq["prop"]["latitude"] < 0 else "NORTH",
+            abs(eq["prop"]["longitude"]), "WEST" if eq["prop"]["longitude"] < 0 else "EAST",
+            eq["prop"]["depth"], eq["prop"]["depth"] * 0.621371,
+            eq["prop"]["region"]
+        )
+        msg += f(template["eval"]) %(
+            template["eval_params"] %(
+                eq["prop"]["magnitude"],
+                eq["prop"]["region"],
+                eq["prop"]["date"].strftime("%H%M UTC ON %A %B %d %Y").upper()
+            ),
+            template["eval_observed"] if nr >= 3 else ""
+        )
+        if step == "mid":
+            msg += f(template["threat"]) %(
+                template["threat_watch"] % levels["watch"] + "\n\n" +
+                template["threat_advisory"] % levels["advisory"] + "\n\n" +
+                template["threat_info"] % levels["info"]
+            )
+        else:
+            msg += f(template["threat"]) % threat
+        msg += f(template["recommended"])
+        msg += f(template["arrival"])
+        if step != "end":
+            msg += tfp_text + "\n\n"
+        msg += f(template["impact"])
+        msg += gauge_text
+        msg += f(template["next_update"])
+
+        # build SMS text
+        sms = "*TEST*EXPERIMENTAL TSUNAMI MESSAGE;"
+        sms += "NWS PACIFIC TSUNAMI WARNING CENTER;"
+        sms += "%s;EQ Mw%.1f;%s;%.2f%c;%.2f%c;%uKM;*TEST*" %(
+             eq["prop"]["date"].strftime("%H%MZ %d%b%Y").upper(),
+             eq["prop"]["magnitude"],
+             eq["prop"]["region"],
+             abs(eq["prop"]["latitude"]), "S" if eq["prop"]["latitude"] < 0 else "N",
+             abs(eq["prop"]["longitude"]), "W" if eq["prop"]["longitude"] < 0 else "E",
+             eq["prop"]["depth"],
+        )
+        return {"mail": msg, "sms": sms, "msgnr": nr}
+
     def _get_msg_texts(self, evid, kind, user=None):
         tfps = self._gettfps(evid)
         cfzs = self._getcfzs(evid)
@@ -452,7 +619,10 @@ class WebGuiSrv(BaseSrv):
         # ISO-2 map used to build the SMS text later on - initialize given keys with empty sets
         iso_map = {key: set() for key in ["WATCH", "ADVISORY", "INFORMATION"]}
         # pick up neccessary data
-        data = {}        
+        data = {}       
+        # define maximal size of TFP or zone name
+        maxsize = 30
+        tostr = lambda x: x["country"] + " - " + x["name"]
         for tfp in tfps:
             level = self.get_tfp_level( tfp )
             if level is None:
@@ -464,17 +634,18 @@ class WebGuiSrv(BaseSrv):
             if tfp["country"] not in data[level]:
                 data[level][ tfp["country"] ] = []
             data[level][ tfp["country"] ].append( tfp )
-            headlen = max( headlen, len( tfp["country"] + "-" + tfp["name"] ) )
+            headlen = max(headlen, len( tostr(tfp) ))
             # add short ISO-2 country name to set - duplicates are avoided this way
             iso_map[level].add(tfp["iso_2"])
-                
+       
+        headlen = min(headlen, maxsize)
         headlines = ("LOCATION-FORECAST POINT".ljust(headlen), "COORDINATES   ", "ARRIVAL TIME", "LEVEL       ")
         headlen = len( headlines[0] )
         tfp_txt = "%s %s %s %s\n" % headlines
         for head in headlines:
             tfp_txt += "%s " % "".ljust(len(head), '-')
         tfp_txt += "\n"
-        
+
         # iterate levels WATCH and ADVISORY only if available - the sorting is done
         # using the length of the level names (WATCH, ADVISORY, INFORMATION)
         for level in sorted(data.keys() & ["WATCH", "ADVISORY"], key=lambda x: len(x) ):
@@ -488,9 +659,13 @@ class WebGuiSrv(BaseSrv):
                     arr_min = math.floor(item["eta"])
                     arr_sec = math.floor( (item["eta"] % 1) * 60.0 )
                     arrival = eq["prop"]["date"] + datetime.timedelta( minutes=arr_min, seconds=arr_sec )
-                    
-                    tfp_txt += ("%s %5.2f%c %6.2f%c %s %s\n"
-                        %( (item["country"] + "-" + item["name"]).ljust(headlen),
+                    label = tostr(item)
+                    if len(label) > maxsize:
+                        tfp_txt += label + "\n"
+                        label = ""
+                    tfp_txt += ("%.*s %5.2f%c %6.2f%c %s %s\n"
+                        %( maxsize,
+                           label.ljust(headlen),
                            abs(item["lat_real"]),
                            "S" if item["lat_real"] < 0 else "N",
                            abs(item["lon_real"]),
@@ -500,14 +675,14 @@ class WebGuiSrv(BaseSrv):
                         )
                     )
             tfp_txt += "\n"
-        
+    
+        maxsize = 45
         # remove all CFZs with an ETA value of -1
         cfzs = [ v for v in cfzs if v["eta"] > -1 ]
         if cfzs:
-            # get maximal size of zone name
-            maxsize = 40
-            v = max( cfzs, key=lambda x: len(x["COUNTRY"] + x["STATE_PROV"]) )
-            headlen = min( len( v["COUNTRY"] + "-" + v["STATE_PROV"] ), maxsize)
+            tostr = lambda x: x["COUNTRY"] + (" - " + x["STATE_PROV"] if x["STATE_PROV"] else "")
+            v = max( cfzs, key=lambda x: len(tostr(x)) )
+            headlen = min( len(tostr(v)), maxsize)
             headlines = ("LOCATION-FORECAST ZONE".ljust(headlen), "ARRIVAL TIME", "LEVEL       ")
             headlen = len(headlines[0])
             # print headlines
@@ -521,16 +696,20 @@ class WebGuiSrv(BaseSrv):
                 arr_min = math.floor(cfz["eta"])
                 arr_sec = math.floor( (cfz["eta"] % 1) * 60.0 )
                 arrival = eq["prop"]["date"] + datetime.timedelta( minutes=arr_min, seconds=arr_sec )
+                label = tostr(cfz)
+                if len(label) > maxsize:
+                    cfz_txt += label + "\n"
+                    label = ""
                 cfz_txt += ("%.*s %s %s\n" %(
                     maxsize,
-                    (cfz["COUNTRY"] + '-' + cfz["STATE_PROV"]).ljust(headlen),
+                    label.ljust(headlen),
                     arrival.strftime("%H%MZ %d %b").upper(),
                     level
                 ))
                 # used in SMS generation later on
                 iso_map[level].add(cfz["ISO2"])
             cfz_txt += "\n"
-        
+
         # 
         applies = {}
         countries = []
@@ -544,7 +723,7 @@ class WebGuiSrv(BaseSrv):
         
         # get message template
         template = self._db["settings"].find_one({"type": "msg_template"})
-        
+
         nr = 1
         provider = ""
         if user is not None:
@@ -658,7 +837,8 @@ class WebGuiSrv(BaseSrv):
                 continue
             sms += level + ":"
             for iso in iso_map[level]:
-                sms += iso + " "
+                if iso is not None:
+                    sms += iso + " "
             sms = sms[:-1] + ";"
         sms += "%s;EQ Mw%.1f;%s;%.2f%c;%.2f%c;%uKM;*TEST*" %(
             eq["prop"]["date"].strftime("%H%MZ %d%b%Y").upper(),
@@ -907,7 +1087,7 @@ class WebGuiSrv(BaseSrv):
         if user is not None:
             self._db["pickings"].update(
                 {"userid": user["_id"], "evtid": evtid, "station": station},
-                {"$set": {"data": json.loads(data)} },
+                {"$set": {"data": json.loads(data), "modified": datetime.datetime.utcnow()} },
                 upsert=True
             )
             return jssuccess()
@@ -1038,7 +1218,6 @@ class WebGuiSrv(BaseSrv):
                 self._db["results"].remove({"id":evtid})
                 self._db["results2"].remove({"id":evtid})
                 self._db["comp"].remove({"EventID":evtid})
-                self._db["tfp_comp"].remove({"EventID":evtid})
                 self._db["simsealeveldata"].remove({"evid":evtid})
                 self._db["eqs"].remove({"_id":evtid})
                 self._db["events"].remove({"id":evtid})
