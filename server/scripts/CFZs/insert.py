@@ -4,11 +4,9 @@ import sys
 import re
 import datetime
 import csv
+import iso
 import pymongo
 from pymongo import MongoReplicaSetClient
-
-client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0" ,w="majority")
-db = client['trideccloud']
 
 def import_cfzs(fcfzs, ftsps):
     f = open(fcfzs, 'r')
@@ -28,6 +26,7 @@ def import_cfzs(fcfzs, ftsps):
                 "FID_IO_DIS": maxid + int(meta.group("id")),
                 "date": now
             }
+            print(iso.getIso2(obj["COUNTRY"]), obj["COUNTRY"])
             objs.append( obj )
         elif re.search('^\s*#\s*@H', poly, re.M) is not None:
             objs[-1]["_COORDS_"].append(points)
@@ -41,7 +40,6 @@ def import_cfzs(fcfzs, ftsps):
         for row in csvreader:
             tsps.append( {"lon_sea": float(row[0]), "lat_sea": float(row[1]), "FID_IO_DIS": maxid + int(row[4]), "date": now} )
         db["tsps"].insert( tsps )
-
 
 if len(sys.argv) < 3:
     print("To few arguments given!")

@@ -51,7 +51,6 @@ for line in f:
         obj = { "name": match.group('name').strip().replace('_',' '),
                 "lat": lat,
                 "lon": lon,
-                "date": now
               }
 
         if str(obj) in done:
@@ -78,7 +77,8 @@ for line in f:
                     mind = tmp
             obj["lat"] = best["lat"]
             obj["lon"] = best["lon"]
-            obj["country"] = best["country"]
+            if "country" in best:
+                obj["country"] = best["country"]
         name = [s for s in names if obj["name"] in s]
         if len(name) != 1:
             print("# Could not find unique name.")
@@ -86,7 +86,7 @@ for line in f:
 
         name = name[0]
         obj["Location"] = name
-        obj["name"] = name
+        obj["name"] = name.replace(' ', '_')
         if name[-3] == " " or name[-2] == " ":
             obj["countryname"] = name.split(" ")[-1]
         obj["inst"] = "gfz_ex"
@@ -95,6 +95,7 @@ for line in f:
 
         if args.write:
             if db["stations"].find_one(obj) is None:
+                obj["date"] = now
                 db["stations"].insert(obj)
                 ninsert += 1
 

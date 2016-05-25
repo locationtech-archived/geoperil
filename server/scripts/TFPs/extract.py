@@ -23,6 +23,7 @@ parser.add_argument('-pw16', dest='pw16', action='store_true', help='PACIFIC WAV
 parser.add_argument('-w', dest='write', action='store_true', help='Write results into DB.')
 parser.add_argument('-dup', dest='dup', action='store_true', help='Print duplicates.')
 parser.add_argument('-v', dest='verbose', action='store_true', help='Be verbose.')
+parser.add_argument('-src', dest='source', nargs='?', type=str, help='Add source document to database.')
 args = parser.parse_args()
 
 f = open( args.fname, 'r')
@@ -46,7 +47,7 @@ ninsert = 0
 for line in f:
     match = re.search(regex, line)
     if match:
-        iso2 = '-'
+        iso2 = None
         country = country if not match.group('country').strip() else match.group('country')
         country = " ".join(country.split()) # remove multiple blanks and replace with a single space
         try:
@@ -79,7 +80,12 @@ for line in f:
         ]});
         if prev is not None:
             vprint("#:", obj)
+            if args.source is not None:
+                db["tfps"].update(prev, {"$addToSet": {"source": args.source}})
             continue
+
+        if args.source is not None:
+            obj["source"] = [args.source]
 
         print(obj)
 
