@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import re
 import sys
@@ -7,8 +7,6 @@ from pymongo import MongoReplicaSetClient
 client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0", w="majority")
 db = client['trideccloud']
 collection = db['results2']
-
-print 'Parsing kml file...',
 
 kml = open( sys.argv[1], 'r')
 
@@ -44,5 +42,3 @@ collection.insert( shape )
 
 kml.close()
 client.close()
-
-print 'done!'
