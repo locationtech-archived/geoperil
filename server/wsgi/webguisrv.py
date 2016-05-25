@@ -362,7 +362,7 @@ class WebGuiSrv(BaseSrv):
         if user is not None or self.auth_shared(evid):
             params = self._db["settings"].find({"type":"jet_color"})
             pmap = dict( (str(p["threshold"]), p["color"]) for p in params )
-            jets = list( self._db["results2"].find({"id":evid}).sort([("ewh",1)]) )
+            jets = list( self._db["comp"].find({"id":evid, "type": "JET"}).sort([("ewh",1)]) )
             for j in jets:
                 j["color"] = pmap[j["ewh"]]
             return jssuccess(jets = jets)
@@ -372,7 +372,7 @@ class WebGuiSrv(BaseSrv):
     def getwaterheights(self, evid):
         user = self.getUser()
         if user is not None or self.auth_shared(evid):
-            heights = list( self._db["results"].find({"id":evid, "class": "flood"}).sort([("height",1)]) )
+            heights = list( self._db["comp"].find({"id":evid, "type": "FLOOD"}).sort([("height",1)]) )
             for h in heights:
                 if h["height"] == "1":
                	    h["color"] = "#fdfd01"
@@ -387,7 +387,7 @@ class WebGuiSrv(BaseSrv):
     def getisos(self, evid, arr):
         user = self.getUser()
         if user is not None or self.auth_shared(evid):
-            res = list( self._db["results"].find({"id":evid, "arrT": {"$gt":int(arr)}}) )
+            res = list( self._db["comp"].find({"id":evid, "type": "ISO", "arrT": {"$gt":int(arr)}}) )
             return jssuccess(comp=res)
         return jsdeny()
 
@@ -1215,8 +1215,6 @@ class WebGuiSrv(BaseSrv):
         inst = self._db["institutions"].find_one({"name": inst, "secret": secret})
         if inst is not None:
             if self._db["eqs"].find_one({"user": inst["_id"], "_id": evtid}) is not None:
-                self._db["results"].remove({"id":evtid})
-                self._db["results2"].remove({"id":evtid})
                 self._db["comp"].remove({"EventID":evtid})
                 self._db["simsealeveldata"].remove({"evid":evtid})
                 self._db["eqs"].remove({"_id":evtid})
