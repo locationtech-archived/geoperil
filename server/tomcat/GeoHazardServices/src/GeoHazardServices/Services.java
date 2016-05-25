@@ -2238,34 +2238,13 @@ public class Services {
 	 
 	 db.getCollection("eqs").insert( obj );
 	 
-	 /* copy TFP results */
-	 cursor = db.getCollection("tfp_comp").find( new BasicDBObject( "EventID", srcId ) );
+	 /* copy computation results */
+	 cursor = db.getCollection("comp").find( new BasicDBObject( "EventID", srcId ) );
 	 for( DBObject res: cursor ) {
 		 res.put( "EventID", id );
 		 res.removeField( "_id" );
-		 db.getCollection("tfp_comp").insert( res );
+		 db.getCollection("comp").insert( res );
 	 }
-	 
-	 cursor.close();
-	 
-	 /* copy isolines */
-	 cursor = db.getCollection("results").find( new BasicDBObject( "id", srcId ) );
-	 for( DBObject res: cursor ) {
-		 res.put( "id", id );
-		 res.removeField( "_id" );
-		 db.getCollection("results").insert( res );
-	 }
-	 
-	 cursor.close();
-	 
-	 /* copy wave heights */
-	 cursor = db.getCollection("results2").find( new BasicDBObject( "id", srcId ) );
-	 for( DBObject res: cursor ) {
-		 res.put( "id", id );
-		 res.removeField( "_id" );
-		 db.getCollection("results2").insert( res );
-	 }
-	 
 	 cursor.close();
 	 
 	 return jssuccess( new BasicDBObject("msg","Event successfully copied.") );
