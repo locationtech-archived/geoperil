@@ -6,7 +6,7 @@ from pymongo import MongoReplicaSetClient
 
 client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0", w="majority")
 db = client['trideccloud']
-collection = db['results2']
+collection = db['comp']
 
 kml = open( sys.argv[1], 'r')
 
@@ -33,6 +33,7 @@ for m in matches:
     points.append( obj )
     
 shape = { "id": id,
+          "type": "JET",
           "process": 0,
           "ewh": ewh,
           "points": points
