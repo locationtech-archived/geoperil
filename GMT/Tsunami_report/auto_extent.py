@@ -139,7 +139,7 @@ def tfp_extent(tfp, extent):
             if(float(tfp_csv_split[0]) < 0):
                 tfp_lon_list_pos.append(float(tfp_csv_split[0]) + 360)	
             else:
-                tfp_lon_list_pos.append(float(tfp_csv_split[0]))	    			
+                tfp_lon_list_pos.append(float(tfp_csv_split[0]))
             tfp_lat_list_pos.append(float(tfp_csv_split[1]))	    
     if not tfp_lon_list==[]: 	    
         if min(tfp_lon_list) != max(tfp_lon_list):
@@ -191,9 +191,9 @@ def tfp_extent(tfp, extent):
 def quake_extent(quake, extent):
     quake_file = open(quake, "r")
     quake_file_split = quake_file.readlines()[1].strip().split(',')
-    quake_file.close()	
-    quake_lon = quake_file_split[0]	
-    quake_lat = quake_file_split[1]	
+    quake_file.close()
+    quake_lon = quake_file_split[0]
+    quake_lat = quake_file_split[1]
     print ('quake lon: ', quake_lon, '\nquake lat: ', quake_lat)
     extent[0].append(float(quake_lon) - 2)
     extent[1].append(float(quake_lon) + 2)
@@ -214,7 +214,7 @@ def best_auto_extent_for_input(west, east, south, north, wave_height, wave_heigh
             if wave_height_expression < wave_height_max:   
                 extent = calc_extent_for_w_height(wave_height, wave_height_expression, extent, tempdir)
             elif not wave_time=='':
-                extent = calc_extent_for_w_time(wave_time, extent, tempdir)			
+                extent = calc_extent_for_w_time(wave_time, extent, tempdir)
         elif not wave_time=='':
             extent = calc_extent_for_w_time(wave_time, extent, tempdir)
 
@@ -222,12 +222,19 @@ def best_auto_extent_for_input(west, east, south, north, wave_height, wave_heigh
             extent = cfz_extent(cfz, extent)
  
         if not tfp=='':
-            extent = tfp_extent(tfp, extent)   
-	      
+            extent = tfp_extent(tfp, extent)
         if not quake=='':   
             extent = quake_extent(quake, extent)   
         print (extent)
-	    	
+
+        # normalizing coords
+        for i in [0,1]:
+            for j in range(len(extent[i])):
+                while extent[i][j] < -180:
+                    extent[i][j] += 360
+                while extent[i][j] > 180:
+                    extent[i][j] -= 360
+
         if extent==[[],[],[],[]]:
             west = -180
             east = 180
@@ -255,15 +262,12 @@ def best_auto_extent_for_input(west, east, south, north, wave_height, wave_heigh
 #z.B. west_calc=170; east_calc=-170 --> west_calc=170; east_calc=190
 def reformat_coords_if_dateline(west_calc, east_calc, south_calc, north_calc):
     if west_calc > east_calc:
+        print("W: %f ; E: %f -> E: %f" % (west_calc,east_calc,east_calc+360)
         #falls ueber Datumsgrenze
-        add_east_calc = abs((-180) - east_calc)
-        east_calc = float(180 + add_east_calc)
+        east_calc += 360
     
-        lon_diff = abs(west_calc - east_calc)
-        lat_diff = abs(south_calc - north_calc)
-    else:
-        lon_diff = abs(west_calc - east_calc)
-        lat_diff = abs(south_calc - north_calc)
+    lon_diff = abs(west_calc - east_calc)
+    lat_diff = abs(south_calc - north_calc)
     
     return (west_calc, east_calc, lon_diff, lat_diff)    	
 
@@ -283,7 +287,9 @@ def calc_coords(west_calc, east_calc, south_calc, north_calc, crs_system_calc, m
     calc_width_height_command = ['gmt', 'mapproject', extent, projection]
     mapproject = subprocess.Popen(calc_width_height_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=tempdir)
     #bytes("%f %f\n" % (east_calc,north_calc),"ascii") = echo east_calc north_calc 
-    width_height = mapproject.communicate(bytes("%f %f\n" % (east_calc,north_calc),"ascii"))[0].decode().split()
+    out,err = mapproject.communicate(bytes("%f %f\n" % (east_calc,north_calc),"ascii"))
+    print(out,err)
+    width_height = out.decode().split()
 
     #Breite und Hoehe der Karte in unit_calc (z.B. cm)
     width = float(width_height[0])
