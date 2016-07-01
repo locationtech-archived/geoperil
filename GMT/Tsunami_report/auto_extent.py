@@ -262,7 +262,7 @@ def best_auto_extent_for_input(west, east, south, north, wave_height, wave_heigh
 #z.B. west_calc=170; east_calc=-170 --> west_calc=170; east_calc=190
 def reformat_coords_if_dateline(west_calc, east_calc, south_calc, north_calc):
     if west_calc > east_calc:
-        print("W: %f ; E: %f -> E: %f" % (west_calc,east_calc,east_calc+360)
+        print("W: %f ; E: %f -> E: %f" % (west_calc,east_calc,east_calc+360))
         #falls ueber Datumsgrenze
         east_calc += 360
     
