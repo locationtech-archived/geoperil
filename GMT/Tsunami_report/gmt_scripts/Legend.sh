@@ -48,6 +48,8 @@ Isochrone_color=${33}
 
 quake_string=${34}
 
+disclaimer=${35}
+
 
 
 #### wave height ####
@@ -136,6 +138,7 @@ fi
 #### created on ####
 gmt pslegend -Dx0c/${created_y}c/${map_width}c/BL -O -K <<EOF>> ${output}
 L 6p Helvetica L Created on ${date} UTC, by TRIDEC Cloud 
+#T This product is of informal nature, has been produced for piloting and research purposes only, and might be incorrect in terms of accuracy, completeness, quality, topicality, or otherwise, of the provided information. It does not constitute either legal, professional or any other advice or an endorsement or a recommendation, and should not be considered to be such, or relied or acted upon in that regard.
 EOF
 
 if [ ${plot_quake} == Y ]
@@ -145,3 +148,8 @@ gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -Dx0.6c/${quake_y}c/15c/BL
 S 1.1c a 0.55c ${quake_fill} 0.01c,35/35/35 1.6c ${quake_string}
 EOF
 fi
+
+### disclaimer ###
+gmt pslegend --FONT_ANNOT_PRIMARY=6p,Helvetica,85/85/85 -Dx0c/1c/${map_width}c/BL -O -K <<EOF>> ${output}
+T ${disclaimer}
+EOF

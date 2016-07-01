@@ -7,7 +7,8 @@
 
 #Basemap Daten Directory
 #basemap_data_dir = 'data/etopo/basemaps/'
-basemap_data_dir = '/home/svenr/geohazardcloud/GMT/basemaps/'
+#basemap_data_dir = '/home/svenr/geohazardcloud/GMT/basemaps/'
+basemap_data_dir = '/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/etopo/basemaps/'
 
 #World-Population Datei
 world_pop_data = 'data/world_pop2000_adj.nc'
@@ -19,6 +20,9 @@ city_pop_data = 'data/cities.csv'
 ############################
 ######### Karte ############
 ############################
+
+disclaimer = "This product is of informal nature, has been produced for piloting and research purposes only, and might be incorrect in terms of accuracy, completeness, quality, topicality, or otherwise, of the provided information. It does not constitute either legal, professional or any other advice or an endorsement or a recommendation, and should not be considered to be such, or relied or acted upon in that regard. This product is provided 'as is', without warranty of any kind, expressed or implied. The parties and individuals involved in producing and providing this product should not be held responsible or liable under any condition for any claim, damage or other liability arising from, out of or in connection with the product or the use or other dealings with the product and its information. By using this product, the user agrees that the use of information obtained from or through this product is at the user's sole discretion and risk. Complete information concerning the terms and conditions applied for this product are available at http://trideccloud.gfz-potsdam.de/disclaimer"
+disclaimer_height = 2.5
 
 ###############
 ### Basemap ###

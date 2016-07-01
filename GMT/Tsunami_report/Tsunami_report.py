@@ -99,7 +99,7 @@ res_group = [
 input_param = [
 {"Flagname": "Title",                                     "variable": "title",                    "Flag1": "-t",            "Flag2": "--title",                   "default": None,                                                        "help": "Title for map",                                                                "category": "General",                      "data_type": "String",                                                                                                                            "user": True},
 {"Flagname": "Subheading",                                "variable": "subtitle",                 "Flag1": "-st",           "Flag2": "--subtitle",                "default": None,                                                        "help": "subheading for map",                                                           "category": "General",                      "data_type": "String",                                                                                                                            "user": True},
-{"Flagname": "Output-File",                               "variable": "output",                   "Flag1": "-o",            "Flag2": "--output",                  "default": "/home/basti/GMT/Tsunami_report/PS_files/default_output.ps", "help": "Path of Output PS-File",                                                                                                                                                                                                                                                     "user": False},
+{"Flagname": "Output-File",                               "variable": "output",                   "Flag1": "-o",            "Flag2": "--output",                  "default": "/home/basti/Tsunami_report/SVN/GMT/Tsunami_report/PS_files/default_output.ps", "help": "Path of Output PS-File",                                                                                                                                                                                                                                                     "user": False},
 
 {"Flagname": "Resolution",                                "variable": "dpi",                      "Flag1": "-dpi",          "Flag2": "--dpi",                     "default": 600,                                                         "help": "Set output resolution\nnumber, web(300) or HQ(600)",                           "category": "General",                      "data_type": "group",       "group": res_group,                                                                                                    "user": True},
 
@@ -205,7 +205,8 @@ def tsunami_report(\
     outline, coast_color, border, border_lvl1_color, border_lvl2_color, color_water, color_land, style, \
     basemap_data_dir, world_pop_data, city_pop_data, \
     crs_system, unit, map_width, coast_res, land_res, Isochrone_dist, \
-    dpi, print_json, input_param, help_table):
+    dpi, print_json, input_param, help_table, \
+    disclaimer, disclaimer_height):
 
     #prints input-list as json
     if print_json=="Y":
@@ -278,7 +279,7 @@ def tsunami_report(\
     ############################
 
     #berechnet Abstand zur unteren Blattkante, abhaengig von zu plottenden Inhalten
-    y_map_dist = 1   
+    y_map_dist = 1 + disclaimer_height   
     #erstellt plot_cities_bool (Y / N)
     if plot_cities=="all" or plot_cities=="capitals":
         plot_cities_bool = "Y"
@@ -544,7 +545,7 @@ def tsunami_report(\
     #erstellt Legende:
     subprocess.call(['./gmt_scripts/Legend.sh',output, plot_wave_height, plot_wave_time, world_pop, plot_cfz, plot_tfp, plot_cities_bool, cfz_cpt, cfz_stroke, tfp_stroke, wave_height_cpt, world_pop_cpt, cities_fill, cities_stroke, \
         wave_height_pslegend, wave_height_psscale, wave_time_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, \
-        str(created_y), str(map_width), date, quake, plot_quake, quake_fill, str(beachball_y), str(quake_y), Isochrone_color, quake_string])     
+        str(created_y), str(map_width), date, quake, plot_quake, quake_fill, str(beachball_y), str(quake_y), Isochrone_color, quake_string, disclaimer])     
  
     ######################################
     ###### Umwandlung in PNG/PDF #########
@@ -622,4 +623,5 @@ tsunami_report(\
     args.outline, args.coast_color, args.border, args.border_lvl1_color, args.border_lvl2_color, args.color_water, args.color_land, args.style, \
     basemap_data_dir, world_pop_data, city_pop_data, \
     crs_system, unit, map_width, coast_res, land_res, Isochrone_dist, \
-    args. dpi, args.print_json, input_param, args.help_table) 
+    args. dpi, args.print_json, input_param, args.help_table, \
+    disclaimer, disclaimer_height) 
