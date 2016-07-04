@@ -109,6 +109,9 @@ public class HySeaAdapter extends TsunamiAdapter {
 			strLocations.appendln(loc.get("lon") + "\t" + loc.get("lat"));
 		}
 		sshCon[0].writeFile(strLocations.toString(), "locations.inp");
+		sshCon[0].runCmds(
+			String.format(Locale.US, "points2water.py locations.inp ../grid_%d.grdx", task.gridres)
+		);
 	}
 	
 	@Override
