@@ -45,6 +45,7 @@ def sendmail(send_from, send_to, send_subject, send_text, send_cc = "", send_dat
         errors = [ (ex.sender, (ex.smtp_code,str(ex.smtp_error))) ]
         success = None
     smtp.quit()
+    print("Mail from", msg["From"], "to", msg["To"], success, errors)
     return success,errors
 
 def sendtwilliosms(twisid, twitoken, twifrom, to, text):
@@ -65,6 +66,7 @@ def sendtwilliosms(twisid, twitoken, twifrom, to, text):
                 break
         else:
             errors.append( (to, ElementTree.tostring(ex,encoding='unicode')) )
+        print("SMS from", payload["From"], "to", payload["To"], success, errors)
         return success, errors
     elif type(to) == list:
         errors = []
