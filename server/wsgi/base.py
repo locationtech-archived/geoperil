@@ -51,11 +51,13 @@ class JSONEncoder(json.JSONEncoder):
 def startapp(app):
     if config["mongodb"].getboolean('replicaset'):
         print("Connecting to MongoDB ReplicaSet: %s" % config["mongodb"]["url"])
-        dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority")
+        dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority",
+            max_pool_size=16,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=64)
         atexit.register(dbe.close)
     else:
         print("Connecting to MongoDB: %s" % config["mongodb"]["url"])
-        dbe = MongoClient(config["mongodb"]["url"])
+        dbe = MongoClient(config["mongodb"]["url"],
+            max_pool_size=16,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=64)
     db = dbe[config["mongodb"]["dbname"]]
     return cherrypy.Application( app( db ) , script_name=None, config=None)
 
