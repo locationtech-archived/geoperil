@@ -51,13 +51,13 @@ class BaseSrv:
         return None
 
     def check_access(self,ev,user):
-        uinstid = user["inst"] if "inst" in user and user["inst"] is not None else None
-        if ev["user"] == user["_id"] or ev["user"] == uinstid:
-            return True
-        else:
-            oinst = self._db["institutions"].find_one({"_id":ev["user"]})
-            if oinst is not None and "public_events" in oinst and oinst["public_events"]:
+        if user is not None:
+            uinstid = user["inst"] if "inst" in user and user["inst"] is not None else None
+            if ev["user"] == user["_id"] or ev["user"] == uinstid:
                 return True
+        oinst = self._db["institutions"].find_one({"_id":ev["user"]})
+        if oinst is not None and "public_events" in oinst and oinst["public_events"]:
+            return True
         return False
 
     def get_hostname(self):

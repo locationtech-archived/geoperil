@@ -53,10 +53,19 @@ class DataSrv(BaseSrv,Products):
     def default(self,eid,*args,**kwargs):
         apikey = kwargs.get("apikey",None)
         user = self.getUser() if apikey is None else self.auth_api(apikey)
+        if user is None:
+            user = self._db["users"].find_one({"session":kwargs.pop("server_cookie","nonexistant_session")})
         now = datetime.datetime.now()
-        self._db["log"].insert({"addr":"datasrv/*","time":now,"eid":eid,"user":user["_id"],"args":args,"kwargs":kwargs})
         if user is None:
             raise HTTPError("401 Unauthorized")
+        self._db["log"].insert({
+            "addr":"datasrv/*",
+            "time":now,
+            "eid":eid,
+            "user":user["_id"] if user is not None else None,
+            "args":args,
+            "kwargs":kwargs
+        })
         ev = self._db["eqs"].find_one({"_id":eid})
         evs = self._db["evtsets"].find_one({"_id":eid})
         if ev is not None:
