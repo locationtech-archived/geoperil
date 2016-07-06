@@ -1189,16 +1189,18 @@ class WebGuiSrv(BaseSrv):
     def generate_report(self, evtid):
         msg = self._get_msg_texts(evtid, "info")["mail"]
         evt = self._db["eqs"].find_one({"_id": evtid})
-        sec = ""
-        if "shared_link" in evt:
-            url = self.get_hostname() + "/snapshots/" + str(evt["shared_link"]) + ".png"
-            lnk = self.get_hostname() + "/?share=" +  str(evt["shared_link"])
-            sec = '''
+        url = self.get_hostname() + "/datasrv/%s/wavejets_traveltimes_web.png?server_cookie=%s" % \
+            (evtid, cherrypy.request.cookie["server_cookie"].value)
+        sec = '''
                 <br>
                 <img style="width: 600px;" src="%s"></img>
+        ''' % (url)
+        lnk = self._db["shared_links"].find_one({"evtid": evtid, "userid": None})
+        if lnk is not None:
+            sec += '''
                 <br><br>
                 <a href="%s">Visit shared map at the TRIDEC CLOUD platform</a>
-            ''' % (url, lnk)
+            ''' % (self.get_hostname() + "/?share=" +  str(lnk["_id"]))
         txt = '''
         <html>
             <body>
@@ -1207,7 +1209,7 @@ class WebGuiSrv(BaseSrv):
             </body>
         </html>''' % (msg, sec)
         cherrypy.response.headers['Content-Type'] = "application/pdf"
-        cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="report_%s.pdf"' % evtid   
+        cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="report_%s.pdf"' % evtid
         return self.html2pdf(txt)
     
     @cherrypy.expose
