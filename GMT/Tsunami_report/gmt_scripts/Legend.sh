@@ -138,7 +138,6 @@ fi
 #### created on ####
 gmt pslegend -Dx0c/${created_y}c/${map_width}c/BL -O -K <<EOF>> ${output}
 L 6p Helvetica L Created on ${date} UTC, by TRIDEC Cloud 
-#T This product is of informal nature, has been produced for piloting and research purposes only, and might be incorrect in terms of accuracy, completeness, quality, topicality, or otherwise, of the provided information. It does not constitute either legal, professional or any other advice or an endorsement or a recommendation, and should not be considered to be such, or relied or acted upon in that regard.
 EOF
 
 if [ ${plot_quake} == Y ]
