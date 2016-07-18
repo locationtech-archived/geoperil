@@ -67,7 +67,7 @@ class DataSrv(BaseSrv,Products):
             "kwargs":kwargs
         })
         ev = self._db["eqs"].find_one({"_id":eid})
-        gev = self._db["eqs"].find_one({"id":eid},sort=[("_id",-1)])
+        gev = self._db["eqs"].find_one({"id":eid},sort=[("timestamp",-1)])
         evs = self._db["evtsets"].find_one({"_id":eid})
         if evs is not None:
             if self.check_access(evs,user):
