@@ -39,7 +39,7 @@ class DataSrv(BaseSrv,Products):
                     n += "".join(ps+ops)
                     n = n.replace("&amp;","?",1)
                 s += "<li><h4>%s</h4>\n%s\n</li>\n" % (n,h["desc"])
-        self.INFO = "<ul>\n%s</ul>\n<h3>Products:</h3>\n<ul>\n%s</ul>" % (ds,s)
+        self.INFO = "<ul>\n%s</ul>\n<h3 id=\"products\">Products:</h3>\n<ul>\n%s</ul>" % (ds,s)
 
     @cherrypy.expose
     def help(self):
@@ -67,15 +67,21 @@ class DataSrv(BaseSrv,Products):
             "kwargs":kwargs
         })
         ev = self._db["eqs"].find_one({"_id":eid})
+        gev = self._db["eqs"].find_one({"id":eid},sort=[("_id",-1)])
         evs = self._db["evtsets"].find_one({"_id":eid})
-        if ev is not None:
+        if evs is not None:
+            if self.check_access(evs,user):
+                return self.serve_eventset(evs,*args,**kwargs)
+            else:
+                raise HTTPError("403 Forbidden.")
+        elif ev is not None:
             if self.check_access(ev,user):
                 return self.serve_event(ev,*args,**kwargs)
             else:
                 raise HTTPError("403 Forbidden.")
-        elif evs is not None:
-            if self.check_access(evs,user):
-                return self.serve_eventset(evs,*args,**kwargs)
+        elif gev is not None:
+            if self.check_access(gev,user):
+                return self.serve_event(gev,*args,**kwargs)
             else:
                 raise HTTPError("403 Forbidden.")
         else:
@@ -342,7 +348,7 @@ class DataSrv(BaseSrv,Products):
                 out += "%f,%f,%f,%f\n" % (tfp["lon_real"], tfp["lat_real"], tfp_comp["ewh"], tfp_comp["eta"])
         return out
 
-    @cherrypy.expose
+#    @cherrypy.expose
     def saveformdata(self,_form,**kwargs):
         doc = kwargs.copy()
         doc.pop("_id",None)
@@ -352,7 +358,7 @@ class DataSrv(BaseSrv,Products):
         self._db["formdata"].insert(doc)
         return jssuccess()
         
-    @cherrypy.expose
+#    @cherrypy.expose
     def queryformdata(self,_form=None,**kwargs):
         if _form is not None:
             kwargs["_form"] = _form
