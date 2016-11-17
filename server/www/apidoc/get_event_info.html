@@ -23,7 +23,8 @@
 	  			<li><img class="tridec-logo" alt="TRIDEC Cloud" src="../img/trideccloud-logo.png"></li>
 	  		</ul>
 	  		<ul class="head-blk head-right">
-	  			<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
+	  			<!-- 
+				<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
 				<li class="divider"><span>|</span></li>
 				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
 				<li class="divider"><span>|</span></li>
@@ -33,6 +34,7 @@
 				<li class="divider"><span>|</span></li>
 				<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
 				<li class="divider"><span>|</span></li>
+				-->
 				<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
 	  		</ul>
 	  		<ul class="head-blk head-right head-buttons">
@@ -52,6 +54,9 @@
 	  		<ul class="clear"></ul>
 	  	</div> <!-- end of headline -->
 		<hr>
+		<div class="sec-label">Description</div>
+		<div class="url">The <i>get_event_info</i> API returns basic data about a specific event in text format.</div>
+		
 		<div class="sec-label">URL</div>
 		<div class="url">http://trideccloud.gfz-potsdam.de/api/get_event_info</div>
 		
@@ -200,7 +205,7 @@
 				<tr>
 					<td class="param">dip</td>
 					<td class="descr">
-						Fault dip of the eathquake in the range of 0 to 90 degrees.
+						Fault dip of the earthquake in the range of 0 to 90 degrees.
 						Can be <i>null</i> if moment tensor is not available.
 					</td>
 					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
@@ -208,7 +213,7 @@
 				<tr>
 					<td class="param">strike</td>
 					<td class="descr">
-						Fault strike of the eathquake in the range of 0 to 360 degrees.
+						Fault strike of the earthquake in the range of 0 to 360 degrees.
 						Can be <i>null</i> if moment tensor is not available.
 					</td>
 					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
@@ -216,7 +221,7 @@
 				<tr>
 					<td class="param">rake</td>
 					<td class="descr">
-						Rake of the eathquake in the range of -180 to +180 degrees.
+						Rake of the earthquake in the range of -180 to +180 degrees.
 						Can be <i>null</i> if moment tensor is not available.
 					</td>
 					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
