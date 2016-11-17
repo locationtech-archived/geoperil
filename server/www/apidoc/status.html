@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>TRIDEC Cloud</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href="../css/bootstrap.css" rel="stylesheet">
+	<link href="style.css" rel="stylesheet">
+	<link href="../geohazardcloud.css" rel="stylesheet">
+</head>
+<body>
+	<div class="outside">
+	<div class="wrapper">
+	<div class="border">
+	<div class="container fullsize">
+		<div class="row gfz-head">
+  			<img class="gfz-logo pull-left" alt="GFZ Logo" src="../img/logo_gfz_en.gif">
+  			<img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="../img/wordmark_gfz_en.gif">
+  		</div>
+  		<hr>
+	  	<div class="headline">
+	  		<ul class="head-blk head-left head-img">
+	  			<li><img class="tridec-logo" alt="TRIDEC Cloud" src="../img/trideccloud-logo.png"></li>
+	  		</ul>
+	  		<ul class="head-blk head-right">
+	  			<!-- 
+				<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="https://play.google.com/store/apps/details?id=org.fosslab.geohazard" target="_blank">App</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="#AboutDia" data-toggle="modal">About</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
+				<li class="divider"><span>|</span></li>
+				-->
+				<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
+	  		</ul>
+	  		<ul class="head-blk head-right head-buttons">
+	  			<li id="grpSignOut" class="btn-group">
+					<button id="btnProp" type="button" class="btn btn-default">
+						<span class="glyphicon glyphicon-cog"></span>
+					</button>
+					<button id="btnAdmin" type="button" class="btn btn-default">
+						<span class="glyphicon glyphicon-user"></span>
+					</button>
+					<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
+				</li>
+	  		</ul>
+	  		<ul class="head-blk head-right">
+	  			<li><a href="" id="lnkUser"></a></li>
+	  		</ul>
+	  		<ul class="clear"></ul>
+	  	</div> <!-- end of headline -->
+		<hr>
+		<div class="sec-label">Description</div>
+		<div class="url">The <i>status</i> API accepts HTTP POST requests and returns status information about the computation of a specific event.</div>
+		
+		<div class="sec-label">URL</div>
+		<div class="url">http://trideccloud.gfz-potsdam.de/srv/status</div>
+		
+		<div class="sec-label">Input parameter</div>
+		<table>
+			<tr>
+				<th>Property</th>
+				<th>Description</th>
+				<th class="status">Status</th>
+			</tr>
+			<tr>
+				<td class="param">apikey</td>
+				<td class="descr">
+					A string of 32 characters that authorizes the usage of this API. It is linked to a user
+					or institution account.
+				</td>
+				<td class="status">Mandatory</td>
+			</tr>
+			<tr>
+				<td class="param">evid</td>
+				<td class="descr">
+               		The unique ID of the event for which information should be retrieved.
+               		The latest refinement will be returned, if this is a GEOFON identifier.
+				</td>
+				<td class="status">Mandatory</td>
+			</tr>
+		</table>
+				
+		<div class="sec-label">Return value</div>
+		<table>
+			<tr>
+				<th>Property</th>
+				<th>Description</th>
+				<th>Status</th>
+			</tr>
+			<tr>
+				<td class="param">status</td>
+				<td class="descr">
+					States the status of the request. Can be one of the following:
+					<ul>
+						<li>
+							<i>success:</i> The operation was successfully accomplished. The values of
+							the remaining fields are valid.
+						</li>
+						<li>
+							<i>failure:</i> An error occurred while trying to apply the request. This may
+							be caused by invalid input parameter values.
+						</li>
+						<li>
+							<i>denied:</i> The access to this API was denied. The given API key is
+							incorrect or not valid in conjunction with the API used.
+						</li>
+					</ul>
+				</td>
+				<td class="status">Always valid.</td>
+			</tr>
+			<tr>
+				<td class="param">comp</td>
+				<td class="descr">
+					States the status of the computation. Can be one of the following:
+					<ul>
+						<li>
+							<i>success:</i> The computation was successfully started and is completed.
+						</li>
+						<li>
+							<i>pending:</i> The computation was successfully started and is running.
+						</li>
+						<li>
+							<i>progress:</i> The computation is in the queue while waiting to be started.
+						</li>
+						<li>
+							<i>failed:</i> The computation was started but failed and simulation results are not available.
+						</li>
+						<li>
+							<i>none:</i> The computation was started but failed and simulation results are not available.
+						</li>
+					</ul>
+				</td>
+				<td class="status">Always valid.</td>
+			</tr>
+			<tr>
+				<td class="param">progress</td>
+				<td class="descr">
+					Contains a number indicating the percentage already completed by the simulation computation.
+				</td>
+				<td class="status">Always valid.</td>
+			</tr>
+			<tr>
+				<td class="param">msg</td>
+				<td class="descr">
+					Contains further information if feasible.
+				</td>
+				<td class="status">Valid, e.g. if <i>comp</i> is set to <i>failed</i> or <i>status</i> is set to <i>failure</i>.</td>
+			</tr>
+		</table>
+		
+		<div class="sec-label">API Examples</div>
+		<div>
+		    <div class="url" style="overflow-wrap: break-word;">
+			$ curl --data "apikey=***&evtid=tcapidoc0001_tridec-cloud@gfz-potsdam.de_0" http://trideccloud.gfz-potsdam.de/srv/status
+			</div>
+		</div>
+	</div></div></div>
+</body>
+</html>
