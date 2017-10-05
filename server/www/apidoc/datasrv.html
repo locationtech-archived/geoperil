@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>TRIDEC Cloud</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href="../css/bootstrap.css" rel="stylesheet">
+	<link href="style.css" rel="stylesheet">
+	<link href="../geohazardcloud.css" rel="stylesheet">
+</head>
+<body>
+	<div class="outside">
+	<div class="wrapper">
+	<div class="border">
+	<div class="container fullsize">
+		<div class="row gfz-head">
+  			<img class="gfz-logo pull-left" alt="GFZ Logo" src="../img/logo_gfz_en.gif">
+  			<img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="../img/wordmark_gfz_en.gif">
+  		</div>
+  		<hr>
+	  	<div class="headline">
+	  		<ul class="head-blk head-left head-img">
+	  			<li><img class="tridec-logo" alt="TRIDEC Cloud" src="../img/trideccloud-logo.png"></li>
+	  		</ul>
+	  		<ul class="head-blk head-right">
+	  			<!--
+	  			<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="https://play.google.com/store/apps/details?id=org.fosslab.geohazard" target="_blank">App</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="#AboutDia" data-toggle="modal">About</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
+				<li class="divider"><span>|</span></li>
+				-->
+				<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
+	  		</ul>
+	  		<ul class="head-blk head-right head-buttons">
+	  			<li id="grpSignOut" class="btn-group">
+					<button id="btnProp" type="button" class="btn btn-default">
+						<span class="glyphicon glyphicon-cog"></span>
+					</button>
+					<button id="btnAdmin" type="button" class="btn btn-default">
+						<span class="glyphicon glyphicon-user"></span>
+					</button>
+					<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
+				</li>
+	  		</ul>
+	  		<ul class="head-blk head-right">
+	  			<li><a href="" id="lnkUser"></a></li>
+	  		</ul>
+	  		<ul class="clear"></ul>
+	  	</div> <!-- end of headline -->
+		<hr>
+		<div class="sec-label">Description</div>
+		<div class="url">The <i>datasrv</i> API serves data for a specific event. Data can be anything from raw data to final end user products associated with an event.</div>
+		
+		<div class="sec-label">URL</div>
+		<div class="url">http://trideccloud.gfz-potsdam.de/datasrv/&lt;EVENT-ID&gt;/&lt;PRODUCT-TYPE&gt;?apikey=&lt;API-KEY&gt;&amp;download=&lt;FILE-NAME&gt;</div>
+				
+		<div class="sec-label">URL Path Elements</div>
+		<table>
+			<tr>
+				<th>Property</th>
+				<th>Description</th>
+				<th class="status">Status</th>
+			</tr>
+			<tr>
+				<td class="param">&lt;EVENT-ID&gt;</td>
+				<td class="descr">
+					The unique ID of the event for which information should be retrieved.
+               		The latest refinement will be returned, if this is a GEOFON identifier.
+				</td>
+				<td class="status">Mandatory</td>
+			</tr>
+			<tr>
+				<td class="param">&lt;PRODUCT-TYPE&gt;</td>
+				<td class="descr">
+               		The name of the specific product. Following products can be retrieved in different resolution and format:<br/>
+               		<ul>
+               			<li>
+               				A map with Wave Jets and Travel Times in web quality (web) or high quality (hq) as PNG or PDF file, 
+               				e.g. wavejets_traveltimes_hq.pdf generates a PDF file with Wave Jets and Travel Times in 600dpi resolution.
+               			</li>
+               			<li>
+               				A map with Coastal Forecast Zones (CFZs) and Tsunami Forecast Points (TFPs) in web quality (web) or high 
+               				quality (hq) as PNG or PDF file, e.g. cfzs_tfps_web.png generates a PNG file with CFZs and TFPs in 300dpi resolution.
+               			</li>
+               			<li>
+               				A map with Cities and Population Density information in web quality (web) or high quality (hq) as PNG or PDF 
+               				file, e.g. cities_population_hq.png generates a PNG file in 600dpi resolution.
+               			</li>
+               			<li>
+               				Basic earthquake paramters as CSV file, i.e. eq.csv.
+               			</li>
+               			<li>
+               				Text information on the computed maximum wave height and the earliest arrival for Tsunami Forecast Points (TFPs) 
+               				as CSV file, i.e. tfps.csv.
+               			</li>
+               			<li>
+               				Text information on the computed maximum wave height and the earliest arrival for Coastal Forecast Zones (CFZs) 
+               				as GMT file, i.e. cfzs.gmt.
+               			</li>
+               		</ul>
+               		Other products such as custom maps or wave forms are available, too. To receive a complete list of available products with short 
+               		descriptions please open <a href="../datasrv/#products" target="_blank">http://trideccloud.gfz-potsdam.de/datasrv/</a> in your browser.<br/>
+               		To receive an incomplete access list of products for a specific event please use http://trideccloud.gfz-potsdam.de/datasrv/&lt;EVENT-ID&gt;
+				</td>
+				<td class="status">Mandatory</td>
+			</tr>
+		</table>
+		
+		<div class="sec-label">URL Query Parameters</div>
+		<table>
+			<tr>
+				<th>Property</th>
+				<th>Description</th>
+				<th class="status">Status</th>
+			</tr>
+			<tr>
+				<td class="param">apikey</td>
+				<td class="descr">
+					A string of 32 characters that authorizes the usage of this API. It is linked to a user
+					or institution account. Note: In case the API is used in the browser and you are already 
+					signed-in then the API key is not required.
+				</td>
+				<td class="status">Mandatory</td>
+			</tr>
+			<tr>
+				<td class="param">download</td>
+				<td class="descr">
+               		The file name for the product to be downloaded. If the download parameter is given but empty, 
+               		then the filename will be automatically generated from the &lt;EVENT-ID&gt; with the proper 
+               		file extension. Note: In case the API is used in the browser and you omit this parameter, 
+               		then the product might be displayed in the browser (in case of CSV, PDF, and PNG products ).
+				</td>
+				<td class="status">Optional</td>
+			</tr>
+		</table>
+				
+		<div class="sec-label">Return Value</div>
+		<div class="url">
+			The requested product or data will be returned as a file. In case of any malfunction the 
+			respective HTTP error response with its HTTP status code will be returned, e.g. 404 for 
+			an unknown &lt;EVENT-ID&gt; or an unknown &lt;PRODUCT-TYPE&gt;.
+		</div>
+		
+		<div class="sec-label">API Examples</div>
+		<div class="url">			
+		    Near East Coast of Honshu, Japan - March 11, 2011<br/>
+		    (please sign-in first, or use your API key):<br/><br/>
+		    <a href="../datasrv/gfz2011ewla/eq.csv" target="_blank">
+			http://trideccloud.gfz-potsdam.de/datasrv/gfz2011ewla/eq.csv?apikey=***
+		    </a><br/><br/>
+		    <a href="../datasrv/gfz2011ewla/wavejets_traveltimes_web.png" target="_blank">
+			http://trideccloud.gfz-potsdam.de/datasrv/gfz2011ewla/wavejets_traveltimes_web.png?apikey=***
+		    </a>
+		</div>
+		</div>
+	</div></div></div>
+</body>
+</html>

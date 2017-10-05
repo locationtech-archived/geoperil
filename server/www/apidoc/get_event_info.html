@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>TRIDEC Cloud</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href="../css/bootstrap.css" rel="stylesheet">
+	<link href="style.css" rel="stylesheet">
+	<link href="../geohazardcloud.css" rel="stylesheet">
+</head>
+<body>
+	<div class="outside">
+	<div class="wrapper">
+	<div class="border">
+	<div class="container fullsize">
+		<div class="row gfz-head">
+  			<img class="gfz-logo pull-left" alt="GFZ Logo" src="../img/logo_gfz_en.gif">
+  			<img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="../img/wordmark_gfz_en.gif">
+  		</div>
+  		<hr>
+	  	<div class="headline">
+	  		<ul class="head-blk head-left head-img">
+	  			<li><img class="tridec-logo" alt="TRIDEC Cloud" src="../img/trideccloud-logo.png"></li>
+	  		</ul>
+	  		<ul class="head-blk head-right">
+	  			<!-- 
+				<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="https://play.google.com/store/apps/details?id=org.fosslab.geohazard" target="_blank">App</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="#AboutDia" data-toggle="modal">About</a></li>
+				<li class="divider"><span>|</span></li>
+				<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
+				<li class="divider"><span>|</span></li>
+				-->
+				<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
+	  		</ul>
+	  		<ul class="head-blk head-right head-buttons">
+	  			<li id="grpSignOut" class="btn-group">
+					<button id="btnProp" type="button" class="btn btn-default">
+						<span class="glyphicon glyphicon-cog"></span>
+					</button>
+					<button id="btnAdmin" type="button" class="btn btn-default">
+						<span class="glyphicon glyphicon-user"></span>
+					</button>
+					<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
+				</li>
+	  		</ul>
+	  		<ul class="head-blk head-right">
+	  			<li><a href="" id="lnkUser"></a></li>
+	  		</ul>
+	  		<ul class="clear"></ul>
+	  	</div> <!-- end of headline -->
+		<hr>
+		<div class="sec-label">Description</div>
+		<div class="url">The <i>get_event_info</i> API returns basic data about a specific event in text format.</div>
+		
+		<div class="sec-label">URL</div>
+		<div class="url">http://trideccloud.gfz-potsdam.de/api/get_event_info</div>
+		
+		<div class="sec-label">Input parameter</div>
+		<table>
+			<tr>
+				<th>Property</th>
+				<th>Description</th>
+				<th class="status">Status</th>
+			</tr>
+			<tr>
+				<td class="param">apikey</td>
+				<td class="descr">
+					A string of 32 characters that authorizes the usage of this API. It is linked to a user
+					or institution account.
+				</td>
+				<td class="status">Mandatory</td>
+			</tr>
+			<tr>
+				<td class="param">evid</td>
+				<td class="descr">
+               		The unique ID of the event for which information should be retrieved.
+               		The latest refinement will be returned, if this is a GEOFON identifier.
+				</td>
+				<td class="status">Mandatory</td>
+			</tr>
+		</table>
+				
+		<div class="sec-label">Return value</div>
+		<table>
+			<tr>
+				<th>Property</th>
+				<th>Description</th>
+				<th>Status</th>
+			</tr>
+			<tr>
+				<td class="param">status</td>
+				<td class="descr">
+					States the status of the request. Can be one of the following:
+					<ul>
+						<li>
+							<i>success:</i> The operation was successfully accomplished. The values of
+							the remaining fields are valid.
+						</li>
+						<li>
+							<i>failure:</i> An error occurred while trying to apply the request. This may
+							be caused by invalid input parameter values.
+						</li>
+						<li>
+							<i>denied:</i> The access to this API was denied. The given API key is
+							incorrect or not valid in conjunction with the API used.
+						</li>
+					</ul>
+				</td>
+				<td class="status">Always valid.</td>
+			</tr>
+			<tr>
+				<td class="param">evid</td>
+				<td class="descr">
+					Contains the unique event ID used by the TRIDEC Cloud platform.
+				</td>
+				<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+			</tr>
+			<tr>
+				<td class="param">geofonid</td>
+				<td class="descr">
+					Contains the official event ID specified by the GEOFON Program.
+				</td>
+				<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+			</tr>
+			<tr>
+				<td class="param"><a href="#sub-prop">prop</a></td>
+				<td class="descr">
+					Lists all properties available for this earthquake event.
+				</td>
+				<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+			</tr>
+			<tr>
+				<td class="param"><a href="#sub-simulation">simulation</a></td>
+				<td class="descr">
+					Includes information about a processed tsunami simulation based on the given event
+					parameters. Only present if a computation was requested.
+				</td>
+				<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+			</tr>
+			<tr>
+				<td class="param">msg</td>
+				<td class="descr">
+					Contains an unapproved exercise message that has been automatically generated.
+				</td>
+				<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+			</tr>
+		</table>
+		
+		<div id="sub-prop" class="sub-sec">
+			<div class="sec-label">prop</div>
+			<table>
+				<tr>
+					<th>Property</th>
+					<th>Description</th>
+					<th>Status</th>
+				</tr>
+				<tr>
+					<td class="param">region</td>
+					<td class="descr">
+						The region in which the earthquake occurred.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">date</td>
+					<td class="descr">
+						The origin time of the earthquake in UTC. The date is given in
+						ISO format: <i>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</i>.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">magnitude</td>
+					<td class="descr">
+						The magnitude of the earthquake.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">latitude</td>
+					<td class="descr">
+						The latitude of the earthquake in the range of -90 to +90 degrees.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">longitude</td>
+					<td class="descr">
+						The longitude of the earthquake in the range of -180 to +180 degrees.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">depth</td>
+					<td class="descr">
+						The depth of the earthquake in kilometer.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">dip</td>
+					<td class="descr">
+						Fault dip of the earthquake in the range of 0 to 90 degrees.
+						Can be <i>null</i> if moment tensor is not available.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">strike</td>
+					<td class="descr">
+						Fault strike of the earthquake in the range of 0 to 360 degrees.
+						Can be <i>null</i> if moment tensor is not available.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">rake</td>
+					<td class="descr">
+						Rake of the earthquake in the range of -180 to +180 degrees.
+						Can be <i>null</i> if moment tensor is not available.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">sea_area</td>
+					<td class="descr">
+						Contains a label of the sea region in which the earthquake occurred.
+						Can be <i>null</i> if the event is situated on land.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+			</table>
+		</div>
+		
+		<div id="sub-simulation" class="sub-sec">
+			<div class="sec-label">simulation</div>
+			<table>
+				<tr>
+					<th>Property</th>
+					<th>Description</th>
+					<th>Status</th>
+				</tr>
+				<tr>
+					<td class="param">resolution</td>
+					<td class="descr">
+						Resolution of the underlying grid in arc minutes.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">resources</td>
+					<td class="descr">
+						Lists the computational resources used to perform the simulation.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">grid_dim</td>
+					<td class="descr">
+						Includes the coordinates of the bounding box used for the simulation.
+						It contains the sub-fields <i>latMin</i>, <i>latMax</i>, <i>lonMin</i> and
+						<i>lonMax</i> that define the boundaries in degree.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">simTime</td>
+					<td class="descr">
+						Number of minutes for which the tsunami propagation has been simulated.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">calcTime</td>
+					<td class="descr">
+						States the amount of time (in milliseconds) needed to complete the simulation.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">progress</td>
+					<td class="descr">
+						Progress of the computation. Set to 100 if the simulation has been completed already.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">curSimTime</td>
+					<td class="descr">
+						States for how many minutes the simulation has been performed at the moment.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">shared_link</td>
+					<td class="descr">
+						Contains a dynamic url to the TRIDEC Cloud platform that can be used to
+						view the simulation results and accomplish further analyses.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+				<tr>
+					<td class="param">image_url</td>
+					<td class="descr">
+						Specifies a dynamic url that points to an image of the simulation result.
+					</td>
+					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
+				</tr>
+			</table>	
+		</div>
+		
+		<div class="sec-label">API Examples</div>
+		<div>
+		    <div class="url">
+			http://trideccloud.gfz-potsdam.de/api/get_event_info?apikey=***&amp;evid=gfz2015kkyi
+		    	http://trideccloud.gfz-potsdam.de/api/get_event_info?apikey=***&amp;evid=gfz2015kkyi_gfz_2
+		</div>
+		</div>
+		<div class="sec-label">Usage Examples</div>
+		<div class="url">
+		    <a href="http://trideccloud.gfz-potsdam.de/embed-data/?id=gfz2015knrf#trideccloud" target="_blank">
+			Southeast of Honshu, Japan - March 30, 2015 (no tsunami generated)
+		    </a><br>
+		    <a href="http://trideccloud.gfz-potsdam.de/embed-data/?id=gfz2011ewla#trideccloud" target="_blank">
+			Near East Coast of Honshu, Japan - March 11, 2011 (tsunami generated)
+		    </a>
+		</div>
+		</div>
+	</div></div></div>
+</body>
+</html>

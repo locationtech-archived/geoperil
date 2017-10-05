@@ -1,0 +1,1708 @@
+html, body {
+	height: 100%;
+	background: #FFF url(img/background.gif) repeat;
+}
+
+.wrapper {
+	background: transparent;
+  	background-color: transparent;
+  	margin: 0 auto;
+  	overflow: hidden;
+  	width: 90%;
+  	/*height: 100%;*/
+}
+
+.wrapper .border {
+	-moz-border-radius: 15px; 		/* Firefox */
+	-webkit-border-radius: 15px; 	/* Safari, Chrome */
+	-khtml-border-radius: 15px; 	/* Konqueror */
+	border-radius: 15px; 			/* CSS3 */  
+	-moz-box-shadow: 2px 2px 6px #999;
+	-webkit-box-shadow: 2px 2px 6px #999;  
+	box-shadow: 2px 2px 6px #999;
+	padding: 15px;
+	margin: 10px;
+	background-color: white;
+
+	height: calc(100% - 10px);
+}
+
+.wrapper .normal {
+	background-color: white;
+	width: 100%;
+}
+
+.wrapper hr {
+	margin-top: 7px;
+	margin-bottom: 8px;
+}
+
+.gfz-head {
+	height: 6em;
+	position: relative;
+}
+
+.gfz-logo {
+	margin-left: 10px;
+}
+
+.gfz-logo-small {
+	height: 3em;
+	display: none;
+	padding-right: 10px;
+}
+
+.gfz-wordmark {
+	margin-right: 10px;
+	padding-top: 31px;
+}
+
+.tridec-logo-small {
+	display: none;
+	width: auto;
+	height: 35px;
+	margin-top: 5px;
+}
+
+.tridec-logo {
+	width: auto;
+	height: 35px;
+}
+
+.nav_buttons {
+	margin-top: 0px;
+}
+
+.gfz-link a {
+	color: #00589C;
+}
+        	
+.fullsize {
+	height: 100%;
+	width: 100%;
+	
+	/* fix what bootstrap has messed up */
+	padding-left: 0px;
+	padding-right: 0px;
+}
+
+.head-blk {
+	display: block;
+	list-style-type: none;
+	margin: 0px;
+	padding: 0px;
+}
+
+.head-right {
+	float: right;
+}
+
+.head-left {
+	float: left;	
+}
+
+.head-blk li {
+	float: left;
+	display: block;
+	margin-right: 10px;
+	margin-top: 20px;
+}
+
+.head-blk li a {
+	color: #00589C;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+.head-img li {
+	margin-top: 10px;
+	margin-left: 10px;
+}
+
+.head-buttons li {
+	margin-top: 12px;
+	margin-right: 20px;
+	margin-left: 10px;
+}
+
+.head-blk li a:hover {
+	color: #F60;
+}
+
+.clear {
+	clear: both;
+}
+	
+.headline {
+    width: 100%;
+}
+
+.mainview {
+	height: calc(100% - 4.5em);
+	padding-left: 15px;
+	padding-right: 15px;
+	display: none;
+}
+
+.mainview .tabs {
+	background-color: #fafafa;
+	padding-top: 5px;
+}
+
+.mainview .tabs-head {
+	border-bottom: 1px solid #dddddd;
+}
+	
+.mainview .nav-tabs {
+	position: relative;
+	border-bottom: 0px;
+}
+
+.mainview .form-horizontal {
+	padding-top: 0.5em;
+	width: 100%;
+}
+
+.logo {
+	max-width: 50px;
+	height: auto;
+	outline: 1px solid black;
+}
+	
+.right-col { 
+	height: 100%;
+	outline: 0.1em solid #acaaa7;
+	width: 72%;
+	overflow-x: auto;
+}
+
+.left-col { 
+	background-color: #fafafa;
+	height: 100%;
+	outline: 0.1em solid #acaaa7;
+	float: left;
+	width: 28%;
+}
+
+.big {
+	font-size: 1.3em;
+	font-weight: bold;
+}
+
+.medium {
+	font-size: 1em;
+}
+
+.small {
+	font-size: 0.8em;
+}
+
+.off {
+	padding-left: 1em;
+}
+    
+#sidebarTab, #saved, #timeline, #messages, #static, #evtsets, #evtsetcomp, #floodcomp, #floodlist, #compose {
+	position: absolute;
+	top: 3em;
+	left: 0px;
+	bottom: 0px;
+	right: 0px;
+}
+
+#sidebar, #saved, #timeline-data, #messages, #static, #evtsets, #evtsetcomp, #floodcomp, #floodlist, #compose {
+	overflow-y: auto;
+}
+
+#side {
+	position: relative;
+}
+
+.left-label {
+	width: 35%;
+}
+
+.right-label {
+	width: 15%;
+}
+  
+#inHead {
+	display: block;
+	width: 100%;
+	margin-bottom: 1em;
+}
+    	
+#grpSignOut, #tabSaved, #tabTimeline, #tabMessages, #tabStatic, #tabEvtSets, #tabEvtSetComp, #tabFloodCompose, #tabFloodList, #tabCompose {
+	display: none;
+}
+  	
+#contextMenu {
+	position: absolute;
+	display: none;
+}
+
+#btnDeselect {
+	float: right;
+	margin-right: 0.5em;
+	margin-top: 0.5em;
+}
+
+.form-center .input-group.input-group-sm {
+	padding: 0.5em;
+	width: 80%;
+	margin-left: 10%;
+}
+	
+.form-center .form-group.input-group-sm {
+	position: relative;
+	padding: 0.5em;
+	padding-top: 1em;
+	width: 80%;
+	margin-left: 10%;
+	padding-bottom: 4em;
+}
+
+.labPreset {
+	font-size: 1em;
+	font-weight: bold;
+	padding: 0.5em;
+	width: 80%;
+	margin-left: 10%;
+}
+
+.list-group-item {
+	width: 80%;
+	margin-left: 10%;
+}
+
+#contextMenu .dropdown-menu {
+	display: block;
+	position: static;
+	margin-bottom: 5px;
+}
+
+.entry {
+	border-bottom: 0.1em solid #acaaa7;
+	display: none;
+	padding-bottom: 0.3em;
+}
+
+.entry .info {
+	position: relative;
+	background-color: #5cb85c;
+	width: 100%;
+	text-align: center;
+	margin-bottom: 0.5em;
+	display: none;
+	
+	border-bottom-left-radius: 1em 1em;
+	border-bottom-right-radius: 1em 1em;
+}
+
+.entry .info span {
+	color: white;
+}
+
+.entry .info a {
+	position: absolute; right: 0.5em; color: white;
+}
+
+.entry .marker {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.entry .row-marker  {
+	padding-top: 0.5em;
+}
+
+.entry .beach {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	padding-top: 0.1em;
+}
+
+.entry .mag {
+	font-weight: bold;
+	text-align: center;
+}
+
+.entry .progress {
+	float: left;
+	height: 0.9em;
+	margin-top: 0.2em;
+	margin-bottom: 0em;
+	width: 75%;
+	display: none;
+}
+
+.entry .process {
+	padding-top: 0.2em;
+}
+
+.entry .lnkEdit {
+	padding-right: 0.2em;
+	display: none;
+}
+
+.entry .lnkEditEvtSet {
+	padding-right: 0.2em;
+	display: none;
+}
+
+.entry .lnkSend {
+	padding-right: 0.4em;
+	display: none;
+}
+
+.entry .lnkLearn {
+	padding-right: 0.3em;
+}
+
+.entry .lnkReport {
+	padding-right: 0.3em;
+	margin-top: -0.08em;
+	display: none;
+}
+
+.entry .lnkData {
+	padding-right: 0.3em;
+	margin-top: -0.08em;
+	display: none;
+}
+
+.entry .lnkDelete {
+	margin-right: 0.7em;
+	display: none;
+}
+
+.entry .lnkMsg {
+	margin-right: 0.3em;
+}
+
+.entry .lnkStatic {
+	margin-right: 0.2em;
+	display: none;
+}
+
+.entry .lnkTimeline {
+	margin-right: 0.4em;
+	display: none;
+}
+
+.entry .lnkCopy {
+	margin-right: 0.4em;
+	display: none;
+}
+
+.entry .lnkRiskData {
+	margin-right: 0.2em;
+}
+
+.entry .chk_grid {
+	vertical-align: top;
+}
+
+.entry .calc_data {
+	display: none;
+}
+
+.entry .layers .html-checkbox {
+	display: inline-block;
+}
+
+.entry .status, .entry .stat-read, .entry .stat-disp {
+	color: #428bca; /* bootstrap ĺink blue */
+}
+
+#diaStatus, #propStatus {
+	padding-top: 1em;
+	color: red;
+}
+
+#drpStatus {
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	color: red;
+}
+
+#SignInDialog .modal-body {
+	padding-bottom: 0px;
+}
+
+.search-group {
+	height: 4em;
+	border: 0.1em solid #acaaa7;
+	padding-right: 1em;
+	padding-left: 1em;
+}
+
+.search-group .input-group-sm {
+	padding-top: 3%;
+}
+
+#timeline-data {
+	position: absolute;
+	top: 4em;
+	bottom: 0px;
+	border-top: 0.1em;
+	padding-top: 0.1em;
+}
+
+#sidebar {
+	position: absolute;
+	top: 4.5em;
+	bottom: 0px;
+	border-top: 0.1em;
+	padding-top: 0.1em;
+}
+
+#btnDelRoot {
+	/*color: red;*/
+}
+
+.row-msgIcon {
+	margin: 0px;
+	height: 100%;
+}
+
+.msgIcon {
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	margin: auto;
+	font-size: 1.5em;
+	height: 1.5em;
+	margin-top: 0em;
+}
+
+.msgType {
+	position: absolute;
+	left: 0px;
+	right: 0px;	
+	font-size: 1em;
+	font-weight: bold;
+	text-align: center;
+	margin-top: 2em;
+}
+
+.entry {
+	position: relative;
+}
+
+.propHeader {
+	padding-bottom: 0px;
+}
+
+.prop-label {
+	width: 100%;
+	padding-top: 0.5em;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+}
+
+.prop-label .input-group-addon {
+	width: 20%;
+}
+
+#propGeneral .input-group-addon {
+	width: 25%;
+}
+
+.prop-label .prop-right {
+	width: 10%;
+}
+
+.prop-info {
+	padding-left: 1.5em;
+	padding-top: 0.25em;
+	padding-bottom: 0.5em;
+	font-size: 0.9em;
+	color: #555555;
+}
+
+#inRootId, #inParentId, #inDate {
+	width: 50%;
+	background-color: #f8f8f8;
+}
+
+#btnDelRoot, #btnDelParent, #btnDelDate {
+	width: 100%;
+}
+
+.no-pad {
+	padding: 0px;
+}
+
+.group {
+	outline: 0.2em solid #eeeeee;
+	margin-bottom: 1em;
+	width: auto;
+}
+
+.grpHeader {
+	padding-top: 0.2em;
+	padding-left: 0.2em;
+	overflow: auto;
+	border-bottom: 0.2em solid #eeeeee;
+	padding-bottom: 0.2em;
+}
+
+.grpHeadline {
+	float: left;
+	margin-left: 0.5em;
+	font-size: 1.2em;
+}
+
+.lnkGroup {
+	margin-right: 0.5em;
+	float: right;
+}
+
+pre {	
+	word-break: keep-all;
+}
+
+.pad-left {
+	padding-left: 0.6em;
+}
+
+.pad-top {
+	padding-top: 1.5em;
+}
+
+.pad-top-1 {
+	padding-top: 1em;
+}
+
+.msg-col-left {
+	width: auto;
+}
+
+.msg-col-right {
+	width: auto;
+}
+
+#lnkUser {
+	display: none;
+	color: #333333;
+	cursor: default;
+	pointer-events: none;
+	font-weight: normal;
+}
+
+#mapview {
+	position: relative;
+	height: calc( 100% - 11em );
+}
+
+#statview {
+	position: relative;
+	height: 0em;
+}
+
+#stat-dias {
+	height: 10em;
+	background-color: #fafafa;
+	white-space: nowrap;
+	overflow-x: auto;
+	padding-top: 0.5em;
+	padding-left: 0.5em;
+}
+
+#stat-dias .lnkSelect {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	text-align: center;
+}
+#stat-dias .lnkSelect a {
+	display: inline;
+	height: 1.2em;
+	font-size: 1.2em;
+}
+	
+#stat-panel {
+	position: absolute;
+	right: 0px;
+	top: -3em;
+	background-color: white;
+	height: 2em;
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
+#stat-toggle-lnk {
+	padding-left: 1em;
+}
+
+#chart-div {
+	display: none;
+}
+
+.chart-div {
+	position: relative;
+	margin-right: 0.5em;
+	display: inline-block;
+	outline: 1px solid #acaaa7;
+	cursor: pointer;
+	cursor: hand;
+}
+
+.chart-div .spanDia {
+	position: absolute;
+	width: 100%;
+	height: 4.2em;
+	top: 0px;
+	bottom: 0px;
+	margin: auto;
+	text-align: center;
+}
+
+.chart-div .spanLoad {
+	display: none;
+}
+
+.chart-div .spanDia .iconLoad {
+	font-size: 3em;
+	margin-bottom: 0.2em;
+	color: #428bca;
+}
+
+.chart-div .spanDia .textLoad {
+	font-size: 1em;
+}
+
+.chart-div .spanDia .textSmall {
+	font-size: 0.8em;
+}
+
+#canvas-line, #canvas-chart, .canvas-gen {
+	position: absolute;
+	display: none;
+}
+
+.canvas-gen {
+	position: absolute;
+	display: none;
+	cursor: pointer;
+	cursor: hand;
+}
+
+#vsdbPlayer {
+	padding: 1em;
+	border: 2px solid #acaaa7;
+	border-top: 1px solid #acaaa7;
+	display: none;
+}
+
+#vsdbPlayer .head {
+	margin-bottom: 0.5em;
+	padding-left: 0.2em;
+	font-weight: bold;
+}
+
+#vsdbPlayer .progress {
+	position: relative;
+	margin-top: 0.5em;
+	margin-bottom: 0px;
+	border: 1px solid #dddddd;
+	display: none;
+}
+
+#vsdbPlayer .progress-txt {
+	display: block;
+	position: absolute;
+	width: 100%;
+	text-align: center;
+	color: black;
+}
+
+#chartDia .time {
+	width: 50%;
+}
+
+#chartDia .pickEnable {
+	padding-bottom: 1em;
+}
+
+#chartDia #picker .input-group {
+	width: 80%;
+	left: 10%;
+	padding-top: 0.3em;
+	padding-bottom: 0.3em;
+}
+
+#chartDia #picker .lab-left {
+	width: 10em;
+}
+
+#chartDia #picker .lab-right {
+	width: 6em;
+}
+
+#chartDia #mainchart-div :active {
+	cursor: move;
+}
+
+#chartDia .localTime,
+#chartDia .utcTime,
+#chartDia .spanHead,
+#chartDia .spanNoPick {
+	background-color: #f8f8f8;
+}
+
+#propStations .countries {
+	margin-left: 1em;
+}
+
+#propStations .country-code {
+	float: left;
+	min-width: 8em;
+}
+
+#propStations .clear {
+	clear: both;
+}
+
+#propStations .warn {
+	color: red;
+}
+
+#propStations .header {
+	margin-top: 1em;
+	margin-left: 1em;
+	margin-right: 1em;
+}
+
+#propStations hr {
+	margin-top: 0.3em;
+	margin-bottom: 0.6em;
+	border-color: #bbb;
+}
+
+#propStations h4 {
+	width: 95%;
+	margin-bottom: 0px;
+}
+
+/**** splash screen ****/
+
+#splash {
+	position: relative;
+	/*display: none;*/
+	
+	-moz-border-radius: 7px; /* Firefox */
+	-webkit-border-radius: 7px; /* Safari, Chrome */
+	-khtml-border-radius: 7px; /* Konqueror */
+	border-radius: 7px; /* CSS3 */
+	overflow: hidden;
+	margin: -5px;
+	/*margin-top: -15px;*/
+}
+
+#splash .section {
+	position: relative;
+	width: 100%;
+}
+
+#splash .image {
+	/* force element to occupy the available space of the parent - even if it is empty */
+	height: 0px;
+	padding-top: 100%;
+	width: 100%;
+}
+
+#splash .section .clear {
+	position: relative;
+	clear: both;
+}
+
+#splash .section .back {
+	position: relative;
+	background-image: linear-gradient(#00579b 0%, #428bca 100%);
+}
+
+#splash .slide {
+	height: 30vw;
+	width: 100%;
+	overflow: hidden;
+}
+
+#splash .video {
+	position: relative;
+	width: 100%;
+	box-shadow: 0px 0px 2px 2px black;
+	display: inline-block;
+	margin-bottom: 2.5%;
+}
+
+/* this is a CSS trick to force a specific ratio for a container */
+#splash .video:after {
+	padding-top: 56.25%; /* 16:9 ratio */
+    display: block;
+    content: '';
+}
+
+#splash .video iframe {
+	position: absolute;
+    top: 0; bottom: 0; right: 0; left: 0; /*fill parent*/
+}
+
+#splash .section .bg-image {
+	position: relative;
+	width: 100%;
+	background: url(img/head.sm.jpg) no-repeat;
+	background-size: cover;
+	
+	/*background-size: 100%;
+	height: 0px;
+	padding-top: 57%;*/
+}
+
+#splash .section .overlay {
+	/*position: absolute;*/
+    top: 0; bottom: 0; right: 0; left: 0; /*fill parent*/
+    overflow-y: auto;
+}
+
+@media( min-width: 800px ) {
+
+	#splash .section .no {
+		position: relative;
+		width: 45%;
+		margin: 2.5%;
+			
+		color: white;
+		font-size: 1.2em;
+		
+		z-index: 100;
+	}
+	
+	#splash .section .fi {
+		position: relative;
+		width: 45%;
+		margin: 2.5%;
+	}
+	
+	#splash .section .float-l {
+		float: left;	
+	}
+	
+	#splash .section .float-r {
+		float: right;
+	}
+	
+	#splash .image-7 {
+		background: url(img/7.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-6 {
+		background: url(img/6.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-5 {
+		background: url(img/5.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-4 {
+		background: url(img/4.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-3 {
+		background: url(img/3.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-2 {
+		background: url(img/2.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-1 {
+		background: url(img/1.sm.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-0 {
+		background: url(img/0.sm.jpg);
+		background-size: 100%;
+	}
+}
+
+@media( max-width: 800px ) {
+
+	#splash .section .no {
+		position: relative;
+		width: 90%;
+		margin-left: 5%;
+		margin-right: 5%;
+		padding-top: 5%;
+		padding-bottom: 5%;
+			
+		color: white;
+		font-size: 1.2em;
+		
+		z-index: 100;
+	}
+	
+	#splash .section .fi {
+		position: relative;
+		
+		/* center horizontal */
+		width: 90%;
+		margin-left: 5%;
+		margin-right: 5%;
+									
+		z-index: 100;
+	}
+	
+	#splash .section .margin-t {
+		margin-top: 5%;
+	}
+	
+	#splash .image-7 {
+		background: url(img/7.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-6 {
+		background: url(img/6.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-5 {
+		background: url(img/5.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-4 {
+		background: url(img/4.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-3 {
+		background: url(img/3.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-2 {
+		background: url(img/2.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-1 {
+		background: url(img/1.xs.jpg);
+		background-size: 100%;
+	}
+	
+	#splash .image-0 {
+		background: url(img/0.xs.jpg);
+		background-size: 100%;
+	}
+}
+	
+#splash .section .no h3 {
+	font-family: 'Prosto One', cursive;
+	margin-top: 0px;
+}
+
+#splash .section .no a {
+	color: #FD7B39;
+}
+
+#splash .nav-arrow {
+	position: fixed;
+	height: 3em;
+	top: calc( 100% - 1.5em );
+	right: 0em;
+	font-size: 3em;
+	z-index: 1000;
+	color: #111111;
+	
+	cursor: pointer;
+}
+
+#splash .nav-arrow:hover {
+	color: #bbbbbb;
+}
+
+#splash .login {
+	width: 100%;
+    box-shadow: 0px 0px 2px 2px black;
+    background: rgba(0,0,0,0.25);
+    color: white;
+}
+
+#splash .login h4 {
+	text-align: center;
+	padding-top: 0.5em;
+	
+	color: white;
+}
+
+#splash .login h3 {
+	text-align: center;
+	
+	color: white;
+}
+
+#splash .login button {
+	background-color: #00579b;
+	margin-bottom: 2em;
+}
+
+#splash .login .cells a, #splash .login .cells span {
+	color: white;
+	font-weight: bold;
+	background: rgba(0,0,0,0.5);
+	display: table-cell;
+}
+
+#splash .login .form {
+	margin-left: 10%;
+	margin-right: 10%;
+	width: 80%;
+}
+
+#splash .login .icon i {
+	width: 100%;
+	text-align: center;
+	font-size: 500%;
+	padding-top: 5%;
+	padding-bottom: 5%;
+}
+
+#splash .login .lnk {
+	width: 100%;
+	text-align: center;	
+    vertical-align : bottom;
+    height : 1px;
+    display : table-row;
+}
+
+#splash .login .cells {
+	display : table;
+	width: 100%;
+}
+
+#splash .login #splashSignIn {
+	margin-top: 1em;
+}
+
+#splash .login #splashStatus {
+	color: red;
+	/*padding-bottom: 0.5em;*/
+	text-align: center;
+	background: rgba(0,0,0,0.5);
+}
+
+#splash-table {
+	height: 100%;
+	width: 100%;
+	display: table;
+}
+
+/********************/
+
+#propTabNotify {
+	display: none;
+}
+
+.ui-autocomplete {
+	/* needed to display the autocomplete menu of jQuery UI correctly with a modal Bootstrap dialog */
+	z-index: 30000;
+	
+	max-height: 150px;
+	overflow-x: hidden;
+    overflow-y: auto;
+}
+
+#propNotify input[type='checkbox'], #propGeneral input[type='checkbox'] {
+	margin-right: 10px;
+	margin-left: 15px;
+	margin-top: 10px;
+}
+
+#filterWidget {
+	height: 4.5em;
+	border: 0.1em solid #acaaa7;
+	padding-right: 1em;
+	padding-left: 1em;
+	padding-top: 1em;
+}
+
+#filterWidget input[type='checkbox'] {
+	vertical-align: text-top;
+	margin-right: 5px;
+	margin-left: 10px;
+	transform: scale(1.2);
+	-webkit-transform: scale(1.2);
+}
+
+#filterWidget .range {
+	padding: 0px;
+}
+
+#filterWidget .labRange {
+	width: 100%;
+	display: block;
+	text-align: center;
+}
+
+.admin .modal-header {
+	padding-bottom: 0px;
+}
+
+.admin .nav-tabs {
+	border-bottom: 0px;
+}
+
+.admin .secPerm .html-checkbox {
+	width: 45%;
+	display: inline-block;
+	margin-left: 0.5em;
+}
+
+.admin .secButtons {
+	padding-top: 3em;
+	padding-bottom: 1em;
+}
+
+.admin .secButtons button {
+	margin-left: 0.2em;
+	margin-right: 0.2em;
+}
+
+.mail-dialog .modal-dialog {
+	height: 0px;
+	width: 700px;
+}
+
+.mail-dialog .txtMsg {
+   resize: none;
+   max-width: calc(100% - 1.6em);
+   margin: 0.8em;
+   padding: 0.8em;
+   overflow: hidden;
+   font-family: monospace;
+}
+
+.mail-dialog .secFtp .spnSlash {
+	width: 5% !important;
+}
+
+.mail-dialog .secFtp .spnChk {
+	width: 5%;
+	padding-top: 0px;
+	padding-bottom: 0px;
+}
+
+.info-dialog .modal-header {
+        padding-bottom: 0px;
+}
+
+.info-dialog .source-template dl {
+	margin-left: 25px;
+}
+
+.info-dialog .source-template dd {
+	margin-left: 25px;
+	padding-bottom: 10px;
+}
+
+.info-dialog #info-dialog-tab-geofon iframe {
+	width: 100%;
+	height: 870px;
+	border: none;
+	margin-bottom: -20px;
+}
+
+.info-dialog .source-template h3 img {
+	height: 1.5em;
+	padding-right: 0.8em;
+}
+
+.templates, .dialog-templates {
+	display: none;
+}
+
+.popovers {
+	font-size: 0.8em;
+	display: none;
+}
+
+/* Fixes that popovers are not shown in modal dialog. */
+.popover{
+	z-index: 1055;
+}
+
+.html-textgroup .html-btn > button {
+	background-color: #eeeeee;
+}
+
+.html-textgroup .html-btn > button:hover {
+	background-color: #fcfcfc;
+}
+
+.html-dialog .modal-content > .modal-overlay {
+	position: absolute;
+	top: 0px;
+	bottom: 0px;
+	left: 0px;
+	right: 0px;
+	background-color: gray;
+	z-index: 100;
+	opacity: 0.1;
+}
+
+.html-dialog > .modal-status {
+	position: fixed;
+	margin: auto;
+	top: 0px;
+	bottom: 0px;
+	left: 0px;
+	right: 0px;
+	height: 2em;
+	width: 2em;
+	font-size: 2em;
+	z-index: 10000;
+	color: #428bca;
+}
+
+/* HtmlDynGroup */
+.html-dyngroup {
+	outline: 0.2em solid #eeeeee;
+	/*padding-bottom: 0.5em;*/
+	margin-top: 1em;
+	width: auto;
+}
+
+.html-dyngroup .html-header {
+	padding-top: 0.2em;
+	padding-left: 0.2em;
+	overflow: auto;
+	border-bottom: 0.2em solid #eeeeee;
+	padding-bottom: 0.2em;
+}
+
+.html-dyngroup .html-header .html-label {
+	float: left;
+	margin-left: 0.5em;
+	font-size: 1.2em;
+}
+
+.html-dyngroup .html-header .html-arrow {
+	margin-right: 0.5em;
+	float: right;
+}
+
+/* HtmlDynGroup2 */
+.html-dyngroup2 {
+	border: 1px solid #cccccc;
+	border-radius: 8px;
+	padding-bottom: 0.5em;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+	margin-top: 1em;
+	width: 100%;
+}
+
+.html-dyngroup2 .html-header {
+	padding-top: 0.2em;
+	padding-left: 0.2em;
+	overflow: auto;
+	border-bottom: 1px solid #eeeeee;
+	padding-bottom: 0.2em;
+}
+
+.html-dyngroup2 .html-header .html-label {
+	float: left;
+	margin-left: 0.5em;
+	font-size: 1.2em;
+}
+
+.html-dyngroup2 .html-header .html-arrow {
+	margin-right: 0.5em;
+	float: right;
+}
+
+/* HtmlColorGroup */
+.html-colorgroup .html-color {
+	width: 10%;
+}
+
+/* HtmlRangeGroup */
+.html-rangegroup .html-label-colon {
+	width: 0.3em;
+}
+
+/* HtmlCheckBox */
+.html-checkbox {
+	margin-right: 0.5em;
+	margin-top: 0.5em;
+}
+
+.html-checkbox .html-label {
+	margin-left: 0.2em;
+	vertical-align: text-bottom;
+}
+
+/* HtmlDropDown */
+.html-dropdown button {
+	line-height: normal;
+	height: inherit;
+}
+
+.html-dropdown .dropdown-menu {
+	width: 100%;
+	text-align: center;
+}
+
+/* HtmlDropDownAuto */
+.html-dropdown-auto {
+	padding: 0px;
+}
+
+.ui-menu .ui-menu-item {
+	font-size: 12px;
+	font-family: inherit;
+}
+
+/* HtmlBlock */
+.html-block {
+	width: 100%;
+	/*border: 2px solid black;*/
+}
+
+.html-range-slider {
+	background: #dddddd;
+	margin-top: 2px;
+	height: 5px;
+	margin-left: 0px;
+}
+
+.html-range-slider .ui-slider-range {
+	background: #428bca;
+}
+
+.html-range-slider .ui-slider-handle {
+	width: 10px;
+	height: 13px;
+	margin-top: -1px;
+	margin-left: -0.4em;
+	background: #dddddd;
+	border: 2px solid #cccccc;
+}
+
+.html-activity-view table {
+	border-spacing: 0.2em;
+	border-collapse: separate;
+}
+
+.html-activity-view td {
+	width: 0.8em;
+	height: 0.8em;
+	background-color: gray;
+}
+.html-activity-view td:hover {
+	border: 1px solid black;
+}
+
+.html-status .error {
+	color: red;
+	text-align: center;
+}
+
+.html-status .success {
+	color: green;
+	text-align: center;
+}
+
+.html-status .load {
+	width: 100%;
+	text-align: center;
+}
+
+#adminTabStats .user-logins .input-group-addon {
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+}
+
+/* */
+#layer-switcher {
+	position: absolute;
+	right: 0px;
+	bottom: 6em;
+	height: 10em;
+	background-color: white;
+	border-top-left-radius: 1em 1em;
+	border-bottom-left-radius: 1em 1em;
+	display: none;
+}
+
+#layer-switcher .toggle {
+	display: inline-block;
+}
+
+#layer-switcher .toggle a span {
+	height: 2em;
+	padding-top: 4em;
+}
+
+#layer-switcher .content {
+	display: inline-block;
+	height: 100%;
+	vertical-align: middle;
+	padding: 0.5em;
+	padding-right: 2em;
+	border-left: 1px solid black;	
+}
+
+.map_progress {
+	position: absolute;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    margin: auto;
+    height: 2em;
+    width: 2em;
+    z-index: 100;
+    color: white;
+    font-size: 2em;
+    display: none;
+}
+
+/* Event Set Compose Tab */
+#evtsetcomp .html-label {
+	width: 7em;
+}
+
+#evtsetcomp .prop-right {
+	width: 4em;
+}
+
+#evtsetcomp .input-group {
+	margin-bottom: 0.5em;
+}
+
+#evtsetcomp .btn {
+	margin-top: 0.5em;
+	width: 30%;
+}
+
+#evtsetcomp .btn-clear {
+	margin-left: 10%;
+	margin-right: 10%;	
+}
+
+#evtsetcomp .btn-start {
+	margin-left: 10%;
+}
+
+#evtsetcomp .status {
+	width: 100%;
+	text-align: center;
+	color: red;
+	margin-top: 1em;
+}
+
+#floodcomp .inner {
+	width: 80%;
+	margin-left: 10%;
+}
+
+#floodcomp .input-group {
+	padding: 0px;
+	margin-top: 1em;
+	margin-bottom: 1em;
+}
+
+#floodcomp input[type="file"] {
+	display: none;
+}
+
+#floodcomp label {
+	display: initial;
+}
+
+#floodcomp .fname {
+	width: 80%;
+}
+
+#floodcomp .points {
+	margin-top: 0.5em;
+	padding-top: 0.5em;
+	border-top: 1px solid black;
+	font-size: 1.05em;
+}
+
+#floodcomp input[type="checkbox"] {
+	transform: scale(1.05);
+	-webkit-transform: scale(1.05);
+}
+
+#floodcomp .flood-location-entry {
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
+    padding-right: 0.5em;
+	padding-left: 0.5em;
+}
+
+.flood-entry .glyphicon {
+	margin-right: 0.3em;
+}
+
+.buildings-dialog .content {
+	height: 500px;
+	overflow: auto;
+}
+
+.buildings-dialog table td, .buildings-dialog table th {
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+	padding-top: 0.2em;
+	padding-bottom: 0.2em;
+	text-align: center;	
+}
+
+.download-dialog .status {
+	display: none;	
+}
+
+.download-dialog .error {
+	color: red;
+	text-align: center;
+	margin-top: 1.5em;
+}
+
+.download-dialog .progress-text {
+	margin-top: 1.5em;
+    text-align: center;
+}
+
+.download-dialog .progress {
+	margin: 0.5em;	
+}
+
+.download-dialog .progress-bar {
+	width: 100%;
+}
+
+.download-dialog .secOptions {
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+}
+
+.download-dialog .prop-label .html-label {
+	width: 25%;
+}
+
+.download-dialog .prop-label .html-icon {
+	width: 10%;
+	border-left: 0px;
+	border-bottom-right-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.download-dialog .prop-label .html-dropdown .dropdown-toggle {
+	border-radius: 0px;
+}
+
+.download-dialog .html-checkbox {
+	padding-left: 0.5em;
+}
+
+.download-dialog .html-checkbox > .html-label {
+	padding-left: 1em;
+}
+
+/* Compose Tab */
+#compose {
+	padding: 0px;
+	padding-top: 0.5em;
+	width: 100%;
+}
+
+#compose .html-textgroup, #compose .html-inputgroup {
+	padding: 0.5em;
+	width: 80%;
+	margin-left: 10%;
+}
+
+#compose .html-label {
+	width: 35%;
+}
+
+#compose .html-icon, #compose .html-btn  {
+	width: 15%;
+	border-left: 0;
+}
+
+#compose .html-btn > button {
+	width: 100%;
+}
+
+#compose input[readonly] {
+	background-color: #f8f8f8;
+}
+
+#compose .form-group {
+	position: relative;
+	padding: 0.5em;
+	padding-top: 1em;
+	width: 80%;
+	margin-left: 10%;
+	padding-bottom: 4em;
+}
+
+#compose .btn-clear {
+	position: absolute;
+	left: 0.5em;
+	width: 40%;
+}
+
+#compose .btn-start {
+	position: absolute;
+	right: 0.5em;
+	width: 40%;
+}
+
+#compose .lab-preset {
+	font-size: 1em;
+	font-weight: bold;
+	padding: 0.5em;
+	width: 80%;
+	margin-left: 10%;
+}
+
+#compose .list-group-item {
+	width: 80%;
+	margin-left: 10%;
+}
+
+.report-new-dialog .html-dyngroup2 {
+	display: inline-block;
+	width: 90%;
+}
+
+.report-new-dialog .updown {
+	padding-left: 1em;
+}
+
+.report-new-dialog .updown a {
+	display: inline-block;
+	vertical-align: top;
+	margin-top: 1.2em;
+	font-size: 1.25em;
+}
+
+.report-new-dialog img {
+	width: 100%;
+}
