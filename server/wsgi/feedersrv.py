@@ -124,6 +124,7 @@ class FeederSrv(BaseSrv):
         inst = self._db["institutions"].find_one({"name":inst, "secret": secret})
         if inst is not None:
             if json is not None:
+                self.feedsealevel_api2_json_new(inst, json, **data)
                 return self.feedsealevel_api2_json(inst, json, **data)
             elif xml is not None:
                 return self.feedsealevel_api2_xml(inst, xml, **data)
@@ -158,6 +159,45 @@ class FeederSrv(BaseSrv):
                     self._db["sealeveldata"].insert(values)
                 last = self._db["sealeveldata"].find_one({"inst":inst["name"],"station":station},sort=[("timestamp",-1)])
                 lastts = None if last is None else last["timestamp"]
+                return jssuccess(values = vnr, errors = verr, lastts = lastts)
+            else:
+                return jsfail(errors = ["Parameter station is missing."])
+        return jsfail(errors = ["Dataformat %s not known." % dataformat])
+
+    def feedsealevel_api2_json_new(self, inst, json, dataformat="simple", station=None):
+        if dataformat == "simple":
+            if station is not None:
+                json = jsonlib.loads(json)
+                vnr = 0
+                verr = 0
+                ids = []
+                values = {}
+                for v in json:
+                    if "value" in v and "timestamp" in v:
+                        value = str(v["value"])
+                        ts = int(v["timestamp"])
+                        daystart = (ts // (60*60*24)) * 60*60*24
+                        dayts = ts % (60*60*24)
+                        if daystart not in values:
+                            values[daystart] = {}
+                        values[daystart][dayts] = value
+                        vnr += 1
+                    else:
+                        verr += 1
+                if len(values)>0:
+                    for daystart,vals in values.items():
+                        vs = {}
+                        for k,v in vals:
+                            vs["data.%d" % k] = v
+                        q = {"inst":inst["name"],"station":station,"daystart":daystart}
+                        self._db["sealeveldata_new"].update(q, {
+                            "$set":vs,
+                            "$max":{"last_ts": daystart + max(vals.keys()) },
+                            "$min":{"first_ts": daystart + min(vals.keys()) },
+                            "$setOnInsert":q
+                        }, upsert = True)
+                last = self._db["sealeveldata_new"].find_one({"inst":inst["name"],"station":station},sort=[("last_ts",-1)])
+                lastts = None if last is None else last["last_ts"]
                 return jssuccess(values = vnr, errors = verr, lastts = lastts)
             else:
                 return jsfail(errors = ["Parameter station is missing."])
