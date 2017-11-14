@@ -187,13 +187,22 @@ class FeederSrv(BaseSrv):
                 if len(values)>0:
                     for daystart,vals in values.items():
                         vs = {}
-                        for k,v in vals:
+                        for k,v in vals.items():
                             vs["data.%d" % k] = v
                         q = {"inst":inst["name"],"station":station,"daystart":daystart}
+                        # Workaround for Mongo 2.4
+                        old = self._db["sealeveldata_new"].find_one(q)
+                        if old is None:
+                            vs["last_ts"] = daystart + max(vals.keys())
+                            vs["first_ts"] = daystart + min(vals.keys())
+                        else:
+                            vs["last_ts"] = daystart + max(max(vals.keys()), max(old["data"].keys()))
+                            vs["first_ts"] = daystart + min(min(vals.keys()), min(old["data"].keys()))
+                        # End of Workaround
                         self._db["sealeveldata_new"].update(q, {
                             "$set":vs,
-                            "$max":{"last_ts": daystart + max(vals.keys()) },
-                            "$min":{"first_ts": daystart + min(vals.keys()) },
+#                            "$max":{"last_ts": daystart + max(vals.keys()) },
+#                            "$min":{"first_ts": daystart + min(vals.keys()) },
                             "$setOnInsert":q
                         }, upsert = True)
                 last = self._db["sealeveldata_new"].find_one({"inst":inst["name"],"station":station},sort=[("last_ts",-1)])
