@@ -4,21 +4,21 @@
    GeoPeril - A platform for the computation and web-mapping of hazard specific
    geospatial data, as well as for serving functionality to handle, share, and
    communicate threat specific information in a collaborative environment.
-   
+
    Copyright (C) 2013 GFZ German Research Centre for Geosciences
-   
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
-   
+
      http://apache.org/licenses/LICENSE-2.0
-   
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the Licence is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the Licence for the specific language governing permissions and
    limitations under the Licence.
-   
+
    Contributors:
    Johannes Spazier (GFZ) - initial implementation
    Sven Reissland (GFZ) - initial implementation
@@ -78,12 +78,12 @@ def startapp(app):
     if config["mongodb"].getboolean('replicaset'):
         print("Connecting to MongoDB ReplicaSet: %s" % config["mongodb"]["url"])
         dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority",
-            maxPoolSize=100,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=64)
+            maxPoolSize=16,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=64)
         atexit.register(dbe.close)
     else:
         print("Connecting to MongoDB: %s" % config["mongodb"]["url"])
         dbe = MongoClient(config["mongodb"]["url"],
-            maxPoolSize=100,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=64)
+            maxPoolSize=16,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=64)
     db = dbe[config["mongodb"]["dbname"]]
     return cherrypy.Application( app( db ) , script_name=None, config=None)
 
@@ -172,4 +172,3 @@ def floatdef(s,default=0.0):
         return float(s)
     except (ValueError,TypeError):
         return default
-
