@@ -329,84 +329,110 @@ def feedevent(event):
     print(requests.post(url, data=params, timeout=60).json())
 
 if __name__=="__main__":
+    print("Feed: German Research Centre for Geosciences")
     for e in parsegfz(requests.get("http://geofon.gfz-potsdam.de/eqinfo/list.php?fmt=rss").content):
         e["provider"] = "gfz"
         e["providerurl"] = "http://gfz-potsdam.de"
         e["providername"] = "German Research Centre for Geosciences"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: British Geological Survey")
     for e in parsebgs(requests.get("http://www.bgs.ac.uk/feeds/SchoolSeismology.xml").content):
         e["provider"] = "bgs"
         e["providerurl"] = "http://www.bgs.ac.uk/"
         e["providername"] = "British Geological Survey"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: Badan Meteorologi, Klimatologi, dan Geofriska")
     for e in parsebmkg(requests.get("http://data.bmkg.go.id/csvlast60event.txt").content):
         e["provider"] = "bmkg"
         e["providerurl"] = "http://www.bmkg.go.id"
         e["providername"] = "Badan Meteorologi, Klimatologi, dan Geofriska"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: European Mediterranean Seismological Centre")
     for e in parseesmc(requests.get("http://www.emsc-csem.org/service/rss/rss.php?typ=emsc").content):
         e["provider"] = "esmc"
         e["providerurl"] = "http://www.emsc-csem.org"
         e["providername"] = "European Mediterranean Seismological Centre"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: Geoscience Australia")
     for e in parsega(requests.get("http://www.ga.gov.au/earthquakes/all_recent.rss").content):
         e["provider"] = "ga"
         e["providerurl"] = "http://www.ga.gov.au"
         e["providername"] = "Geoscience Australia"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: Global Disaster Alert and Coordination System")
     for e in parsegdacs(requests.get("http://www.gdacs.org/rss.aspx").content):
         e["provider"] = "gdacs"
         e["providerurl"] = "http://www.gdacs.org"
         e["providername"] = "Global Disaster Alert and Coordination System"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: GeoNet")
     for e in parsegns(requests.get("http://www.geonet.org.nz/quakes/services/all.rss").content):
         e["provider"] = "gns"
         e["providerurl"] = "http://www.geonet.org.nz"
         e["providername"] = "GeoNet"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: Portuguese Sea and Atmosphere Institute")
     for e in parseipma(requests.get("http://www.ipma.pt/resources.www/rss/sism_geral.xml").content):
         e["provider"] = "ipma"
         e["providerurl"] = "http://www.ipma.pt"
         e["providername"] = "Portuguese Sea and Atmosphere Institute"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: Kandilli Observatory and Earthquake Research Institute")
     for e in parsekoeri(requests.get("http://sc3.koeri.boun.edu.tr/eqevents/eq_events?sort=Origin+Time+UTC&desc=descending&get_events=true&get_rss=Get+RSS").content):
         e["provider"] = "koeri"
         e["providerurl"] = "http://www.koeri.boun.edu.tr"
         e["providername"] = "Kandilli Observatory and Earthquake Research Institute"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: National Observatory of Athens")
     for e in parsenoa(requests.get("http://bbnet.gein.noa.gr/rss/automatic_events_24h.xml").content):
         e["provider"] = "noa"
         e["providerurl"] = "http://bbnet.gein.noa.gr/HL/"
         e["providername"] = "National Observatory of Athens"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: Natural Resources Canada")
     for e in parsenrc(requests.get("http://www.earthquakescanada.nrcan.gc.ca/index-eng.php?tpl_region=canada&tpl_output=rss").content):
         e["provider"] = "nrc"
         e["providerurl"] = "http://www.earthquakescanada.nrcan.gc.ca"
         e["providername"] = "Natural Resources Canada"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: United States Geological Survey")
     for e in parsequakeml(requests.get("http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.quakeml").content,"USGS-"):
         if "depth" in e:
             e["depth"] = e["depth"] / 1000
         e["provider"] = "usgs"
         e["providerurl"] = "http://www.usgs.gov"
         e["providername"] = "United States Geological Survey"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
+    print("Feed: Incorporated Research Institutions for Seismology")
     for e in parsequakeml(requests.get("http://service.iris.edu/fdsnws/event/1/query?starttime={date}".format(date=(datetime.datetime.utcnow()-datetime.timedelta(days=1)).strftime('%Y-%m-%d'))).content,"IRIS-"):
         if "depth" in e:
             e["depth"] = e["depth"] / 1000
         e["provider"] = "iris"
         e["providerurl"] = "http://www.iris.edu"
         e["providername"] = "Incorporated Research Institutions for Seismology"
+        print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
