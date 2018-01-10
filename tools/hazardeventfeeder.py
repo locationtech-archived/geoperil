@@ -105,10 +105,10 @@ def parseesmc(data,idprefix="ESMC-"):
         event["y"]=float(e.findtext("{http://www.w3.org/2003/01/geo/}lat"))
         event["eventid"]=idprefix+e.findtext("guid").rpartition("id=")[2]
         event["url"]=e.findtext("link")
-        event["time"]=calendar.timegm(time.strptime(e.findtext("{http://www.emsc-csem.org}time"),'%Y-%m-%d %H:%M:%S %Z'))
-        event["mag"]=float(e.findtext("{http://www.emsc-csem.org}magnitude").partition(" ")[2])
-        event["magtype"]=e.findtext("{http://www.emsc-csem.org}magnitude").partition(" ")[0]
-        event["depth"]=float(e.findtext("{http://www.emsc-csem.org}depth").partition(" ")[0])
+        event["time"]=calendar.timegm(time.strptime(e.findtext("{https://www.emsc-csem.org}time"),'%Y-%m-%d %H:%M:%S %Z'))
+        event["mag"]=float(e.findtext("{https://www.emsc-csem.org}magnitude").strip().partition(" ")[2])
+        event["magtype"]=e.findtext("{https://www.emsc-csem.org}magnitude").strip().partition(" ")[0]
+        event["depth"]=float(e.findtext("{https://www.emsc-csem.org}depth").strip().partition(" ")[0])
         event["region"]=e.findtext("title").strip()
         events.append(event)
     return events
