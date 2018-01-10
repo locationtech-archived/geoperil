@@ -430,13 +430,14 @@ if __name__=="__main__":
         print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
-    print("Feed: GeoNet")
-    for e in parsegns(requests.get("http://www.geonet.org.nz/quakes/services/all.rss").content):
-        e["provider"] = "gns"
-        e["providerurl"] = "http://www.geonet.org.nz"
-        e["providername"] = "GeoNet"
-        print("Event ID: {0}".format(e["eventid"]))
-        feedevent(e)
+# NOTE: 410 Page Gone
+#    print("Feed: GeoNet")
+#    for e in parsegns(requests.get("http://www.geonet.org.nz/quakes/services/all.rss").content):
+#        e["provider"] = "gns"
+#        e["providerurl"] = "http://www.geonet.org.nz"
+#        e["providername"] = "GeoNet"
+#        print("Event ID: {0}".format(e["eventid"]))
+#        feedevent(e)
 
     print("Feed: Portuguese Sea and Atmosphere Institute")
     for e in parseipma(requests.get("http://www.ipma.pt/resources.www/rss/sism_geral.xml").content):
