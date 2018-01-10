@@ -32,7 +32,11 @@ import calendar
 import re
 import json
 import sys
-from xml.etree.ElementTree import *
+try:
+    from xml.etree.cElementTree import *
+except ImportError:
+    from xml.etree.ElementTree import *
+    print("Warning: using slower xml implementation")
 
 regexalnum='([0-9\.]+)([A-Za-z]+)'
 
