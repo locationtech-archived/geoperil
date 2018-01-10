@@ -46,7 +46,7 @@ def parsegfz(data,idprefix=None):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ"}
@@ -71,7 +71,7 @@ def parsebgs(data,idprefix="BGS-"):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ"}
@@ -114,7 +114,7 @@ def parseesmc(data,idprefix="ESMC-"):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ"}
@@ -136,7 +136,7 @@ def parsega(data,idprefix="GA-"):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ","magtype":"M"}
@@ -161,7 +161,7 @@ def parsegdacs(data,idprefix="GDACS-"):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("item"):
         event={}
@@ -201,7 +201,7 @@ def parsegns(data,idprefix="GNS-"):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ","magtype":"M"}
@@ -227,7 +227,7 @@ def parseipma(data,idprefix="IPMA-"):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("spot"):
         event={"eventtype":"EQ"}
@@ -249,7 +249,7 @@ def parsekoeri(data,idprefix=None):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ","magtype":"M"}
@@ -273,7 +273,7 @@ def parsenoa(data,idprefix="NOA-"):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ"}
@@ -296,7 +296,7 @@ def parsenrc(data,idprefix="NRC-"):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ"}
@@ -322,7 +322,7 @@ def parseusgs(data,idprefix=None):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("{http://www.w3.org/2005/Atom}entry"):
         event={"eventtype":"EQ"}
@@ -347,7 +347,7 @@ def parsequakeml(data,idprefix=""):
     try:
         xml=fromstring(data)
     except ParseError as err:
-        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        sys.stderr.write("ParseError: {}, ID Prefix: {}\n".format(err, idprefix))
         return events
     for e in xml.iter("{http://quakeml.org/xmlns/bed/1.2}event"):
         event={"eventtype":"EQ"}
