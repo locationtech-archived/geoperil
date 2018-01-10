@@ -31,6 +31,7 @@ import datetime
 import calendar
 import re
 import json
+import sys
 from xml.etree.ElementTree import *
 
 regexalnum='([0-9\.]+)([A-Za-z]+)'
@@ -38,7 +39,11 @@ regexalnum='([0-9\.]+)([A-Za-z]+)'
 parsers={}
 def parsegfz(data,idprefix=None):
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ"}
         event["eventid"]=e.findtext("guid")
@@ -59,7 +64,11 @@ parsers["gfz"]=parsegfz
 
 def parsebgs(data,idprefix="BGS-"):
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ"}
         event["x"]=float(e.findtext("{http://www.w3.org/2003/01/geo/wgs84_pos#}long"))
@@ -98,7 +107,11 @@ parsers["bmkg"]=parsebmkg
 
 def parseesmc(data,idprefix="ESMC-"):
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ"}
         event["x"]=float(e.findtext("{http://www.w3.org/2003/01/geo/}long"))
@@ -116,7 +129,11 @@ parsers["esmc"]=parseesmc
 
 def parsega(data,idprefix="GA-"):
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ","magtype":"M"}
         point=e.findtext("{http://www.georss.org/georss}point").split()
@@ -137,7 +154,11 @@ parsers["ga"]=parsega
 
 def parsegdacs(data,idprefix="GDACS-"):
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("item"):
         event={}
         event["eventid"]=idprefix+e.findtext("guid")
@@ -173,7 +194,11 @@ def parsegns(data,idprefix="GNS-"):
     regexmag="<td><b>Magnitude</b></td><td>([0-9\.]+)</td></tr>"
     regexregion="<td><b>Location</b></td><td>(.*)</td></tr>"
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ","magtype":"M"}
         event["x"]=float(e.findtext("{http://www.w3.org/2003/01/geo/wgs84_pos#}long"))
@@ -195,7 +220,11 @@ parsers["gns"]=parsegns
 
 def parseipma(data,idprefix="IPMA-"):
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("spot"):
         event={"eventtype":"EQ"}
         event["x"]=float(e.get("lon"))
@@ -213,7 +242,11 @@ parsers["ipma"]=parseipma
 def parsekoeri(data,idprefix=None):
     events=[]
     #print(data)
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ","magtype":"M"}
         event["eventid"]=e.findtext("link").split("/")[-2]
@@ -233,7 +266,11 @@ parsers["koeri"]=parsekoeri
 
 def parsenoa(data,idprefix="NOA-"):
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ"}
         event["x"]=float(e.findtext("{http://www.w3.org/2003/01/geo/}long"))
@@ -252,7 +289,11 @@ parsers["noa"]=parsenoa
 
 def parsenrc(data,idprefix="NRC-"):
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("item"):
         event={"eventtype":"EQ"}
         event["time"]=calendar.timegm(time.strptime(e.findtext("pubDate"),'%a, %d %b %Y %H:%M:%S %Z'))
@@ -274,7 +315,11 @@ parsers["nrc"]=parsenrc
 
 def parseusgs(data,idprefix=None):
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("{http://www.w3.org/2005/Atom}entry"):
         event={"eventtype":"EQ"}
         event["time"]=calendar.timegm(time.strptime(e.findtext("{http://purl.org/dc/elements/1.1/}date"),'%Y-%m-%dT%H:%M:%SZ'))
@@ -295,7 +340,11 @@ parsers["usgs"]=parseusgs
 
 def parsequakeml(data,idprefix=""):
     events=[]
-    xml=fromstring(data)
+    try:
+        xml=fromstring(data)
+    except ParseError as err:
+        sys.stderr.write("ParseError: {}, ID Prefix: {}".format(err, idprefix))
+        return events
     for e in xml.iter("{http://quakeml.org/xmlns/bed/1.2}event"):
         event={"eventtype":"EQ"}
         event["eventid"]=e.get("catalog:eventid","")
