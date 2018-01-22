@@ -91,7 +91,8 @@ import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
-import com.mongodb.util.Base64Codec;
+
+import java.util.Base64;
 
 class Inst extends User {
 	
@@ -1360,10 +1361,9 @@ public class Services {
 		  } catch (NoSuchAlgorithmException e) {
 			return "{ \"status\": \"error\" }";
 		  }
-		  
-		  Base64Codec base64Codec = new Base64Codec();
+		  		 
 		  		  
-		  if( hash.equals( base64Codec.encode( sha256.digest( password.getBytes() ) ) ) ) {
+		  if( hash.equals( Base64.getEncoder().encodeToString( sha256.digest( password.getBytes() ) ) ) ) {
 			  
 			  if( session == null ) {
 				  session = getSessionKey();
