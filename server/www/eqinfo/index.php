@@ -721,7 +721,7 @@ if( ! isset( $_GET["id"] ) ) :
 		        layers : [
 		        	new ol.layer.Tile({
 						source:	new ol.source.TileWMS({
-									url: 'http://139.17.3.204:8080/geoserver/wms',
+									url: 'http://rz-vm65.gfz-potsdam.de:8080/geoserver/wms',
 									params: {'LAYERS': 'Quakes:etopo3857', 'VERSION': '1.1.1'}
 								})
 					})
@@ -736,7 +736,7 @@ if( ! isset( $_GET["id"] ) ) :
 				new ol.layer.Tile({
 					source: new ol.source.TileWMS({
 						preload: Infinity,
-						url: 'http://139.17.3.204:8080/geoserver/wms',
+						url: 'http://rz-vm65.gfz-potsdam.de:8080/geoserver/wms',
 						serverType:'geoserver',
 						params:{
 							'LAYERS':"Quakes:plattengrenzen", 
@@ -749,7 +749,7 @@ if( ! isset( $_GET["id"] ) ) :
 				new ol.layer.Tile({
 					source: new ol.source.TileWMS({
 						preload: Infinity,
-						url: 'http://139.17.3.204:8080/geoserver/wms',
+						url: 'http://rz-vm65.gfz-potsdam.de:8080/geoserver/wms',
 						serverType:'geoserver',
 						params:{
 							'LAYERS':"Quakes:geofon3857", 
