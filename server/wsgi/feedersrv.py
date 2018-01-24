@@ -196,8 +196,8 @@ class FeederSrv(BaseSrv):
                             vs["last_ts"] = daystart + max(vals.keys())
                             vs["first_ts"] = daystart + min(vals.keys())
                         else:
-                            vs["last_ts"] = daystart + max(max(vals.keys()), max(old["data"].keys()))
-                            vs["first_ts"] = daystart + min(min(vals.keys()), min(old["data"].keys()))
+                            vs["last_ts"] = daystart + max(max(vals.keys()), max([ int(x) for x in old["data"].keys() ]))
+                            vs["first_ts"] = daystart + min(min(vals.keys()), min([ int(x) for x in old["data"].keys() ]))
                         # End of Workaround
                         self._db["sealeveldata_new"].update(q, {
                             "$set":vs,
