@@ -469,12 +469,22 @@ public abstract class TsunamiAdapter implements IAdapter {
 	    	comps.add( cfz );
 	    }
 		/* Bulk insert. */
-		t1 = System.nanoTime();
-		db.getCollection("comp").insert(comps);
-		System.out.println("Comp: " + (System.nanoTime() - t1) / 1000000000.);
-		t1 = System.nanoTime();
-		db.getCollection("simsealeveldata").insert(sldata);
-		System.out.println("Sealevel: " + (System.nanoTime() - t1) / 1000000000.);
+		/* TODO: improve, just a hotfix to prevent inserting empty documents */
+		if (comps.size() == 0 && sldata.size() == 0) {
+			System.out.println("WARNING: <comps> and <sldata> is empty!");
+		}
+		System.out.println("comps items: " + comps.size());
+		if (comps.size() > 0) {
+			t1 = System.nanoTime();
+			db.getCollection("comp").insert(comps);
+			System.out.println("Comp: " + (System.nanoTime() - t1) / 1000000000.);
+		}
+		System.out.println("sldata items: " + sldata.size());
+		if (sldata.size() > 0) {
+			t1 = System.nanoTime();
+			db.getCollection("simsealeveldata").insert(sldata);
+			System.out.println("Sealevel: " + (System.nanoTime() - t1) / 1000000000.);
+		}
 		System.out.println("Total: " + (System.nanoTime() - t0) / 1000000000.);
 	}
 	
