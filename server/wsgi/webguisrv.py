@@ -1195,9 +1195,9 @@ class WebGuiSrv(BaseSrv):
             {"$sort": {"_id": 1}}
         ]
         res = self._db["stations"].aggregate(pipeline)
-        for r in res["result"]:
+        for r in res:
             r["on"] = (r["_id"] in user.get("countries",[])) == True
-        user["countries"] = res["result"]
+        user["countries"] = list(res)
         # TODO: better include wanted fields explicitly instead of removing irrelevant ones
         user.pop("password", None)
         user.pop("pwhash", None)
