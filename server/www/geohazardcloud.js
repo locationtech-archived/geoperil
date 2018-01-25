@@ -4498,9 +4498,14 @@ function charPad(num, count, char) {
 function id_equals(id1, id2) {
 
 	var fields = [ "_time", "_machine", "_inc", "_new" ];
+	var fields_new = [ "timestamp", "machineIdentifier", "processIdentifier", "counter" ];
 
 	for (i in fields)
 		if (id1[fields[i]] != id2[fields[i]])
+			return false;
+
+	for (i in fields_new)
+		if (id1[fields_new[i]] != id2[fields_new[i]])
 			return false;
 
 	// return ( id1.toSource() == id2.toSource() );
