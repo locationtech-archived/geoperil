@@ -423,7 +423,7 @@ if __name__=="__main__":
         feedevent(e)
 
     print("Feed: Global Disaster Alert and Coordination System")
-    for e in parsegdacs(requests.get("http://www.gdacs.org/rss.aspx").content):
+    for e in parsegdacs(requests.get("http://www.gdacs.org/xml/rss_eq_24h.xml").content):
         e["provider"] = "gdacs"
         e["providerurl"] = "http://www.gdacs.org"
         e["providername"] = "Global Disaster Alert and Coordination System"
