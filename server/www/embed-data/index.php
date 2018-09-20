@@ -58,12 +58,12 @@ function do_post_request($url, $data)
 	return $response;
 }
 
-$ret = ajax('http://'. $_SERVER['SERVER_NAME'] .'/srv/session', array() );
+$ret = ajax('https://'. $_SERVER['SERVER_NAME'] .'/srv/session', array() );
 
 if( $ret['status'] != 'success' ) {
 	/* redirect to login form - it is important to use the absolute url here,
 	 * because the server will deliver PHP code otherwise !!! */
-	echo do_post_request('http://' . $_SERVER['SERVER_NAME'] . '/embed-data/login.php', $data);
+	echo do_post_request('https://' . $_SERVER['SERVER_NAME'] . '/embed-data/login.php', $data);
 	die();
 }
 
@@ -77,7 +77,7 @@ if( $ret['status'] != 'success' ) {
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <link href="../css/bootstrap.css" rel="stylesheet">
 <link href="../geohazardcloud.css" rel="stylesheet">
-<link rel="stylesheet" href="http://openlayers.org/en/v3.4.0/css/ol.css" type="text/css">
+<link rel="stylesheet" href="//openlayers.org/en/v3.4.0/css/ol.css" type="text/css">
 <style>
 	.headline-fixed {
 		position: fixed;
@@ -225,8 +225,8 @@ if( $ret['status'] != 'success' ) {
 		margin: auto;
 	}
 </style>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCRRGvXI8yyuNgzb3nuQsNEcA8oIBd50WM&v=3.exp"></script>
-<script src="http://openlayers.org/en/v3.4.0/build/ol.js" type="text/javascript"></script>
+<script src="//maps.googleapis.com/maps/api/js?key=AIzaSyCRRGvXI8yyuNgzb3nuQsNEcA8oIBd50WM&v=3.exp"></script>
+<script src="//openlayers.org/en/v3.4.0/build/ol.js" type="text/javascript"></script>
 <script type="text/javascript">
 	window.onscroll = function () {
 	    var scrollPos = document.body.scrollTop;
@@ -300,7 +300,7 @@ if( ! isset( $_GET["id"] ) ) :
 </tr>
 <?php
 	$ret = ajax(
-		'http://'. $_SERVER['SERVER_NAME'] .'/webguisrv/get_events',
+		'https://'. $_SERVER['SERVER_NAME'] .'/webguisrv/get_events',
 		array( 'limit' => 50, "inst" => "gfz" )
 	);
 	$row = "row-even";
@@ -323,7 +323,7 @@ if( ! isset( $_GET["id"] ) ) :
 
 <?php
 	$evtid = htmlspecialchars( $_GET["id"] );
-	$url = 'http://'. $_SERVER['SERVER_NAME'] .'/webguisrv/get_event_info';
+	$url = 'https://'. $_SERVER['SERVER_NAME'] .'/webguisrv/get_event_info';
 	$data = array(
 			'apikey' => "6fc1358f8d505c34bce1eaa466e1d179",
 			'evid' => $evtid
@@ -437,7 +437,7 @@ if( ! isset( $_GET["id"] ) ) :
 	<h3 id="hazards">Other Sources</h3>
 	<div class="sec hazards">
 	<?php
-		$url = 'http://'. $_SERVER['SERVER_NAME'] .'/webguisrv/gethazardevents';
+		$url = 'https://'. $_SERVER['SERVER_NAME'] .'/webguisrv/gethazardevents';
 		$data = array(
 			'eventtype' => 'EQ',
 			'y' => $eq['prop']['latitude'],
