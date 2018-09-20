@@ -225,7 +225,7 @@ if( $ret['status'] != 'success' ) {
 		margin: auto;
 	}
 </style>
-<script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCRRGvXI8yyuNgzb3nuQsNEcA8oIBd50WM&v=3.exp"></script>
 <script src="http://openlayers.org/en/v3.4.0/build/ol.js" type="text/javascript"></script>
 <script type="text/javascript">
 	window.onscroll = function () {
