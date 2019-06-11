@@ -9,8 +9,8 @@ COPY requirements.txt requirements.txt
 
 RUN pip3 install -r requirements.txt
 
-COPY wsgi /var/www/geoperil/wsgi
-COPY www /var/www/geoperil/htdocs
+VOLUME ["/var/www/geoperil/wsgi", "/var/www/geoperil/htdocs"]
+
 COPY conf/apache2/sites-available/geoperil.conf /etc/apache2/sites-available/010-geoperil.conf
 
 RUN a2ensite 010-geoperil

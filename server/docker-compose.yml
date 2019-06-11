@@ -17,9 +17,14 @@ services:
       - '8080:80'
     depends_on:
       - mongo
+    volumes:
+      - ./wsgi:/var/www/geoperil/wsgi
+      - ./www:/var/www/geoperil/htdocs
+      - 'geoperil-logs:/var/log'
 
 volumes:
   data-volume:
+  geoperil-logs:
 
 networks:
   network:
