@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  mongo:
+    image: mongo:3.6.12
+    container_name: mongo
+    ports:
+      - '27017:27017'
+    volumes:
+      - 'data-volume:/data/db'
+  geoperil-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: server_geoperil-server
+    ports:
+      - '8080:80'
+    depends_on:
+      - mongo
+
+volumes:
+  data-volume:
+
+networks:
+  network:
+    external:
+      name: main_network
