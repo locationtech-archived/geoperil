@@ -1,0 +1,7 @@
+.idea
+.vscode
+server/tomcat/GeoHazardServices/target
+server/tomcat/GeoHazardServices/.classpath
+server/tomcat/GeoHazardServices/.project
+server/tomcat/GeoHazardServices/.settings
+__pycache__
