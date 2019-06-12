@@ -3,16 +3,33 @@ version: '3'
 services:
   mongo:
     image: mongo:3.6.12
-    container_name: mongo
+    container_name: geoperil-mongo
     ports:
       - '27017:27017'
     volumes:
       - 'data-volume:/data/db'
+
+  mongo-data:
+    image: geoperil-mondodb-data
+    build:
+      context: ./mongodb-data
+      dockerfile: Dockerfile
+    container_name: geoperil-mondodb-data
+    depends_on:
+      - mongo
+    volumes:
+      - ./mongodb-data/example-data:/tmp/example-data
+    command: ["/tmp/scripts/wait-for-mongodb.sh", "/tmp/scripts/import-example-data.sh"]
+    environment:
+      - MONGO_HOST=mongo
+      - MONGO_DB=trideccloud
+
   geoperil-server:
     build:
       context: .
       dockerfile: Dockerfile
-    image: server_geoperil-server
+    image: geoperil-server
+    container_name: geoperil-server
     ports:
       - '8080:80'
     depends_on:

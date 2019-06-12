@@ -1,0 +1,65 @@
+[
+    {
+        "_id": { "$oid": "333333333333333333333333" },
+        "type": "urls",
+        "wsgi": "localhost"
+    },
+    {
+        "_id": { "$oid": "666666666666666666666666" },
+        "type" : "dirs",
+        "results": "/tmp/geoperil/results/"
+    },
+    {
+        "_id": { "$oid": "888888888888888888888888" },
+        "type": "parameter",
+        "name": "localdir",
+        "value": "/tmp/geoperil/localdir"
+    },
+    {
+        "_id": { "$oid": "999999999999999999999999" },
+        "args": "-gpu -gpu-nreal 2 -gpu-nvirt 2",
+        "count": 2,
+        "dir": "/home/worker/EasyWave/web/worker",
+        "hardware": "GeForce GTX TITAN X",
+        "host": "cuda-server",
+        "priority": 10,
+        "remote": true,
+        "slots": 0,
+        "type": "worker",
+        "user": "worker"
+    },
+    {
+        "_id": { "$oid": "101010101010101010101010" },
+        "args": "",
+        "count": 2,
+        "dir": "/home/worker/HySEA/web/worker",
+        "hardware": "GeForce GTX TITAN X",
+        "host": "cuda-server",
+        "priority": 10,
+        "remote": true,
+        "slots": 2,
+        "type": "worker",
+        "user": "worker"
+    },
+    {
+        "_id": { "$oid": "aaaaaaaaaaaaaaaaaaaaaaaa" },
+        "type": "msg_template",
+        "provider": "PROVIDER",
+        "prolog": "%s %s %s",
+        "summary": "SUMMARY",
+        "advise": "ADVISE",
+        "params": "%s %s %s %s %s %s %s %s",
+        "measurements": "%s",
+        "eval_watch_first": "",
+        "eval_advisory_first": "",
+        "eval_info_first": "",
+        "eval_watch_mid": "",
+        "eval_advisory_mid": "",
+        "eval_watch_end": "",
+        "eval_advisory_end": "",
+        "tfps": "%s",
+        "supplement": "",
+        "final": "",
+        "epilog": "%s"
+    }
+]
