@@ -138,7 +138,7 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 <head>
 <title>EQ-Info</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<link href="../css/bootstrap.css" rel="stylesheet">
+<link href="//stackpath.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
 <link href="../geohazardcloud.css" rel="stylesheet">
 <link rel="stylesheet" href="//openlayers.org/en/v3.4.0/css/ol.css" type="text/css">
 <style>
