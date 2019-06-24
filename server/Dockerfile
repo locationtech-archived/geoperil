@@ -29,14 +29,22 @@ RUN a2enmod proxy && \
     a2enconf php7.2-fpm && \
     a2ensite 010-geoperil
 
-COPY ./tomcat/GeoHazardServices /tmp/GeoHazardServices
+COPY ./tomcat/GeoHazardServices /root/GeoHazardServices
 COPY ./tomcat/server.xml /etc/tomcat8/
 
-WORKDIR /tmp/GeoHazardServices
+# in this folder a KML file with the world sea regions is needed (as 'World_Seas.kml')
+# http://www.marineregions.org/download_file.php?name=World_Seas_IHO_v1_kmz.zip
+COPY ./db_manager /root/db_manager
+
+RUN sed -i -e 's@trideccloud\.gfz-potsdam\.de@localhost@' /root/db_manager/manager.py && \
+    sed -i -e 's@MongoReplicaSetClient@MongoClient@' /root/db_manager/manager.py && \
+    sed -i -e 's@mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0@mongodb://mongo@' /root/db_manager/manager.py
+
+WORKDIR /root/GeoHazardServices
 
 RUN sed -i -e 's@localhost@mongo@' src/main/resources/config.properties && \
     mvn clean package && \
-    cp /tmp/GeoHazardServices/target/*.war /var/lib/tomcat8/webapps/geohazardservices.war
+    cp /root/GeoHazardServices/target/*.war /var/lib/tomcat8/webapps/geohazardservices.war
 
 # workaround with "true" for bug https://github.com/moby/moby/issues/6800
 CMD service php7.2-fpm start && \
