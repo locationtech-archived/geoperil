@@ -2,21 +2,21 @@
    GeoPeril - A platform for the computation and web-mapping of hazard specific
    geospatial data, as well as for serving functionality to handle, share, and
    communicate threat specific information in a collaborative environment.
-   
+
    Copyright (C) 2013 GFZ German Research Centre for Geosciences
-   
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
-   
+
      http://apache.org/licenses/LICENSE-2.0
-   
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the Licence is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the Licence for the specific language governing permissions and
    limitations under the Licence.
-   
+
    Contributors:
    Johannes Spazier (GFZ) - initial implementation
    Sven Reissland (GFZ) - initial implementation
@@ -73,7 +73,7 @@ class WebGuiSrv(BaseSrv):
                 cookie['server_cookie']['version'] = 1
                 return jssuccess()
         return jsfail()
-            
+
     @cherrypy.expose
     def signout(self):
         user = self.getUser()
@@ -267,7 +267,7 @@ class WebGuiSrv(BaseSrv):
                 return jssuccess()
             return jsfail(errors = ["Either station or name are required."])
         return jsdeny()
-    
+
     @cherrypy.expose
     def getdata(self, station, start, end=None, inst=None):
         user = self.getUser()
@@ -359,7 +359,7 @@ class WebGuiSrv(BaseSrv):
             query = {"$and": [
                 {"minx": {"$gt": float(minx)} },
                 {"miny": {"$gt": float(miny)} },
-                {"maxx": {"$lt": float(maxx)} }, 
+                {"maxx": {"$lt": float(maxx)} },
                 {"maxy": {"$lt": float(maxy)} }
             ]}
         total = 0
@@ -423,7 +423,7 @@ class WebGuiSrv(BaseSrv):
             res = self._gettfps(evid)
             return jssuccess(comp=res)
         return jsdeny()
-    
+
     # for internal use
     def _gettfps(self, evid):
         crs = list(self._db["comp"].find({"EventID":evid, "type": "TFP"}))
@@ -436,7 +436,7 @@ class WebGuiSrv(BaseSrv):
             obj["eta"] = tfp["eta"]
             res.append(obj)
         return res
-                
+
     # static division into different TFP levels
     def get_tfp_level(self, tfp):
         if(tfp["eta"] == -1):
@@ -446,7 +446,7 @@ class WebGuiSrv(BaseSrv):
         if(tfp["ewh"] < 0.5):
             return "ADVISORY"
         return "WATCH"
-    
+
     @cherrypy.expose
     def get_msg_texts(self, evtid, kind, form=None):
         user = self.getUser()
@@ -484,7 +484,7 @@ class WebGuiSrv(BaseSrv):
         if tfps:
             len_location = max( max( [len(v["name"]) for v in tfps] ), 8)
             len_region = max( max( [len(v["country"]) for v in tfps] ), 6)
-        
+
             tfp_text += "%s  %s   %s    %s \n" %(
                 "LOCATION".ljust(len_location),
                 "REGION".ljust(len_region),
@@ -526,7 +526,7 @@ class WebGuiSrv(BaseSrv):
         levels["advisory"] = layout( [v for v in ewhs if v["ewh"] > 1 and v["ewh"] <= 3] )
         levels["info"] = layout( [v for v in ewhs if v["ewh"] > 0.3 and v["ewh"] <= 1] )
         threat = layout(etas,set())
-        
+
         ## create table of gauge locations
         gauge_text = ""
         has_initial_gauges = False
@@ -559,11 +559,11 @@ class WebGuiSrv(BaseSrv):
                 )
             if pickings:
                 gauge_text = template["observations"] % indent(gauge_text)
-        ## 
+        ##
         step = "end" if kind == "end" else "mid" if nr > 1 else "first"
         g = lambda v,t,l: t[[ x for x in l if x in t and l.index(v) <= l.index(x)][0]]
         f = lambda t: g(step, t, ["end", "mid", "first"])
-  
+
         # find previous magnitude
         mag = eq["prop"]["magnitude"]
         prev_mag = self._db["eqs"].find_one({"_id": prev_msg["ParentId"]})["prop"]["magnitude"] if prev_msg else None
@@ -644,7 +644,7 @@ class WebGuiSrv(BaseSrv):
         # ISO-2 map used to build the SMS text later on - initialize given keys with empty sets
         iso_map = {key: set() for key in ["WATCH", "ADVISORY", "INFORMATION"]}
         # pick up neccessary data
-        data = {}       
+        data = {}
         # define maximal size of TFP or zone name
         maxsize = 30
         tostr = lambda x: x["country"] + " - " + x["name"]
@@ -662,7 +662,7 @@ class WebGuiSrv(BaseSrv):
             headlen = max(headlen, len( tostr(tfp) ))
             # add short ISO-2 country name to set - duplicates are avoided this way
             iso_map[level].add(tfp["iso_2"])
-       
+
         headlen = min(headlen, maxsize)
         headlines = ("LOCATION-FORECAST POINT".ljust(headlen), "COORDINATES   ", "ARRIVAL TIME", "LEVEL       ")
         headlen = len( headlines[0] )
@@ -700,7 +700,7 @@ class WebGuiSrv(BaseSrv):
                         )
                     )
             tfp_txt += "\n"
-    
+
         maxsize = 45
         # remove all CFZs with an ETA value of -1
         cfzs = [ v for v in cfzs if v["eta"] > -1 ]
@@ -715,7 +715,7 @@ class WebGuiSrv(BaseSrv):
             for head in headlines:
                 cfz_txt += "%s " % "".ljust(len(head), '-')
             cfz_txt += "\n"
-    
+
             for cfz in sorted( cfzs, key=lambda x: x["eta"] ):
                 level = self.get_tfp_level( cfz )
                 arr_min = math.floor(cfz["eta"])
@@ -735,7 +735,7 @@ class WebGuiSrv(BaseSrv):
                 iso_map[level].add(cfz["ISO2"])
             cfz_txt += "\n"
 
-        # 
+        #
         applies = {}
         countries = []
         for level in sorted(data, key=lambda x: len(x) ):
@@ -745,7 +745,7 @@ class WebGuiSrv(BaseSrv):
                     applies[level] += "%s ... " % country
                     countries.append(country)
             applies[level] = applies[level][:-5]
-        
+
         # get message template
         template = self._db["settings"].find_one({"type": "msg_template"})
 
@@ -773,7 +773,7 @@ class WebGuiSrv(BaseSrv):
         # summaries
         for level in sorted(data, key=lambda x: len(x) ):
             if level == "INFORMATION" and kind == "end":
-                continue 
+                continue
             if applies[level] != "":
                 msg += template["summary"] %(
                     "END OF " if kind == "end" else "",
@@ -836,23 +836,23 @@ class WebGuiSrv(BaseSrv):
         elif kind == "end":
             msg += template["eval_watch_end"]
             msg += template["eval_advisory_end"]
-        
+
         # append table of TFP values if available
         if kind == "info":
             if "WATCH" in data or "ADVISORY" in data:
                 msg += template["tfps"] % tfp_txt
-        
+
         # append table of CFZ values if available
         if cfzs:
             msg += cfz_txt
-        
-        # 
+
+        #
         if kind == "info":
             msg += template["supplement"]
         else:
             msg += template["final"]
         msg += template["epilog"] % nr
-        
+
         # build SMS text
         sms = "*TEST*TSUNAMI EXERCISE MSG;"
         # TODO: make dynamic?
@@ -872,9 +872,9 @@ class WebGuiSrv(BaseSrv):
             abs(eq["prop"]["latitude"]), "S" if eq["prop"]["latitude"] < 0 else "N",
             abs(eq["prop"]["longitude"]), "W" if eq["prop"]["longitude"] < 0 else "E",
             eq["prop"]["depth"],
-        )  
+        )
         return {"mail": msg, "sms": sms, "msgnr": nr}
-    
+
     # public interface to get all information about an earthquake event
     @cherrypy.expose
     def get_event_info(self,apikey,evid):
@@ -891,14 +891,14 @@ class WebGuiSrv(BaseSrv):
                 if "process" in eq:
                     evt["simulation"] = eq["process"][0]
                     if "shared_link" in eq:
-                        evt["simulation"]["shared_link"] = self.get_hostname() + "/?share=" + str(eq["shared_link"]) 
+                        evt["simulation"]["shared_link"] = self.get_hostname() + "/?share=" + str(eq["shared_link"])
                         evt["simulation"]["image_url"] = self.get_hostname() + "/snapshots/" + str(eq["shared_link"]) + ".png"
-                    
+
                 msg = self._get_msg_texts(eq['_id'], "info")["mail"]
                 return jssuccess(eq=evt,msg=msg)
             return jsfail()
         return jsdeny()
-    
+
     # create a shared link and return its ID - internal usage only
     def _make_shared_link(self, evtid, lon, lat, zoom, userid):
         obj = {
@@ -909,18 +909,18 @@ class WebGuiSrv(BaseSrv):
             "timestamp": datetime.datetime.utcnow(),
             "userid": userid
         }
-        # return ID of inserted object 
+        # return ID of inserted object
         return self._db["shared_links"].insert( obj )
-    
+
     # public interface to create a shared link
-    @cherrypy.expose 
+    @cherrypy.expose
     def make_shared_link(self, evtid, lon, lat, zoom):
         user = self.getUser()
         if user is not None:
             link_id = self._make_shared_link( evtid, lon, lat, zoom, user["_id"] )
             return jssuccess(key=link_id)
         return jsdeny()
-    
+
     # create a PNG image based on a shared link and return the file as binary data
     def make_image(self, link_id):
         # call phantomjs to make a snapshot
@@ -928,7 +928,7 @@ class WebGuiSrv(BaseSrv):
         # provide file for download
         dst = os.path.join(config["global"]["snapshotdir"], str(link_id) + '.png')
         subprocess.call(path + "phantomjs " + path + "snapshot.js " + self.get_hostname() + "/?share=" + str(link_id) + " " + dst + " '#mapview'", shell=True)
-   
+
     @cherrypy.expose
     def create_missing_images(self):
         events = self._db["eqs"].find({"shared_link": { "$ne": None }})
@@ -941,7 +941,7 @@ class WebGuiSrv(BaseSrv):
 
     # this method is called by the tomcat-server if the computation
     # of an earthquake event is completed - just a workaround until
-    # we have everything merged into this python module 
+    # we have everything merged into this python module
     @cherrypy.expose
     def post_compute(self, evtid):
         evt = self._db["eqs"].find_one({"_id": evtid})
@@ -960,7 +960,7 @@ class WebGuiSrv(BaseSrv):
             if inst is not None and (inst["name"] == "gfz" or inst["name"] == "tdss15"):
                 self._notify_users(evtid, link_id)
         return jssuccess()
-    
+
     def _notify_users(self, evtid, link_id=None):
         template = self._db["settings"].find_one({"type": "notify_template"})
         evt = self._db["eqs"].find_one({"_id": evtid})
@@ -992,7 +992,7 @@ class WebGuiSrv(BaseSrv):
                     #    kind = "M-NOC"
                 else:
                     # new event - check initial conditions
-                    kind = "NMSG"        
+                    kind = "NMSG"
             if kind is not None:
                 location = "OFF SHORE" if evt["prop"]["sea_area"] is not None else "INLAND"
                 if user["notify"].get("sms"):
@@ -1001,7 +1001,7 @@ class WebGuiSrv(BaseSrv):
                     twifrom = user["properties"].get("TwilioFrom","")
                     to = user["notify"]["sms"]
                     text = template["sms_text"] % (
-                        kind, 
+                        kind,
                         evt["prop"]["region"],
                         evt["prop"]["magnitude"],
                         location,
@@ -1011,7 +1011,7 @@ class WebGuiSrv(BaseSrv):
                     print("CLOUD SMS-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))
                 if user["notify"].get("mail"):
                     to = user["notify"]["mail"]
-                    subject = "[TC] %s: %.1f, %uKM, %s, %s, %s" % ( 
+                    subject = "[TC] %s: %.1f, %uKM, %s, %s, %s" % (
                         kind, evt["prop"]["magnitude"], evt["prop"]["depth"],
                         location, evt["id"], evt["prop"]["region"]
                     )
@@ -1025,7 +1025,7 @@ class WebGuiSrv(BaseSrv):
                     if user["notify"].get("includeMsg"):
                         text += template["mail_text_msg"] % self._get_msg_texts(evtid,"info")["mail"]
                     ret = sendmail("TRIDEC CLOUD <tridec-cloud-noreply@gfz-potsdam.de>", to, subject, text)
-                    print("CLOUD Mail-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))        
+                    print("CLOUD Mail-Notification: " + user["username"] + ", " + to + ", " + str(ret[0]))
         return
 
     # can be used to download the image
@@ -1038,18 +1038,18 @@ class WebGuiSrv(BaseSrv):
             cherrypy.response.headers["Content-Disposition"] = cd
             return evt["image"]
         return jsfail()
-    
+
     # retrieve a UTC timestamp from a given datetime object in UTC
-    def _get_utc_timestamp(self, utc_date): 
+    def _get_utc_timestamp(self, utc_date):
         return (utc_date - datetime.datetime(1970, 1, 1)) / datetime.timedelta(seconds=1)
-    
+
     # retrieve a UCT datetime object from a given UTC timestamp
     def _get_utc_date(self, utc_timestamp):
         sec_ms = str(utc_timestamp).split('.')
         sec = int(sec_ms[0])
         ms = int(sec_ms[1].ljust(6,'0')) if len(sec_ms) > 1 else 0
         return datetime.datetime.utcfromtimestamp(sec).replace(microsecond=ms)
-    
+
     def _get_events(self, user=None, inst=None, time=0.0, limit=200):
         query = [];
         maxtime = 0.0;
@@ -1071,14 +1071,14 @@ class WebGuiSrv(BaseSrv):
         if len(events) > 0:
             maxtime = self._get_utc_timestamp( max( events, key=lambda x: x["timestamp"] )["timestamp"] )
         return {"events": events, "maxtime": maxtime}
-    
+
     @cherrypy.expose
     def get_geofon_events(self, time=0.0, limit=200, apikey=None):
         if self.auth_api(apikey, "inst") is not None:
             rslt = self._get_events(None, "gfz", time, limit)
             return jssuccess(**rslt)
         return jsdeny()
-        
+
     @cherrypy.expose
     def get_events(self, inst=None, limit=200):
         user = self.getUser()
@@ -1105,7 +1105,7 @@ class WebGuiSrv(BaseSrv):
     @cherrypy.expose
     def gethazardevents(self,**parameters):
         return self.get_hazard_event(**parameters)
-    
+
     @cherrypy.expose
     def save_picking(self, evtid, station, data):
         user = self.getUser()
@@ -1117,7 +1117,7 @@ class WebGuiSrv(BaseSrv):
             )
             return jssuccess()
         return jsdeny()
-    
+
     @cherrypy.expose
     def load_picking(self, evtid, station):
         user = self.getUser()
@@ -1129,7 +1129,7 @@ class WebGuiSrv(BaseSrv):
                 return jssuccess(data=obj["data"])
             return jsfail()
         return jsdeny()
-    
+
     @cherrypy.expose
     def saveusersettings(self, props, inst, notify, api, stations=None, curpwd=None, newpwd=None):
         user = self.getUser()
@@ -1175,7 +1175,7 @@ class WebGuiSrv(BaseSrv):
             self._db["users"].update({"username": user["username"]}, {"$set": user})
             return jssuccess(user=self._get_user_obj(user))
         return jsdeny()
-    
+
     # this method collects all the user data that should be delivered to the client -
     # sensible information need to be removed
     def _get_user_obj(self, user):
@@ -1204,12 +1204,12 @@ class WebGuiSrv(BaseSrv):
         user.pop("pwsalt", None)
         user.pop("session", None)
         return user
-    
-    # generates a random key of 32 hexadecimal characters 
+
+    # generates a random key of 32 hexadecimal characters
     @cherrypy.expose
     def generate_apikey(self):
         return jssuccess(key=binascii.b2a_hex(os.urandom(16)).decode("ascii"))
-    
+
     @cherrypy.expose
     def generate_report(self, evtid):
         msg = self._get_msg_texts(evtid, "info")["mail"]
@@ -1236,7 +1236,7 @@ class WebGuiSrv(BaseSrv):
         cherrypy.response.headers['Content-Type'] = "application/pdf"
         cherrypy.response.headers['Content-Disposition'] = 'attachment; filename="report_%s.pdf"' % evtid
         return self.html2pdf(txt)
-    
+
     @cherrypy.expose
     def delete_event(self, inst, secret, evtid):
         inst = self._db["institutions"].find_one({"name": inst, "secret": secret})
@@ -1250,12 +1250,12 @@ class WebGuiSrv(BaseSrv):
                 return jssuccess()
             return jsfail()
         return jsdeny()
-    
+
     @cherrypy.expose
     def get_stats(self, time):
         aggr = [
-            # include all records since given time 
-            { "$match": { 
+            # include all records since given time
+            { "$match": {
                 "date": { "$gte": self._get_utc_date(time) }
             }},
             # group records of same day and same user together; add count
@@ -1271,14 +1271,14 @@ class WebGuiSrv(BaseSrv):
             # second group: now combine the list of days per user
             {"$group": {
                 "_id": "$_id.user",
-                "logins": { 
-                    "$push": { 
+                "logins": {
+                    "$push": {
                         "year": "$_id.year",
                         "month": "$_id.month",
                         "day": "$_id.day",
                         "count": "$count"
                     }
-                } 
+                }
             }},
             # rename and hide some fields
             {"$project": {
@@ -1287,7 +1287,7 @@ class WebGuiSrv(BaseSrv):
                 "logins": 1
             }}
         ]
-        res = self._db["logins"].aggregate(aggr)          
-        return jssuccess(users=res["result"])
-    
+        res = self._db["logins"].aggregate(aggr)
+        return jssuccess(users=list(res))
+
 application = startapp( WebGuiSrv )
