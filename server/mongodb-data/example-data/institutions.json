@@ -4,7 +4,8 @@
 		"name": "gfz",
 		"secret": "cc5e19a258524cb4b70dc9c0441df65c",
 		"api": {
-			"key": "7e93c6cdb8bb4825b8451e0d5ebfdb40"
+			"key": "7e93c6cdb8bb4825b8451e0d5ebfdb40",
+			"enabled": true
 		}
 	}
 ]
