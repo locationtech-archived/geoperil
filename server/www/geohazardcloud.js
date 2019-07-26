@@ -1922,8 +1922,7 @@ function StationView(widget, data) {
 		this.widget.scroll(this.onScroll.bind(this));
 }
 
-function Symbol(marker, idx, list) {
-
+function SingleSymbol(marker, idx, list) {
 	this.marker = marker;
 	this.idx = idx;
 	this.list = list; /* StationSymbols */
@@ -2014,7 +2013,7 @@ function StationSymbols(data, show) {
 				}
 			});
 
-			this.symbols.push(new Symbol(marker, i, this));
+			this.symbols.push(new SingleSymbol(marker, i, this));
 		}
 
 		this.show(this.visible);
