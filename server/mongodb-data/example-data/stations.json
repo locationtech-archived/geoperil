@@ -1,0 +1,18 @@
+[
+    {
+        "_id" : { "$oid": "555555555555555555555555" },
+        "name" : "teststation",
+        "country" : "USA",
+        "lon" : -20.000,
+        "countryname" : "USA",
+        "UTCOffset" : 0,
+        "inst" : "gfz_ex_test",
+        "Location" : "Station Location",
+        "lat" : 70.000,
+        "type" : "SE",
+        "slmcode" : "scor",
+        "sensor" : "prs",
+        "lastmetadataupdate" : 1561075458,
+        "units" : "M"
+    }
+]
