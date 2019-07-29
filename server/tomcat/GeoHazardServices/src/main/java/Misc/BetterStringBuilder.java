@@ -2,21 +2,21 @@
  * GeoPeril - A platform for the computation and web-mapping of hazard specific
  * geospatial data, as well as for serving functionality to handle, share, and
  * communicate threat specific information in a collaborative environment.
- * 
+ *
  * Copyright (C) 2013 GFZ German Research Centre for Geosciences
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
- * 
+ *
  * Contributors:
  * Johannes Spazier (GFZ) - initial implementation
  * Sven Reissland (GFZ) - initial implementation
@@ -26,13 +26,13 @@
 package Misc;
 
 public class BetterStringBuilder {
-	
+
 	private StringBuilder builder;
-	
+
 	public BetterStringBuilder() {
 		builder = new StringBuilder();
 	}
-	
+
 	public BetterStringBuilder append(boolean b) {
 		builder.append(b);
 		return this;
@@ -92,7 +92,7 @@ public class BetterStringBuilder {
 		builder.append(s);
 		return this;
 	}
-	
+
 	public BetterStringBuilder append(StringBuffer sb) {
 		builder.append(sb);
 		return this;
@@ -271,26 +271,26 @@ public class BetterStringBuilder {
 	public void trimToSize() {
 		builder.trimToSize();
 	}
-	
+
 	/* Added */
 	public BetterStringBuilder appendln(int i) {
 		return this.append(i).newline();
 	}
-	
+
 	public BetterStringBuilder appendln(String s) {
 		return this.append(s).newline();
 	}
-	
+
 	public BetterStringBuilder newline() {
 		return this.append( System.getProperty("line.separator") );
 	}
-	
+
 	public BetterStringBuilder appendMany(String...strings) {
 		for(String s: strings)
 			this.append(s);
 		return this;
 	}
-	
+
 	public BetterStringBuilder appendManyNl(String...strings) {
 		return this.appendMany(strings).newline();
 	}

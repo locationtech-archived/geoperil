@@ -2,21 +2,21 @@
  * GeoPeril - A platform for the computation and web-mapping of hazard specific
  * geospatial data, as well as for serving functionality to handle, share, and
  * communicate threat specific information in a collaborative environment.
- * 
+ *
  * Copyright (C) 2013 GFZ German Research Centre for Geosciences
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
- * 
+ *
  * Contributors:
  * Johannes Spazier (GFZ) - initial implementation
  * Sven Reissland (GFZ) - initial implementation
@@ -55,9 +55,9 @@ public abstract class TsunamiAdapter implements IAdapter {
 	protected String hardware;
 	protected String args;
 	protected LocalConnection localCon;
-	
+
 	private HashMap<String, DBObject> locations;
-	
+
 	public TsunamiAdapter(DB db, SshConnection[] sshCon, File workdir, String hardware, String args) throws IOException {
 		this.db = db;
 		this.sshCon = sshCon;
@@ -66,14 +66,14 @@ public abstract class TsunamiAdapter implements IAdapter {
 		this.args = args;
 		this.localCon = new LocalConnection(workdir.getAbsolutePath());
 	}
-	
+
 	@Override
 	public int handleRequest(Task task) {
 		if( task instanceof EQTask )
 			return handleRequest( (EQTask)task );
 		throw new IllegalArgumentException("TsunamiAdapter requires EQTask.");
 	}
-	
+
 	public int handleRequest(EQTask task) {
 		System.out.println("TsuamiAdapter: " + task);
 		try {
@@ -105,17 +105,17 @@ public abstract class TsunamiAdapter implements IAdapter {
 			return -1;
 		}
 	}
-	
+
 	protected abstract void writeFault(EQTask task) throws IOException;
 	protected abstract void writeLocations(EQTask task) throws IOException;
 	protected abstract int simulate(EQTask task) throws IOException, SimulationException;
 	protected abstract int readLocations(EQTask task) throws IOException;
-	
+
 	private void markAsFailed(EQTask task) {
 		BasicDBObject obj = new BasicDBObject("_id", task.id );
 		BasicDBObject setter = new BasicDBObject("process.0.failed", true);
 		db.getCollection("eqs").update( obj, new BasicDBObject( "$set", setter ) );
-		
+
 		BasicDBObject event = new BasicDBObject();
 		event.append( "id", task.id );
 		event.append( "user", task.user.objId );
@@ -123,25 +123,25 @@ public abstract class TsunamiAdapter implements IAdapter {
 		event.append( "event", "update" );
 		db.getCollection("events").insert( event );
 	}
-	
+
 	/* Should be called by child classes if progress of simulation has changed. */
 	protected int updateProgress(EQTask task) throws IOException {
 		return updateProgress(task, false);
 	}
-	
+
 	private int updateProgress(EQTask task, boolean finalize) throws IOException {
 		/*  */
 		if( task.progress == 100.0f && ! finalize )
 			return 0;
-		
+
 		/* create a kml file if at least 10 minutes of simulation are done */
 		System.out.println(task.prevSimTime + " -> " + task.curSimTime);
 		if( task.curSimTime > task.prevSimTime && task.dt_out > 0 )
 			createIsolines(task, task.curSimTime);
-		
+
 		/* DB object to find current earthquake ID */
 		BasicDBObject obj = new BasicDBObject("_id", task.id );
-		
+
 		/* create sub-object that is used to update the current progress */
 		BasicDBObject setter = new BasicDBObject("raw_progress",  task.progress);
 		if( task.raw == 0 ) {
@@ -149,12 +149,12 @@ public abstract class TsunamiAdapter implements IAdapter {
 			setter.put( "process." + 0 + ".curSimTime", task.curSimTime );
 			setter.put( "process." + 0 + ".calcTime", task.calcTime );
 		}
-		
+
 		/* build update query */
 		BasicDBObject update = new BasicDBObject( "$set", setter );
 		/* update the DB entry with the given ID*/
 		db.getCollection("eqs").update( obj, update );
-		
+
 		if( task.raw == 0 ) {
 			/* create DB object that holds all event data */
 			BasicDBObject event = new BasicDBObject();
@@ -163,25 +163,25 @@ public abstract class TsunamiAdapter implements IAdapter {
 			event.append( "timestamp", new Date() );
 			event.append( "event", "progress" );
 			event.append( "progress", task.progress );
-								
+
 			/* create reference event that should be updated */
 			BasicDBObject refEvent = new BasicDBObject("id", task.id );
 			refEvent.put( "event", "progress" );
-			
+
 			/* update the reference event with the new data */
 			db.getCollection("events").update( refEvent, event, true, false );
 		}
-		
+
 		updateEventSet(task);
-		
+
 		return 0;
 	}
-	
+
 	private void updateEventSet(EQTask task) {
-		
+
 		if( task.evtset == null || task.raw == 1 )
 			return;
-		
+
 		/* Update Event-Set progress. */
 		synchronized(task.evtset) {
 			if( task.progress == 100.0f )
@@ -202,15 +202,15 @@ public abstract class TsunamiAdapter implements IAdapter {
 			}
 		}
 	}
-	
+
 	/* Should be called by child classes if the computation was successfully started. */
 	protected int initialProgress(EQTask task) {
 			if( task.raw == 1 )
 				return 0;
-		
+
 			/* DB object to find current earthquake ID */
 			BasicDBObject obj = new BasicDBObject("_id", task.id );
-			
+
 			/* create sub-object that holds all event data */
 			BasicDBObject dbObject = new BasicDBObject();
 			dbObject.put( "progress", 0.0 );
@@ -222,16 +222,16 @@ public abstract class TsunamiAdapter implements IAdapter {
 			dbObject.put( "calcTime", 0.0 );
 			dbObject.put( "resources", this.hardware );
 			dbObject.put( "algorithm", task.algo );
-			
+
 			/* create final DB object used to update the collection  */
 			BasicDBObject update = new BasicDBObject();
 			update.put( "$push", new BasicDBObject( "process", dbObject ) );
-			
+
 			/* append a new process entry and return the corresponding index */
 			db.getCollection("eqs").findAndModify( obj, null, null, false, update, true, false);
 			return 0;
 	}
-	
+
 	protected void saveRawData(EQTask task) throws IOException {
 		DBObject dirs = db.getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
 		String resdir = (String) dirs.get("results") + "/events/" + task.id;
@@ -249,14 +249,14 @@ public abstract class TsunamiAdapter implements IAdapter {
 			new BasicDBObject("$set", new BasicDBObject("stored", true))
 		);
 	}
-	
+
 	protected void finalize(EQTask task) throws IOException {
-		
+
 		saveRawData(task);
-		
+
 		if( task.evtset == null && task.raw == 0 )
 			Services.sendPost(GlobalParameter.wsgi_url + "webguisrv/post_compute", "evtid=" + task.id);
-		
+
 		/* Update Event-Set progress. */
 		if( task.evtset != null && task.raw == 0 ) {
 			BasicDBObject set = new BasicDBObject("_id", task.evtset.setid );
@@ -267,7 +267,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 			}
 		}
 	}
-	
+
 	private int evtset_post(EventSet evtset) throws IOException {
 		DBObject dirs = db.getCollection("settings").findOne(new BasicDBObject("type", "dirs"));
 		String resdir = (String) dirs.get("results");
@@ -301,24 +301,24 @@ public abstract class TsunamiAdapter implements IAdapter {
 		saveRawData(dummy);
 		return 0;
 	}
-	
+
 	protected void cleanup(EQTask task) throws IOException {
 		sshCon[0].runCmd(
 			String.format("rm -f heights.*.kml arrival.*.kml fault.inp locations.inp eWave.2D.sshmax range.grd")
 		);
 	}
-	
+
 	protected HashMap<String, DBObject> getLocations() {
 		return locations;
 	}
-	
+
 	protected void prepareLocations(EQTask task) {
 		locations = new HashMap<String, DBObject>();
 		prepareTFPs(task, locations);
 		prepareTSPs(task, locations);
 		prepareStations(task, locations);
 	}
-	
+
 	private void prepareTFPs(EQTask task, HashMap<String, DBObject> locations) {
 		DBObject tfpQuery = null;
 		if( task.user.inst != null ) {
@@ -326,7 +326,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 			DBObject instObj = db.getCollection("institutions").findOne(
 				new BasicDBObject("name", task.user.inst)
 			);
-		
+
 			if( instObj != null ) {
 				@SuppressWarnings("unchecked")
 				List<Object> tfpList = (List<Object>) instObj.get("tfps");
@@ -339,7 +339,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 				}
 			}
 		}
-						
+
 		for( DBObject obj: db.getCollection("tfps").find( tfpQuery ) ) {
 			String id = (String) obj.get( "_id" ).toString();
 			DBObject init = new BasicDBObject();
@@ -353,10 +353,10 @@ public abstract class TsunamiAdapter implements IAdapter {
 			locations.put( id, init );
 		}
 	}
-	
+
 	private void prepareTSPs(EQTask task, HashMap<String, DBObject> locations) {
 		for( DBObject obj: db.getCollection("tsps").find() ) {
-			String id = (String) obj.get( "_id" ).toString();			
+			String id = (String) obj.get( "_id" ).toString();
 			DBObject init = new BasicDBObject();
 			init.put( "lat", obj.get( "lat_sea" ) );
 			init.put( "lon", obj.get( "lon_sea" ) );
@@ -370,7 +370,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 			locations.put( id, init );
 		}
 	}
-	
+
 	private void prepareStations(EQTask task, HashMap<String, DBObject> locations) {
 		BasicDBList andList = new BasicDBList();
 		/* check if a real user requests this computation */
@@ -384,16 +384,16 @@ public abstract class TsunamiAdapter implements IAdapter {
 				ccodes = new BasicDBList();
 			andList.add(
 				new BasicDBObject("country", new BasicDBObject("$in", ccodes) )
-			);			
+			);
 		}
-		
+
 		String inst = task.user.inst;
 		if( inst == null || inst.equals("gfz") || inst.equals("tdss15") )
 			inst = "gfz_ex_test";
 		andList.add( new BasicDBObject( "inst", inst ) );
-				
+
 		for( DBObject obj: db.getCollection("stations").find( new BasicDBObject("$and", andList) )) {
-			String id = (String) obj.get( "name" );		
+			String id = (String) obj.get( "name" );
 			DBObject init = new BasicDBObject();
 			init.put( "lat", obj.get( "lat" ) );
 			init.put( "lon", obj.get( "lon" ) );
@@ -402,7 +402,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 			locations.put( id, init );
 		}
 	}
-	
+
 	protected void finalizeLocations(EQTask task) {
 		long t0, t1;
 		t0 = System.nanoTime();
@@ -432,7 +432,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 					sldata.add(obj);
 				}
 			}
-			
+
 			/* Update maximal and minimal CFZ values. */
 			if( loc.get("type").equals("TSP") ) {
 			    Double ewh = (Double) loc.get("ewh");
@@ -487,31 +487,31 @@ public abstract class TsunamiAdapter implements IAdapter {
 		}
 		System.out.println("Total: " + (System.nanoTime() - t0) / 1000000000.);
 	}
-	
+
 	protected int createJets(EQTask task, String ewh) throws IOException {
-		
+
 		/* Nothing to do if a raw computation was requested. */
 		if( task.raw > 0 )
 			return 0;
 
 		String kml_file = String.format("heights.%s.kml", ewh);
-		
+
 		/* ssh should be okay upon here, therefore run commands */
 		sshCon[0].runCmds(
 			String.format("gdal_contour -f kml -fl %1$s eWave.2D.sshmax heights.%1$s.kml", ewh),
 			String.format("ogr2ogr -f kml -simplify 0.001 heights.%1$s.kml heights.%1$s.kml", ewh)
-		);		
+		);
 		sshCon[0].copyFile(kml_file, workdir + "/" + kml_file);
-			
+
 		localCon.runCmd( String.format("python3 ../getEWH.py heights.%1$s.kml %1$s %2$s", ewh, task.id) );
 		return 0;
 	}
-	
+
 	protected int createIsolines(EQTask task, int time) throws IOException {
 		/* Nothing to do if a raw computation was requested. */
 		if( task.raw > 0 )
 			return 0;
-		
+
 		/* Use second ssh connection. */
 		sshCon[1].runCmd(
 			String.format("ogr2ogr -f kml -simplify 0.001 arrival.%1$d.kml arrival.%1$d.kml", time - 10)
@@ -521,7 +521,7 @@ public abstract class TsunamiAdapter implements IAdapter {
 		localCon.runCmd(
 			String.format("python3 ../getShape.py arrival.%1$d.kml %1$d %2$s", time - 10, task.id)
 		);
-		
+
 		return 0;
 	}
 }

@@ -2,21 +2,21 @@
  * GeoPeril - A platform for the computation and web-mapping of hazard specific
  * geospatial data, as well as for serving functionality to handle, share, and
  * communicate threat specific information in a collaborative environment.
- * 
+ *
  * Copyright (C) 2013 GFZ German Research Centre for Geosciences
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
- * 
+ *
  * Contributors:
  * Johannes Spazier (GFZ) - initial implementation
  * Sven Reissland (GFZ) - initial implementation
@@ -73,12 +73,12 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 		}
 		sshCon[0].writeFile(strLocations.toString(), "locations.inp");
 	}
-	
+
 	@Override
 	protected int readLocations(EQTask task) throws IOException {
 		if( task.raw > 0 )
 			return 0;
-				
+
 		HashMap<String, DBObject> locations = getLocations();
 		/* Read TFPs and TSPs from file. */
 		List<String> lines = sshCon[0].readFile("eWave.poi.summary");
@@ -92,11 +92,11 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 				loc.put( "ewh", Double.valueOf( data[2] ) );
 			}
 		}
-		
+
 		/* Read stations from file. */
 		Map<Integer, String> statIds = new HashMap<Integer, String>();
 		lines = sshCon[0].readFile("eWave.poi.ssh");
-		/* search for stations in headline and store related index */		
+		/* search for stations in headline and store related index */
 		for( int i = 0; i < lines.size(); i++ ) {
 			String[] data = lines.get(i).trim().split( "\\s+" );
 			if( i == 0 ) {
@@ -108,11 +108,11 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 				}
 				continue;
 			}
-			
+
 			long rel_time = (long)(Float.valueOf(data[0]) * 60);
 	    	if( rel_time > task.duration * 60 )
 	    		break;
-	    			    	
+
 	    	/* extract value of each station for the next timestamp */
 	    	for(Integer j: statIds.keySet()) {
 	    		@SuppressWarnings("unchecked")
@@ -156,21 +156,21 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 			int hours = Integer.valueOf( matcher.group(1) );
 			int min = Integer.valueOf( matcher.group(2) );
 			int totalMin = hours * 60 + min;
-			
+
 			/* calculate current progress in percentage */
 			task.progress = ( (float)totalMin / (float)simTime ) * 100.0f;
 			task.prevSimTime = task.curSimTime;
 			task.curSimTime = totalMin;
 			task.prevCalcTime = task.calcTime;
 			task.calcTime = Integer.valueOf( matcher.group(4) );
-			
+
 			updateProgress(task);
 		}
 		if( sshCon[0].returnValue() != 0 )
 			throw new SimulationException("EasyWave failed!");
 		return 0;
 	}
-	
+
 	protected int createIsolines(EQTask task, int time) throws IOException {
 		/* Generate travel times as KML file. */
 		sshCon[1].runCmd(
@@ -178,7 +178,7 @@ public class EasyWaveAdapter extends TsunamiAdapter {
 		);
 		return super.createIsolines(task, time);
 	}
-	
+
 	@Override
 	protected void cleanup(EQTask task) throws IOException {
 		sshCon[0].runCmd(

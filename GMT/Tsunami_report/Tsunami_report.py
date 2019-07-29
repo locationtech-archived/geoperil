@@ -4,21 +4,21 @@
    GeoPeril - A platform for the computation and web-mapping of hazard specific
    geospatial data, as well as for serving functionality to handle, share, and
    communicate threat specific information in a collaborative environment.
-   
+
    Copyright (C) 2013 GFZ German Research Centre for Geosciences
-   
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
-   
+
      http://apache.org/licenses/LICENSE-2.0
-   
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the Licence is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the Licence for the specific language governing permissions and
    limitations under the Licence.
-   
+
    Contributors:
    Sebastian Juengling (GFZ) - initial implementation
    Johannes Spazier (GFZ) - initial implementation
@@ -57,54 +57,54 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 #defines pre-built styles
 style_group = [
 {"Name": "Water DEM gray",      "key": 3,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "water_only"},
-                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"}, 
-                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"}, 
+                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"},
+                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"},
                                                       {"variable": "border",            "Flag": "-p_b",      "value": "Y"},
-                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"}, 	
-                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"}, 						 						
-                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "170/170/170"}, 
+                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"},
+                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"},
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "170/170/170"},
                                                       {"variable": "color_land",        "Flag": "-c_land",   "value": "80/80/80"},
                                                       {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]},
 {"Name": "Water DEM darkblue",  "key": 4,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "water_only"},
-                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"}, 
-                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"}, 
+                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"},
+                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"},
                                                       {"variable": "border",            "Flag": "-p_b",      "value": "Y"},
-                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"}, 	
-                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"}, 						 						
-                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "141/149/154"}, 
+                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"},
+                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"},
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "141/149/154"},
                                                       {"variable": "color_land",        "Flag": "-c_land",   "value": "80/80/80"},
-                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]},  
+                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]},
 {"Name": "DEM",                 "key": 1,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "Y"},
-                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "N"}, 
-                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"}, 
+                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "N"},
+                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"},
                                                       {"variable": "border",            "Flag": "-p_b",      "value": "N"},
-                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"}, 	
-                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"}, 						 						
-                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "247/252/255"}, 
+                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"},
+                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"},
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "247/252/255"},
                                                       {"variable": "color_land",        "Flag": "-c_land",   "value": "226/226/214"},
-                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/0/0"}]}, 
+                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/0/0"}]},
 {"Name": "DEM gray",            "key": 5,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "Y"},
-                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"}, 
-                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "220/220/220"}, 
+                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"},
+                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "220/220/220"},
                                                       {"variable": "border",            "Flag": "-p_b",      "value": "Y"},
-                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "200/200/200"}, 	
-                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "170/170/170"}, 						 						
-                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "118/154/174"}, 
+                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "200/200/200"},
+                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "170/170/170"},
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "118/154/174"},
                                                       {"variable": "color_land",        "Flag": "-c_land",   "value": "150/150/150"},
-                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]}, 
+                                                      {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]},
 {"Name": "Gray",                "key": 2,  "change": [{"variable": "dem",               "Flag": "-p_dem",    "value": "N"},
-                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"}, 
-                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"}, 
+                                                      {"variable": "outline",           "Flag": "-p_o",      "value": "Y"},
+                                                      {"variable": "coast_color",       "Flag": "-c_color",  "value": "215/215/215"},
                                                       {"variable": "border",            "Flag": "-p_b",      "value": "Y"},
-                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"}, 	
-                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"}, 						 						
-                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "170/170/170"}, 
+                                                      {"variable": "border_lvl1_color", "Flag": "-b_l1_c",   "value": "160/160/160"},
+                                                      {"variable": "border_lvl2_color", "Flag": "-b_l2_c",   "value": "90/90/90"},
+                                                      {"variable": "color_water",       "Flag": "-c_water",  "value": "170/170/170"},
                                                       {"variable": "color_land",        "Flag": "-c_land",   "value": "80/80/80"},
                                                       {"variable": "Isochrone_color",   "Flag": "-w_time_c", "value": "255/255/255"}]}]
 
 #Gruppe fuer -p_dem flag
 dem_group = [
-{"Name": "Plot DEM",        "key": "Y"}, 
+{"Name": "Plot DEM",        "key": "Y"},
 {"Name": "Plot water only", "key": "water_only"},
 {"Name": "Plot no DEM",     "key": "N"}
 ]
@@ -200,16 +200,16 @@ input_param = [
 #parses the flags
 for flag in input_param:
     if flag["default"] is None:
-        parser.add_argument(flag["Flag1"], flag["Flag2"], dest = flag["variable"], help = flag["help"])        
+        parser.add_argument(flag["Flag1"], flag["Flag2"], dest = flag["variable"], help = flag["help"])
     else:
-        parser.add_argument(flag["Flag1"], flag["Flag2"], dest = flag["variable"], default = flag["default"], help = flag["help"])   
+        parser.add_argument(flag["Flag1"], flag["Flag2"], dest = flag["variable"], default = flag["default"], help = flag["help"])
 args = parser.parse_args()
 
 #ueberschreibt die default-werte in input_param aus style_group abhaengig vom eingebenen style und parsed die flags erneut
 for style_loop in style_group:
     if style_loop["key"]==int(args.style):
         for style_flag in style_loop["change"]:
-             parser.set_defaults(**{style_flag["variable"] : style_flag["value"]}) 
+             parser.set_defaults(**{style_flag["variable"] : style_flag["value"]})
 args = parser.parse_args()
 
 
@@ -238,41 +238,41 @@ def tsunami_report(\
     #prints input-list as json
     if print_json=="Y":
         print (json.dumps(input_param))
-        return 
-    #erstellt html datei für die hilfe	
+        return
+    #erstellt html datei für die hilfe
     def build_html_help_table(help_table):
         help_html_table = open(help_table, "w")
         help_html_table.write('<!DOCTYPE html><html><head><style>\n')
-        help_html_table.write('body {font-family: Arial, \'Helvetica Neue\', Helvetica, sans-serif;}\n')    
-        help_html_table.write('table, th, td {border: 1px solid black;border-collapse: collapse;}\n')    
-        help_html_table.write('th, td {padding: 5px;text-align: left;}\n')  
-        help_html_table.write('</style></head><body>\n')  
-        help_html_table.write('<table style="width:100%"><caption>Tsunami-Report.py Help</caption>\n')  
-        help_html_table.write('<tr><th>Name</th><th>Flag1</th><th>Flag2</th><th>Beschreibung</th><th>Default</th></tr>\n')  	
+        help_html_table.write('body {font-family: Arial, \'Helvetica Neue\', Helvetica, sans-serif;}\n')
+        help_html_table.write('table, th, td {border: 1px solid black;border-collapse: collapse;}\n')
+        help_html_table.write('th, td {padding: 5px;text-align: left;}\n')
+        help_html_table.write('</style></head><body>\n')
+        help_html_table.write('<table style="width:100%"><caption>Tsunami-Report.py Help</caption>\n')
+        help_html_table.write('<tr><th>Name</th><th>Flag1</th><th>Flag2</th><th>Beschreibung</th><th>Default</th></tr>\n')
         for input_element in input_param:
-            help_html_table.write('\n<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (input_element["Flagname"], input_element["Flag1"], input_element["Flag2"], input_element["help"].replace('\n','<br>').replace('\t','<tab>'), input_element["default"]))  
-        help_html_table.write('</table>\n')         	  
-        help_html_table.write('</body></html>')  
+            help_html_table.write('\n<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (input_element["Flagname"], input_element["Flag1"], input_element["Flag2"], input_element["help"].replace('\n','<br>').replace('\t','<tab>'), input_element["default"]))
+        help_html_table.write('</table>\n')
+        help_html_table.write('</body></html>')
         help_html_table.close()
 
     if help_table is not None:
-        build_html_help_table(help_table)	
+        build_html_help_table(help_table)
         return
-	
+
     #erstellt tempdir in /tmp wo alle temporaeren dateien abgespeicher werden
     tempdir = tempfile.mkdtemp()
     #GMT_TMPDIR = tempdir als environ, damit gmt.conf und gmt.history in tempdir abgespeichert werden (ermoeglicht gleichzeitiges ablaufen des scripts)
     os.environ["GMT_TMPDIR"] = tempdir
-    
+
     map_width = float(map_width)
     y_ratio = float(y_ratio)
     x_ratio = float(x_ratio)
-    
+
     wave_height_temp = '%s/eWave_height_temp.nc' % (tempdir)
     wave_height_expression = float(wave_height_expression)
     if wave_height_expression <= 0:
         wave_height_expression = 0.00000000000000001
-	
+
     wave_time_temp = '%s/eWave_time_temp.nc' %(tempdir)
 
     #aktuelles Datum
@@ -282,8 +282,8 @@ def tsunami_report(\
     print ('\tTitle:\t\t\t', title, '\n\tSubtitle:\t\t', subtitle, '\n\tresolution:\t\t', dpi, '\n\tOutput-File:\t\t', output, '\n')
     print ('\tWest:\t\t\t', west, '\n\tEast:\t\t\t', east, '\n\tSouth:\t\t\t', south, '\n\tNorth:\t\t\t', north, '\n')
     print ('\ty-ratio:\t\t', y_ratio, '\n\tx-ratio:\t\t', x_ratio, '\n')
-    print ('\tplot WaveJets?:\t\t', plot_wave_height, '\n\tWaveJets:\t\t', wave_height, '\n\tWaveJets temp:\t\t', wave_height_temp, '\n\tWaveJets CPT:\t\t', wave_height_cpt, '\n\tw_exp:\t\t\t', wave_height_expression, '\n')   
-    print ('\tplot TravelTimes?:\t', plot_wave_time, '\n\tTravelTimes:\t\t', wave_time, '\n\tTravelTimes temp:\t', wave_time_temp, '\n\tTravelTimes color:\t', Isochrone_color, '\n')              
+    print ('\tplot WaveJets?:\t\t', plot_wave_height, '\n\tWaveJets:\t\t', wave_height, '\n\tWaveJets temp:\t\t', wave_height_temp, '\n\tWaveJets CPT:\t\t', wave_height_cpt, '\n\tw_exp:\t\t\t', wave_height_expression, '\n')
+    print ('\tplot TravelTimes?:\t', plot_wave_time, '\n\tTravelTimes:\t\t', wave_time, '\n\tTravelTimes temp:\t', wave_time_temp, '\n\tTravelTimes color:\t', Isochrone_color, '\n')
     print ('\tplot CFZ?:\t\t', plot_cfz, '\n\tCFZ:\t\t\t', cfz, '\n\tCFZ CPT:\t\t', cfz_cpt, '\n\tCFZ stroke:\t\t', cfz_stroke, '\n')
     print ('\tplot TFP?:\t\t', plot_tfp, '\n\tTFP:\t\t\t', tfp, '\n\tTFP CPT:\t\t', tfp_cpt, '\n\tTFP stroke:\t\t', tfp_stroke, '\n')
     print ('\tplot quake?:\t\t', plot_quake, '\n\tquake:\t\t\t', quake, '\n\tquake fill:\t\t', quake_fill, '\n')
@@ -306,33 +306,33 @@ def tsunami_report(\
     ############################
 
     #berechnet Abstand zur unteren Blattkante, abhaengig von zu plottenden Inhalten
-    y_map_dist = 1 + disclaimer_height   
+    y_map_dist = 1 + disclaimer_height
     #erstellt plot_cities_bool (Y / N)
     if plot_cities=="all" or plot_cities=="capitals":
         plot_cities_bool = "Y"
     else:
         plot_cities_bool = "N"
-    layer_list_count = [plot_wave_time, world_pop, plot_cities_bool, plot_tfp, plot_cfz].count("Y")   
-    layer_list_count_xwave = [world_pop, plot_cities_bool, plot_tfp, plot_cfz].count("Y")   
-         
-    #berechnet y_map_dist (Y-Zuschlag fuer Blattunterkante) abhaengig von geplotteten Karteninhalten (Legende)	 
+    layer_list_count = [plot_wave_time, world_pop, plot_cities_bool, plot_tfp, plot_cfz].count("Y")
+    layer_list_count_xwave = [world_pop, plot_cities_bool, plot_tfp, plot_cfz].count("Y")
+
+    #berechnet y_map_dist (Y-Zuschlag fuer Blattunterkante) abhaengig von geplotteten Karteninhalten (Legende)
     if  (plot_wave_height=="Y" and layer_list_count <= 0) or (plot_wave_height=="Y" and plot_wave_time=="Y" and layer_list_count_xwave <= 0):
-        y_map_dist += 1.9  
+        y_map_dist += 1.9
     elif plot_wave_height=="Y" and layer_list_count >=1:
-        y_map_dist += 3.8   
-    elif plot_wave_height=="N" and layer_list_count >=1:    
+        y_map_dist += 3.8
+    elif plot_wave_height=="N" and layer_list_count >=1:
         y_map_dist += 2.3
     #y_map_dist if plot_quake == Y (Legend)
     quake_y_diff = 0.9
     if plot_quake=="Y":
-       y_map_dist += quake_y_diff 
+       y_map_dist += quake_y_diff
 
     #berechnet die Hoehe der Karte
-    map_height = (map_width * y_ratio) / x_ratio  
+    map_height = (map_width * y_ratio) / x_ratio
 
     #berechnet Position der Unterueberschrift
-    subtitle_pos_y = y_map_dist + map_height + 0.55  
-    
+    subtitle_pos_y = y_map_dist + map_height + 0.55
+
     #berechnet blatthoehe
     if title is not None and subtitle is None:
         paper_height = y_map_dist + map_height + 2.5
@@ -347,12 +347,12 @@ def tsunami_report(\
     ############################
     #berechnet die optimale Ausdehnung anhand der Eingabe-Dateien (siehe auto_extent.py)
     west, east, south, north = best_auto_extent_for_input(west, east, south, north, wave_height, wave_height_expression, wave_time, cfz, tfp, tempdir, quake)
-    
+
     west = float(west)
     east = float(east)
     south = float(south)
     north = float(north)
-    
+
     print ('Extent after input-calculation:')
     print (    'west:  ', west)
     print (    'east:  ', east)
@@ -376,7 +376,7 @@ def tsunami_report(\
     #1/4 von lon_dist gerundet auf naechste Hundert fuer scalebar
     if lon_dist >= 1000:
         scalebar_length = round((lon_dist/4) / 100) * 100
-    else:	
+    else:
         scalebar_length = round((lon_dist/4) / 10) * 10
 
     #################################
@@ -403,7 +403,7 @@ def tsunami_report(\
         elif psize <= 3.0:
             return '2'
         elif psize <= 4.0:
-            return '3'	
+            return '3'
         elif psize <= 6.0:
             return '4'
         elif psize <= 8.0:
@@ -412,9 +412,9 @@ def tsunami_report(\
             return '8'
         else:
            return '12'
-	
+
     basemap_size = choose_best_basemap(perfect_pixel_size)
-    
+
     #legt Speicherort der Basemap fest
     basemap='%s%s/basemap_%s.nc' %(basemap_data_dir, basemap_size, basemap_size)
     basemap_hillshade='%s%s/basemap_%s_shade.nc' %(basemap_data_dir, basemap_size, basemap_size)
@@ -428,13 +428,13 @@ def tsunami_report(\
     if dem=="Y" or dem=="water_only":
         if basemap_water_cpt is None:
             basemap_water_cpt = '%s/basemap_water_cpt.cpt' % (tempdir)
-            build_basemap_cpt(basemap_water_cpt, color_water) 
-	
+            build_basemap_cpt(basemap_water_cpt, color_water)
+
         if dem=="Y":
             if basemap_land_cpt is None:
                 basemap_land_cpt = '%s/basemap_land_cpt.cpt' % (tempdir)
-                build_basemap_cpt(basemap_land_cpt, color_land)    
-    
+                build_basemap_cpt(basemap_land_cpt, color_land)
+
     #############################
     ######### Basemap ###########
     #############################
@@ -445,12 +445,12 @@ def tsunami_report(\
     y_map_distance = '%s%s' % (y_map_dist, unit)
 
     border_color = '-N1/0.01c,%s -N2/0.01c,%s' % (border_lvl1_color, border_lvl2_color)
-    #./Basemap.sh title output extent projection y_map_dist basemap basemap_hillshade 
+    #./Basemap.sh title output extent projection y_map_dist basemap basemap_hillshade
     #	outline coast_res coast_color terrain color_water color_land color_globe_land color_globe_water land_res basemap_water_cpt basemap_land_cpt
     subprocess.call(['./gmt_scripts/Basemap.sh', str(title),output , R, J, y_map_distance, basemap, basemap_hillshade, \
         outline, coast_res, coast_color, dem, color_water, color_land, color_globe_land, color_globe_water, land_res, str(basemap_water_cpt), str(basemap_land_cpt), \
         world_pop_data, world_pop_cpt, world_pop, str(subtitle), str(paper_height), border, border_color])
-    #erstellt subheading    
+    #erstellt subheading
     if subtitle is not None:
        subprocess.call(['./gmt_scripts/subtitle.sh',output , str(subtitle), str(subtitle_pos_y), str(map_width)])
 
@@ -473,7 +473,7 @@ def tsunami_report(\
     ########### CFZ #############
     if plot_cfz=="Y":
         subprocess.call(['./gmt_scripts/CFZ.sh',output ,cfz, cfz_cpt, cfz_stroke, y_map_distance])
-    
+
     ########### TFP #############
     if plot_tfp=="Y":
         subprocess.call(['./gmt_scripts/TFP.sh',output ,tfp, tfp_cpt, tfp_stroke, y_map_distance])
@@ -481,9 +481,9 @@ def tsunami_report(\
     ########## Quakes ###########
     quake_string = ''
     if plot_quake=="Y":
-        #creates Infotext for the earthquake for Legend based on the csv-file    
+        #creates Infotext for the earthquake for Legend based on the csv-file
         def build_quake_legend_string(quake):
-            quake_file = open(quake, "r")              	    
+            quake_file = open(quake, "r")
             quake_file_split = quake_file.readlines()[1].strip().split(',')
             quake_date, quake_lat, quake_lon, quake_depth, quake_mag = quake_file_split[4].partition('.')[0], round(float(quake_file_split[1]), 2), round(float(quake_file_split[0]), 2), quake_file_split[3], quake_file_split[2]
             quake_file.close()
@@ -492,7 +492,7 @@ def tsunami_report(\
             elif quake_lon < 0:
                 quake_lon = '%s\\260W' % quake_lon
             else:
-                quake_lon = '%s\\260' % quake_lon	    
+                quake_lon = '%s\\260' % quake_lon
             if quake_lat > 0:
                 quake_lat = '%s\\260N' % quake_lat
             elif quake_lat < 0:
@@ -500,19 +500,19 @@ def tsunami_report(\
             else:
                 quake_lat = '%s\\260' % quake_lat
             quake_date = datetime.datetime.strptime(quake_date, "%Y-%m-%d %H:%M:%S").strftime("%Y, %B %d, %H:%M")
-            quake_string = '%s UTC, Lat: %s Lon: %s, Depth: %s km, M: %s' % (quake_date, quake_lat, quake_lon, quake_depth, quake_mag)  
-            print (quake_string)  
+            quake_string = '%s UTC, Lat: %s Lon: %s, Depth: %s km, M: %s' % (quake_date, quake_lat, quake_lon, quake_depth, quake_mag)
+            print (quake_string)
             return quake_string
-        quake_string = build_quake_legend_string(quake)    
-    
-        subprocess.call(['./gmt_scripts/quake.sh',output ,quake, quake_fill, y_map_distance])    
+        quake_string = build_quake_legend_string(quake)
+
+        subprocess.call(['./gmt_scripts/quake.sh',output ,quake, quake_fill, y_map_distance])
 
     ######## city pop ###########
     if plot_cities=="all" or plot_cities=="capitals":
         if plot_cities=="capitals":
             cities_capital = '&& $6 == "Admin-0 capital"'
         else:
-            cities_capital = ''    
+            cities_capital = ''
 
         #da default = None, wenn keine Eingabe dann 0
         if cities_pop is None:
@@ -522,13 +522,13 @@ def tsunami_report(\
             cities_label_pop = cities_pop
         elif (cities_label_pop is not None and cities_pop is not None) and float(cities_label_pop) < float(cities_pop):
             cities_label_pop = cities_pop
-        
+
         #damit Pop-Anzahl in mio angegeben werden kann:
         if cities_pop is not None:
-            cities_pop = int(float(cities_pop) * 1000000)	
+            cities_pop = int(float(cities_pop) * 1000000)
         if cities_label_pop is not None:
             cities_label_pop = int(float(cities_label_pop) * 1000000)
-        
+
         subprocess.call(['./gmt_scripts/city_population.sh', output, R, J, y_map_distance, city_pop_data, str(cities_pop), cities_capital, cities_label, str(cities_label_pop), cities_fill, cities_stroke])
 
 
@@ -558,8 +558,8 @@ def tsunami_report(\
         plot_cfz_tfp = "Y"
     else:
         plot_cfz_tfp = "N"
-    
-    #Liste mit bool-werten (Y, N) für die Legendenelemente				
+
+    #Liste mit bool-werten (Y, N) für die Legendenelemente
     plot_legend_list = [plot_wave_height, plot_wave_time, world_pop, plot_cities_bool, plot_cfz_tfp]
     #berechnet beste Postition der Legendenelemente abhaenig von zu plottenden Karteninhalten (siehe build_legend.py)
     wave_height_pslegend, wave_height_psscale, wave_time_pslegend, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2 = calc_legend_positions (plot_legend_list, y_map_dist, plot_quake, quake_y_diff)
@@ -568,12 +568,12 @@ def tsunami_report(\
     #berechnet beste Position von Erdbeben-Legende
     beachball_y = y_map_dist - 1.5
     quake_y = y_map_dist - 1.4
-    
+
     #erstellt Legende:
     subprocess.call(['./gmt_scripts/Legend.sh',output, plot_wave_height, plot_wave_time, world_pop, plot_cfz, plot_tfp, plot_cities_bool, cfz_cpt, cfz_stroke, tfp_stroke, wave_height_cpt, world_pop_cpt, cities_fill, cities_stroke, \
         wave_height_pslegend, wave_height_psscale, wave_time_pslegend, tfp_cfz_pslegend, tfp_cfz_psscale_1, tfp_cfz_psscale_2, world_pop_pslegend, world_pop_psscale_1, world_pop_psscale_2, cities_pslegend, \
-        str(created_y), str(map_width), date, quake, plot_quake, quake_fill, str(beachball_y), str(quake_y), Isochrone_color, quake_string, disclaimer])     
- 
+        str(created_y), str(map_width), date, quake, plot_quake, quake_fill, str(beachball_y), str(quake_y), Isochrone_color, quake_string, disclaimer])
+
     ######################################
     ###### Umwandlung in PNG/PDF #########
     ######################################
@@ -581,7 +581,7 @@ def tsunami_report(\
     #PseudoCommand; beendet das Overlay; Plottet unsichtbare Fluesse/Seen
     #gmt pscoast -J -R -P -O -C-t100 -Y >> ${output}
     subprocess.call(['./gmt_scripts/pseudo_end.sh', output, R, J, tempdir])
-    
+
     #PDF
     #subprocess.call(['gmt', 'ps2raster', output, '-Tf', '-V'])
     #erstellt png-Datei
@@ -589,7 +589,7 @@ def tsunami_report(\
     #-A plottet nur Karteninhalt
     E = '-E%s' % (dpi)
     subprocess.call(['gmt', 'ps2raster', output, '-Tg', '-A', '-V', E], cwd=tempdir)
-    
+
     #löscht tempdir
     shutil.rmtree(tempdir)
 
@@ -651,4 +651,4 @@ tsunami_report(\
     basemap_data_dir, world_pop_data, city_pop_data, \
     crs_system, unit, map_width, coast_res, land_res, Isochrone_dist, \
     args. dpi, args.print_json, input_param, args.help_table, \
-    disclaimer, disclaimer_height) 
+    disclaimer, disclaimer_height)

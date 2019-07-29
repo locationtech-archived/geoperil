@@ -3,21 +3,21 @@
 # GeoPeril - A platform for the computation and web-mapping of hazard specific
 # geospatial data, as well as for serving functionality to handle, share, and
 # communicate threat specific information in a collaborative environment.
-# 
+#
 # Copyright (C) 2013 GFZ German Research Centre for Geosciences
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #   http://apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the Licence is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the Licence for the specific language governing permissions and
 # limitations under the Licence.
-# 
+#
 # Contributors:
 # Sebastian Juengling (GFZ) - initial implementation
 # Johannes Spazier (GFZ) - initial implementation
@@ -108,7 +108,7 @@ gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -P -R -J ${tfp_cfz_pslegen
 N 2
 #S 0c c 0.13c 255/255/255 0.01c,${tfp_stroke} 0.3c TFP
 S 0c c 0.13c 255/255/255 0.01c,0/0/0 0.3c TFP
-S 1.5c s 0.3c 255/255/255 0.01c,${cfz_stroke} 1.8c CFZ 
+S 1.5c s 0.3c 255/255/255 0.01c,${cfz_stroke} 1.8c CFZ
 EOF
 elif [ ${plot_cfz} == N ] && [ ${plot_tfp} == Y ]
 then
@@ -118,7 +118,7 @@ EOF
 elif [ ${plot_cfz} == Y ] && [ ${plot_tfp} == N ]
 then
 gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -P -R -J ${tfp_cfz_pslegend} -O -V -K <<EOF>> ${output}
-S 0c s 0.3c 255/255/255 0.01c,${cfz_stroke} 0.3c CFZ 
+S 0c s 0.3c 255/255/255 0.01c,${cfz_stroke} 0.3c CFZ
 EOF
 fi
 
@@ -161,12 +161,12 @@ fi
 
 #### created on ####
 gmt pslegend -Dx0c/${created_y}c/${map_width}c/BL -O -K <<EOF>> ${output}
-L 6p Helvetica L Created on ${date} UTC, by TRIDEC Cloud 
+L 6p Helvetica L Created on ${date} UTC, by TRIDEC Cloud
 EOF
 
 if [ ${plot_quake} == Y ]
 then
-awk "BEGIN {FS=\",\"}; NR >= 2 {print 0, 0, \$4, \$6, \$7, \$8, \$3, 0, 0;}" ${quake} | gmt psmeca -R-0.45/0.45/-0.45/0.45 -JM0.9c -M -Sa0.8c -G85/97/134 -E238/238/238 -W0.01c,0/0/0 -P -K -O -V -Ya${beachball_y}c -Xa0.6c >> ${output} 
+awk "BEGIN {FS=\",\"}; NR >= 2 {print 0, 0, \$4, \$6, \$7, \$8, \$3, 0, 0;}" ${quake} | gmt psmeca -R-0.45/0.45/-0.45/0.45 -JM0.9c -M -Sa0.8c -G85/97/134 -E238/238/238 -W0.01c,0/0/0 -P -K -O -V -Ya${beachball_y}c -Xa0.6c >> ${output}
 gmt pslegend --FONT_ANNOT_PRIMARY=10p,Helvetica,black -Dx0.6c/${quake_y}c/15c/BL -O -K <<EOF>> ${output}
 S 1.1c a 0.55c ${quake_fill} 0.01c,35/35/35 1.6c ${quake_string}
 EOF

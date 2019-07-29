@@ -1,23 +1,23 @@
-<?php 
+<?php
 /*
  * GeoPeril - A platform for the computation and web-mapping of hazard specific
  * geospatial data, as well as for serving functionality to handle, share, and
  * communicate threat specific information in a collaborative environment.
- * 
+ *
  * Copyright (C) 2013 GFZ German Research Centre for Geosciences
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
- * 
+ *
  * Contributors:
  * Johannes Spazier (GFZ) - initial implementation
  * Sven Reissland (GFZ) - initial implementation
@@ -297,7 +297,7 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 	    var gfz_head = document.getElementById("gfz-head");
 	    var nav = document.getElementById("nav");
 	    var nav_cover = document.getElementById("nav-cover");
-	    
+
 	    if( scrollPos > gfz_head.clientHeight ) {
 		    headline.className = "headline-fixed";
 <?php if( isset( $_GET["id"] ) ) : ?>
@@ -306,13 +306,13 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 		    nav.style.top = (top1 - top2 - gfz_head.clientHeight) + "px";
 		    nav.style.width = nav_cover.clientWidth + "px";
 		    nav.className = "nav fixed";
-<?php endif; ?>  
+<?php endif; ?>
 	    } else {
 	    	headline.className = "headline-abs";
 <?php if( isset( $_GET["id"] ) ) : ?>
 	    	nav.className = "nav";
 	    	nav.style.top = "";
-<?php endif; ?>   	
+<?php endif; ?>
 	    }
 	};
 </script>
@@ -351,9 +351,9 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 	  		<hr>
 	  	</div> <!-- end of headline -->
 	  	</div> <!-- end of headline-fixed -->
-		
+
 		<div class="row content">
-		
+
 <?php
 if( ! isset( $_GET["id"] ) ) :
 ?>
@@ -557,8 +557,8 @@ if( ! isset( $_GET["id"] ) ) :
 		  <dd><?php echo $eq['prop']['depth']; ?> km</dd>
 		  <dt>Fault</dt>
 		  <?php if( ! empty($eq['simulation']) ) : ?>
-			<dd>Dip: <?php echo $eq['prop']['dip']; ?> &deg;</dd> 
-			<dd>Strike: <?php echo $eq['prop']['strike']; ?> &deg;</dd> 
+			<dd>Dip: <?php echo $eq['prop']['dip']; ?> &deg;</dd>
+			<dd>Strike: <?php echo $eq['prop']['strike']; ?> &deg;</dd>
 			<dd>Rake: <?php echo $eq['prop']['rake']; ?> &deg;</dd>
 		  <?php else:?>
 		  	<dd>-</dd>
@@ -599,7 +599,7 @@ if( ! isset( $_GET["id"] ) ) :
 		<b>No simulation available.</b>
 		<h3>Message text</h3>
 		<b>No simulation available.</b>
-		<?php endif;?>		
+		<?php endif;?>
 	</div>
 	<?php
 		$file = 'http://kinherd.org/events/'. $eq['geofonid'] .'/report.html';
@@ -637,7 +637,7 @@ if( ! isset( $_GET["id"] ) ) :
 	<?php if( empty( $ret['hazard_events'] ) ):	?>
 			document.getElementById('mapview').style.display = "none";
 	<?php endif; ?>
-			
+
 			var mapOptions = {
 				zoom: 8,
 			    center: new google.maps.LatLng(0,0)
@@ -656,7 +656,7 @@ if( ! isset( $_GET["id"] ) ) :
 			map.setCenter( marker.getPosition() );
 
 			var content =
-			<?php 
+			<?php
 				echo "\"<b>". $item['providername'] ."</b><br>";
 				echo "<span>Region: ". $item['region'] ."</span><br>";
 				echo "<span>Latitude: ". $item['y'] ." &deg;</span><br>";
@@ -664,7 +664,7 @@ if( ! isset( $_GET["id"] ) ) :
 				echo "<span>Magnitude: ". $item['mag'] ." ". $item['magtype'] ."</span><br>";
 				echo "<span>Depth: ". $item['depth'] ." km</span><br>\"";
 			?>;
-			
+
 			infowindow = new google.maps.InfoWindow({
 				content: content
 			});
@@ -700,7 +700,7 @@ if( ! isset( $_GET["id"] ) ) :
 					echo "\t<dd></dd>";
 				}
 				echo "</dl>";
-			}	
+			}
 		}
 	?>
 	</div>
@@ -731,7 +731,7 @@ if( ! isset( $_GET["id"] ) ) :
 		    		zoom:3
 				})
 			});
-	
+
 			map.addLayer(
 				new ol.layer.Tile({
 					source: new ol.source.TileWMS({
@@ -739,12 +739,12 @@ if( ! isset( $_GET["id"] ) ) :
 						url: 'http://rz-vm65.gfz-potsdam.de:8080/geoserver/wms',
 						serverType:'geoserver',
 						params:{
-							'LAYERS':"Quakes:plattengrenzen", 
+							'LAYERS':"Quakes:plattengrenzen",
 							'TILED':true
 						}
 					})
 			}));
-	
+
 			map.addLayer(
 				new ol.layer.Tile({
 					source: new ol.source.TileWMS({
@@ -752,13 +752,13 @@ if( ! isset( $_GET["id"] ) ) :
 						url: 'http://rz-vm65.gfz-potsdam.de:8080/geoserver/wms',
 						serverType:'geoserver',
 						params:{
-							'LAYERS':"Quakes:geofon3857", 
+							'LAYERS':"Quakes:geofon3857",
 							'TILED':true
 						}
 					}),
 					opacity: 0.75
 			}));
-			
+
 			map.addLayer(
 				new ol.layer.Vector({
 				  	source: new ol.source.Vector({
@@ -769,7 +769,7 @@ if( ! isset( $_GET["id"] ) ) :
 					}),
 				  	style: new ol.style.Style({
 				  		image: 	new ol.style.Circle({
-					          		radius: 10,										
+					          		radius: 10,
 					          		stroke:new ol.style.Stroke({
 					      				color:'#FFFFFF',
 					      				width:3

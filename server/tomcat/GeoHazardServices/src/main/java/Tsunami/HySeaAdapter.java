@@ -2,21 +2,21 @@
  * GeoPeril - A platform for the computation and web-mapping of hazard specific
  * geospatial data, as well as for serving functionality to handle, share, and
  * communicate threat specific information in a collaborative environment.
- * 
+ *
  * Copyright (C) 2013 GFZ German Research Centre for Geosciences
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the Licence is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
- * 
+ *
  * Contributors:
  * Johannes Spazier (GFZ) - initial implementation
  * Sven Reissland (GFZ) - initial implementation
@@ -48,8 +48,8 @@ public class HySeaAdapter extends TsunamiAdapter {
 	private final String outfile = "hysea_out";
 	private int jobid = 0;
 	/* Used to map column number to locations id of input and output file. */
-	private List<String> ids; 
-	
+	private List<String> ids;
+
 	public HySeaAdapter(DB db, SshConnection[] sshCon, File workdir, String hardware, String args) throws IOException {
 		super(db, sshCon, workdir, hardware, args);
 	}
@@ -58,7 +58,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 	protected void writeFault(EQTask task) throws IOException {
 		BetterStringBuilder strFault = new BetterStringBuilder();
 		EQParameter eqp = task.eqparams;
-		
+
 		/* Compute bounding box. */
 		double margin = 7.5 + task.duration / 10.0;
 		double ulx = eqp.lon - margin;
@@ -71,7 +71,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 			String.format(Locale.US, "gdal_translate -projwin %f %f %f %f -of GSBG ../grid_%d.grd range.grd", ulx, uly, lrx, lry, task.gridres),
 			String.format("gdal_calc.py -A range.grd --calc=\"-A\" --overwrite --outfile=range.grd")
 		);
-		
+
 		/* Determine size of grid. */
 		int xsize = 0;
 		int ysize = 0;
@@ -82,14 +82,14 @@ public class HySeaAdapter extends TsunamiAdapter {
 				ysize = Integer.valueOf( matcher.group(2) );
 			}
 		}
-		
+
 		/* Translate grid to binary XYZ. */
 		sshCon[0].runCmds(
 			"gdal_translate -of XYZ range.grd range.xyz.bat",
 			"binconvert.exe range.xyz",
 			"mv range.xyz_bin.bat range.xyz.bin"
 		);
-		
+
 		/* Write input file. */
 		strFault.appendln("range");
 		strFault.appendln(xsize);
@@ -118,7 +118,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 		strFault.appendln("100");
 		strFault.appendln("100000");
 		strFault.appendln("1000");
-		
+
 		sshCon[0].writeFile(strFault.toString(), "fault.inp");
 	}
 
@@ -138,19 +138,19 @@ public class HySeaAdapter extends TsunamiAdapter {
 			String.format(Locale.US, "points2water.py locations.inp ../grid_%d.grdx", task.gridres)
 		);
 	}
-	
+
 	@Override
 	protected int readLocations(EQTask task) throws IOException {
 		/* TODO: move? */
 		if( task.raw > 0 )
 			return 0;
-		
+
 		/* Translate binary output to text. */
 		sshCon[0].runCmds(
 			"ts_minmax_bin2txt.sh hysea_out_ts_minmax.bin > hysea_out_ts_minmax.txt",
 			"ts_bin2txt.sh hysea_out_ts.bin > hysea_out_ts.txt"
 		);
-		
+
 		System.out.println("readLocations 1");
 		HashMap<String, DBObject> locations = getLocations();
 		/* Read TFPs and TSPs from text file. */
@@ -163,7 +163,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 			if( loc.get("type").equals("TFP") || loc.get("type").equals("TSP") )
 				loc.put("ewh", Double.valueOf( data[2*i+1] ));
 		}
-		
+
 		System.out.println("readLocations 2");
 		/* Process stations! */
 		lines = sshCon[0].readFile("hysea_out_ts.txt");
@@ -191,7 +191,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 		    		values.add(
 		    			new BasicDBObject("reltime", rel_time).append("value", value)
 		    		);
-				}			
+				}
 			}
 		}
 		return 0;
@@ -199,9 +199,9 @@ public class HySeaAdapter extends TsunamiAdapter {
 
 	@Override
 	protected int simulate(EQTask task) throws IOException, SimulationException {
-		
+
 		initialProgress(task);
-		
+
 		String line;
 		long start = System.nanoTime();
 		sshCon[0].runLiveCmd("hysea fault.inp");
@@ -220,9 +220,9 @@ public class HySeaAdapter extends TsunamiAdapter {
 		}
 		if( sshCon[0].returnValue() != 0 )
 			throw new SimulationException("HySEA failed!");
-		
+
 		updateProgress(task);
-		
+
 		sshCon[0].runCmds(
 			String.format(
 				"gdal_calc.py -A NETCDF:\"%1$s_eta.nc\":bathymetry -B NETCDF:\"%1$s_eta.nc\":max_height --calc=\"(A<0)*A + B\" --overwrite --outfile=%2$s",
@@ -234,7 +234,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 		);
 		return 0;
 	}
-	
+
 	@Deprecated
 	protected int simulate_job(EQTask task) throws IOException {
 		jobid = 0;
@@ -245,9 +245,9 @@ public class HySeaAdapter extends TsunamiAdapter {
 		}
 		if( jobid == 0 ) return -1;
 		System.out.println(jobid);
-		
+
 		initialProgress(task);
-		
+
 		long start = System.nanoTime();
 		boolean finished = false;
 		int lnr = 1;
@@ -283,7 +283,7 @@ public class HySeaAdapter extends TsunamiAdapter {
 				Thread.currentThread().interrupt();
 			}
 		}
-		
+
 		sshCon[0].runCmds(
 			String.format(
 				"gdal_calc.py -A NETCDF:\"%1$s_eta.nc\":bathymetry -B NETCDF:\"%1$s_eta.nc\":max_height --calc=\"(A<0)*A + B\" --overwrite --outfile=%2$s",
@@ -295,12 +295,12 @@ public class HySeaAdapter extends TsunamiAdapter {
 		);
 		return 0;
 	}
-	
+
 	protected int createIsolines(EQTask task, int time) throws IOException {
-		/* Generate travel times as KML file. */		
+		/* Generate travel times as KML file. */
 		sshCon[1].runCmds(
 			String.format(
-				"gdal_calc.py -A NETCDF:\"%1$s_eta.nc\":bathymetry -B NETCDF:\"%1$s_eta.nc\":eta --B_band %2$d " + 
+				"gdal_calc.py -A NETCDF:\"%1$s_eta.nc\":bathymetry -B NETCDF:\"%1$s_eta.nc\":eta --B_band %2$d " +
 			    "--calc=\"((A>0)*B)!=0\" --overwrite --outfile=arrival.%3$d.tiff",
 				outfile, time / task.dt_out + 1, time
 			),

@@ -4,21 +4,21 @@
    GeoPeril - A platform for the computation and web-mapping of hazard specific
    geospatial data, as well as for serving functionality to handle, share, and
    communicate threat specific information in a collaborative environment.
-   
+
    Copyright (C) 2013 GFZ German Research Centre for Geosciences
-   
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
-   
+
      http://apache.org/licenses/LICENSE-2.0
-   
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the Licence is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the Licence for the specific language governing permissions and
    limitations under the Licence.
-   
+
    Contributors:
    Johannes Spazier (GFZ) - initial implementation
    Sven Reissland (GFZ) - initial implementation
@@ -78,8 +78,8 @@ def getdataforstation(args):
         if len(data)>0:
             print("Inserting %d data values for %s..." % (len(data),s["name"]))
             params = {
-                "apiver":"2", 
-                "inst":config["inst"], 
+                "apiver":"2",
+                "inst":config["inst"],
                 "secret":config["secret"],
                 "station":s["name"],
                 "dataformat":"simple",
@@ -102,9 +102,9 @@ def updatestationmetadata(config):
         print("Updating station metadata %d/%d: %s..." % (n,len(config["stations"]),s["name"]), end="")
         sdetail = requests.get(IOCSLMSRV, params={"query":"station", "code":s["slmcode"]}, timeout=TIMEOUT).json()
         news = {
-            "name":sname, 
-            "slmcode":s["slmcode"], 
-            "lon":float(sdetail["Lon"]), 
+            "name":sname,
+            "slmcode":s["slmcode"],
+            "lon":float(sdetail["Lon"]),
             "lat":float(sdetail["Lat"]),
             }
         if "sensor" in s:
@@ -114,8 +114,8 @@ def updatestationmetadata(config):
             if v is not None:
                 news[a] = v
         params = {
-            "apiver":"1", 
-            "inst":config["inst"], 
+            "apiver":"1",
+            "inst":config["inst"],
             "secret":config["secret"],
             "station":json.dumps(news),
             }
@@ -158,7 +158,7 @@ elif cmd=="updatemetadata":
     saveconfig(configfile,config)
 elif cmd=="updatestations":
     config = loadconfig(configfile)
-    
+
     newstations = []
     oldstations = list(config["stations"].keys())
 
