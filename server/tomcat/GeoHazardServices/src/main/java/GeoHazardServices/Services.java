@@ -302,8 +302,18 @@ public class Services {
 		  String dir = (String) obj.get("dir");
 		  String args = (String) obj.get("args");
 		  /* MongoDB stores all integer values as Long (bug?), so convert back here */
-		  Integer count = ((Long) obj.get("count")).intValue();
-		  int priority = ((Long) obj.get("priority")).intValue();
+		  Integer count;
+		  if (obj.get("count") instanceof Long) {
+			  count = ((Long) obj.get("count")).intValue();
+		  } else {
+			  count = (Integer) obj.get("count");
+		  }
+		  Integer priority;
+		  if (obj.get("priority") instanceof Long) {
+			  priority = ((Long) obj.get("priority")).intValue();
+		  } else {
+			  priority = (Integer) obj.get("priority");
+		  }
 		  boolean remote = (boolean) obj.get("remote");
 		  int slots[] = getSlots(obj.get("slots"), count);
 
