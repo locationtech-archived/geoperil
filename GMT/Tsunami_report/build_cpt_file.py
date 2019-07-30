@@ -26,7 +26,8 @@
    Martin Hammitzsch (GFZ) - initial implementation
 '''
 
-#color = R/G/B
+
+# color = R/G/B
 def build_basemap_cpt(cpt_path, color):
     cpt_file = open(cpt_path, "w")
     cpt_file.write('# COLOR_MODEL = RGB\n')
@@ -37,4 +38,4 @@ def build_basemap_cpt(cpt_path, color):
 
     cpt_file.close()
 
-#build_basemap_cpt('/home/basti/GMT/Tsunami_report/test.cpt', '90/130/153')
+# build_basemap_cpt('/home/basti/GMT/Tsunami_report/test.cpt', '90/130/153')

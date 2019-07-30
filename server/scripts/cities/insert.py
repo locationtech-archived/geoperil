@@ -31,6 +31,7 @@ import csv
 from pymongo import MongoReplicaSetClient
 import pymongo
 
+
 def extract_tsps(f_tsps):
     tsps = {}
     with open(f_tsps, 'r') as csvfile:
@@ -39,25 +40,33 @@ def extract_tsps(f_tsps):
         for row in csvreader:
             if first:
                 # Find indices for headlines
-                (x,y,cityid,dist) = (row.index("X"), row.index("Y"), row.index("City_ID"), row.index("City_Dist"))
+                (posx, posy, cityid, dist) = (
+                    row.index("X"),
+                    row.index("Y"),
+                    row.index("City_ID"),
+                    row.index("City_Dist")
+                )
                 first = False
                 continue
             obj = {
-                "lon": float(row[x]),
-                "lon_sea": float(row[x]), # TODO: remove sometime
-                "lat": float(row[y]),
-                "lat_sea": float(row[y]), # TODO: remove sometime
+                "lon": float(row[posx]),
+                "lon_sea": float(row[posx]),  # TODO: remove sometime
+                "lat": float(row[posy]),
+                "lat_sea": float(row[posy]),  # TODO: remove sometime
                 "dist": float(row[dist]),
                 "type": "city"
             }
-            tsps.setdefault(row[cityid],[]).append(obj)
+            tsps.setdefault(row[cityid], []).append(obj)
     return tsps
 
-def import_cities(f_cities, tsps):
+
+def import_cities(dbm, f_cities, ltsps):
     cities = []
     all_tsps = []
     now = datetime.datetime.utcnow()
-    maxid = next( db["oois"].find().sort("uid", pymongo.DESCENDING).limit(1), {"uid": 0})
+    maxid = next(
+        dbm["oois"].find().sort("uid", pymongo.DESCENDING).limit(1), {"uid": 0}
+    )
     with open(f_cities, 'r') as csvfile:
         csvreader = csv.reader(csvfile)
         first = True
@@ -65,17 +74,22 @@ def import_cities(f_cities, tsps):
         for row in csvreader:
             if first:
                 # Find indices for headlines
-                (x,y,cap,name,adm0,adm1,iso,maxpop,minpop,cityid,pop2015) = (
-                    row.index("X"), row.index("Y"), row.index("CAPALT"), row.index("NAMEASCII"),
-                    row.index("ADM0NAME"), row.index("ADM1NAME"), row.index("ISO_A2"), row.index("POP_MAX"),
-                    row.index("POP_MIN"), row.index("City_ID"), row.index("POP2015")
+                (
+                    posx, posy, cap, name, adm0, adm1, iso,
+                    maxpop, minpop, cityid, pop2015
+                ) = (
+                    row.index("X"), row.index("Y"), row.index("CAPALT"),
+                    row.index("NAMEASCII"), row.index("ADM0NAME"),
+                    row.index("ADM1NAME"), row.index("ISO_A2"),
+                    row.index("POP_MAX"), row.index("POP_MIN"),
+                    row.index("City_ID"), row.index("POP2015")
                 )
                 first = False
                 continue
             relid += 1
             obj = {
-                "lon": float(row[x]),
-                "lat": float(row[y]),
+                "lon": float(row[posx]),
+                "lat": float(row[posy]),
                 "iscapital": row[cap] == "1",
                 "name": row[name],
                 "adm0": row[adm0],
@@ -89,26 +103,34 @@ def import_cities(f_cities, tsps):
                 "date": now
             }
             cities.append(obj)
-            if row[cityid] not in tsps:
+            if row[cityid] not in ltsps:
                 continue
-            for tsp in tsps[ row[cityid] ]:
+            for tsp in ltsps[row[cityid]]:
                 tsp["ref"] = obj["uid"]
                 tsp["date"] = obj["date"]
                 all_tsps.append(tsp)
     return (cities, all_tsps)
 
-if len(sys.argv) < 3:
-    print("Too few arguments given!")
-    sys.exit(1)
 
-client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0" ,w="majority")
-db = client['trideccloud']
+def main():
+    if len(sys.argv) < 3:
+        print("Too few arguments given!")
+        sys.exit(1)
 
-tsps = extract_tsps(sys.argv[2])
-(cities,tsps) = import_cities(sys.argv[1], tsps)
+    client = MongoReplicaSetClient(
+        "mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0",
+        w="majority"
+    )
+    dbm = client['trideccloud']
 
-db["oois"].insert(cities)
-db["tsps"].insert(tsps)
+    tsps = extract_tsps(sys.argv[2])
+    (cities, tsps) = import_cities(dbm, sys.argv[1], tsps)
 
-client.close()
+    dbm["oois"].insert(cities)
+    dbm["tsps"].insert(tsps)
 
+    client.close()
+
+
+if __name__ == "__main__":
+    main()

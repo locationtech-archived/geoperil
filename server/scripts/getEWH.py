@@ -29,42 +29,55 @@ import re
 import sys
 from pymongo import MongoReplicaSetClient
 
-client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0", w="majority")
-db = client['trideccloud']
-collection = db['comp']
 
-kml = open( sys.argv[1], 'r')
+def main():
+    client = MongoReplicaSetClient(
+        "mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0",
+        w="majority"
+    )
+    dbm = client['trideccloud']
+    collection = dbm['comp']
 
-ewh = sys.argv[2]
-id = sys.argv[3]
+    kml = open(sys.argv[1], 'r')
 
-txt = kml.read()
+    ewh = sys.argv[2]
+    argid = sys.argv[3]
 
-regexp = '<coordinates>(.*?)</coordinates>'
+    txt = kml.read()
 
-matches = re.findall( regexp, txt, re.S )
+    regexp = '<coordinates>(.*?)</coordinates>'
 
-points = []
+    matches = re.findall(regexp, txt, re.S)
 
-for m in matches:
-    arr = m.split(' ')
+    points = []
 
-    obj = []
+    for match in matches:
+        arr = match.split(' ')
 
-    for i in arr:
-        coord = i.split(',')
-        obj.append( { "e": round( float(coord[0]), 4), "d": round( float(coord[1]), 4) } )
+        obj = []
 
-    points.append( obj )
+        for i in arr:
+            coord = i.split(',')
+            obj.append({
+                "e": round(float(coord[0]), 4),
+                "d": round(float(coord[1]), 4)
+            })
 
-shape = { "id": id,
-          "type": "JET",
-          "process": 0,
-          "ewh": ewh,
-          "points": points
-         }
+        points.append(obj)
 
-collection.insert( shape )
+    shape = {
+        "id": argid,
+        "type": "JET",
+        "process": 0,
+        "ewh": ewh,
+        "points": points
+    }
 
-kml.close()
-client.close()
+    collection.insert(shape)
+
+    kml.close()
+    client.close()
+
+
+if __name__ == "__main__":
+    main()

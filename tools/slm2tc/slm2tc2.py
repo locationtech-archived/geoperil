@@ -25,7 +25,6 @@
    Martin Hammitzsch (GFZ) - initial implementation
 '''
 
-import requests
 import sys
 import json
 import datetime
@@ -33,6 +32,7 @@ import time
 import calendar
 from multiprocessing import Process
 from queue import Queue
+import requests
 
 IOCSLMSRV = "http://www.ioc-sealevelmonitoring.org/service.php"
 FEEDURL = "http://trideccloud.gfz-potsdam.de/feedersrv"
@@ -43,102 +43,156 @@ TIMEOUT = 1800
 MAXRUNTIME = 1800
 PROCESSES = 4
 
+
 def feeddata(station):
-    p = {"query":"data", "code":station["slmcode"]}
+    pstation = {"query": "data", "code": station["slmcode"]}
     if "sensor" in station:
-        p["includesensors[]"] = station["sensor"]
+        pstation["includesensors[]"] = station["sensor"]
     params = {
-        "apiver":"2",
-        "inst":INST,
-        "secret":SECRET,
-        "station":station["name"],
-        "dataformat":"simple",
-        "json":json.dumps({}),
-        }
+        "apiver": "2",
+        "inst": INST,
+        "secret": SECRET,
+        "station": station["name"],
+        "dataformat": "simple",
+        "json": json.dumps({}),
+    }
     now = time.time()
-    sfeed = requests.post(FEEDURL+"/feedsealevel", data=params, timeout=TIMEOUT).json()
-    lastts = sfeed.get("lastts",None)
+    sfeed = requests.post(
+        FEEDURL + "/feedsealevel",
+        data=params,
+        timeout=TIMEOUT
+    ).json()
+    lastts = sfeed.get("lastts", None)
     if lastts is None or now-lastts > MAXRANGE:
-        p["timestart"] = (datetime.datetime.utcfromtimestamp(now-MAXRANGE)).strftime('%Y-%m-%dT%H:%M:%S')
-        print("No data yet, or last timestamp out of range. " + \
-            "Requesting values for %s since %s..." % (station["name"],p["timestart"]))
+        pstation["timestart"] = (
+            datetime.datetime.utcfromtimestamp(now - MAXRANGE)
+        ).strftime('%Y-%m-%dT%H:%M:%S')
+        print(
+            "No data yet, or last timestamp out of range. " +
+            "Requesting values for %s since %s..." % (
+                station["name"],
+                pstation["timestart"]
+            )
+        )
     else:
-        p["timestart"] = datetime.datetime.utcfromtimestamp(lastts).strftime('%Y-%m-%dT%H:%M:%S')
-        print("Requesting values for %s since %s..." % (station["name"],p["timestart"]))
+        pstation["timestart"] = datetime.datetime.utcfromtimestamp(lastts) \
+            .strftime('%Y-%m-%dT%H:%M:%S')
+        print(
+            "Requesting values for %s since %s..." % (
+                station["name"],
+                pstation["timestart"]
+            )
+        )
     try:
         data = []
-        sdata = requests.get(IOCSLMSRV, params=p, timeout=TIMEOUT)
+        sdata = requests.get(IOCSLMSRV, params=pstation, timeout=TIMEOUT)
         sdata = json.loads(sdata.text)
-        for d in sdata:
-            dt = datetime.datetime.strptime(d["stime"].strip(),'%Y-%m-%d %H:%M:%S')
-            ts = calendar.timegm(dt.utctimetuple())
-            v = d["slevel"]
-            data.append({"timestamp":ts, "value":str(v)})
-        if len(data)>0:
-            print("Inserting %d data values for %s..." % (len(data),station["name"]))
+        for item in sdata:
+            dtime = datetime.datetime.strptime(
+                item["stime"].strip(),
+                '%Y-%m-%d %H:%M:%S'
+            )
+            tst = calendar.timegm(dtime.utctimetuple())
+            val = item["slevel"]
+            data.append({"timestamp": tst, "value": str(val)})
+        if data != []:
+            print(
+                "Inserting %d data values for %s..." % (
+                    len(data),
+                    station["name"]
+                )
+            )
             params = {
-                "apiver":"2",
-                "inst":INST,
-                "secret":SECRET,
-                "station":station["name"],
-                "dataformat":"simple",
-                "json":json.dumps(data),
-                }
-            sfeed = requests.post(FEEDURL+"/feedsealevel", data=params, timeout=TIMEOUT).json()
+                "apiver": "2",
+                "inst": INST,
+                "secret": SECRET,
+                "station": station["name"],
+                "dataformat": "simple",
+                "json": json.dumps(data),
+            }
+            sfeed = requests.post(
+                FEEDURL + "/feedsealevel",
+                data=params,
+                timeout=TIMEOUT
+            ).json()
             print("%s: " % station["name"], sfeed)
         else:
             print("%s: No values to insert." % station["name"])
     except Exception as ex:
-        print("Error %s: " % station["name"],ex)
+        print("Error %s: " % station["name"], ex)
     sys.stdout.flush()
     sys.stderr.flush()
+
 
 def feedmetadata(station):
     print("Updating station %s metadata..." % station["name"])
     params = {
-        "apiver":"1",
-        "inst":INST,
-        "secret":SECRET,
-        "station":json.dumps(station),
-        }
-    sfeed = requests.post(FEEDURL+"/feedstation", data=params, timeout=TIMEOUT).json()
+        "apiver": "1",
+        "inst": INST,
+        "secret": SECRET,
+        "station": json.dumps(station),
+    }
+    sfeed = requests.post(
+        FEEDURL + "/feedstation",
+        data=params,
+        timeout=TIMEOUT
+    ).json()
     return sfeed.get("status") == "success"
+
 
 def feedall(station):
     if feedmetadata(station):
         feeddata(station)
 
-if __name__ == "__main__":
-    pq = Queue()
-    stationlist = requests.get(IOCSLMSRV, params={"query":"stationlist"}, timeout=TIMEOUT).json()
-    for s in stationlist:
-        stationname = s["Code"]
-        if "sensor" in s and s["sensor"] is not None:
-            stationname += "_" + s["sensor"]
+
+def main():
+    procq = Queue()
+    stationlist = requests.get(
+        IOCSLMSRV,
+        params={"query": "stationlist"},
+        timeout=TIMEOUT
+    ).json()
+    for slist in stationlist:
+        stationname = slist["Code"]
+        if "sensor" in slist and slist["sensor"] is not None:
+            stationname += "_" + slist["sensor"]
         station = {}
         station["name"] = stationname
-        station["slmcode"] = s["Code"]
-        station["lon"] = float(s["Lon"])
-        station["lat"] = float(s["Lat"])
-        for a in ['Location', 'units', 'type', 'countryname', 'UTCOffset', 'country', 'offset', 'sensor']:
-            v = s.get(a,None)
-            if v is not None:
-                station[a] = v
-        pq.put(Process(target=feedall, args=[station]))
+        station["slmcode"] = slist["Code"]
+        station["lon"] = float(slist["Lon"])
+        station["lat"] = float(slist["Lat"])
+        for key in [
+                'Location',
+                'units',
+                'type',
+                'countryname',
+                'UTCOffset',
+                'country',
+                'offset',
+                'sensor'
+        ]:
+            val = slist.get(key, None)
+            if val is not None:
+                station[key] = val
+        procq.put(Process(target=feedall, args=[station]))
 
     processes = {}
-    while (len(processes) > 0) or (not pq.empty()):
+    while (processes != []) or (not procq.empty()):
         now = int(time.time())
-        for t,p in list(processes.items()):
-            if now - t > MAXRUNTIME:
+        for proctime, proc in list(processes.items()):
+            if now - proctime > MAXRUNTIME:
                 print("Terminating Process.")
-                p.terminate()
-            if not p.is_alive():
-                del processes[t]
-        if (not pq.empty()) and len(processes) < PROCESSES:
-            p = pq.get()
-            p.start()
-            processes[now] = p
+                proc.terminate()
+            if not proc.is_alive():
+                del processes[proctime]
+        if (not procq.empty()) and len(processes) < PROCESSES:
+            proc = procq.get()
+            proc.start()
+            processes[now] = proc
         time.sleep(.01)
 
     print("Done.")
+
+
+if __name__ == "__main__":
+    main()

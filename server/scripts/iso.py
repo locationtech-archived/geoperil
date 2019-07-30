@@ -23,7 +23,7 @@
    Martin Hammitzsch (GFZ) - initial implementation
 '''
 
-isoMap = {
+ISO_MAP = {
     "AD": "Andorra",
     "AE": "United Arab Emirates",
     "AF": "Afghanistan",
@@ -256,7 +256,8 @@ isoMap = {
     "TZ": "Tanzania",
     "UA": "Ukraine",
     "UG": "Uganda",
-    "UM": "Minor Outlying Islands Baker Howland Jarvis Johnston Kingman Reef Midway Navassa Palmyra Wake",
+    "UM": "Minor Outlying Islands Baker Howland Jarvis Johnston Kingman " +
+          "Reef Midway Navassa Palmyra Wake",
     "US": "United States Hawaii",
     "UY": "Uruguay",
     "UZ": "Uzbekistan",
@@ -274,34 +275,36 @@ isoMap = {
     "ZA": "South Africa",
     "ZM": "Zambia",
     "ZW": "Zimbabwe",
-
 }
+
 
 def getIso2(country):
     if country == "":
         return None
-    for i, c in isoMap.items():
-        if country.lower() == c.lower():
-            return (i,None)
-    for i, c in isoMap.items():
-        if country.lower().startswith(c.lower()) or c.lower().startswith(country.lower()):
-            return (i,c)
-    for i, c in isoMap.items():
-        if country.lower() in c.lower() or c.lower() in country.lower():
-            return (i,c)
-    # find common words is dangerous since it also matches words like 'island', 'south' ...
+    for i, value in ISO_MAP.items():
+        if country.lower() == value.lower():
+            return (i, None)
+    for i, value in ISO_MAP.items():
+        if country.lower().startswith(value.lower()) or \
+                value.lower().startswith(country.lower()):
+            return (i, value)
+    for i, value in ISO_MAP.items():
+        if country.lower() in value.lower() or \
+                value.lower() in country.lower():
+            return (i, value)
+    # find common words is dangerous since it also matches words like
+    # 'island', 'south' ...
     best = set()
     best_i = None
-    for i, c in isoMap.items():
-        words1 = set( country.lower().split() )
-        words2 = set( c.lower().split() )
+    for i, value in ISO_MAP.items():
+        words1 = set(country.lower().split())
+        words2 = set(value.lower().split())
         common = words1.intersection(words2)
         blocked = set(["republic", "saint"]).intersection(common)
-        #if common and len(next(iter(common))) > 3:
+        # if common and len(next(iter(common))) > 3:
         if common and (len(common) - len(blocked)) > len(best):
             best = common
             best_i = i
     if best:
-        return (best_i,best)
+        return (best_i, best)
     return None
-

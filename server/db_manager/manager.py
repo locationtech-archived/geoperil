@@ -25,79 +25,86 @@
    Martin Hammitzsch (GFZ) - initial implementation
 '''
 
-import os
-import sys
 import re
 import time
 import datetime
-import urllib.request, urllib.parse, urllib.error
-import urllib.request, urllib.error, urllib.parse
-import atexit
-import json
+import urllib
 
 from pymongo import MongoReplicaSetClient
+
 
 class LatLon:
     def __init__(self, lat, lon):
         self.lat = lat
         self.lon = lon
 
-areas = []
-names = []
 
-def isPointInsidePoylgon( t ):
-
+def is_point_inside_polygon(testpt, areas, names):
     # now start algorithm and check if the point lies inside one polygon
-    nr = 0
+    count = 0
 
     for area in areas:
 
-        for p in area:
+        for ptx in area:
 
             inside = 0
 
-            j = len(p) - 1
-            for i in range( 0, len(p) ):
+            j = len(ptx) - 1
+            for i in enumerate(ptx):
 
-                if p[i].lat < t.lat and p[j].lat >= t.lat or p[i].lat >= t.lat and p[j].lat < t.lat :
+                if (
+                        ptx[i].lat < testpt.lat and ptx[j].lat >= testpt.lat or
+                        ptx[i].lat >= testpt.lat and ptx[j].lat < testpt.lat
+                ):
 
-                    if p[i].lon + (t.lat - p[i].lat) / ( p[j].lat - p[i].lat ) * ( p[j].lon - p[i].lon ) < t.lon :
+                    calc = ptx[i].lon + \
+                        (testpt.lat - ptx[i].lat) / \
+                        (ptx[j].lat - ptx[i].lat) * \
+                        (ptx[j].lon - ptx[i].lon)
+
+                    if calc < testpt.lon:
                         inside = (inside + 1) % 2
 
                 j = i
 
             if inside:
-                return names[nr]
+                return names[count]
 
-        nr += 1
+        count += 1
 
     return None
 
+
 # this is now still left in the manager to unburden the Tomcat server
 # however we could move this into the server as well
-def getType( db, inst, entry ):
+def get_type(dbm, inst, entry, areas, names):
 
-    ret = db['eqs'].find( { "id": entry["id"] } )
+    ret = dbm['eqs'].find({"id": entry["id"]})
 
     if ret.count() == 0:
 
         # no entry with same id found --> new entry
-        iho_region = isPointInsidePoylgon( LatLon( entry["lat"], entry["lon"] ) )
-        if iho_region != None:
+        iho_region = is_point_inside_polygon(
+            LatLon(entry["lat"], entry["lon"]),
+            areas,
+            names
+        )
+        if iho_region is not None:
             entry["sea_area"] = iho_region
 
         return "new"
 
     # convert iso date string of form YYYY-MM-DDTHH:MM:SS.mmmZ to datetime
-    date = datetime.datetime.strptime( entry["date"], "%Y-%m-%dT%H:%M:%S.%fZ" )
+    date = datetime.datetime.strptime(entry["date"], "%Y-%m-%dT%H:%M:%S.%fZ")
 
-    query = { "prop.region": entry["name"],
-              "prop.latitude": entry["lat"],
-              "prop.longitude": entry["lon"],
-              "prop.magnitude": entry["mag"],
-              "prop.depth": entry["depth"],
-              "prop.date": date,
-            }
+    query = {
+        "prop.region": entry["name"],
+        "prop.latitude": entry["lat"],
+        "prop.longitude": entry["lon"],
+        "prop.magnitude": entry["mag"],
+        "prop.depth": entry["depth"],
+        "prop.date": date,
+    }
 
     if "dip" in entry:
         query["prop.dip"] = entry["dip"]
@@ -108,29 +115,35 @@ def getType( db, inst, entry ):
     if "rake" in entry:
         query["prop.rake"] = entry["rake"]
 
-    query.update( { "id": entry['id'],
-                    "user": inst["_id"],
-                  })
+    query.update({
+        "id": entry['id'],
+        "user": inst["_id"]
+    })
 
-    # check if IHO region was set already in one of the related entries returned in ret
-    for r in ret:
+    # check if IHO region was set already in one of the related entries
+    # returned in ret
+    for rel in ret:
 
-        if r["prop"]["latitude"] == entry["lat"] and \
-           r["prop"]["longitude"] == entry["lon"]:
+        if rel["prop"]["latitude"] == entry["lat"] and \
+           rel["prop"]["longitude"] == entry["lon"]:
 
-            if "sea_area" in r["prop"] and r["prop"]["sea_area"]:
-                entry["sea_area"] = r["prop"]["sea_area"]
+            if "sea_area" in rel["prop"] and rel["prop"]["sea_area"]:
+                entry["sea_area"] = rel["prop"]["sea_area"]
                 break
 
     # check for update
-    ret = db['eqs'].find( query )
+    ret = dbm['eqs'].find(query)
 
     if ret.count() == 0:
 
         # no matching entry for all properties found --> update
         if "sea_area" not in entry:
-            iho_region = isPointInsidePoylgon( LatLon( entry["lat"], entry["lon"] ) )
-            if iho_region != None:
+            iho_region = is_point_inside_polygon(
+                LatLon(entry["lat"], entry["lon"]),
+                areas,
+                names
+            )
+            if iho_region is not None:
                 entry["sea_area"] = iho_region
 
         return "update"
@@ -138,9 +151,10 @@ def getType( db, inst, entry ):
     # entry exists already
     return "existing"
 
-def read_mt( entry, mt ):
 
-    s = """(\d\d/\d\d/\d\d) (\d\d:\d\d:\d\d.\d\d)
+def read_mt(entry, rmt):
+
+    pattern = r"""(\d\d/\d\d/\d\d) (\d\d:\d\d:\d\d.\d\d)
 (.*?)
 Epicenter: (.*?) (.*?)
 MW (.*?)
@@ -152,25 +166,27 @@ Best Double Couple:.*?
  NP1:Strike=([ \d]{1,3}) Dip=([ \d]{1,2}) Slip=([- \d]{1,4})
 """
 
-    response = urllib.request.urlopen( 'http://geofon.gfz-potsdam.de' + mt )
+    response = urllib.request.urlopen('http://geofon.gfz-potsdam.de' + rmt)
     data = response.read()
     txt = data.decode('utf-8')
 
-    prop = re.findall( s, txt )
+    prop = re.findall(pattern, txt)
 
-    if len(prop) == 0:
-      return 1
+    if prop == []:
+        return 1
 
     prop = prop[0]
 
-    date = datetime.datetime.strptime( prop[0] + " " + prop[1], "%y/%m/%d %H:%M:%S.%f")
+    date = datetime.datetime.strptime(
+        prop[0] + " " + prop[1], "%y/%m/%d %H:%M:%S.%f"
+    )
 
     # adjust to right format if milliseconds are missing
-    datestr = date.isoformat();
-    if not '.' in datestr:
-        datestr = datestr + ".000000";
+    datestr = date.isoformat()
+    if '.' not in datestr:
+        datestr = datestr + ".000000"
 
-    datestr = datestr[:-3] + 'Z'; #ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
+    datestr = datestr[:-3] + 'Z'  # ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
 
     entry["name"] = prop[2]
     entry["lat"] = float(prop[3])
@@ -184,16 +200,15 @@ Best Double Couple:.*?
 
     return 0
 
-def init_world_seas_lookup( regions_file ):
-    global areas
-    global names
 
-    kml_regions = open( regions_file, 'r')
+def init_world_seas_lookup(regions_file):
+    kml_regions = open(regions_file, 'r')
 
     txt = kml_regions.read()
 
-    regions = re.findall( '<Placemark .*?>(.*?)</Placemark>', txt, re.S )
-    names = re.findall( '<span class="atr-name">NAME</span>:</strong> <span class="atr-value">(.*?)</span>', txt, re.S )
+    regions = re.findall('<Placemark .*?>(.*?)</Placemark>', txt, re.S)
+    names = re.findall('<span class="atr-name">NAME</span>:</strong> ' +
+                       '<span class="atr-value">(.*?)</span>', txt, re.S)
 
     areas = []
 
@@ -201,152 +216,175 @@ def init_world_seas_lookup( regions_file ):
 
         polygons = []
 
-        matches = re.findall( '<outerBoundaryIs>.*?<coordinates>(.*?)</coordinates>', region, re.S )
+        matches = re.findall(
+            '<outerBoundaryIs>.*?<coordinates>(.*?)</coordinates>',
+            region,
+            re.S
+        )
 
-        for m in matches:
+        for match in matches:
 
-            arr = m.split(' ')
+            arr = match.split(' ')
             obj = []
 
             for i in arr:
                 coord = i.split(',')
-                obj.append( LatLon( float(coord[1]), float(coord[0]) ) )
+                obj.append(LatLon(float(coord[1]), float(coord[0])))
 
-            polygons.append( obj )
+            polygons.append(obj)
 
-        areas.append( polygons )
+        areas.append(polygons)
+
+    return areas, names
+
 
 def main():
 
-    startTime = time.time()
+    start_time = time.time()
 
-    init_world_seas_lookup("World_Seas.kml")
+    areas, names = init_world_seas_lookup("World_Seas.kml")
 
     print('Initialization of world seas regions finished')
 
     url = 'http://geofon.gfz-potsdam.de/eqinfo/list.php?page='
     page = 1
 
-    cntTotal = 0
-    cntInsert = 0
-    cntUpdate = 0
-    cntError = 0
-    cntSim = 0
-    cntKnown = 0
+    cnt_total = 0
+    cnt_insert = 0
+    cnt_update = 0
+    cnt_error = 0
+    cnt_sim = 0
+    cnt_known = 0
 
-    client = MongoReplicaSetClient("mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0" ,w="majority",
-        socketTimeoutMS=10000,connectTimeoutMS=10000)
-    db = client['trideccloud']
+    client = MongoReplicaSetClient(
+        "mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0",
+        w="majority",
+        socketTimeoutMS=10000,
+        connectTimeoutMS=10000
+    )
+    dbm = client['trideccloud']
 
-    inst = db['institutions'].find( { "name": "gfz" } )[0]
+    inst = dbm['institutions'].find({"name": "gfz"})[0]
 
     elist = []
 
-    # stop if we have seen at least 100 known entries (rounded up to a multiple of page size) --> updates for older entries are unlikely
-    while cntKnown < 100:
+    # stop if we have seen at least 100 known entries (rounded up to a
+    # multiple of page size) --> updates for older entries are unlikely
+    while cnt_known < 100:
 
-        response = urllib.request.urlopen( url + str(page) )
+        response = urllib.request.urlopen(url + str(page))
         data = response.read()
         text = data.decode('utf-8')
 
-        pattern = ("<tr.*?>.*?"
-         "<td.*?><a.*?(gfz\d\d\d\d\w\w\w\w)'>(.*?)</a></td>.*?" # eventId, date
-         "<td.*?>(.*?)</td>.*?" # magnitude
-         "<td.*?>(.*?)</td>.*?" # latitude
-         "<td.*?>(.*?)</td>.*?" # longitude
-         "<td.*?>(.*?)</td>.*?" # depth
-         "<td.*?>.*?</td>.*?" # status
-         "<td.*?>(?:<a href='(.*?)'>MT</a>)?</td>.*?" # link to mt.txt
-         "<td.*?>(.*?)</td>.*?" # region
-         "</tr>"
+        pattern = (
+            r"<tr.*?>.*?"
+            # eventId, date
+            r"<td.*?><a.*?(gfz\d\d\d\d\w\w\w\w)'>(.*?)</a></td>.*?"
+            r"<td.*?>(.*?)</td>.*?"  # magnitude
+            r"<td.*?>(.*?)</td>.*?"  # latitude
+            r"<td.*?>(.*?)</td>.*?"  # longitude
+            r"<td.*?>(.*?)</td>.*?"  # depth
+            r"<td.*?>.*?</td>.*?"  # status
+            r"<td.*?>(?:<a href='(.*?)'>MT</a>)?</td>.*?"  # link to mt.txt
+            r"<td.*?>(.*?)</td>.*?"  # region
+            r"</tr>"
         )
 
-        matches = re.findall( pattern, text, re.MULTILINE | re.DOTALL )
+        matches = re.findall(pattern, text, re.MULTILINE | re.DOTALL)
 
-        #if page == 5:
-        #    break
+        # if page == 5:
+        #     break
 
-        if len( matches ) == 0:
+        if matches == []:
             break
 
         page += 1
 
-        for m in matches:
+        for match in matches:
 
-            #print(m)
+            # print(m)
 
-            cntTotal += 1
+            cnt_total += 1
 
             entry = {
-              "inst": inst["name"],
-              "secret": inst["secret"],
-              "id": m[0],
+                "inst": inst["name"],
+                "secret": inst["secret"],
+                "id": match[0],
             }
 
             ret = 0
 
             # parse mt.txt if moment tensor is available
-            mt = m[6]
-            if mt != '':
-                ret = read_mt( entry, mt )
+            mten = match[6]
+            if mten != '':
+                ret = read_mt(entry, mten)
             else:
-                date = datetime.datetime.strptime( m[1], "%Y-%m-%d %H:%M:%S")
-                entry["date"] = date.isoformat() + '.000Z' #ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
-                entry["name"] = m[7]
-                entry["lat"] = float(m[3][:-6]) * (1 - 2*m[3].endswith("S"))
-                entry["lon"] = float(m[4][:-6]) * (1 - 2*m[4].endswith("W"))
-                entry["mag"] = float(m[2])
-                entry["depth"] = float(m[5])
+                date = datetime.datetime.strptime(
+                    match[1],
+                    "%Y-%m-%d %H:%M:%S"
+                )
+                # ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
+                entry["date"] = date.isoformat() + '.000Z'
+                entry["name"] = match[7]
+                entry["lat"] = float(match[3][:-6]) * \
+                    (1 - 2 * match[3].endswith("S"))
+                entry["lon"] = float(match[4][:-6]) * \
+                    (1 - 2 * match[4].endswith("W"))
+                entry["mag"] = float(match[2])
+                entry["depth"] = float(match[5])
             if ret != 0:
                 print('Error: ', entry["id"])
-                cntError += 1
+                cnt_error += 1
                 continue
 
-            print( "Fetch: ", entry["date"], entry["id"] )
+            print("Fetch: ", entry["date"], entry["id"])
 
             # get type of entry and set IHO region
-            type = getType( db, inst, entry )
+            gtype = get_type(dbm, inst, entry, areas, names)
 
-            if type == "new" or type == "update":
+            if gtype in ("new", "update"):
 
-                elist.append( { "type": type, "entry": entry } )
+                elist.append({"type": gtype, "entry": entry})
 
             else:
-                cntKnown += 1
+                cnt_known += 1
 
     print('\n')
 
-    for elem in reversed( elist ):
+    for elem in reversed(elist):
 
-        type = elem["type"]
+        etype = elem["type"]
         entry = elem["entry"]
 
-        if type == "new":
-            cntInsert += 1
-        elif type == "update":
-            cntUpdate += 1
+        if etype == "new":
+            cnt_insert += 1
+        elif etype == "update":
+            cnt_update += 1
 
         if "sea_area" in entry and entry["mag"] > 5.5 and entry["depth"] < 100:
-            cntSim += 1
-            entry.update( { "comp": 180 } )
+            cnt_sim += 1
+            entry.update({"comp": 180})
 
-        data = urllib.parse.urlencode( entry ).encode('ascii')
-        req = urllib.request.Request('http://trideccloud.gfz-potsdam.de/srv/data_insert', data)
-        res = urllib.request.urlopen( req ).read()
+        data = urllib.parse.urlencode(entry).encode('ascii')
+        req = urllib.request.Request(
+            'http://trideccloud.gfz-potsdam.de/srv/data_insert',
+            data
+        )
+        urllib.request.urlopen(req).read()
 
-        time.sleep( 0.01 )
+        time.sleep(0.01)
 
-    print('Total: %u' % cntTotal)
-    print('Inserted: %u' % cntInsert)
-    print('Updated: %u' % cntUpdate)
-    print('Errors: %u' % cntError)
+    print('Total: %u' % cnt_total)
+    print('Inserted: %u' % cnt_insert)
+    print('Updated: %u' % cnt_update)
+    print('Errors: %u' % cnt_error)
     print('Pages: %u' % page)
-    print('Simulated: %u' % cntSim)
+    print('Simulated: %u' % cnt_sim)
 
     client.close()
-    endTime = time.time()
+    end_time = time.time()
 
-    print("Duration: %u" % (endTime - startTime))
+    print("Duration: %u" % (end_time - start_time))
 
 
 if __name__ == "__main__":
