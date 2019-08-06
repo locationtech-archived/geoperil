@@ -28,52 +28,59 @@ package GeoHazardServices;
 import java.util.ArrayList;
 import java.util.List;
 
-public class EventSet {
-	public String setid;
-	public int size;
-	public int total_dur;
-	/* Progress accumulated over all events. */
-	private Integer overall_progress;
-	private List<EQTask> tasks;
-	private EQTask last;
+public final class EventSet {
+    public String setid;
+    public int size;
+    public int total_dur;
+    /* Progress accumulated over all events. */
+    private Integer overall_progress;
+    private List<EQTask> tasks;
+    private EQTask last;
 
-	public EventSet(String setid, int size, int total_dur) {
-		this.setid = setid;
-		this.size = size;
-		this.total_dur = total_dur;
-		this.overall_progress = 0;
-		this.tasks = new ArrayList<EQTask>();
-	}
+    private final float calcPercent = 100.0f;
 
-	public synchronized void addTask(EQTask task) {
-		this.tasks.add(task);
-	}
+    public EventSet(
+        final String evsetid,
+        final int evsize,
+        final int evtotaldur
+    ) {
+        this.setid = evsetid;
+        this.size = evsize;
+        this.total_dur = evtotaldur;
+        this.overall_progress = 0;
+        this.tasks = new ArrayList<EQTask>();
+    }
 
-	public synchronized void setLastTask(EQTask task) {
-		this.last = task;
-	}
+    public synchronized void addTask(final EQTask task) {
+        this.tasks.add(task);
+    }
 
-	public synchronized boolean isLastTask(EQTask task) {
-		return this.last == task;
-	}
+    public synchronized void setLastTask(final EQTask task) {
+        this.last = task;
+    }
 
-	public List<EQTask> getTasks() {
-		return this.tasks;
-	}
+    public synchronized boolean isLastTask(final EQTask task) {
+        return this.last == task;
+    }
 
-	public int getOverallProgress() {
-		return overall_progress;
-	}
+    public List<EQTask> getTasks() {
+        return this.tasks;
+    }
 
-	public float incOverallProgress(int amount) {
-		synchronized( overall_progress ) {
-			overall_progress += amount;
-			return getProgress();
-		}
-	}
+    public int getOverallProgress() {
+        return overall_progress;
+    }
 
-	/* Return real progress from 0 - 100. */
-	public float getProgress() {
-		return (this.overall_progress.floatValue() / (float)this.total_dur) * 100.0f;
-	}
+    public float incOverallProgress(final int amount) {
+        synchronized (overall_progress) {
+            overall_progress += amount;
+            return getProgress();
+        }
+    }
+
+    /* Return real progress from 0 - 100. */
+    public float getProgress() {
+        return (this.overall_progress.floatValue() / (float) this.total_dur)
+            * calcPercent;
+    }
 }

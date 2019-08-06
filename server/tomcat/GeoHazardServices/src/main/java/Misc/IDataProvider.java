@@ -31,7 +31,11 @@ import java.util.List;
 import com.mongodb.DBObject;
 
 public interface IDataProvider {
-	public List<DBObject> fetch(User user, Date maxTimestamp, int limit);
-	public List<DBObject> update(User user, Date minTimestamp, Date maxTimestamp);
-	public boolean add(List<DBObject> out, DBObject obj);
+    List<DBObject> fetch(User user, Date maxTimestamp, int limit);
+    List<DBObject> update(
+        User user,
+        Date minTimestamp,
+        Date maxTimestamp
+    );
+    boolean add(List<DBObject> out, DBObject obj);
 }

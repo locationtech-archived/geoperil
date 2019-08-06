@@ -28,25 +28,25 @@ package Misc;
 import com.mongodb.DBObject;
 
 public class User {
+    public String name;
+    public Object objId;
+    public String inst;
 
-	public String name;
-	public Object objId;
-	public String inst;
+    public User(final DBObject obj) {
+        this(obj, (DBObject) null);
+    }
 
-	public User( DBObject obj ) {
-		this( obj, (DBObject) null );
-	}
+    public User(final DBObject obj, final String userInst) {
+        this(obj);
+        this.inst = userInst;
+    }
 
-	public User( DBObject obj, String inst ) {
-		this( obj );
-		this.inst = inst;
-	}
+    public User(final DBObject obj, final DBObject instObj) {
+        this.objId = (Object) obj.get("_id");
+        this.name = (String) obj.get("username");
 
-	public User( DBObject obj, DBObject instObj ) {
-		this.objId = (Object) obj.get( "_id" );
-		this.name = (String) obj.get( "username" );
-
-		if( instObj != null )
-			inst = (String) instObj.get( "name" );
-	}
+        if (instObj != null) {
+            inst = (String) instObj.get("name");
+        }
+    }
 }

@@ -38,53 +38,76 @@ import com.mongodb.DBObject;
 import Misc.IDataProvider;
 import Misc.User;
 
-public class FloodProvider implements IDataProvider {
+public final class FloodProvider implements IDataProvider {
 
-	protected DB db;
+    protected DB db;
 
-	public FloodProvider(DB db) {
-		this.db = db;
-	}
+    public FloodProvider(final DB database) {
+        this.db = database;
+    }
 
-	@Override
-	public List<DBObject> fetch(User user, Date maxTimestamp, int limit) {
-		List<DBObject> list = new ArrayList<DBObject>();
-		BasicDBObject query = new BasicDBObject("user", user.objId);
-		query.append("timestamp", new BasicDBObject("$lte", maxTimestamp));
-		DBCursor cursor = db.getCollection("floodsims").find(query).sort( new BasicDBObject("timestamp", -1) ).limit(limit);
-		list = cursor.toArray();
-		return list;
-	}
+    @Override
+    public List<DBObject> fetch(
+        final User user,
+        final Date maxTimestamp,
+        final int limit
+    ) {
+        List<DBObject> list = new ArrayList<DBObject>();
+        BasicDBObject query = new BasicDBObject("user", user.objId);
+        query.append("timestamp", new BasicDBObject("$lte", maxTimestamp));
+        DBCursor cursor = db.getCollection("floodsims").find(query).sort(
+            new BasicDBObject("timestamp", -1)
+        ).limit(limit);
+        list = cursor.toArray();
+        return list;
+    }
 
-	@Override
-	public List<DBObject> update(User user, Date minTimestamp, Date maxTimestamp) {
-		List<DBObject> list = new ArrayList<DBObject>();
-		BasicDBList timestamp = new BasicDBList();
-		timestamp.add( new BasicDBObject("timestamp", new BasicDBObject( "$gt", minTimestamp )) );
-		timestamp.add( new BasicDBObject("timestamp", new BasicDBObject( "$lte", maxTimestamp )) );
-		BasicDBObject query = new BasicDBObject("$and", timestamp);
-		query.append("class", "flood");
+    @Override
+    public List<DBObject> update(
+        final User user,
+        final Date minTimestamp,
+        final Date maxTimestamp
+    ) {
+        List<DBObject> list = new ArrayList<DBObject>();
+        BasicDBList timestamp = new BasicDBList();
+        timestamp.add(
+            new BasicDBObject(
+                "timestamp",
+                new BasicDBObject("$gt", minTimestamp)
+            )
+        );
+        timestamp.add(
+            new BasicDBObject(
+                "timestamp",
+                new BasicDBObject("$lte", maxTimestamp)
+            )
+        );
+        BasicDBObject query = new BasicDBObject("$and", timestamp);
+        query.append("class", "flood");
 
-		DBCursor cursor = db.getCollection("events").find( query ).sort( new BasicDBObject("timestamp", -1) );
-		for( DBObject obj: cursor ) {
-			//if( obj.get("event").equals("new") ) {
-				BasicDBObject objQuery = new BasicDBObject("_id", obj.get("id"));
-				obj.put("data", db.getCollection("floodsims").findOne( objQuery ));
-				list.add( obj );
-			//}
-		}
+        DBCursor cursor = db.getCollection("events")
+            .find(query).sort(new BasicDBObject("timestamp", -1));
+        for (DBObject obj: cursor) {
+            //if( obj.get("event").equals("new") ) {
+            BasicDBObject objQuery = new BasicDBObject("_id", obj.get("id"));
+            obj.put("data", db.getCollection("floodsims").findOne(objQuery));
+            list.add(obj);
+            //}
+        }
 
-		return list;
-	}
+        return list;
+    }
 
-	@Override
-	public boolean add(List<DBObject> out, DBObject obj) {
-		if( ! "flood".equals(obj.get("class")) )
-			return false;
-		BasicDBObject objQuery = new BasicDBObject("_id", obj.get("id"));
-		obj.put("data", db.getCollection("floodsims").findOne( objQuery ));
-		out.add( obj );
-		return true;
-	}
+    @Override
+    public boolean add(final List<DBObject> out, final DBObject obj) {
+        if (!"flood".equals(obj.get("class"))) {
+            return false;
+        }
+
+        BasicDBObject objQuery = new BasicDBObject("_id", obj.get("id"));
+        obj.put("data", db.getCollection("floodsims").findOne(objQuery));
+        out.add(obj);
+        return true;
+    }
 
 }

@@ -28,50 +28,43 @@ package GeoHazardServices;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 
-public class WorkScheduler implements IScheduler {
+public final class WorkScheduler implements IScheduler {
+    PriorityBlockingQueue<WorkerThread> workerQueue;
+    BlockingQueue<Task> taskQueue;
 
-	PriorityBlockingQueue<WorkerThread> workerQueue;
-	BlockingQueue<Task> taskQueue;
+    WorkScheduler(
+        final BlockingQueue<Task> schedTaskQueue,
+        final PriorityBlockingQueue<WorkerThread> schedWorkerQueue
+    ) {
+        this.workerQueue = schedWorkerQueue;
+        this.taskQueue = schedTaskQueue;
+    }
 
-	public WorkScheduler( BlockingQueue<Task> taskQueue,
-						  PriorityBlockingQueue<WorkerThread> workerQueue ) {
+    public void submit(final WorkerThread worker) {
+        this.workerQueue.offer(worker);
+    }
 
-		this.workerQueue = workerQueue;
-		this.taskQueue = taskQueue;
-	}
+    public void submit(final Task task) {
+        this.taskQueue.offer(task);
+    }
 
-	public void submit(WorkerThread worker) {
-		this.workerQueue.offer(worker);
-	}
+    public Task getTask(final String id) {
+        return null;
+    }
 
-	public void submit(Task task) {
-		this.taskQueue.offer(task);
-	}
+    @Override
+    public void run() {
+        WorkerThread worker;
+        Task task;
 
-	public Task getTask(String id) {
-		return null;
-	}
-
-	@Override
-	public void run() {
-
-		WorkerThread worker;
-		Task task;
-
-		while( true ) {
-
-			try {
-
-				task = taskQueue.take();
-				worker = workerQueue.take();
-				worker.putWork( task );
-
-			} catch (InterruptedException e) {
-				break;
-			}
-
-		}
-
-	}
-
+        while (true) {
+            try {
+                task = taskQueue.take();
+                worker = workerQueue.take();
+                worker.putWork(task);
+            } catch (InterruptedException e) {
+                break;
+            }
+        }
+    }
 }

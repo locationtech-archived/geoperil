@@ -36,128 +36,145 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Connection {
+    protected Process process;
+    protected PrintStream out;
+    protected BufferedReader in;
+    protected byte[] buffer;
+    protected String dir;
 
-	protected Process process;
-	protected PrintStream out;
-	protected BufferedReader in;
-	protected byte[] buffer;
-	protected String dir;
+    private final int bufferSize = 512 * 1024;
 
-	public Connection(String dir) throws IOException {
-		this.dir = dir;
-	}
+    Connection(final String chdir) throws IOException {
+        this.dir = chdir;
+    }
 
-	public PrintStream out() {
-		return out;
-	}
+    public final PrintStream out() {
+        return out;
+    }
 
-	public BufferedReader in() {
-		return in;
-	}
+    public final BufferedReader in() {
+        return in;
+    }
 
-	public void connect() throws IOException {
-		out = new PrintStream( process.getOutputStream() );
-		in = new BufferedReader( new InputStreamReader( process.getInputStream() ) );
-		buffer = new byte[512*1024];
+    /**
+     * Connect method.
+     * @throws IOException Can occur while reading stream
+     */
+    public void connect() throws IOException {
+        out = new PrintStream(process.getOutputStream());
+        in = new BufferedReader(
+            new InputStreamReader(process.getInputStream())
+        );
+        buffer = new byte[bufferSize];
 
-		System.out.println( "cd " + dir );
-		out.println( "cd " + dir );
-		out.println( "echo '\004'" );
-		out.flush();
-		complete();
-	}
+        System.out.println("cd " + dir);
+        out.println("cd " + dir);
+        out.println("echo '\004'");
+        out.flush();
+        complete();
+    }
 
-	public int complete() {
-		out.flush();
-		try {
-			String line;
-			while( (line = in.readLine()) != null && ! line.equals("\004") );
-		} catch( IOException e ) {
-			return 1;
-		}
-		return 0;
-	}
+    public final int complete() {
+        out.flush();
+        try {
+            String line;
 
-	public void close() {
-		out.println( "exit" );
-		out.flush();
-	}
+            do {
+                line = in.readLine();
+            } while (line != null && !line.equals("\004"));
+        } catch (IOException e) {
+            return 1;
+        }
+        return 0;
+    }
 
-	public List<String> runCmds(String ...cmds) throws IOException {
-		List<String> lines = new ArrayList<String>();
-		for( String cmd: cmds )
-			lines.addAll( runCmd(cmd) );
-		return lines;
-	}
+    public final void close() {
+        out.println("exit");
+        out.flush();
+    }
 
-	public List<String> runCmd(String cmd) throws IOException {
-		List<String> lines = new ArrayList<String>();
-		runLiveCmd(cmd);
-		String line;
-		while( (line = nextLine()) != null) {
-			lines.add(line);
-		}
-		/* Remove inserted newline from the result. */
-		lines.remove(lines.size() - 1);
-		return lines;
-	}
+    public final List<String> runCmds(final String... cmds) throws IOException {
+        List<String> lines = new ArrayList<String>();
+        for (String cmd: cmds) {
+            lines.addAll(runCmd(cmd));
+        }
+        return lines;
+    }
 
-	public void runLiveCmd(String cmd) throws IOException {
-		/* Run command. */
-		out.println( cmd + "; __RET=$?" );
-		/* Force newline before \004! */
-		out.println( "echo '\n\004'" );
-		out.flush();
-	}
+    public final List<String> runCmd(final String cmd) throws IOException {
+        List<String> lines = new ArrayList<String>();
+        runLiveCmd(cmd);
+        String line;
+        while ((line = nextLine()) != null) {
+            lines.add(line);
+        }
+        /* Remove inserted newline from the result. */
+        lines.remove(lines.size() - 1);
+        return lines;
+    }
 
-	public int returnValue() throws IOException {
-		List<String> ret = this.runCmd("echo ${__RET}");
-		return Integer.valueOf(ret.get(0)).intValue();
-	}
+    public final void runLiveCmd(final String cmd) throws IOException {
+        /* Run command. */
+        out.println(cmd + "; __RET=$?");
+        /* Force newline before \004! */
+        out.println("echo '\n\004'");
+        out.flush();
+    }
 
-	public String nextLine() throws IOException {
-		String line = in.readLine();
-		if( line == null || line.equals("\004") )
-			return null;
-		return line;
-	}
+    public final int returnValue() throws IOException {
+        List<String> ret = this.runCmd("echo ${__RET}");
+        return Integer.valueOf(ret.get(0)).intValue();
+    }
 
-	public List<String> readFile(String fname) throws IOException {
-		return runCmd("cat " + fname);
-	}
+    public final String nextLine() throws IOException {
+        String line = in.readLine();
+        if (line == null || line.equals("\004")) {
+            return null;
+        }
+        return line;
+    }
 
-	public void writeFile(String content, String fname) {
-		out.println("echo '" + content + "' > " + fname);
-		out.flush();
-	}
+    public final List<String> readFile(final String fname) throws IOException {
+        return runCmd("cat " + fname);
+    }
 
-	public int copyFile(String src, String dst) {
-		/* TODO: '\n' can be important if previous program does not issue a final newline - check this for all cases */
-		out.println( "echo '\n\004'" );
-		complete();
-		out.println( "cat " + src );
-		out.println( "echo -n '\004'" );
-		out.flush();
-		/* Use BufferedInputStream to read file in binary mode! */
-		BufferedInputStream bin = new BufferedInputStream( process.getInputStream() );
-		try {
-			BufferedOutputStream writer = new BufferedOutputStream( new FileOutputStream( dst ) );
-			int ret = bin.read( buffer, 0, buffer.length );
-			while( ret > 0 ) {
-				if( buffer[ ret - 1 ] == '\004' ) {
-					ret -= 1;
-					writer.write( buffer, 0, ret );
-					break;
-				}
-				writer.write( buffer, 0, ret );
-				ret = bin.read( buffer, 0, buffer.length );
-			}
-			writer.close();
-		} catch(IOException e) {
-			e.printStackTrace();
-			return 1;
-		}
+    public final void writeFile(final String content, final String fname) {
+        out.println("echo '" + content + "' > " + fname);
+        out.flush();
+    }
 
-		return 0;
-	}
+    public final int copyFile(final String src, final String dst) {
+        /* TODO: '\n' can be important if previous program does not issue a
+         * final newline - check this for all cases */
+        out.println("echo '\n\004'");
+        complete();
+        out.println("cat " + src);
+        out.println("echo -n '\004'");
+        out.flush();
+        /* Use BufferedInputStream to read file in binary mode! */
+        BufferedInputStream bin = new BufferedInputStream(
+            process.getInputStream()
+        );
+        try {
+            BufferedOutputStream writer = new BufferedOutputStream(
+                new FileOutputStream(dst)
+            );
+            int ret = bin.read(buffer, 0, buffer.length);
+            while (ret > 0) {
+                if (buffer[ ret - 1 ] == '\004') {
+                    ret -= 1;
+                    writer.write(buffer, 0, ret);
+                    break;
+                }
+                writer.write(buffer, 0, ret);
+                ret = bin.read(buffer, 0, buffer.length);
+            }
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return 1;
+        }
+
+        return 0;
+    }
 }

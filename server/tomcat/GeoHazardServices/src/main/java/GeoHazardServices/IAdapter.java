@@ -26,5 +26,5 @@
 package GeoHazardServices;
 
 public interface IAdapter {
-	public int handleRequest( Task task );
+    int handleRequest(Task task);
 }

@@ -30,17 +30,21 @@ import java.util.List;
 import GeoHazardServices.Task;
 import Misc.User;
 
-public class FloodTask extends Task {
+public final class FloodTask extends Task {
 
-	private List<Location> locations;
+    private List<Location> locations;
 
-	public FloodTask(String id, User user, List<Location> locations) {
-		this.id = id;
-		this.user = user;
-		this.locations = locations;
-	}
+    public FloodTask(
+        final String id,
+        final User user,
+        final List<Location> locationslist
+    ) {
+        this.id = id;
+        this.user = user;
+        this.locations = locationslist;
+    }
 
-	public List<Location> getLocations() {
-		return this.locations;
-	}
+    public List<Location> getLocations() {
+        return this.locations;
+    }
 }

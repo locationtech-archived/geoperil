@@ -30,21 +30,20 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
 @WebListener
-public class Listener implements ServletContextListener {
+public final class Listener implements ServletContextListener {
+    static Services srv = null;
 
-	static Services srv = null;
+    static void registerService(final Services service) {
+        Listener.srv = service;
+    }
 
-	static void registerService( Services srv ) {
-		Listener.srv = srv;
-	}
+    @Override
+    public void contextDestroyed(final ServletContextEvent arg0) {
+        if (srv != null) {
+            srv.destroy();
+        }
+    }
 
-	@Override
-	public void contextDestroyed(ServletContextEvent arg0) {
-		if( srv != null )
-			srv.destroy();
-	}
-
-	@Override
-	public void contextInitialized(ServletContextEvent arg0) { }
-
+    @Override
+    public void contextInitialized(final ServletContextEvent arg0) { }
 }

@@ -27,44 +27,63 @@ package GeoHazardServices;
 
 import java.util.Date;
 
-public class EQParameter {
+public final class EQParameter {
 
-	public double lon;
-	public double lat;
-	/* Either mw or slip, width and length must be specified. */
-	public double mw;
-	public double slip;
-	public double length;
-	public double width;
-	public double depth;
-	public double dip;
-	public double strike;
-	public double rake;
-	public Date date;
+    public double lon;
+    public double lat;
+    /* Either mw or slip, width and length must be specified. */
+    public double mw;
+    public double slip;
+    public double length;
+    public double width;
+    public double depth;
+    public double dip;
+    public double strike;
+    public double rake;
+    public Date date;
 
-	public EQParameter( double lon, double lat, double mw, double depth,
-						double dip, double strike, double rake, Date date) {
-		this.lon = lon;
-		this.lat = lat;
-		this.mw = mw;
-		this.depth = depth;
-		this.dip = dip;
-		this.strike = strike;
-		this.rake = rake;
-		this.date = date;
-	}
+    public EQParameter(
+        final double eqLon,
+        final double eqLat,
+        final double eqMw,
+        final double eqDepth,
+        final double eqDip,
+        final double eqStrike,
+        final double eqRake,
+        final Date eqDate
+    ) {
+        this.lon = eqLon;
+        this.lat = eqLat;
+        this.mw = eqMw;
+        this.depth = eqDepth;
+        this.dip = eqDip;
+        this.strike = eqStrike;
+        this.rake = eqRake;
+        this.date = eqDate;
+    }
 
-	public EQParameter( double lon, double lat, double slip, double length, double width,
-						double depth, double dip, double strike, double rake, Date date ) {
-		this( lon, lat, 0, depth, dip, strike, rake, date );
-		this.slip = slip;
-		this.length = length;
-		this.width = width;
-	}
+    public EQParameter(
+        final double eqLon,
+        final double eqLat,
+        final double eqSlip,
+        final double eqLength,
+        final double eqWidth,
+        final double eqDepth,
+        final double eqDip,
+        final double eqStrike,
+        final double eqRake,
+        final Date eqDate
+    ) {
+        this(eqLon, eqLat, 0, eqDepth, eqDip, eqStrike, eqRake, eqDate);
+        this.slip = eqSlip;
+        this.length = eqLength;
+        this.width = eqWidth;
+    }
 
-	@Override
-	public String toString() {
-		return new String( "Longitude: " + lon + " Latitude: " + lat + " Magnitude (mw): " + mw +
-						   " Depth: " + depth + " Dip: " + dip + " Strike: " + strike + " Rake: " + rake);
-	}
+    @Override
+    public String toString() {
+        return "Longitude: " + lon + " Latitude: " + lat + " Magnitude (mw): "
+            + mw + " Depth: " + depth + " Dip: " + dip + " Strike: " + strike
+            + " Rake: " + rake;
+    }
 }
