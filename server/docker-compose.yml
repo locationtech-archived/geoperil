@@ -37,13 +37,11 @@ services:
     volumes:
       - ./wsgi:/var/www/geoperil/wsgi
       - ./www:/var/www/geoperil/htdocs
+      - ../tools:/opt/geoperil/tools
+      - ../worker:/opt/geoperil/worker
+      - ../GMT:/opt/geoperil/GMT
       - 'geoperil-logs:/var/log'
 
 volumes:
   data-volume:
   geoperil-logs:
-
-networks:
-  network:
-    external:
-      name: main_network

@@ -18,7 +18,13 @@ COPY requirements.txt requirements.txt
 
 RUN pip3 install -r requirements.txt
 
-VOLUME ["/var/www/geoperil/wsgi", "/var/www/geoperil/htdocs"]
+VOLUME [ \
+    "/var/www/geoperil/wsgi", \
+    "/var/www/geoperil/htdocs", \
+    "/opt/geoperil/worker", \
+    "/opt/geoperil/GMT", \
+    "/opt/geoperil/tools" \
+]
 
 COPY conf/apache2/sites-available/geoperil.conf /etc/apache2/sites-available/010-geoperil.conf
 
