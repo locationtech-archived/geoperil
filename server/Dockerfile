@@ -12,7 +12,8 @@ RUN apt-get update && \
     tomcat8 \
     maven \
     php7.2-fpm \
-    php-mbstring
+    php-mbstring \
+    ssh
 
 COPY requirements.txt requirements.txt
 
@@ -44,7 +45,10 @@ COPY ./db_manager /root/db_manager
 
 RUN sed -i -e 's@trideccloud\.gfz-potsdam\.de@localhost@' /root/db_manager/manager.py && \
     sed -i -e 's@MongoReplicaSetClient@MongoClient@' /root/db_manager/manager.py && \
-    sed -i -e 's@mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0@mongodb://mongo@' /root/db_manager/manager.py
+    sed -i -e 's@mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0@mongodb://mongo@' /root/db_manager/manager.py && \
+    mkdir -pv /tmp/geoperil/localdir && \
+    mkdir -pv /tmp/geoperil/results && \
+    chown -Rv tomcat8 /tmp/geoperil
 
 WORKDIR /root/GeoHazardServices
 
