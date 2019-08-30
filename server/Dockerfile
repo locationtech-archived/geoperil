@@ -48,7 +48,9 @@ RUN sed -i -e 's@trideccloud\.gfz-potsdam\.de@localhost@' /root/db_manager/manag
     sed -i -e 's@mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0@mongodb://mongo@' /root/db_manager/manager.py && \
     mkdir -pv /tmp/geoperil/localdir && \
     mkdir -pv /tmp/geoperil/results && \
-    chown -Rv tomcat8 /tmp/geoperil
+    chown -Rv tomcat8 /tmp/geoperil && \
+    mkdir -pv /var/log/tomcat8 && \
+    chown -Rv tomcat8 /var/log/tomcat8
 
 WORKDIR /root/GeoHazardServices
 
