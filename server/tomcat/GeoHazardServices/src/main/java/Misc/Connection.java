@@ -103,13 +103,19 @@ public abstract class Connection {
 
     public final List<String> runCmd(final String cmd) throws IOException {
         List<String> lines = new ArrayList<String>();
-        runLiveCmd(cmd);
         String line;
+
+        runLiveCmd(cmd);
+
         while ((line = nextLine()) != null) {
             lines.add(line);
         }
-        /* Remove inserted newline from the result. */
-        lines.remove(lines.size() - 1);
+
+        if (lines.size() > 0) {
+            /* Remove inserted newline from the result. */
+            lines.remove(lines.size() - 1);
+        }
+
         return lines;
     }
 
@@ -123,7 +129,12 @@ public abstract class Connection {
 
     public final int returnValue() throws IOException {
         List<String> ret = this.runCmd("echo ${__RET}");
-        return Integer.valueOf(ret.get(0)).intValue();
+
+        if (ret.size() > 0) {
+            return Integer.valueOf(ret.get(0)).intValue();
+        }
+
+        return -1;
     }
 
     public final String nextLine() throws IOException {
