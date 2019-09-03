@@ -54,14 +54,16 @@ COPY ./tomcat/server.xml /etc/tomcat8/
 COPY ./db_manager /root/db_manager
 
 RUN sed -i -e 's@trideccloud\.gfz-potsdam\.de@localhost@' /root/db_manager/manager.py && \
-    sed -i -e 's@MongoReplicaSetClient@MongoClient@' /root/db_manager/manager.py && \
-    sed -i -e 's@mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0@mongodb://mongo@' /root/db_manager/manager.py && \
     mkdir -pv /tmp/geoperil/localdir && \
     mkdir -pv /tmp/geoperil/results && \
     chown -Rv tomcat8 /tmp/geoperil && \
     mkdir -pv /var/log/tomcat8 && \
     chown -Rv tomcat8 /var/log/tomcat8 && \
     mkdir -pv /var/lib/tomcat8/.ssh
+
+COPY ./scripts/getShape.py /tmp/geoperil/localdir
+COPY ./scripts/getFlood.py /tmp/geoperil/localdir
+COPY ./scripts/getEWH.py /tmp/geoperil/localdir
 
 # insert entry of remote CUDA server in this file
 COPY ./conf/ssh/known_hosts /var/lib/tomcat8/.ssh/
