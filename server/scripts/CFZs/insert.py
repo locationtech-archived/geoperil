@@ -84,10 +84,7 @@ def main():
         print("To few arguments given!")
         sys.exit()
 
-    client = pymongo.MongoReplicaSetClient(
-        "mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0",
-        w="majority"
-    )
+    client = pymongo.MongoClient("mongodb://mongo")
     dbm = client['trideccloud']
 
     import_cfzs(dbm, sys.argv[1], sys.argv[2])

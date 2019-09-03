@@ -24,7 +24,7 @@
 '''
 
 import argparse
-from pymongo import MongoReplicaSetClient
+from pymongo import MongoClient
 import iso
 
 
@@ -59,8 +59,8 @@ def main():
     )
     args = parser.parse_args()
 
-    client = MongoReplicaSetClient(
-        "mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0",
+    client = MongoClient(
+        "mongodb://mongo",
         w="majority"
     )
     dbm = client['trideccloud']

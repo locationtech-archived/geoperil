@@ -28,7 +28,7 @@
 import sys
 import datetime
 import csv
-from pymongo import MongoReplicaSetClient
+from pymongo import MongoClient
 import pymongo
 
 
@@ -117,10 +117,7 @@ def main():
         print("Too few arguments given!")
         sys.exit(1)
 
-    client = MongoReplicaSetClient(
-        "mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0",
-        w="majority"
-    )
+    client = MongoClient("mongodb://mongo")
     dbm = client['trideccloud']
 
     tsps = extract_tsps(sys.argv[2])

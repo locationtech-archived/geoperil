@@ -30,7 +30,7 @@ import time
 import datetime
 import urllib
 
-from pymongo import MongoReplicaSetClient
+from pymongo import MongoClient
 
 
 class LatLon:
@@ -256,9 +256,8 @@ def main():
     cnt_sim = 0
     cnt_known = 0
 
-    client = MongoReplicaSetClient(
-        "mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0",
-        w="majority",
+    client = MongoClient(
+        "mongodb://mongo",
         socketTimeoutMS=10000,
         connectTimeoutMS=10000
     )

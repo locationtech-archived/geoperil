@@ -28,7 +28,7 @@ import argparse
 import datetime
 import pycountry
 
-from pymongo import MongoReplicaSetClient
+from pymongo import MongoClient
 
 
 def vprint(verbose, *_args, **_kwargs):
@@ -37,10 +37,7 @@ def vprint(verbose, *_args, **_kwargs):
 
 
 def main():
-    client = MongoReplicaSetClient(
-        "mongodb://tcnode1,tcnode2,tcnode3/?replicaSet=tcmongors0",
-        w="majority"
-    )
+    client = MongoClient("mongodb://mongo")
     dbm = client['trideccloud']
 
     parser = argparse.ArgumentParser(
