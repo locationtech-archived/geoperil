@@ -116,4 +116,16 @@ public final class EQTask extends Task {
     ) {
         this.bbox = new BoundingBox(lonMin, lonMax, latMin, latMax);
     }
+
+    @Override
+    public String toString() {
+        return "EQTask [accel=" + accel + ", algo=" + algo + ", bbox=" + bbox
+            + ", calcTime=" + calcTime + ", curSimTime=" + curSimTime
+            + ", defaultDtOut=" + defaultDtOut + ", defaultGridres="
+            + defaultGridres + ", dt_out=" + dt_out + ", duration="
+            + duration + ", eqparams=" + eqparams + ", evtset=" + evtset
+            + ", gridres=" + gridres + ", prevCalcTime=" + prevCalcTime
+            + ", prevSimTime=" + prevSimTime + ", progress=" + progress
+            + ", raw=" + raw + ", status=" + status + "]";
+    }
 }
