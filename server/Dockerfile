@@ -60,7 +60,18 @@ RUN sed -i -e 's@trideccloud\.gfz-potsdam\.de@localhost@' /root/db_manager/manag
     mkdir -pv /tmp/geoperil/results && \
     chown -Rv tomcat8 /tmp/geoperil && \
     mkdir -pv /var/log/tomcat8 && \
-    chown -Rv tomcat8 /var/log/tomcat8
+    chown -Rv tomcat8 /var/log/tomcat8 && \
+    mkdir -pv /var/lib/tomcat8/.ssh
+
+# insert entry of remote CUDA server in this file
+COPY ./conf/ssh/known_hosts /var/lib/tomcat8/.ssh/
+
+# id_rsa.pub needs to be added in ~/.ssh/authorized_keys on remote CUDA server
+COPY ./conf/ssh/id_rsa /var/lib/tomcat8/.ssh/
+COPY ./conf/ssh/id_rsa.pub /var/lib/tomcat8/.ssh/
+
+RUN chmod 600 /var/lib/tomcat8/.ssh/id_rsa && \
+    chown -Rv tomcat8 /var/lib/tomcat8/.ssh
 
 WORKDIR /root/GeoHazardServices
 
