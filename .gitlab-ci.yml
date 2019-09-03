@@ -1,0 +1,61 @@
+variables:
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version"
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+
+cache:
+  paths:
+    - .m2/repository/
+    - server/tomcat/GeoHazardServices/target/
+
+verify_python:
+  image: python:3.7-stretch
+  stage: build
+  before_script:
+    - pip3 install -r server/requirements.txt
+  script:
+    - find -name *.py -exec python3 -m compileall \{\} \;
+
+verify_java:
+  image: maven:3-jdk-8
+  stage: build
+  script:
+    - cd server/tomcat/GeoHazardServices
+    - 'mvn $MAVEN_CLI_OPTS clean test-compile'
+    - 'mvn $MAVEN_CLI_OPTS clean verify'
+
+checkstyle_java:
+  image: maven:3-jdk-8
+  stage: test
+  allow_failure: true
+  script:
+    - cd server/tomcat/GeoHazardServices
+    - 'mvn $MAVEN_CLI_OPTS clean checkstyle:checkstyle'
+
+checkstyle_python:
+  image: python:3.7-stretch
+  stage: test
+  allow_failure: true
+  before_script:
+    - pip3 install -r server/requirements.txt
+    - pip3 install pycodestyle pylint
+  script:
+    - find -name *.py | xargs pycodestyle
+    - find -name *.py | xargs pylint
+
+checkstyle_css:
+  image: node:stretch
+  stage: test
+  before_script:
+    - npm install -g stylelint
+    - npm install -g stylelint-config-standard
+  script:
+    - find -name *.css | xargs stylelint
+
+checkstyle_js:
+  image: node:stretch
+  stage: test
+  allow_failure: true
+  before_script:
+    - npm install -g eslint
+  script:
+    - find -name *.js | xargs eslint

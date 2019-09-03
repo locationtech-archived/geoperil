@@ -1,0 +1,19 @@
+{
+  "env": {
+    "browser": true,
+    "commonjs": true,
+    "es6": true,
+    "jquery": true
+  },
+  "globals": {
+    "google": true,
+    "proj4": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "rules": {
+    "max-len": ["error", { "code": 80 }],
+    "indent": ["error", 2]
+  }
+}
