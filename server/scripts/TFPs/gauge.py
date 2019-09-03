@@ -38,7 +38,7 @@ def vprint(verbose, *_args, **_kwargs):
 
 def main():
     client = MongoClient("mongodb://mongo")
-    dbm = client['trideccloud']
+    dbm = client['geoperil']
 
     parser = argparse.ArgumentParser(
         description='Extract tsunami forecast points from PDF.'

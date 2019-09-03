@@ -161,7 +161,7 @@ fi
 
 #### created on ####
 gmt pslegend -Dx0c/${created_y}c/${map_width}c/BL -O -K <<EOF>> ${output}
-L 6p Helvetica L Created on ${date} UTC, by TRIDEC Cloud
+L 6p Helvetica L Created on ${date} UTC
 EOF
 
 if [ ${plot_quake} == Y ]

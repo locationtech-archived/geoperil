@@ -61,9 +61,7 @@ disclaimer = "This product is of informal nature, has been produced for " + \
     "the product or the use or other dealings with the product and its " + \
     "information. By using this product, the user agrees that the use of " + \
     "information obtained from or through this product is at the user's " + \
-    "sole discretion and risk. Complete information concerning the terms " + \
-    "and conditions applied for this product are available at " + \
-    "http://trideccloud.gfz-potsdam.de/disclaimer"
+    "sole discretion and risk."
 disclaimer_height = 2.5
 
 ###########

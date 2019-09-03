@@ -53,13 +53,15 @@ COPY ./tomcat/server.xml /etc/tomcat8/
 # http://www.marineregions.org/download_file.php?name=World_Seas_IHO_v1_kmz.zip
 COPY ./db_manager /root/db_manager
 
-RUN sed -i -e 's@trideccloud\.gfz-potsdam\.de@localhost@' /root/db_manager/manager.py && \
-    mkdir -pv /tmp/geoperil/localdir && \
-    mkdir -pv /tmp/geoperil/results && \
-    chown -Rv tomcat8 /tmp/geoperil && \
-    mkdir -pv /var/log/tomcat8 && \
-    chown -Rv tomcat8 /var/log/tomcat8 && \
-    mkdir -pv /var/lib/tomcat8/.ssh
+RUN mkdir -p /tmp/geoperil/localdir && \
+    mkdir /tmp/geoperil/results && \
+    mkdir /tmp/geoperil/snapshots && \
+    chown -R tomcat8 /tmp/geoperil && \
+    mkdir -p /var/log/tomcat8 && \
+    chown -R tomcat8 /var/log/tomcat8 && \
+    mkdir -p /var/lib/tomcat8/.ssh && \
+    mkdir -p /opt/geoperil/simenv && \
+    mkdir /opt/geoperil/events
 
 COPY ./scripts/getShape.py /tmp/geoperil/localdir
 COPY ./scripts/getFlood.py /tmp/geoperil/localdir

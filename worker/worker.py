@@ -35,7 +35,7 @@ import configparser
 import hashlib
 import requests
 
-TCURL = "http://trideccloud.gfz-potsdam.de/nodes/tcnode1/workersrv"
+TCURL = "http://localhost/workersrv"
 INST = "gfz"
 SECRET = "abcdef"
 

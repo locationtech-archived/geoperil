@@ -261,7 +261,7 @@ def main():
         socketTimeoutMS=10000,
         connectTimeoutMS=10000
     )
-    dbm = client['trideccloud']
+    dbm = client['geoperil']
 
     inst = dbm['institutions'].find({"name": "gfz"})[0]
 
@@ -366,7 +366,7 @@ def main():
 
         data = urllib.parse.urlencode(entry).encode('ascii')
         req = urllib.request.Request(
-            'http://trideccloud.gfz-potsdam.de/srv/data_insert',
+            'http://localhost/srv/data_insert',
             data
         )
         urllib.request.urlopen(req).read()

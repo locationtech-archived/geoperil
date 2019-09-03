@@ -85,7 +85,7 @@ def main():
         sys.exit()
 
     client = pymongo.MongoClient("mongodb://mongo")
-    dbm = client['trideccloud']
+    dbm = client['geoperil']
 
     import_cfzs(dbm, sys.argv[1], sys.argv[2])
 

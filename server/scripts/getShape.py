@@ -35,7 +35,7 @@ def main():
         "mongodb://mongo",
         w="majority"
     )
-    dbm = client['trideccloud']
+    dbm = client['geoperil']
     collection = dbm['comp']
 
     kml = open(sys.argv[1], 'r')

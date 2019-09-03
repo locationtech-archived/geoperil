@@ -470,7 +470,7 @@ parsers["quakeml"] = parsequakeml
 
 
 def feedevent(event):
-    url = "https://trideccloud.gfz-potsdam.de/feedersrv/feedhazardevent"
+    url = "http://localhost/feedersrv/feedhazardevent"
     params = {
         "apiver": "1",
         "inst": "gfz_ex_test",

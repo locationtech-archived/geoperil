@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>TRIDEC Cloud</title>
+	<title>GeoPeril</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link href="../css/bootstrap.css" rel="stylesheet">
@@ -19,23 +19,16 @@
   		</div>
   		<hr>
 	  	<div class="headline">
-	  		<ul class="head-blk head-left head-img">
-	  			<li><img class="tridec-logo" alt="TRIDEC Cloud" src="../img/trideccloud-logo.png"></li>
-	  		</ul>
 	  		<ul class="head-blk head-right">
 	  			<!-- 
 				<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
 				<li class="divider"><span>|</span></li>
 				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
 				<li class="divider"><span>|</span></li>
-				<li><a href="https://play.google.com/store/apps/details?id=org.fosslab.geohazard" target="_blank">App</a></li>
-				<li class="divider"><span>|</span></li>
 				<li><a href="#AboutDia" data-toggle="modal">About</a></li>
 				<li class="divider"><span>|</span></li>
 				<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
-				<li class="divider"><span>|</span></li>
 				-->
-				<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
 	  		</ul>
 	  		<ul class="head-blk head-right head-buttons">
 	  			<li id="grpSignOut" class="btn-group">
@@ -58,8 +51,8 @@
 		<div class="url">The <i>data_insert</i> API accepts HTTP POST requests, allows the creation of an event entry with specific event parameters and allows the computation based on the given event parameters.</div>
 		
 		<div class="sec-label">URL</div>
-		<div class="url">http://trideccloud.gfz-potsdam.de/srv/data_insert</div>
-		
+		<div class="url">http://localhost/srv/data_insert</div>
+
 		<div class="sec-label">Input parameter</div>
 		<table>
 			<tr>
@@ -78,12 +71,12 @@
 			<tr>
 				<td class="param">id</td>
 				<td class="descr">
-               		The unique ID of the event for which information should be inserted, e.g. id=tc_0001. 
-               		Please note that the ID has to be constructed carefully and should include information 
-               		of the originator/creator of this event (tc in this example as acronym for TRIDEC Cloud) 
-               		so that the ID is not in conflict with another event ID. Furthermore, it is recommended 
-               		to add a number which is based on a counter (0001 in this example for the very first 
-               		simulation computation) so that simulation computations for different events are separated 
+               		The unique ID of the event for which information should be inserted, e.g. id=tc_0001.
+               		Please note that the ID has to be constructed carefully and should include information
+               		of the originator/creator of this event
+               		so that the ID is not in conflict with another event ID. Furthermore, it is recommended
+               		to add a number which is based on a counter (0001 in this example for the very first
+               		simulation computation) so that simulation computations for different events are separated
                		from each other.<br/>
                		Additionally, please note that for each event refinemements are accepted which means that 
                		using the same id several times results in a refinement for the very same event, e.g. 
@@ -225,8 +218,8 @@
 			<tr>
 				<td class="param">evtid</td>
 				<td class="descr">
-					Contains the unique event ID used by the TRIDEC Cloud platform. 
-					This unique event ID is composed of three parts: the value provided 
+					Contains the unique event ID used by the platform.
+					This unique event ID is composed of three parts: the value provided
 					with the id parameter, the unique user id, and the refinement id.
 				</td>
 				<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
@@ -250,9 +243,9 @@
 		<div class="sec-label">API Examples</div>
 		<div>
 		    <div class="url" style="overflow-wrap: break-word;">
-			$ curl --data "apikey=***&id=tcapidoc0001&comp=180&mag=7.8&dip=25&strike=225&rake=134&depth=10.0&lat=-42.73&lon=173.25&date=2016-11-15T16:20:00.00Z&name=NZL API Doc Example" http://trideccloud.gfz-potsdam.de/srv/data_insert
+			$ curl --data "apikey=***&id=tcapidoc0001&comp=180&mag=7.8&dip=25&strike=225&rake=134&depth=10.0&lat=-42.73&lon=173.25&date=2016-11-15T16:20:00.00Z&name=NZL API Doc Example" http://localhost/srv/data_insert
 			<br/><br/>
-			$ curl --data "apikey=***&id=tcapidoc0002&comp=180&slip=16.0&length=40.0&width=60&dip=50&strike=97&rake=90&depth=15.0&lat=10.8&lon=-66&date=2016-11-15T16:20:00.00Z&name=VEN API Doc Example" http://trideccloud.gfz-potsdam.de/srv/data_insert
+			$ curl --data "apikey=***&id=tcapidoc0002&comp=180&slip=16.0&length=40.0&width=60&dip=50&strike=97&rake=90&depth=15.0&lat=10.8&lon=-66&date=2016-11-15T16:20:00.00Z&name=VEN API Doc Example" http://localhost/srv/data_insert
 			</div>
 		</div>
 	</div></div></div>

@@ -1366,7 +1366,7 @@ class WebGuiSrv(BaseSrv):
                         text += template["mail_text_msg"] % \
                             self._get_msg_texts(evtid, "info")["mail"]
                     ret = sendmail(
-                        "TRIDEC CLOUD <tridec-cloud-noreply@gfz-potsdam.de>",
+                        "GeoPeril",
                         sendto,
                         subject,
                         text
@@ -1631,7 +1631,7 @@ class WebGuiSrv(BaseSrv):
         if lnk is not None:
             sec += '''
                 <br><br>
-                <a href="%s">Visit shared map at the TRIDEC CLOUD platform</a>
+                <a href="%s">Visit shared map</a>
             ''' % (self.get_hostname() + "/?share=" + str(lnk["_id"]))
         txt = '''
         <html>

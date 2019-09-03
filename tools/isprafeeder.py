@@ -493,7 +493,7 @@ parsers["ispra"] = parseispra
 
 
 def feedevent(event):
-    url = "http://trideccloud.gfz-potsdam.de/srv/data_insert"
+    url = "http://localhost/srv/data_insert"
     params = {
         "inst": "tdss15",
         "secret": "TDSS2015",
@@ -526,9 +526,6 @@ def main():
         file.close()
     except Exception:
         lastevents = []
-    # for e in parseispra(
-    #     requests.get("http://trideccloud.gfz-potsdam.de/TRIDEC.xml")
-    # .content):
     for item in parseispra(
             requests.get("http://webcritech.jrc.ec.europa.eu/tdss/TRIDEC.xml")
             .content

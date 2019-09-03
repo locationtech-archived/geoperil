@@ -198,27 +198,27 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
  		font-size: 14px;
 		float: right;
 	}
-	.sec.trideccloud img {
+	.sec.geoperil img {
 		margin-left: 50px;
 		width: 90%;
 	}
-	.sec.trideccloud pre {
+	.sec.geoperil pre {
 		width: 90%;
 		white-space: pre-wrap;
 		margin-left: 50px;
  		padding: 1em;
 		background-color: #eeeeee;
 	}
-	.sec.trideccloud dl {
+	.sec.geoperil dl {
 		margin-left: 50px;
  		margin-right: 50px;
 		float: left;
 	}
-	.sec.trideccloud dd {
+	.sec.geoperil dd {
 		margin-left: 25px;
 		padding-bottom: 10px;
 	}
-	.sec.trideccloud .clear {
+	.sec.geoperil .clear {
 		clear: both;
 	}
 	.sec > b {
@@ -283,19 +283,12 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
   		<hr>
   		<div id="headline-fixed" class="headline-abs">
 	  	<div class="headline">
-	  		<ul class="head-blk head-left head-img">
-	  			<li><img class="eqinfo-logo" alt="TRIDEC Cloud" src="../img/eqinfo-logo.png"></li>
-	  		</ul>
 	  		<ul class="head-blk head-right">
 				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
 				<li class="divider"><span>|</span></li>
-				<li><a href="http://trideccloud.gfz-potsdam.de/" target="_blank">TRIDEC Cloud</a></li>
+				<li><a href="http://localhost/" target="_blank">GeoPeril</a></li>
 				<li class="divider"><span>|</span></li>
 				<li><a href="http://kinherd.org" target="_blank">KINHERD</a></li>
-				<li class="divider"><span>|</span></li>
-				<li><a href="https://play.google.com/store/apps/details?id=org.fosslab.geohazard" target="_blank">App</a></li>
-				<li class="divider"><span>|</span></li>
-				<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
 	  		</ul>
 	  		<ul class="clear"></ul>
 	  		<hr>
@@ -356,7 +349,7 @@ if( ! isset( $_GET["id"] ) ) :
 <div id="nav-cover" class="nav-cover">
 <ul id="nav" class="nav">
 	<li><a href="#geofon">GEOFON</a></li>
-	<li><a href="#trideccloud">TRIDEC Cloud</a></li>
+	<li><a href="#geoperil">GeoPeril</a></li>
 	<li><a href="#kinherd">KINHERD</a></li>
 	<li><a href="#hazards">Other Sources</a></li>
 	<?php if( check_ip() ):	?>
@@ -387,12 +380,12 @@ if( ! isset( $_GET["id"] ) ) :
 		echo $div[1];
 	?>
 	</div>
-	<h3 id="trideccloud">TRIDEC Cloud
+	<h3 id="geoperil">GeoPeril
 		<?php if( ! empty($eq['simulation']) ) : ?>
-			<a href="http://trideccloud.gfz-potsdam.de<?php echo $shared_link;?>">Go to source</a>
+			<a href="http://localhost<?php echo $shared_link;?>">Go to source</a>
 		<?php endif; ?>
 	</h3>
-	<div class="sec trideccloud">
+	<div class="sec geoperil">
 		<?php if( ! empty($eq['geofonid']) ) : ?>
 		<h3><?php echo $eq['prop']['region']; ?></h3>
 		<dl>

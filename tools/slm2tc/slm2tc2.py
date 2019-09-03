@@ -35,7 +35,7 @@ from queue import Queue
 import requests
 
 IOCSLMSRV = "http://www.ioc-sealevelmonitoring.org/service.php"
-FEEDURL = "http://trideccloud.gfz-potsdam.de/feedersrv"
+FEEDURL = "http://localhost/feedersrv"
 INST = "gfz_ex_test"
 SECRET = "abcdef"
 MAXRANGE = 7 * 24 * 3600    # 1 week

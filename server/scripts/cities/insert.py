@@ -118,7 +118,7 @@ def main():
         sys.exit(1)
 
     client = MongoClient("mongodb://mongo")
-    dbm = client['trideccloud']
+    dbm = client['geoperil']
 
     tsps = extract_tsps(sys.argv[2])
     (cities, tsps) = import_cities(dbm, sys.argv[1], tsps)

@@ -335,7 +335,7 @@ class MsgSrv(BaseSrv):
                     sendmail(
                         user["username"],
                         user["username"],
-                        "Error in Tridec Cloud Mailing System",
+                        "Error in mailing system",
                         errtext
                     )
 

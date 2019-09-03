@@ -22,7 +22,7 @@ services:
     command: ["/tmp/scripts/wait-for-mongodb.sh", "/tmp/scripts/import-example-data.sh"]
     environment:
       - MONGO_HOST=mongo
-      - MONGO_DB=trideccloud
+      - MONGO_DB=geoperil
 
   geoperil-server:
     build:

@@ -63,7 +63,7 @@ def main():
         "mongodb://mongo",
         w="majority"
     )
-    dbm = client['trideccloud']
+    dbm = client['geoperil']
 
     print("Add iso2 for CFZs")
     add_iso(dbm, "cfcz", "ISO2", "COUNTRY", args)

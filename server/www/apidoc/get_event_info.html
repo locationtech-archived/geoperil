@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>TRIDEC Cloud</title>
+	<title>GeoPeril</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link href="../css/bootstrap.css" rel="stylesheet">
@@ -19,23 +19,16 @@
   		</div>
   		<hr>
 	  	<div class="headline">
-	  		<ul class="head-blk head-left head-img">
-	  			<li><img class="tridec-logo" alt="TRIDEC Cloud" src="../img/trideccloud-logo.png"></li>
-	  		</ul>
 	  		<ul class="head-blk head-right">
 	  			<!-- 
 				<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
 				<li class="divider"><span>|</span></li>
 				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
 				<li class="divider"><span>|</span></li>
-				<li><a href="https://play.google.com/store/apps/details?id=org.fosslab.geohazard" target="_blank">App</a></li>
-				<li class="divider"><span>|</span></li>
 				<li><a href="#AboutDia" data-toggle="modal">About</a></li>
 				<li class="divider"><span>|</span></li>
 				<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
-				<li class="divider"><span>|</span></li>
 				-->
-				<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
 	  		</ul>
 	  		<ul class="head-blk head-right head-buttons">
 	  			<li id="grpSignOut" class="btn-group">
@@ -58,8 +51,8 @@
 		<div class="url">The <i>get_event_info</i> API returns basic data about a specific event in text format.</div>
 		
 		<div class="sec-label">URL</div>
-		<div class="url">http://trideccloud.gfz-potsdam.de/api/get_event_info</div>
-		
+		<div class="url">http://localhost/api/get_event_info</div>
+
 		<div class="sec-label">Input parameter</div>
 		<table>
 			<tr>
@@ -116,7 +109,7 @@
 			<tr>
 				<td class="param">evid</td>
 				<td class="descr">
-					Contains the unique event ID used by the TRIDEC Cloud platform.
+					Contains the unique event ID used by the platform.
 				</td>
 				<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
 			</tr>
@@ -299,7 +292,7 @@
 				<tr>
 					<td class="param">shared_link</td>
 					<td class="descr">
-						Contains a dynamic url to the TRIDEC Cloud platform that can be used to
+						Contains a dynamic url to the platform that can be used to
 						view the simulation results and accomplish further analyses.
 					</td>
 					<td class="status">Valid if <i>status</i> is set to <i>success</i>.</td>
@@ -317,16 +310,16 @@
 		<div class="sec-label">API Examples</div>
 		<div>
 		    <div class="url">
-			http://trideccloud.gfz-potsdam.de/api/get_event_info?apikey=***&amp;evid=gfz2015kkyi
-		    	http://trideccloud.gfz-potsdam.de/api/get_event_info?apikey=***&amp;evid=gfz2015kkyi_gfz_2
+			http://localhost/api/get_event_info?apikey=***&amp;evid=gfz2015kkyi
+		    	http://localhost/api/get_event_info?apikey=***&amp;evid=gfz2015kkyi_gfz_2
 		</div>
 		</div>
 		<div class="sec-label">Usage Examples</div>
 		<div class="url">
-		    <a href="http://trideccloud.gfz-potsdam.de/embed-data/?id=gfz2015knrf#trideccloud" target="_blank">
+		    <a href="http://localhost/embed-data/?id=gfz2015knrf#geoperil" target="_blank">
 			Southeast of Honshu, Japan - March 30, 2015 (no tsunami generated)
 		    </a><br>
-		    <a href="http://trideccloud.gfz-potsdam.de/embed-data/?id=gfz2011ewla#trideccloud" target="_blank">
+		    <a href="http://localhost/embed-data/?id=gfz2011ewla#geoperil" target="_blank">
 			Near East Coast of Honshu, Japan - March 11, 2011 (tsunami generated)
 		    </a>
 		</div>

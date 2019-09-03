@@ -5791,10 +5791,6 @@ function showSplash(show) {
 		$('.wrapper hr').hide();
 		$('.wrapper').css('width', '100%');
 		$('.wrapper').css('height', '100%');
-		/*
-		 * $('.gfz-logo-small').show(); $('.tridec-logo-small').show();
-		 */
-		// $('.tridec-logo').hide();
 		$('.headline').css('background-color', '#f8f8f8');
 		$('.headline').css('border-color', '#e7e7e7');
 		/** *** */

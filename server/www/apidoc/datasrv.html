@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>TRIDEC Cloud</title>
+	<title>GeoPeril</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link href="../css/bootstrap.css" rel="stylesheet">
@@ -19,23 +19,16 @@
   		</div>
   		<hr>
 	  	<div class="headline">
-	  		<ul class="head-blk head-left head-img">
-	  			<li><img class="tridec-logo" alt="TRIDEC Cloud" src="../img/trideccloud-logo.png"></li>
-	  		</ul>
 	  		<ul class="head-blk head-right">
 	  			<!--
 	  			<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
 				<li class="divider"><span>|</span></li>
 				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
 				<li class="divider"><span>|</span></li>
-				<li><a href="https://play.google.com/store/apps/details?id=org.fosslab.geohazard" target="_blank">App</a></li>
-				<li class="divider"><span>|</span></li>
 				<li><a href="#AboutDia" data-toggle="modal">About</a></li>
 				<li class="divider"><span>|</span></li>
 				<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
-				<li class="divider"><span>|</span></li>
 				-->
-				<li><a href="http://www.gfz-potsdam.de/en/imprint" target="_blank">Imprint</a></li>
 	  		</ul>
 	  		<ul class="head-blk head-right head-buttons">
 	  			<li id="grpSignOut" class="btn-group">
@@ -58,8 +51,8 @@
 		<div class="url">The <i>datasrv</i> API serves data for a specific event. Data can be anything from raw data to final end user products associated with an event.</div>
 		
 		<div class="sec-label">URL</div>
-		<div class="url">http://trideccloud.gfz-potsdam.de/datasrv/&lt;EVENT-ID&gt;/&lt;PRODUCT-TYPE&gt;?apikey=&lt;API-KEY&gt;&amp;download=&lt;FILE-NAME&gt;</div>
-				
+		<div class="url">http://localhost/datasrv/&lt;EVENT-ID&gt;/&lt;PRODUCT-TYPE&gt;?apikey=&lt;API-KEY&gt;&amp;download=&lt;FILE-NAME&gt;</div>
+
 		<div class="sec-label">URL Path Elements</div>
 		<table>
 			<tr>
@@ -104,9 +97,9 @@
                				as GMT file, i.e. cfzs.gmt.
                			</li>
                		</ul>
-               		Other products such as custom maps or wave forms are available, too. To receive a complete list of available products with short 
-               		descriptions please open <a href="../datasrv/#products" target="_blank">http://trideccloud.gfz-potsdam.de/datasrv/</a> in your browser.<br/>
-               		To receive an incomplete access list of products for a specific event please use http://trideccloud.gfz-potsdam.de/datasrv/&lt;EVENT-ID&gt;
+               		Other products such as custom maps or wave forms are available, too. To receive a complete list of available products with short
+               		descriptions please open <a href="../datasrv/#products" target="_blank">http://localhost/datasrv/</a> in your browser.<br/>
+               		To receive an incomplete access list of products for a specific event please use http://localhost/datasrv/&lt;EVENT-ID&gt;
 				</td>
 				<td class="status">Mandatory</td>
 			</tr>
@@ -152,10 +145,10 @@
 		    Near East Coast of Honshu, Japan - March 11, 2011<br/>
 		    (please sign-in first, or use your API key):<br/><br/>
 		    <a href="../datasrv/gfz2011ewla/eq.csv" target="_blank">
-			http://trideccloud.gfz-potsdam.de/datasrv/gfz2011ewla/eq.csv?apikey=***
+			http://localhost/datasrv/gfz2011ewla/eq.csv?apikey=***
 		    </a><br/><br/>
 		    <a href="../datasrv/gfz2011ewla/wavejets_traveltimes_web.png" target="_blank">
-			http://trideccloud.gfz-potsdam.de/datasrv/gfz2011ewla/wavejets_traveltimes_web.png?apikey=***
+			http://localhost/datasrv/gfz2011ewla/wavejets_traveltimes_web.png?apikey=***
 		    </a>
 		</div>
 		</div>
