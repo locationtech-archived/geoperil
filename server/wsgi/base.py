@@ -78,12 +78,12 @@ def startapp(app):
     if config["mongodb"].getboolean('replicaset'):
         print("Connecting to MongoDB ReplicaSet: %s" % config["mongodb"]["url"])
         dbe = MongoReplicaSetClient(config["mongodb"]["url"],w="majority",
-            maxPoolSize=16,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=64)
+            maxPoolSize=100,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=64)
         atexit.register(dbe.close)
     else:
         print("Connecting to MongoDB: %s" % config["mongodb"]["url"])
         dbe = MongoClient(config["mongodb"]["url"],
-            maxPoolSize=16,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=64)
+            maxPoolSize=100,socketTimeoutMS=60000,connectTimeoutMS=30000,waitQueueTimeoutMS=60000,waitQueueMultiple=64)
     db = dbe[config["mongodb"]["dbname"]]
     return cherrypy.Application( app( db ) , script_name=None, config=None)
 
