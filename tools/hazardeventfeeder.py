@@ -141,7 +141,7 @@ def parsega(data,idprefix="GA-"):
     for e in xml.iter("item"):
         event={"eventtype":"EQ","magtype":"M"}
         point=e.findtext("{http://www.georss.org/georss}point").split()
-        event["eventid"]=idprefix+e.findtext("link").partition("quakeId=")[2].partition("&")[0]
+        event["eventid"]=idprefix+e.findtext("link").split("/")[-1]
         event["url"]=e.findtext("link")
         title=e.findtext("title").split(",")
         desc=e.findtext("description").split("<br>")
@@ -363,27 +363,30 @@ def parsequakeml(data,idprefix=""):
         event["x"]=float(o.find("{http://quakeml.org/xmlns/bed/1.2}longitude").findtext("{http://quakeml.org/xmlns/bed/1.2}value"))
         event["y"]=float(o.find("{http://quakeml.org/xmlns/bed/1.2}latitude").findtext("{http://quakeml.org/xmlns/bed/1.2}value"))
         event["depth"]=float(o.find("{http://quakeml.org/xmlns/bed/1.2}depth").findtext("{http://quakeml.org/xmlns/bed/1.2}value"))
-        mag=e.find("{http://quakeml.org/xmlns/bed/1.2}magnitude")
-        event["mag"]=float(mag.find("{http://quakeml.org/xmlns/bed/1.2}mag").findtext("{http://quakeml.org/xmlns/bed/1.2}value"))
-        event["magtype"]=mag.findtext("{http://quakeml.org/xmlns/bed/1.2}type")
-        events.append(event)
+        try:
+          mag=e.find("{http://quakeml.org/xmlns/bed/1.2}magnitude")
+          event["mag"]=float(mag.find("{http://quakeml.org/xmlns/bed/1.2}mag").findtext("{http://quakeml.org/xmlns/bed/1.2}value"))
+          event["magtype"]=mag.findtext("{http://quakeml.org/xmlns/bed/1.2}type")
+          events.append(event)
+        except AttributeError as err:
+          sys.stderr.write("AttributeError: {}, ID Prefix: {}, Event:\n{}".format(err, idprefix, tostring(e)))
     return events
 parsers["quakeml"]=parsequakeml
 
 
 def feedevent(event):
-    url = "http://trideccloud.gfz-potsdam.de/feedersrv/feedhazardevent"
+    url = "https://trideccloud.gfz-potsdam.de/feedersrv/feedhazardevent"
     params = {
         "apiver":"1",
         "inst":"gfz_ex_test",
         "secret":"abcdef",
         "event":json.dumps(event),
     }
-    print(requests.post(url, data=params, timeout=60).json())
+    print(requests.post(url, data=params, timeout=60, verify=False).json())
 
 if __name__=="__main__":
     print("Feed: German Research Centre for Geosciences")
-    for e in parsegfz(requests.get("http://geofon.gfz-potsdam.de/eqinfo/list.php?fmt=rss").content):
+    for e in parsegfz(requests.get("https://geofon.gfz-potsdam.de/eqinfo/list.php?fmt=rss", verify=False).content):
         e["provider"] = "gfz"
         e["providerurl"] = "http://gfz-potsdam.de"
         e["providername"] = "German Research Centre for Geosciences"
@@ -456,20 +459,21 @@ if __name__=="__main__":
         feedevent(e)
 
     print("Feed: National Observatory of Athens")
-    for e in parsenoa(requests.get("http://bbnet.gein.noa.gr/rss/automatic_events_24h.xml").content):
+    for e in parsenoa(requests.get("http://bbnet.gein.noa.gr/rss/revised_events_24h_new.xml").content):
         e["provider"] = "noa"
         e["providerurl"] = "http://bbnet.gein.noa.gr/HL/"
         e["providername"] = "National Observatory of Athens"
         print("Event ID: {0}".format(e["eventid"]))
         feedevent(e)
 
-    print("Feed: Natural Resources Canada")
-    for e in parsenrc(requests.get("http://www.earthquakescanada.nrcan.gc.ca/index-eng.php?tpl_region=canada&tpl_output=rss").content):
-        e["provider"] = "nrc"
-        e["providerurl"] = "http://www.earthquakescanada.nrcan.gc.ca"
-        e["providername"] = "Natural Resources Canada"
-        print("Event ID: {0}".format(e["eventid"]))
-        feedevent(e)
+# NOTE: resource?
+#    print("Feed: Natural Resources Canada")
+#    for e in parsenrc(requests.get("http://www.earthquakescanada.nrcan.gc.ca/index-eng.php?tpl_region=canada&tpl_output=rss").content):
+#        e["provider"] = "nrc"
+#        e["providerurl"] = "http://www.earthquakescanada.nrcan.gc.ca"
+#        e["providername"] = "Natural Resources Canada"
+#        print("Event ID: {0}".format(e["eventid"]))
+#        feedevent(e)
 
     print("Feed: United States Geological Survey")
     for e in parsequakeml(requests.get("http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.quakeml").content,"USGS-"):
