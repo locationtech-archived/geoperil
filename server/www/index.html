@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-   	<title>GeoPeril</title>
+    <title>GeoPeril</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="//code.jquery.com/jquery.js"></script>
@@ -11,7 +12,7 @@
     <script src="//stackpath.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
     <link href="//stackpath.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
     <script src="//maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>
-    <script src="//www.google.com/jsapi" type="text/javascript"></script>
+    <script src="//www.google.com/jsapi"></script>
     <script src="geohazardcloud.js"></script>
     <link href="geohazardcloud.css" rel="stylesheet">
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
@@ -22,1375 +23,1426 @@
     <link href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-colorpicker/2.5.3/css/bootstrap-colorpicker.min.css" rel="stylesheet">
     <!-- Color Picker end -->
     <script>
-	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
-	  ga('create', 'UA-38980092-2', 'gfz-potsdam.de');
-	  ga('send', 'pageview');
-	</script>
+      ga('create', 'UA-38980092-2', 'gfz-potsdam.de');
+      ga('send', 'pageview');
+    </script>
 </head>
+
 <body>
-	<div class="wrapper">
-	<div class="border">
-  	<div class="container fullsize">
-	  	<div class="headline">
-	  		<ul class="head-blk head-right">
-	  			<li><a href="https://gitext.gfz-potsdam.de/geoperil/easyWave" target="_blank">easyWave</a></li>
-				<li class="divider"><span>|</span></li>
-				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
-				<li class="divider"><span>|</span></li>
-				<li><a href="#AboutDia" data-toggle="modal">About</a></li>
-				<li class="divider"><span>|</span></li>
-				<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
-	  		</ul>
-	  		<ul class="head-blk head-right head-buttons">
-	  			<li id="grpSignOut" class="btn-group">
-					<button id="btnProp" type="button" class="btn btn-default">
-						<span class="glyphicon glyphicon-cog"></span>
-					</button>
-					<button id="btnAdmin" type="button" class="btn btn-default">
-						<span class="glyphicon glyphicon-user"></span>
-					</button>
-					<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
-				</li>
-	  		</ul>
-	  		<ul class="head-blk head-right">
-	  			<li><a href="" id="lnkUser"></a></li>
-	  		</ul>
-	  		<ul class="clear"></ul>
-	  	</div> <!-- end of headline -->
+    <div class="wrapper">
+        <div class="border">
+            <div class="container fullsize">
+                <div class="headline">
+                    <ul class="head-blk head-right">
+                        <li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
+                        <li class="divider"><span>|</span></li>
+                        <li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
+                        <li class="divider"><span>|</span></li>
+                        <li><a href="#AboutDia" data-toggle="modal">About</a></li>
+                        <li class="divider"><span>|</span></li>
+                        <li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
+                    </ul>
+                    <ul class="head-blk head-right head-buttons">
+                        <li id="grpSignOut" class="btn-group">
+                            <button id="btnProp" type="button" class="btn btn-default">
+                                <span class="glyphicon glyphicon-cog"></span>
+                            </button>
+                            <button id="btnAdmin" type="button" class="btn btn-default">
+                                <span class="glyphicon glyphicon-user"></span>
+                            </button>
+                            <button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
+                        </li>
+                    </ul>
+                    <ul class="head-blk head-right">
+                        <li>
+                            <a href="" id="lnkUser"></a>
+                        </li>
+                    </ul>
+                    <ul class="clear"></ul>
+                </div>
+                <!-- end of headline -->
 
-	  	<div class="row mainview">
-	  		<div class="col-md-4 left-col" id="side">
-	  			<div id="vsdbPlayer" class="row">
-	  				<div class="head">Virtual Scenario Database (VSDB) Player</div>
-	  				<div class="dropdown pull-left drpNames">
-						<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
-					    	Scenario
-					    	<span class="caret"></span>
-					  	</button>
-					  	<ul class="dropdown-menu"></ul>
-					</div>
-					<div class="dropdown pull-left drpAccel">
-						<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
-					    	Accel
-					    	<span class="caret"></span>
-					  	</button>
-					  	<ul class="dropdown-menu"></ul>
-					</div>
-					<button type="button" class="btn btn-success btnPlay" disabled>
-						<span class="ready glyphicon glyphicon-play"></span>
-						<i class="load fa fa-spinner fa-spin fa-lg"></i>
-					</button>
-					<div class="progress">
-  						<div class="progress-bar progress-bar-danger">
-  							<span class="progress-txt"></span>
-  						</div>
-					</div>
-	  			</div>
+                <div class="row mainview">
+                    <div class="col-md-4 left-col" id="side">
+                        <div id="vsdbPlayer" class="row">
+                            <div class="head">Virtual Scenario Database (VSDB) Player</div>
+                            <div class="dropdown pull-left drpNames">
+                                <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+                                    Scenario
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu"></ul>
+                            </div>
+                            <div class="dropdown pull-left drpAccel">
+                                <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+                                    Accel
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu"></ul>
+                            </div>
+                            <button type="button" class="btn btn-success btnPlay" disabled>
+                                <span class="ready glyphicon glyphicon-play"></span>
+                                <i class="load fa fa-spinner fa-spin fa-lg"></i>
+                            </button>
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-danger">
+                                    <span class="progress-txt"></span>
+                                </div>
+                            </div>
+                        </div>
 
-	  			<div class="row tabs-head">
-	  				<div class="col-md-10">
-	  					<div class="row tabs">
-							<ul class="nav nav-tabs main-tabs">
-								<li id="tabRecent" class="active"><a href="#sidebarTab" data-toggle="tab">Recent</a></li>
-							 	<li id="tabSaved" class="tab-private"><a href="#saved" id="hrefSaved" data-toggle="tab">My List</a></li>
-							  	<li id="tabCompose" class="tab-private"><a href="#compose" data-toggle="tab">Compose</a></li>
-							  	<li id="tabEvtSets" class="tab-private"><a href="#evtsets" data-toggle="tab">Event Sets</a></li>
-							  	<li id="tabEvtSetComp" class="tab-private"><a href="#evtsetcomp" data-toggle="tab">Event Set Compose</a></li>
-							  	<li id="tabTimeline" class="tab-private"><a href="#timeline" id="hrefTimeline" data-toggle="tab">Timeline</a></li>
-							  	<li id="tabMessages" class="tab-private"><a href="#messages" data-toggle="tab">Messages</a></li>
-							  	<li id="tabStatic"><a href="#static" data-toggle="tab">Shared</a></li>
-							  	<li id="tabFloodCompose" class="tab-private"><a href="#floodcomp" data-toggle="tab">Flood Compose</a></li>
-							  	<li id="tabFloodList" class="tab-private"><a href="#floodlist" data-toggle="tab">Flood List</a></li>
-							</ul>
-						</div>
-	  				</div>
-	  				<div class="col-md-2">
-	  				<div class="row tabs-right">
-	  					<button id="btnDeselect" type="button" class="btn btn-primary btn-sm">
-					  		<span class="glyphicon glyphicon-globe"></span>
-						</button>
-						</div>
-					</div>
-	  			</div>
+                        <div class="row tabs-head">
+                            <div class="col-md-10">
+                                <div class="row tabs">
+                                    <ul class="nav nav-tabs main-tabs">
+                                        <li id="tabRecent" class="active"><a href="#sidebarTab" data-toggle="tab">Recent</a></li>
+                                        <li id="tabSaved" class="tab-private"><a href="#saved" id="hrefSaved" data-toggle="tab">My List</a></li>
+                                        <li id="tabCompose" class="tab-private"><a href="#compose" data-toggle="tab">Compose</a></li>
+                                        <li id="tabEvtSets" class="tab-private"><a href="#evtsets" data-toggle="tab">Event Sets</a></li>
+                                        <li id="tabEvtSetComp" class="tab-private"><a href="#evtsetcomp" data-toggle="tab">Event Set Compose</a></li>
+                                        <li id="tabTimeline" class="tab-private"><a href="#timeline" id="hrefTimeline" data-toggle="tab">Timeline</a></li>
+                                        <li id="tabMessages" class="tab-private"><a href="#messages" data-toggle="tab">Messages</a></li>
+                                        <li id="tabStatic"><a href="#static" data-toggle="tab">Shared</a></li>
+                                        <li id="tabFloodCompose" class="tab-private"><a href="#floodcomp" data-toggle="tab">Flood Compose</a></li>
+                                        <li id="tabFloodList" class="tab-private"><a href="#floodlist" data-toggle="tab">Flood List</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="row tabs-right">
+                                    <button id="btnDeselect" type="button" class="btn btn-primary btn-sm">
+                                        <span class="glyphicon glyphicon-globe"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
-	  			<div class="tab-content">
-		  			<div class="col-md-12 tab-pane active" id="sidebarTab">
-		  				<div id="filterWidget" class="row">
-			  				<div class="input-group input-group-sm">
-			  					<span class="input-group-addon">Mw</span>
-			  					<span class="form-control range">
-			  					    <span class="labRange"></span>
-			  						<span class="slider"></span>
-			  					</span>
-				  				<span class="input-group-addon">
-			        				<span><input class="chkMT" type="checkbox">MT</span>
-			        				<span><input class="chkSea" type="checkbox">Sea</span>
-			        				<span><input class="chkSim" type="checkbox">Sim</span>
-			      				</span>
-			  				</div>
-			  			</div>
-			  			<div class="row">
-		  					<div id="sidebar" class="col-md-12"></div>
-		  				</div>
-		  			</div>
-		  			<div class="col-md-12 tab-pane" id="saved"></div>
-		  			<div class="col-md-12 tab-pane" id="compose">
-		  				<div class="compose-form"></div>
-		  				<div class="status"></div>
-		  				<div class="form-group input-group-sm">
-				  			<button type="button" class="btn-clear btn btn-default btn-lg">Clear</button>
-				  			<button type="button" class="btn-start btn btn-primary btn-lg">Start</button>
-				  		</div>
-		  				<p class="form-control-static lab-preset">Load from preset events</p>
-		  				<div class="list-group preset"></div>
-		  			</div>
-	  				<div class="col-md-12 tab-pane" id="timeline">
-	  					<div class="search-group row">
-		  					<div class="input-group input-group-sm">
-	  							<span class="input-group-addon">Search:</span>
-	  							<input id="inSearch" type="text" class="form-control">
-	  							<span class="input-group-btn">
-	  								<button id="btnSearch" type="button" class="btn btn-primary">
-	  									<span class="glyphicon glyphicon-search"></span>
-	  								</button>
-	  							</span>
-	  						</div>
-  						</div>
-  						<div class="row">
-  							<div id="timeline-data" class="col-md-12"></div>
-  						</div>
-	  				</div>
-		  			<div class="col-md-12 tab-pane" id="messages"></div>
-		  			<div class="col-md-12 tab-pane" id="static"></div>
-		  			<div class="col-md-12 tab-pane" id="evtsets"></div>
-		  			<div class="col-md-12 tab-pane" id="evtsetcomp">
-		  				<div class="evtset-form"></div>
-		  				<div class="status"></div>
-		  				<div class="form-group input-group-sm">
-				  			<button type="button" class="btn-clear btn btn-default btn-lg">Clear</button>
-				  			<button type="button" class="btn-start btn btn-primary btn-lg">Start</button>
-				  		</div>
-		  				<p class="form-control-static labPreset">Load from preset events</p>
-		  				<div class="list-group preset"></div>
-		  			</div>
-		  			<div class="col-md-12 tab-pane" id="floodcomp">
-		  				<div class="inner">
-		  					<div class="flood-form"></div>
-		  					<div class="sourcepoints-upload">
-		  						<div class="content">
-			  						<label for="file-points" class="file-points-label">
-			  							<span class="fname input-group-addon"></span>
-			  							<span class="btn btn-sm btn-primary input-group-btn">Select</span>
-			  							<input id="file-points" class="file-points input-group-addon" type="file" name="files[]"/>
-			  						</label>
-			  					</div>
-			  				</div>
-			  				<div class="breach-upload">
-		  						<div class="content">
-			  						<label for="file-hydros" class="file-hydros-label">
-			  							<span class="fname input-group-addon"></span>
-			  							<span class="btn btn-sm btn-primary input-group-btn">Select</span>
-			  							<input id="file-hydros" class="file-points input-group-addon" type="file" name="files[]"/>
-			  						</label>
-			  					</div>
-			  				</div>
-			  				<button class="start btn btn-primary pull-right">Start</button>
-			  				<span class="clearfix"></span>
-			  				<span class="status"></span>
-			  				<div class="points"></div>
-		  				</div>
-		  			</div>
-		  			<div class="col-md-12 tab-pane" id="floodlist"></div>
-	  			</div>
-	  		</div>
+                        <div class="tab-content">
+                            <div class="col-md-12 tab-pane active" id="sidebarTab">
+                                <div id="filterWidget" class="row">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-addon">Mw</span>
+                                        <span class="form-control range">
+                                      <span class="labRange"></span>
+                                        <span class="slider"></span>
+                                        </span>
+                                        <span class="input-group-addon">
+                                    <span><input class="chkMT" type="checkbox">MT</span>
+                                        <span><input class="chkSea" type="checkbox">Sea</span>
+                                        <span><input class="chkSim" type="checkbox">Sim</span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div id="sidebar" class="col-md-12"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-12 tab-pane" id="saved"></div>
+                            <div class="col-md-12 tab-pane" id="compose">
+                                <div class="compose-form"></div>
+                                <div class="status"></div>
+                                <div class="form-group input-group-sm">
+                                    <button type="button" class="btn-clear btn btn-default btn-lg">Clear</button>
+                                    <button type="button" class="btn-start btn btn-primary btn-lg">Start</button>
+                                </div>
+                                <p class="form-control-static lab-preset">Load from preset events</p>
+                                <div class="list-group preset"></div>
+                            </div>
+                            <div class="col-md-12 tab-pane" id="timeline">
+                                <div class="search-group row">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-addon">Search:</span>
+                                        <input id="inSearch" type="text" class="form-control">
+                                        <span class="input-group-btn">
+                                      <button id="btnSearch" type="button" class="btn btn-primary">
+                                          <span class="glyphicon glyphicon-search"></span>
+                                        </button>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div id="timeline-data" class="col-md-12"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-12 tab-pane" id="messages"></div>
+                            <div class="col-md-12 tab-pane" id="static"></div>
+                            <div class="col-md-12 tab-pane" id="evtsets"></div>
+                            <div class="col-md-12 tab-pane" id="evtsetcomp">
+                                <div class="evtset-form"></div>
+                                <div class="status"></div>
+                                <div class="form-group input-group-sm">
+                                    <button type="button" class="btn-clear btn btn-default btn-lg">Clear</button>
+                                    <button type="button" class="btn-start btn btn-primary btn-lg">Start</button>
+                                </div>
+                                <p class="form-control-static labPreset">Load from preset events</p>
+                                <div class="list-group preset"></div>
+                            </div>
+                            <div class="col-md-12 tab-pane" id="floodcomp">
+                                <div class="inner">
+                                    <div class="flood-form"></div>
+                                    <div class="sourcepoints-upload">
+                                        <div class="content">
+                                            <label for="file-points" class="file-points-label">
+                                                <span class="fname input-group-addon"></span>
+                                                <span class="btn btn-sm btn-primary input-group-btn">Select</span>
+                                                <input id="file-points" class="file-points input-group-addon" type="file" name="files[]" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="breach-upload">
+                                        <div class="content">
+                                            <label for="file-hydros" class="file-hydros-label">
+                                                <span class="fname input-group-addon"></span>
+                                                <span class="btn btn-sm btn-primary input-group-btn">Select</span>
+                                                <input id="file-hydros" class="file-points input-group-addon" type="file" name="files[]" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <button class="start btn btn-primary pull-right">Start</button>
+                                    <span class="clearfix"></span>
+                                    <span class="status"></span>
+                                    <div class="points"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-12 tab-pane" id="floodlist"></div>
+                        </div>
+                    </div>
 
-	  		<div class="col-md-8 right-col">
-	  			<span class="map_progress"><i class="fa fa-spinner fa-spin fa-lg"></i></span>
-	  			<div class="row" id="mapview"></div>
-	  			<div class="row" id="statview">
-	  				<div id="layer-switcher">
-	  					<div class="toggle">
-	  						<a href="#"><span class="glyphicon glyphicon-chevron-right"></span></a>
-	  					</div>
-	  					<div class="content"></div>
-	  				</div>
-	  				<div id="stat-panel">
-	  					<input id="stat-chk" type="checkbox" checked>
-	  					<span>Show stations</span>
-	  					<a href="#" id="stat-toggle-lnk"><span class="glyphicon glyphicon-chevron-down"></span></a>
-	  				</div>
-	  				<div id="stat-dias"></div>
-	  			</div>
-	  		</div>
+                    <div class="col-md-8 right-col">
+                        <span class="map_progress"><i class="fa fa-spinner fa-spin fa-lg"></i></span>
+                        <div class="row" id="mapview"></div>
+                        <div class="row" id="statview">
+                            <div id="layer-switcher">
+                                <div class="toggle">
+                                    <a href="#"><span class="glyphicon glyphicon-chevron-right"></span></a>
+                                </div>
+                                <div class="content"></div>
+                            </div>
+                            <div id="stat-panel">
+                                <input id="stat-chk" type="checkbox" checked>
+                                <span>Show stations</span>
+                                <a href="#" id="stat-toggle-lnk"><span class="glyphicon glyphicon-chevron-down"></span></a>
+                            </div>
+                            <div id="stat-dias"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- end of main view -->
 
-	  	</div> <!-- end of main view -->
+                <div id="splash" class="row">
+                    <div class="section">
+                        <div class="bg-image">
+                            <div class="overlay">
+                                <div class="fi float-r margin-t">
+                                    <div class="login">
+                                        <div id="splash-table">
+                                            <h3 class="form">Welcome to <b>GeoPeril</b></h3>
+                                            <h4 class="form">Sign in with your E-Mail address</h4>
+                                            <div class="icon form">
+                                                <i class="fa fa-user"></i>
+                                            </div>
+                                            <p id="splashStatus" class="form-control-static form"></p>
+                                            <input id="splashUser" type="text" class="form-control form" placeholder="E-Mail" required>
+                                            <input id="splashPass" type="password" class="form-control form" placeholder="Password" required>
+                                            <button id="splashSignIn" type="button" class="btn btn-primary form">Sign In</button>
+                                            <span class="lnk form">
+                                      <span class="cells">
+                                          <a href="mailto:localhost?subject=Get%20account%20for%20GeoPeril">Get Account</a>
+                                      </span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="clear"></div>
+                            </div>
+                        </div>
+                    </div>
 
-	  	<div id="splash" class="row">
-	  		<div class="section">
-	  			<div class="bg-image">
-	  			<div class="overlay">
-	  				<div class="fi float-r margin-t">
-			  			<div class="login">
-				  			<div id="splash-table">
-					  			<h3 class="form">Welcome to <b>GeoPeril</b></h3>
-					  			<h4 class="form">Sign in with your E-Mail address</h4>
-					  			<div class="icon form">
-					  				<i class="fa fa-user"></i>
-					  			</div>
-					  			<p id="splashStatus" class="form-control-static form"></p>
-						  		<input id="splashUser" type="text" class="form-control form" placeholder="E-Mail" required>
-							  	<input id="splashPass" type="password" class="form-control form" placeholder="Password" required>
-							  	<button id="splashSignIn" type="button" class="btn btn-primary form">Sign In</button>
-							  	<span class="lnk form">
-							  		<span class="cells">
-							  			<a href="mailto:localhost?subject=Get%20account%20for%20GeoPeril">Get Account</a>
-							  		</span>
-							  	</span>
-						  	</div>
-					  	</div>
-			  		</div>
-			  		<div class="clear"></div>
-			  	</div>
-			  	</div>
-	  		</div>
+                    <span class="nav-arrow glyphicon glyphicon-download"></span>
+                </div>
+            </div>
+            <!-- end of container -->
+        </div>
+        <!-- end of border -->
+    </div>
+    <!-- end of wrapper -->
 
-			<span class="nav-arrow glyphicon glyphicon-download"></span>
-	  	</div>
+    <!-- the following content is not shown directly and only used
+         by JavaScript code to dynamically add prepared content -->
 
-	</div> <!-- end of container -->
-	</div> <!-- end of border -->
-	</div> <!-- end of wrapper -->
+    <!-- sidebar context menu template that appears on right click -->
+    <div id="contextMenu" class="dropdown clearfix">
+        <ul class="dropdown-menu">
+            <li><a id="ctxEdit" href="#" tabindex="-1">Edit</a></li>
+            <li class="divider"></li>
+        </ul>
+    </div>
 
-	<!-- the following content is not shown directly and only used
-		 by JavaScript code to dynamically add prepared content -->
+    <!-- sidebar entry template -->
+    <div class="row eq-entry entry">
+        <div class="col-md-12">
+            <div class="info">
+                <span></span>
+                <a href="#">&times;</a>
+            </div>
+            <div class="row row-region">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+                    <div class="row">
+                        <a href="#" class="big region"></a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="row row-marker">
+                        <img class="marker" alt="" src="javascript:void(0);">
+                    </div>
+                    <div class="row">
+                        <h4 class="mag"></h4>
+                    </div>
+                </div>
+                <div class="col-md-10">
+                    <div class="row">
+                        <div class="col-md-10">
+                            <div class="row">
+                                <span class="small datetime"></span>
+                                <a class="small lnkId" href="#"></a>
+                            </div>
+                            <div class="row">
+                                <span class="small lonlat"></span>
+                            </div>
+                            <div class="row">
+                                <span class="small dip"></span>
+                            </div>
+                            <div class="row">
+                                <span class="small slip"></span>
+                            </div>
+                            <div class="row">
+                                <span class="small accel"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="row">
+                                <a class="geofon" href="#" target="_blank"><img class="beach" alt="" src="javascript:void(0);"></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row process">
+                        <div class="progress">
+                            <div class="progress-bar"></div>
+                        </div>
+                        <span class="medium status"></span>
+                        <span class="lnkLast"></span>
+                        <a class="lnkCopy pull-right" href="#"><span class="glyphicon glyphicon-floppy-open"></span></a>
+                        <a class="lnkTimeline pull-right" href="#"><span class="glyphicon glyphicon-sort-by-attributes"></span></a>
+                        <a class="lnkStatic pull-right" href="#"><span class="glyphicon glyphicon-share-alt"></span></a>
+                        <a class="lnkSend pull-right" href="#"><span class="glyphicon glyphicon-send"></span></a>
+                        <a class="lnkEdit pull-right" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
+                        <a class="lnkEditEvtSet pull-right" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
+                        <a class="lnkLearn pull-right" href="#"><span class="glyphicon glyphicon-info-sign"></span></a>
+                        <a class="lnkReport pull-right" href="#"><span class="glyphicon glyphicon-cloud-download"></span></a>
+                        <a class="lnkData pull-right" href="#"><span class="glyphicon glyphicon-save"></span></a>
+                        <a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
+                        <!-- <button class="lnkEdit btn btn-primary btn-sm"><span class="glyphicon glyphicon-repeat"></span></button> -->
+                    </div>
+                    <div class="calc_data">
+                        <div class="row">
+                            <span class="small layers"></span>
+                        </div>
+                        <div class="row">
+                            <span class="small resource"></span>
+                            <span class="small algorithm"></span>
+                        </div>
+                        <div class="row">
+                            <span class="small calc"></span>
+                        </div>
+                        <div class="row">
+                            <input class="chk_grid" type="checkbox">
+                            <span class="small grid"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-	<!-- sidebar context menu template that appears on right click -->
-	<div id="contextMenu" class="dropdown clearfix">
-	    <ul class="dropdown-menu">
-	    	<li><a id="ctxEdit" href="#" tabindex="-1">Edit</a></li>
-	    	<li class="divider"></li>
-	    </ul>
-  	</div>
+    <!-- sidebar message template -->
+    <div class="row msg-entry entry">
+        <div class="col-md-12">
+            <div class="row row-subject">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+                    <div class="row">
+                        <a href="#" class="big subject"></a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="row row-msgIcon">
+                        <span class="glyphicon glyphicon-arrow-right msgIcon"></span>
+                        <span class="msgType"></span>
+                    </div>
+                </div>
+                <div class="col-md-10">
+                    <div class="row">
+                        <span class="small datetime"></span>
+                        <!-- <a href="#" class="small lnkEvtId"></a> -->
+                        <span class="small lnkEvtId"></span>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-2 no-pad msg-col-left">
+                            <span class="small">From: &nbsp;</span>
+                        </div>
+                        <div class="col-md-10 no-pad msg-col-right">
+                            <span class="small from"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-2 no-pad msg-col-left">
+                            <span class="small">To: &nbsp;</span>
+                        </div>
+                        <div class="col-md-10 no-pad msg-col-right">
+                            <span class="small to"></span>
+                        </div>
+                    </div>
+                    <div class="row cc-row">
+                        <div class="col-md-2 no-pad msg-col-left">
+                            <span class="small cc-lab">Cc:&nbsp;</span>
+                        </div>
+                        <div class="col-md-10 no-pad msg-col-right">
+                            <span class="small cc"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <span class="medium stat-disp">Map not displayed</span>
+                    </div>
+                    <div class="row">
+                        <span class="medium stat-read">Message not read</span>
+                        <a class="lnkTimeline pull-right" href="#"><span class="glyphicon glyphicon-sort-by-attributes"></span></a>
+                        <a class="lnkMsg pull-right" href="#"><span class="glyphicon glyphicon-align-justify"></span></a>
+                        <a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-	<!-- sidebar entry template -->
-	<div class="row eq-entry entry">
-		<div class="col-md-12" >
-			<div class="info">
-				<span></span>
-				<a href="#">&times;</a>
-			</div>
-			<div class="row row-region">
-				<div class="col-md-2"></div>
-				<div class="col-md-10">
-					<div class="row">
-						<a href="#" class="big region"></a>
-					</div>
-				</div>
-			</div>
-			<div class="row">
-				<div class="col-md-2">
-					<div class="row row-marker">
-						<img class="marker" alt="" src="javascript:void(0);">
-					</div>
-					<div class="row">
-						<h4 class="mag"></h4>
-					</div>
-				</div>
-				<div class="col-md-10">
-					<div class="row">
-						<div class="col-md-10">
-							<div class="row">
-								<span class="small datetime"></span>
-								<a class="small lnkId" href="#"></a>
-							</div>
-							<div class="row">
-								<span class="small lonlat"></span>
-							</div>
-							<div class="row">
-								<span class="small dip"></span>
-							</div>
-							<div class="row">
-								<span class="small slip"></span>
-							</div>
-							<div class="row">
-								<span class="small accel"></span>
-							</div>
-						</div>
-						<div class="col-md-2">
-							<div class="row">
-								<a class="geofon" href="#" target="_blank"><img class="beach" alt="" src="javascript:void(0);"></a>
-							</div>
-						</div>
-					</div>
-					<div class="row process">
-						<div class="progress">
-							<div class="progress-bar"></div>
-						</div>
-						<span class="medium status"></span>
-						<span class="lnkLast"></span>
-						<a class="lnkCopy pull-right" href="#"><span class="glyphicon glyphicon-floppy-open"></span></a>
-						<a class="lnkTimeline pull-right" href="#"><span class="glyphicon glyphicon-sort-by-attributes"></span></a>
-						<a class="lnkStatic pull-right" href="#"><span class="glyphicon glyphicon-share-alt"></span></a>
-						<a class="lnkSend pull-right" href="#"><span class="glyphicon glyphicon-send"></span></a>
-						<a class="lnkEdit pull-right" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
-						<a class="lnkEditEvtSet pull-right" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
-						<a class="lnkLearn pull-right" href="#"><span class="glyphicon glyphicon-info-sign"></span></a>
-						<a class="lnkReport pull-right" href="#"><span class="glyphicon glyphicon-cloud-download"></span></a>
-						<a class="lnkData pull-right" href="#"><span class="glyphicon glyphicon-save"></span></a>
-						<a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
-						<!-- <button class="lnkEdit btn btn-primary btn-sm"><span class="glyphicon glyphicon-repeat"></span></button> -->
-					</div>
-					<div class="calc_data">
-						<div class="row">
-							<span class="small layers"></span>
-						</div>
-						<div class="row">
-							<span class="small resource"></span>
-							<span class="small algorithm"></span>
-						</div>
-						<div class="row">
-							<span class="small calc"></span>
-						</div>
-						<div class="row">
-							<input class="chk_grid" type="checkbox">
-							<span class="small grid"></span>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+    <!-- sidebar event-set template -->
+    <div class="row evtset-entry entry">
+        <div class="col-md-12">
+            <div class="row row-subject">
+                <div class="col-md-2"></div>
+                <div class="col-md-10">
+                    <div class="row">
+                        <a href="#" class="big subject"></a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="row row-marker">
+                        <img class="marker" alt="" src="javascript:void(0);">
+                    </div>
+                    <div class="row">
+                        <h4 class="mag"></h4>
+                    </div>
+                </div>
+                <div class="col-md-10">
+                    <div class="row">
+                        <div class="col-md-10">
+                            <div class="row">
+                                <span class="small timestamp"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <span class="small latlon"></span>
+                    </div>
+                    <div class="row">
+                        <span class="small mag-range"></span>
+                    </div>
+                    <div class="row">
+                        <span class="small depth"></span>
+                    </div>
+                    <div class="row">
+                        <span class="small dip"></span>
+                    </div>
+                    <div class="row">
+                        <span class="small strike"></span>
+                    </div>
+                    <div class="row">
+                        <span class="small rake"></span>
+                    </div>
+                    <div class="row process">
+                        <div class="progress">
+                            <div class="progress-bar"></div>
+                        </div>
+                        <span class="medium status"></span>
+                        <a class="lnkTimeline pull-right" href="#"><span class="glyphicon glyphicon-sort-by-attributes"></span></a>
+                        <a class="lnkEdit pull-right" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
+                        <a class="lnkRiskData pull-right" href="#"><span class="glyphicon glyphicon-download-alt"></span></a>
+                    </div>
+                    <div class="calc_data">
+                        <div class="row">
+                            <span class="small layers"></span>
+                        </div>
+                        <div class="row">
+                            <span class="small simcount"></span>
+                            <span class="small dur"></span>
+                            <span class="small runtime"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-	<!-- sidebar message template -->
-	<div class="row msg-entry entry">
-		<div class="col-md-12" >
-			<div class="row row-subject">
-				<div class="col-md-2"></div>
-				<div class="col-md-10">
-					<div class="row">
-						<a href="#" class="big subject"></a>
-					</div>
-				</div>
-			</div>
-			<div class="row">
-				<div class="col-md-2">
-					<div class="row row-msgIcon">
-						<span class="glyphicon glyphicon-arrow-right msgIcon"></span>
-						<span class="msgType"></span>
-					</div>
-				</div>
-				<div class="col-md-10">
-					<div class="row">
-						<span class="small datetime"></span>
-						<!-- <a href="#" class="small lnkEvtId"></a> -->
-						<span class="small lnkEvtId"></span>
-					</div>
-					<div class="row">
-						<div class="col-md-2 no-pad msg-col-left">
-							<span class="small">From: &nbsp;</span>
-						</div>
-						<div class="col-md-10 no-pad msg-col-right">
-							<span class="small from"></span>
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-md-2 no-pad msg-col-left">
-							<span class="small">To: &nbsp;</span>
-						</div>
-						<div class="col-md-10 no-pad msg-col-right">
-							<span class="small to"></span>
-						</div>
-					</div>
-					<div class="row cc-row">
-						<div class="col-md-2 no-pad msg-col-left">
-							<span class="small cc-lab">Cc:&nbsp;</span>
-						</div>
-						<div class="col-md-10 no-pad msg-col-right">
-							<span class="small cc"></span>
-						</div>
-					</div>
-					<div class="row">
-						<span class="medium stat-disp">Map not displayed</span>
-					</div>
-					<div class="row">
-						<span class="medium stat-read">Message not read</span>
-						<a class="lnkTimeline pull-right" href="#"><span class="glyphicon glyphicon-sort-by-attributes"></span></a>
-						<a class="lnkMsg pull-right" href="#"><span class="glyphicon glyphicon-align-justify"></span></a>
-						<a class="lnkDelete pull-right" href="#"><span class="glyphicon glyphicon-remove"></span></a>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+    <div class="popovers">
+        <span class="learn">
+            Currently, we use a rough and simple threshold mechanism to identify the tsunami potential
+            of an earthquake. If the location of the earthquake is inland, deeper than 100km, or has
+            a magnitude less than 5.5 then we don't consider the earthquake for any wave propagation
+            computation. However, if you think the earthquake is relevant for computation then you can
+            do so by using 'Modify and reprocess'. <br><br>Anyhow, in the near future we plan to use an
+            improved mechanism by adopting region dependent decision matrices defined by the UNESCO-IOC
+            ICGs, that is ICG/NEAMTWS, ICG/IOTWS, ICG/PTWS, and ICG/CARIBE EWS.
+        </span>
+    </div>
 
-	<!-- sidebar event-set template -->
-	<div class="row evtset-entry entry">
-		<div class="col-md-12" >
-			<div class="row row-subject">
-				<div class="col-md-2"></div>
-				<div class="col-md-10">
-					<div class="row">
-						<a href="#" class="big subject"></a>
-					</div>
-				</div>
-			</div>
-			<div class="row">
-				<div class="col-md-2">
-					<div class="row row-marker">
-						<img class="marker" alt="" src="javascript:void(0);">
-					</div>
-					<div class="row">
-						<h4 class="mag"></h4>
-					</div>
-				</div>
-				<div class="col-md-10">
-					<div class="row">
-						<div class="col-md-10">
-							<div class="row">
-								<span class="small timestamp"></span>
-							</div>
-						</div>
-					</div>
-					<div class="row">
-						<span class="small latlon"></span>
-					</div>
-					<div class="row">
-						<span class="small mag-range"></span>
-					</div>
-					<div class="row">
-						<span class="small depth"></span>
-					</div>
-					<div class="row">
-						<span class="small dip"></span>
-					</div>
-					<div class="row">
-						<span class="small strike"></span>
-					</div>
-					<div class="row">
-						<span class="small rake"></span>
-					</div>
-					<div class="row process">
-						<div class="progress">
-							<div class="progress-bar"></div>
-						</div>
-						<span class="medium status"></span>
-						<a class="lnkTimeline pull-right" href="#"><span class="glyphicon glyphicon-sort-by-attributes"></span></a>
-						<a class="lnkEdit pull-right" href="#"><span class="glyphicon glyphicon-repeat"></span></a>
-						<a class="lnkRiskData pull-right" href="#"><span class="glyphicon glyphicon-download-alt"></span></a>
-					</div>
-					<div class="calc_data">
-						<div class="row">
-							<span class="small layers"></span>
-						</div>
-						<div class="row">
-							<span class="small simcount"></span>
-							<span class="small dur"></span>
-							<span class="small runtime"></span>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+    <!-- modal "SignIn" dialog -->
+    <div class="modal fade" id="SignInDialog" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Please sign in to continue</h4>
+                </div>
+                <div class="modal-body">
+                    <input id="diaUser" type="text" class="form-control" placeholder="E-Mail" required>
+                    <input id="diaPass" type="password" class="form-control" placeholder="Password" required>
+                    <p id="diaStatus" class="form-control-static"></p>
+                </div>
+                <div class="modal-footer">
+                    <a id="diaAccount" href="mailto:localhost?subject=Get%20account%20for%20GeoPeril" class="btn btn-primary pull-left">Get Account</a>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button id="diaSignIn" type="button" class="btn btn-primary">Sign In</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->
 
-	<div class="popovers">
-		<span class="learn">
-			Currently, we use a rough and simple threshold mechanism to identify the tsunami potential
-			of an earthquake. If the location of the earthquake is inland, deeper than 100km, or has
-			a magnitude less than 5.5 then we don't consider the earthquake for any wave propagation
-			computation. However, if you think the earthquake is relevant for computation then you can
-			do so by using 'Modify and reprocess'. <br><br>Anyhow, in the near future we plan to use an
-			improved mechanism by adopting region dependent decision matrices defined by the UNESCO-IOC
-			ICGs, that is ICG/NEAMTWS, ICG/IOTWS, ICG/PTWS, and ICG/CARIBE EWS.
-		</span>
-	</div>
+    <!-- modal contact dialog -->
+    <div class="modal fade" id="ContactDialog" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Connect</h4>
+                </div>
+                <div class="modal-body">
+                    <span>
+                  Are  you looking to learn more about what we are doing? Still trying to figure out how this might be applicable to your work? Looking to help?
+                <br><br>
+                You’ve come to the right place.
+                <br><br>
+                We’ll  be building out resource around some of the pillars of scientific GPU computing, in particular the computation of models for simulating forecasts for geohazards and other natural hazards.
+            </span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->
 
-	<!-- modal "SignIn" dialog -->
-	<div class="modal fade" id="SignInDialog" tabindex="-1">
-	  <div class="modal-dialog">
-	    <div class="modal-content">
-	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal">&times;</button>
-	        <h4 class="modal-title">Please sign in to continue</h4>
-	      </div>
-	      <div class="modal-body">
-	      	<input id="diaUser" type="text" class="form-control" placeholder="E-Mail" required>
-		  	<input id="diaPass" type="password" class="form-control" placeholder="Password" required>
-		  	<p id="diaStatus" class="form-control-static"></p>
-	      </div>
-	      <div class="modal-footer">
-	      	<a id="diaAccount" href="mailto:localhost?subject=Get%20account%20for%20GeoPeril" class="btn btn-primary pull-left">Get Account</a>
-	        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-	        <button id="diaSignIn" type="button" class="btn btn-primary">Sign In</button>
-	      </div>
-	    </div><!-- /.modal-content -->
-	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
+    <!-- modal disclaimer dialog -->
+    <div class="modal fade" id="DisclaimDia" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close disClose">&times;</button>
+                    <h4 class="modal-title">About</h4>
+                </div>
+                <div class="modal-body">
+                    <span>GeoPeril is a platform and activity that will help researchers around the world use cloud based GPU computation services for analysing geohazards and other natural hazards. The website you use is an early alpha version for demonstration purposes to give the concept a whirl and to shape science’s future. Further functionality, improvements and possible profound changes will be implemented in the next weeks and months. If you would like to get involved then feel free to connect with us.
+              <br><br>
+                However, the service is aimed for research purposes only. You may NOT use the service for early warning or crisis management purposes in its current version. So please note that:
+              <br><br>
+                THE SERVICE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SERVICE OR THE USE OR OTHER DEALINGS IN THE SERVICE.
+            </span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default disClose">Cancel</button>
+                    <button id="disAccept" type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->
 
-	<!-- modal contact dialog -->
-	<div class="modal fade" id="ContactDialog" tabindex="-1">
-	  <div class="modal-dialog modal-sm">
-	    <div class="modal-content">
-	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal">&times;</button>
-	        <h4 class="modal-title">Connect</h4>
-	      </div>
-	      <div class="modal-body">
-	      	<span>
-	      		Are  you looking to learn more about what we are doing? Still trying to figure out how this might be applicable to your work? Looking to help?
-				<br><br>
-				You’ve come to the right place.
-				<br><br>
-				We’ll  be building out resource around some of the pillars of scientific GPU computing, in particular the computation of models for simulating forecasts for geohazards and other natural hazards.
-			</span>
-	      </div>
-	      <div class="modal-footer">
-	        <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
-	      </div>
-	    </div><!-- /.modal-content -->
-	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
+    <!-- modal about dialog -->
+    <div class="modal fade" id="AboutDia" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">About</h4>
+                </div>
+                <div class="modal-body">
+                    <span>GeoPeril is a platform and activity that will help researchers around the world use cloud based GPU computation services for analysing geohazards and other natural hazards. The website you use is an early alpha version for demonstration purposes to give the concept a whirl and to shape science’s future. Further functionality, improvements and possible profound changes will be implemented in the next weeks and months. If you would like to get involved then feel free to connect with us.
+              <br><br>
+                However, the service is aimed for research purposes only. You may NOT use the service for early warning or crisis management purposes in its current version. So please note that:
+              <br><br>
+                THE SERVICE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SERVICE OR THE USE OR OTHER DEALINGS IN THE SERVICE.
+            </span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->
 
-	<!-- modal disclaimer dialog -->
-	<div class="modal fade" id="DisclaimDia" tabindex="-1">
-	  <div class="modal-dialog modal-sm">
-	    <div class="modal-content">
-	      <div class="modal-header">
-	        <button type="button" class="close disClose">&times;</button>
-	        <h4 class="modal-title">About</h4>
-	      </div>
-	      <div class="modal-body">
-	        <span>GeoPeril is a platform and activity that will help researchers around the world use cloud based GPU computation services for analysing geohazards and other natural hazards. The website you use is an early alpha version for demonstration purposes to give the concept a whirl and to shape science’s future. Further functionality, improvements and possible profound changes will be implemented in the next weeks and months. If you would like to get involved then feel free to connect with us.
-			  <br><br>
-				However, the service is aimed for research purposes only. You may NOT use the service for early warning or crisis management purposes in its current version. So please note that:
-			  <br><br>
-				THE SERVICE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SERVICE OR THE USE OR OTHER DEALINGS IN THE SERVICE.
-			</span>
-	      </div>
-	      <div class="modal-footer">
-	      	<button type="button" class="btn btn-default disClose">Cancel</button>
-	        <button id="disAccept" type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
-	      </div>
-	    </div><!-- /.modal-content -->
-	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
+    <!-- modal prop dialog -->
+    <div class="modal fade" id="PropDia" data-keyboard="false" data-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header propHeader">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Properties</h4>
+                    <br>
+                    <ul class="nav nav-tabs">
+                        <li id="propTabGeneral" class="active"><a href="#propGeneral" data-toggle="tab">General</a></li>
+                        <li id="propTabMsgs"><a href="#propMsgs" data-toggle="tab">Messages</a></li>
+                        <li id="propTabNotify"><a href="#propNotify" data-toggle="tab">Notifications</a></li>
+                        <li id="propTabInst"><a href="#propInst" data-toggle="tab">Institution</a></li>
+                        <li id="propTabStations"><a href="#propStations" data-toggle="tab">Stations</a></li>
+                    </ul>
+                </div>
+                <div class="modal-body">
+                    <div class="tab-content">
+                        <div class="tab-pane active" id="propGeneral">
+                            <div class="input-group input-group-sm prop-label">
+                                <span class="input-group-addon">Username:</span>
+                                <span class="form-control" id="propUser"></span>
+                            </div>
+                            <div class="prop-label pad-top">Change your password:</div>
+                            <div class="input-group input-group-sm prop-label">
+                                <span class="input-group-addon">Current password:</span>
+                                <input id="propCurPwd" type="password" class="form-control">
+                            </div>
+                            <div class="input-group input-group-sm prop-label">
+                                <span class="input-group-addon">New password:</span>
+                                <input id="propNewPwd" type="password" class="form-control">
+                            </div>
+                            <div class="input-group input-group-sm prop-label">
+                                <span class="input-group-addon">Confirm password:</span>
+                                <input id="propConfPwd" type="password" class="form-control">
+                            </div>
+                            <div id="propApi">
+                                <div class="prop-label pad-top">API Key:</div>
+                                <div class="input-group input-group-sm prop-label">
+                                    <span class="input-group-addon">Key:</span>
+                                    <input id="propApiKey" type="text" class="form-control" readonly>
+                                    <span class="input-group-btn">
+                                <button id="propBtnApiKey" type="button" class="btn btn-default">
+                                    <span class="glyphicon glyphicon-refresh"></span>
+                                    </button>
+                                    </span>
+                                </div>
+                                <div class="input-group input-group-sm">
+                                    <input id="propApiEnabled" type="checkbox">
+                                    <span>Enable API</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="propMsgs">
+                            <div id="propGrpFax" class="group">
+                                <div class="grpHeader">
+                                    <span class="grpHeadline">Fax</span>
+                                    <a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+                                </div>
+                                <div class="grpContent">
+                                    <div class="input-group input-group-sm prop-label">
+                                        <span class="input-group-addon">Fax-Username:</span>
+                                        <input id="propFaxUser" type="text" class="form-control">
+                                        <span class="input-group-addon prop-right">
+                                    <span class="glyphicon glyphicon-phone-alt"></span>
+                                        </span>
+                                    </div>
+                                    <div class="input-group input-group-sm prop-label">
+                                        <span class="input-group-addon">Fax-Password:</span>
+                                        <input id="propFaxPwd" type="password" class="form-control">
+                                        <span class="input-group-addon prop-right">
+                                    <span class="glyphicon glyphicon-phone-alt"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="propGrpFtp" class="group">
+                                <div class="grpHeader">
+                                    <span class="grpHeadline">FTP / GTS</span>
+                                    <a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+                                </div>
+                                <div class="grpContent">
+                                    <div class="input-group input-group-sm prop-label">
+                                        <span class="input-group-addon">FTP-Username:</span>
+                                        <input id="propFTPUser" type="text" class="form-control">
+                                        <span class="input-group-addon prop-right">
+                                    <span class="glyphicon glyphicon-link"></span>
+                                        </span>
+                                    </div>
+                                    <div class="input-group input-group-sm prop-label">
+                                        <span class="input-group-addon">FTP-Password:</span>
+                                        <input id="propFTPPwd" type="password" class="form-control">
+                                        <span class="input-group-addon prop-right">
+                                    <span class="glyphicon glyphicon-link"></span>
+                                        </span>
+                                    </div>
+                                    <div class="input-group input-group-sm prop-label">
+                                        <span class="input-group-addon">FTP-Host:</span>
+                                        <input id="propFTPHost" type="text" class="form-control">
+                                        <span class="input-group-addon prop-right">
+                                    <span class="glyphicon glyphicon-link"></span>
+                                        </span>
+                                    </div>
+                                    <div class="input-group input-group-sm prop-label">
+                                        <span class="input-group-addon">FTP-Path:</span>
+                                        <input id="propFTPPath" type="text" class="form-control">
+                                        <span class="input-group-addon slash">/</span>
+                                        <input id="propFTPFile" type="text" class="form-control">
+                                        <span class="input-group-addon prop-right">
+                                    <span class="glyphicon glyphicon-link"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="propGrpSms" class="group">
+                                <div class="grpHeader">
+                                    <span class="grpHeadline">SMS</span>
+                                    <a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+                                </div>
+                                <div class="grpContent">
+                                    <div class="input-group input-group-sm prop-label">
+                                        <span class="input-group-addon">Twilio-SID</span>
+                                        <input id="propSmsSID" type="text" class="form-control">
+                                        <span class="input-group-addon prop-right">
+                                    <span class="glyphicon glyphicon-phone"></span>
+                                        </span>
+                                    </div>
+                                    <div class="input-group input-group-sm prop-label">
+                                        <span class="input-group-addon">Twilio-Token</span>
+                                        <input id="propSmsToken" type="password" class="form-control">
+                                        <span class="input-group-addon prop-right">
+                                    <span class="glyphicon glyphicon-phone"></span>
+                                        </span>
+                                    </div>
+                                    <div class="input-group input-group-sm prop-label">
+                                        <span class="input-group-addon">Twilio-Number</span>
+                                        <input id="propSmsFrom" type="text" class="form-control">
+                                        <span class="input-group-addon prop-right">
+                                    <span class="glyphicon glyphicon-phone"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="propNotify">
+                            <div class="prop-label">General settings:</div>
+                            <div class="propNotifySmsTemplate"></div>
+                            <!--
+                            <div class="input-group input-group-sm prop-label">
+                                <span class="input-group-addon">SMS</span>
+                                <input id="propNotifySms" type="text" class="form-control">
+                                <span class="input-group-addon prop-right">
+                                    <span class="glyphicon glyphicon-phone"></span>
+                                </span>
+                            </div>
+                            -->
+                            <div class="prop-info">Include a '+' and the country code to ensure proper delivery.</div>
+                            <div class="input-group input-group-sm prop-label">
+                                <span class="input-group-addon">Mail</span>
+                                <input id="propNotifyMail" type="text" class="form-control">
+                                <span class="input-group-addon prop-right">
+                            <span class="glyphicon glyphicon-envelope"></span>
+                                </span>
+                            </div>
+                            <br>
+                            <div class="prop-label">Notification Message (NMSG):</div>
+                            <div class="input-group input-group-sm prop-label">
+                                <span class="input-group-addon">Magnitude &ge;</span>
+                                <input id="propNotifyMag" type="text" class="form-control">
+                                <span class="input-group-addon prop-right">M</span>
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <input id="propNotifyOffshore" type="checkbox">
+                                <span>Offshore events only</span>
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <input id="propNotifyPreMsg" type="checkbox">
+                                <span>Include preliminary message</span>
+                            </div>
+                            <br>
+                            <div class="prop-label">Notification on change (NOC) when:</div>
+                            <!--
+                            <div style="display: inline-block; padding-right: 1em;">
+                                <div class="input-group input-group-sm">
+                                    <input id="propNotifyChangeChk" type="checkbox">
+                                    <span>Magnitude changes (M-NOC)</span>
+                                </div>
+                            </div>
+                            <div style="display: inline-block; width: 200px; vertical-align: bottom;">
+                                <div class="input-group input-group-sm">
+                                    <input id="propNotifyChangeVal" type="text" class="form-control">
+                                    <span class="input-group-addon prop-right">M</span>
+                                </div>
+                            </div>
+                            -->
+                            <div class="input-group input-group-sm">
+                                <input id="propNotifyMT" type="checkbox">
+                                <span>MT available (MT-NOC)</span>
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <input id="propNotifySim" type="checkbox">
+                                <span>Simulation available (SIM-NOC)</span>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="propInst">
+                            <div class="prop-label">View or edit institution related information</div>
+                            <div class="input-group input-group-sm prop-label pad-top-1">
+                                <span class="input-group-addon">Name:</span>
+                                <input id="propInstName" class="form-control">
+                            </div>
+                            <div class="input-group input-group-sm prop-label">
+                                <span class="input-group-addon">Sender message line:</span>
+                                <input id="propInstMsgName" class="form-control">
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="propStations">
+                            <span>Select your countries of interest:</span>
+                            <div class="header">
+                                <h4 class="pull-left">Caribean region (CARIBE EWS)<input class="check pull-right" type="checkbox"></h4>
+                                <div class="clear"></div>
+                                <hr>
+                                <div class="countries countries-CARIBE"></div>
+                                <div class="clear"></div>
+                            </div>
 
-	<!-- modal about dialog -->
-	<div class="modal fade" id="AboutDia" tabindex="-1">
-	  <div class="modal-dialog modal-sm">
-	    <div class="modal-content">
-	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal">&times;</button>
-	        <h4 class="modal-title">About</h4>
-	      </div>
-	      <div class="modal-body">
-	        <span>GeoPeril is a platform and activity that will help researchers around the world use cloud based GPU computation services for analysing geohazards and other natural hazards. The website you use is an early alpha version for demonstration purposes to give the concept a whirl and to shape science’s future. Further functionality, improvements and possible profound changes will be implemented in the next weeks and months. If you would like to get involved then feel free to connect with us.
-			  <br><br>
-				However, the service is aimed for research purposes only. You may NOT use the service for early warning or crisis management purposes in its current version. So please note that:
-			  <br><br>
-				THE SERVICE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SERVICE OR THE USE OR OTHER DEALINGS IN THE SERVICE.
-			</span>
-	      </div>
-	      <div class="modal-footer">
-	        <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
-	      </div>
-	    </div><!-- /.modal-content -->
-	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
+                            <div class="header">
+                                <h4 class="pull-left">Indian Ocean region (IOTWS) <input class="check pull-right" type="checkbox"></h4>
+                                <div class="clear"></div>
+                                <hr>
+                                <div class="countries countries-IO"></div>
+                                <div class="clear"></div>
+                            </div>
 
-	<!-- modal prop dialog -->
-	<div class="modal fade" id="PropDia" data-keyboard="false" data-backdrop="static" tabindex="-1">
-	  <div class="modal-dialog modal-sm">
-	    <div class="modal-content">
-	      <div class="modal-header propHeader">
-	        <button type="button" class="close" data-dismiss="modal">&times;</button>
-	        <h4 class="modal-title">Properties</h4><br>
-	        <ul class="nav nav-tabs">
-				<li id="propTabGeneral" class="active"><a href="#propGeneral" data-toggle="tab">General</a></li>
-			 	<li id="propTabMsgs"><a href="#propMsgs" data-toggle="tab">Messages</a></li>
-			 	<li id="propTabNotify"><a href="#propNotify" data-toggle="tab">Notifications</a></li>
-			 	<li id="propTabInst"><a href="#propInst" data-toggle="tab">Institution</a></li>
-			 	<li id="propTabStations"><a href="#propStations" data-toggle="tab">Stations</a></li>
-			</ul>
-	      </div>
-	      <div class="modal-body">
-		  	<div class="tab-content">
-		  		<div class="tab-pane active" id="propGeneral">
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">Username:</span>
-						<span class="form-control" id="propUser"></span>
-		  			</div>
-		  			<div class="prop-label pad-top">Change your password:</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">Current password:</span>
-						<input id="propCurPwd" type="password" class="form-control">
-		  			</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">New password:</span>
-						<input id="propNewPwd" type="password" class="form-control">
-		  			</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">Confirm password:</span>
-						<input id="propConfPwd" type="password" class="form-control">
-		  			</div>
-		  			<div id="propApi">
-			  			<div class="prop-label pad-top">API Key:</div>
-			  			<div class="input-group input-group-sm prop-label">
-	  						<span class="input-group-addon">Key:</span>
-	  						<input id="propApiKey" type="text" class="form-control" readonly>
-	  						<span class="input-group-btn">
-								<button id="propBtnApiKey" type="button" class="btn btn-default">
-									<span class="glyphicon glyphicon-refresh"></span>
-								</button>
-							</span>
-	  					</div>
-	  					<div class="input-group input-group-sm">
-			  				<input id="propApiEnabled" type="checkbox">
-			  				<span>Enable API</span>
-			  			</div>
-		  			</div>
-		  		</div>
-		  		<div class="tab-pane" id="propMsgs">
-		  			<div id="propGrpFax" class="group">
-		      			<div class="grpHeader">
-		      				<span class="grpHeadline">Fax</span>
-		      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-		      			</div>
-		      			<div class="grpContent">
-		      				<div class="input-group input-group-sm prop-label">
-								<span class="input-group-addon">Fax-Username:</span>
-								<input id="propFaxUser" type="text" class="form-control">
-								<span class="input-group-addon prop-right">
-									<span class="glyphicon glyphicon-phone-alt"></span>
-								</span>
-				  			</div>
-				  			<div class="input-group input-group-sm prop-label">
-								<span class="input-group-addon">Fax-Password:</span>
-								<input id="propFaxPwd" type="password" class="form-control">
-								<span class="input-group-addon prop-right">
-									<span class="glyphicon glyphicon-phone-alt"></span>
-								</span>
-				  			</div>
-		      			</div>
-		      		</div>
-		  			<div id="propGrpFtp" class="group">
-		      			<div class="grpHeader">
-		      				<span class="grpHeadline">FTP / GTS</span>
-		      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-		      			</div>
-		      			<div class="grpContent">
-				  			<div class="input-group input-group-sm prop-label">
-								<span class="input-group-addon">FTP-Username:</span>
-								<input id="propFTPUser" type="text" class="form-control">
-								<span class="input-group-addon prop-right">
-									<span class="glyphicon glyphicon-link"></span>
-								</span>
-				  			</div>
-				  			<div class="input-group input-group-sm prop-label">
-								<span class="input-group-addon">FTP-Password:</span>
-								<input id="propFTPPwd" type="password" class="form-control">
-								<span class="input-group-addon prop-right">
-									<span class="glyphicon glyphicon-link"></span>
-								</span>
-				  			</div>
-				  			<div class="input-group input-group-sm prop-label">
-								<span class="input-group-addon">FTP-Host:</span>
-								<input id="propFTPHost" type="text" class="form-control">
-								<span class="input-group-addon prop-right">
-									<span class="glyphicon glyphicon-link"></span>
-								</span>
-				  			</div>
-				  			<div class="input-group input-group-sm prop-label">
-								<span class="input-group-addon">FTP-Path:</span>
-								<input id="propFTPPath" type="text" class="form-control">
-								<span class="input-group-addon slash">/</span>
-								<input id="propFTPFile" type="text" class="form-control">
-								<span class="input-group-addon prop-right">
-									<span class="glyphicon glyphicon-link"></span>
-								</span>
-				  			</div>
-				  		</div>
-				  	</div>
-				  	<div id="propGrpSms" class="group">
-					  	<div class="grpHeader">
-		      				<span class="grpHeadline">SMS</span>
-		      				<a class="lnkGroup" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-		      			</div>
-		      			<div class="grpContent">
-		      				<div class="input-group input-group-sm prop-label">
-								<span class="input-group-addon">Twilio-SID</span>
-								<input id="propSmsSID" type="text" class="form-control">
-								<span class="input-group-addon prop-right">
-									<span class="glyphicon glyphicon-phone"></span>
-								</span>
-				  			</div>
-				  			<div class="input-group input-group-sm prop-label">
-								<span class="input-group-addon">Twilio-Token</span>
-								<input id="propSmsToken" type="password" class="form-control">
-								<span class="input-group-addon prop-right">
-									<span class="glyphicon glyphicon-phone"></span>
-								</span>
-				  			</div>
-				  			<div class="input-group input-group-sm prop-label">
-								<span class="input-group-addon">Twilio-Number</span>
-								<input id="propSmsFrom" type="text" class="form-control">
-								<span class="input-group-addon prop-right">
-									<span class="glyphicon glyphicon-phone"></span>
-								</span>
-				  			</div>
-			      		</div>
-			      	</div>
-		      	</div>
-		      	<div class="tab-pane" id="propNotify">
-		      		<div class="prop-label">General settings:</div>
-		      		<div class="propNotifySmsTemplate"></div>
-		      		<!-- <div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">SMS</span>
-						<input id="propNotifySms" type="text" class="form-control">
-						<span class="input-group-addon prop-right">
-							<span class="glyphicon glyphicon-phone"></span>
-						</span>
-		  			</div> -->
-		  			<div class="prop-info">Include a '+' and the country code to ensure proper delivery.</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">Mail</span>
-						<input id="propNotifyMail" type="text" class="form-control">
-						<span class="input-group-addon prop-right">
-							<span class="glyphicon glyphicon-envelope"></span>
-						</span>
-		  			</div>
-		  			<br>
-		  			<div class="prop-label">Notification Message (NMSG):</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">Magnitude &ge;</span>
-						<input id="propNotifyMag" type="text" class="form-control">
-						<span class="input-group-addon prop-right">M</span>
-		  			</div>
-		  			<div class="input-group input-group-sm">
-		  				<input id="propNotifyOffshore" type="checkbox">
-		  				<span>Offshore events only</span>
-		  			</div>
-		  			<div class="input-group input-group-sm">
-		  				<input id="propNotifyPreMsg" type="checkbox">
-		  				<span>Include preliminary message</span>
-		  			</div>
-		  			<br>
-		  			<div class="prop-label">Notification on change (NOC) when:</div>
-		  			<!--
-		  			<div style="display: inline-block; padding-right: 1em;">
-		  			<div class="input-group input-group-sm">
-		  				<input id="propNotifyChangeChk" type="checkbox">
-		  				<span>Magnitude changes (M-NOC)</span>
-		  			</div>
-		  			</div>
-		  			<div style="display: inline-block; width: 200px; vertical-align: bottom;">
-			  			<div class="input-group input-group-sm">
-							<input id="propNotifyChangeVal" type="text" class="form-control">
-							<span class="input-group-addon prop-right">M</span>
-			  			</div>
-		  			</div>
-		  			-->
-		  			<div class="input-group input-group-sm">
-		  				<input id="propNotifyMT" type="checkbox">
-						<span>MT available (MT-NOC)</span>
-		  			</div>
-		  			<div class="input-group input-group-sm">
-		  				<input id="propNotifySim" type="checkbox">
-						<span>Simulation available (SIM-NOC)</span>
-		  			</div>
-		      	</div>
-		      	<div class="tab-pane" id="propInst">
-		      		<div class="prop-label">View or edit institution related information</div>
-		  			<div class="input-group input-group-sm prop-label pad-top-1">
-						<span class="input-group-addon">Name:</span>
-						<input id="propInstName" class="form-control">
-		  			</div>
-		  			<div class="input-group input-group-sm prop-label">
-						<span class="input-group-addon">Sender message line:</span>
-						<input id="propInstMsgName" class="form-control">
-		  			</div>
-		      	</div>
-		      	<div class="tab-pane" id="propStations">
-		      		<span>Select your countries of interest:</span>
-		      		<div class="header">
-			      		<h4 class="pull-left">Caribean region (CARIBE EWS)<input class="check pull-right" type="checkbox"></h4>
-			      		<div class="clear"></div>
-			      		<hr>
-		  				<div class="countries countries-CARIBE"></div>
-		  				<div class="clear"></div>
-		      		</div>
+                            <div class="header">
+                                <h4 class="pull-left">NE-Atlantic and Med region (NEAMTWS)<input class="check pull-right" type="checkbox"></h4>
+                                <div class="clear"></div>
+                                <hr>
+                                <div class="countries countries-NEAM"></div>
+                                <div class="clear"></div>
+                            </div>
 
-		      		<div class="header">
-			      		<h4 class="pull-left">Indian Ocean region (IOTWS) <input class="check pull-right" type="checkbox"></h4>
-			      		<div class="clear"></div>
-			      		<hr>
-			      		<div class="countries countries-IO"></div>
-			  			<div class="clear"></div>
-		      		</div>
+                            <div class="header">
+                                <h4 class="pull-left">Pacific region (PTWS)<input class="check pull-right" type="checkbox"></h4>
+                                <div class="clear"></div>
+                                <hr>
+                                <div class="countries countries-P"></div>
+                                <div class="clear"></div>
+                            </div>
 
-		  			<div class="header">
-			      		<h4 class="pull-left">NE-Atlantic and Med region (NEAMTWS)<input class="check pull-right" type="checkbox"></h4>
-			      		<div class="clear"></div>
-			      		<hr>
-			  			<div class="countries countries-NEAM"></div>
-			  			<div class="clear"></div>
-		      		</div>
+                            <div class="header">
+                                <h4 class="pull-left">S-Atlantic region<input class="check pull-right" type="checkbox"></h4>
+                                <div class="clear"></div>
+                                <hr>
+                                <div class="countries countries-S"></div>
+                                <div class="clear"></div>
+                            </div>
 
-		  			<div class="header">
-			      		<h4 class="pull-left">Pacific region (PTWS)<input class="check pull-right" type="checkbox"></h4>
-			      		<div class="clear"></div>
-			      		<hr>
-		  				<div class="countries countries-P"></div>
-		  				<div class="clear"></div>
-		      		</div>
+                            <div class="header">
+                                <h4 class="pull-left">Not assigned<input class="check pull-right" type="checkbox"></h4>
+                                <div class="clear"></div>
+                                <hr>
+                                <div class="countries countries-unassigned"></div>
+                                <div class="clear"></div>
+                            </div>
+                            <br>
+                            <span class="count"></span>
+                            <br>
+                            <span class="warn"></span>
+                        </div>
+                    </div>
+                    <p id="propStatus" class="form-control-static prop-label"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="button" id="propBtnSubmit" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->
 
-		      		<div class="header">
-			      		<h4 class="pull-left">S-Atlantic region<input class="check pull-right" type="checkbox"></h4>
-			      		<div class="clear"></div>
-			      		<hr>
-		  				<div class="countries countries-S"></div>
-		  				<div class="clear"></div>
-		      		</div>
+    <!-- modal showText dialog -->
+    <div class="modal fade" id="showTextDia" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Message</h4>
+                </div>
+                <div class="modal-body">
+                    <pre id="msgDiaText"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->
 
-		  			<div class="header">
-			      		<h4 class="pull-left">Not assigned<input class="check pull-right" type="checkbox"></h4>
-			      		<div class="clear"></div>
-			      		<hr>
-		  				<div class="countries countries-unassigned"></div>
-		  				<div class="clear"></div>
-		      		</div>
-		  			<br>
-		  			<span class="count"></span><br>
-		  			<span class="warn"></span>
-		      	</div>
-		  	</div>
-		  	<p id="propStatus" class="form-control-static prop-label"></p>
-	      </div>
-	      <div class="modal-footer">
-	      	<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-	        <button type="button" id="propBtnSubmit" class="btn btn-primary">Save</button>
-	      </div>
-	    </div><!-- /.modal-content -->
-	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
+    <!-- modal showText dialog -->
+    <div class="modal fade" id="shareDia" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Share map</h4>
+                </div>
+                <div class="modal-body">
+                    <pre id="sharedLnk"></pre>
+                </div>
+                <div class="modal-footer">
+                    <!-- <button type="button" class="btn btn-default pull-left">Copy</button> -->
+                    <a id="lnkTwitter" class="btn btn-info pull-left" href="#" target="_blank"><i class="fa fa-lg fa-twitter"></i></a>
+                    <a id="lnkGplus" class="btn btn-danger pull-left" href="#" target="_blank"><i class="fa fa-lg fa-google-plus"></i></a>
+                    <a id="lnkFace" class="btn btn-primary pull-left" href="#" target="_blank"><i class="fa fa-lg fa-facebook"></i></a>
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->
 
-	<!-- modal showText dialog -->
-	<div class="modal fade" id="showTextDia" tabindex="-1">
-	  <div class="modal-dialog modal-sm">
-	    <div class="modal-content">
-	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal">&times;</button>
-	        <h4 class="modal-title">Message</h4>
-	      </div>
-	      <div class="modal-body">
-	        <pre id="msgDiaText"></pre>
-	      </div>
-	      <div class="modal-footer">
-	        <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
-	      </div>
-	    </div><!-- /.modal-content -->
-	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
+    <!-- modal chart dialog -->
+    <div class="modal fade" id="chartDia" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Sealevel data</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group input-group-sm prop-label pull-left time">
+                        <span class="input-group-addon">Local time:</span>
+                        <span class="form-control localTime"></span>
+                    </div>
+                    <div class="input-group input-group-sm prop-label time">
+                        <span class="input-group-addon">UTC time:</span>
+                        <span class="form-control utcTime"></span>
+                    </div>
+                    <div id="mainchart-div"></div>
+                    <div class="input-group pickEnable">
+                        <span class="input-group-addon">
+                    <input type="checkbox" id="pickerEnable">
+                </span>
+                        <span class="form-control spanHead">
+                    Include picked values in message:<br>
+                    <span class="spanValues"></span>
+                        </span>
+                        <span class="form-control spanNoPick">
+                    Select an event to enable the picking of values
+                </span>
+                    </div>
+                    <div id="picker" class="group">
+                        <div class="grpHeader">
+                            <span class="grpHeadline">Picker</span>
+                            <a class="lnkGroup test" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
+                        </div>
+                        <div class="grpContent">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-addon lab-left">Period:</span>
+                                <input id="pickerFreq" class="form-control">
+                                <span class="input-group-addon">x</span>
+                                <div class="input-group-btn" id="pickerDropDown">
+                                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+                                        <span>1</span>
+                                        <span>&nbsp;</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#">1</a></li>
+                                        <li><a href="#">2</a></li>
+                                        <li><a href="#">4</a></li>
+                                    </ul>
+                                </div>
+                                <span class="input-group-addon">=</span>
+                                <input id="pickerFreqTotal" class="form-control">
+                                <span class="input-group-addon lab-right">Minutes</span>
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-addon lab-left">Amplitude:</span>
+                                <input id="pickerAmpl" class="form-control">
+                                <span class="input-group-addon lab-right">Meters</span>
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-addon lab-left">Time of Arrival:</span>
+                                <input id="pickerTime" class="form-control" maxlength="5">
+                                <span class="input-group-addon lab-right">UTC</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->
 
-	<!-- modal showText dialog -->
-	<div class="modal fade" id="shareDia" tabindex="-1">
-	  <div class="modal-dialog modal-sm">
-	    <div class="modal-content">
-	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal">&times;</button>
-	        <h4 class="modal-title">Share map</h4>
-	      </div>
-	      <div class="modal-body">
-	        <pre id="sharedLnk"></pre>
-	      </div>
-	      <div class="modal-footer">
-	      	<!-- <button type="button" class="btn btn-default pull-left">Copy</button> -->
-	      	<a id="lnkTwitter" class="btn btn-info pull-left" href="#" target="_blank"><i class="fa fa-lg fa-twitter"></i></a>
-	      	<a id="lnkGplus" class="btn btn-danger pull-left" href="#" target="_blank"><i class="fa fa-lg fa-google-plus"></i></a>
-	      	<a id="lnkFace" class="btn btn-primary pull-left" href="#" target="_blank"><i class="fa fa-lg fa-facebook"></i></a>
-	        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-	      </div>
-	    </div><!-- /.modal-content -->
-	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
+    <!-- chart div -->
+    <div id="chart-div" class="chart-div">
+        <div class="dia"></div>
+        <span class="spanDia spanInactive">
+            <i class="iconLoad fa fa-pause fa-lg"></i><br>
+            <i class="textLoad">Disabled</i><br>
+            <i class="textSmall">Wait for 1 second to activate.</i>
+        </span>
+        <span class="spanDia spanLoad">
+            <i class="iconLoad fa fa-spinner fa-spin fa-lg"></i><br>
+            <i class="textLoad">Loading...</i>
+        </span>
+    </div>
 
-	<!-- modal chart dialog -->
-	<div class="modal fade" id="chartDia" tabindex="-1">
-	  <div class="modal-dialog modal-sm">
-	    <div class="modal-content">
-	      <div class="modal-header">
-	        <button type="button" class="close" data-dismiss="modal">&times;</button>
-	        <h4 class="modal-title">Sealevel data</h4>
-	      </div>
-	      <div class="modal-body">
-	      	<div class="input-group input-group-sm prop-label pull-left time">
-				<span class="input-group-addon">Local time:</span>
-				<span class="form-control localTime"></span>
-  			</div>
-  			<div class="input-group input-group-sm prop-label time">
-				<span class="input-group-addon">UTC time:</span>
-				<span class="form-control utcTime"></span>
-  			</div>
-	        <div id="mainchart-div"></div>
-	        <div class="input-group pickEnable">
-				<span class="input-group-addon">
-					<input type="checkbox" id="pickerEnable">
-				</span>
-				<span class="form-control spanHead">
-					Include picked values in message:<br>
-					<span class="spanValues"></span>
-				</span>
-				<span class="form-control spanNoPick">
-					Select an event to enable the picking of values
-				</span>
-			</div>
-	        <div id="picker" class="group">
-			  	<div class="grpHeader">
-      				<span class="grpHeadline">Picker</span>
-      				<a class="lnkGroup test" href="#"><span class="glyphicon glyphicon-chevron-up grpArrow"></span></a>
-      			</div>
-      			<div class="grpContent">
-		  			<div class="input-group input-group-sm">
-						<span class="input-group-addon lab-left">Period:</span>
-						<input id="pickerFreq" class="form-control">
-						<span class="input-group-addon">x</span>
-						<div class="input-group-btn" id="pickerDropDown">
-						  <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
-						  	<span>1</span>
-						  	<span>&nbsp;</span>
-						    <span class="caret"></span>
-						  </button>
-						  <ul class="dropdown-menu">
-						    <li><a href="#">1</a></li>
-						    <li><a href="#">2</a></li>
-						    <li><a href="#">4</a></li>
-						  </ul>
-						</div>
-						<span class="input-group-addon">=</span>
-						<input id="pickerFreqTotal" class="form-control">
-						<span class="input-group-addon lab-right">Minutes</span>
-		  			</div>
-		  			<div class="input-group input-group-sm">
-						<span class="input-group-addon lab-left">Amplitude:</span>
-						<input id="pickerAmpl" class="form-control">
-						<span class="input-group-addon lab-right">Meters</span>
-		  			</div>
-		  			<div class="input-group input-group-sm">
-						<span class="input-group-addon lab-left">Time of Arrival:</span>
-						<input id="pickerTime" class="form-control" maxlength="5">
-						<span class="input-group-addon lab-right">UTC</span>
-		  			</div>
-		  		</div>
-	        </div>
-	      </div>
-	      <div class="modal-footer">
-	        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-	      </div>
-	    </div><!-- /.modal-content -->
-	  </div><!-- /.modal-dialog -->
-	</div><!-- /.modal -->
+    <canvas id="canvas-line"></canvas>
 
-	<!-- chart div -->
-	<div id="chart-div" class="chart-div">
-		<div class="dia"></div>
-		<span class="spanDia spanInactive">
-			<i class="iconLoad fa fa-pause fa-lg"></i><br>
-			<i class="textLoad">Disabled</i><br>
-			<i class="textSmall">Wait for 1 second to activate.</i>
-		</span>
-		<span class="spanDia spanLoad">
-			<i class="iconLoad fa fa-spinner fa-spin fa-lg"></i><br>
-			<i class="textLoad">Loading...</i>
-		</span>
-	</div>
+    <div class="dialog-templates">
+        <!-- AdminDialog -->
+        <div class="admin">
+            <div class="header">
+                <h4 class="modal-title">Admin-Interface</h4>
+                <br>
+                <ul class="nav nav-tabs">
+                    <li class="active"><a href="#adminTabUser" data-toggle="tab">Users</a></li>
+                    <li><a href="#adminTabInst" data-toggle="tab">Institutions</a></li>
+                    <li><a href="#adminTabStats" data-toggle="tab">Statistics</a></li>
+                </ul>
+            </div>
+            <div class="content tab-content">
+                <div id="adminTabUser" class="tab-pane active">
+                    <div class="secProp"></div>
+                    <div class="secPerm"></div>
+                    <div class="secButtons">
+                        <button type="button" class="btn btn-default pull-left btnClear">Clear</button>
+                        <button type="button" class="btn btn-success pull-right btnSave">Save new user</button>
+                        <button type="button" class="btn btn-primary pull-right btnModify">Modify user</button>
+                        <button type="button" class="btn btn-danger pull-right btnDelete">Delete user</button>
+                    </div>
+                </div>
+                <div id="adminTabInst" class="tab-pane">
+                    <div class="secInputs"></div>
+                    <div class="secButtons">
+                        <button type="button" class="btn btn-default pull-left btnClear">Clear</button>
+                        <button type="button" class="btn btn-success pull-right btnSave">Save new institution</button>
+                        <button type="button" class="btn btn-primary pull-right btnModify">Modify institution</button>
+                        <button type="button" class="btn btn-danger pull-right btnDelete">Delete institution</button>
+                    </div>
+                </div>
+                <div id="adminTabStats" class="tab-pane">
+                    <div class="user-logins input-group input-group-sm prop-label">
+                        <span class="input-group-addon">
+                            <span class="user pull-left"></span>
+                        <span class="logins pull-right"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
 
-	<canvas id="canvas-line"></canvas>
+        <!-- MailDialog -->
+        <div class="mail-dialog">
+            <div class="header">
+                <h4 class="modal-title">Send messages</h4>
+                <br>
+            </div>
+            <div class="content">
+                <div class="secGroups1"></div>
+                <div class="secFtp">
+                    <div class="content">
+                        <span class="spnChk form-control"><input type="checkbox"></span>
+                        <input class="txtPath form-control" readonly>
+                        <span class="spnSlash input-group-addon">/</span>
+                        <input type="text" class="txtFile form-control">
+                    </div>
+                </div>
+                <div class="secMailText">
+                    <div class="content">
+                        <div class="btn-group btn-group-justified" data-toggle="buttons">
+                            <label class="btn btn-default active">
+                                <input class="btnInfo" name="options" type="radio">Information/Watch/Advisory</label>
+                            <label class="btn btn-default">
+                                <input class="btnEnd" name="options" type="radio">End</label>
+                            <label class="btn btn-default">
+                                <input class="btnCancel" name="options" type="radio">Cancelation</label>
+                        </div>
+                        <div class="subject"></div>
+                        <textarea class="txtMsg form-control" rows="1" spellcheck="false"></textarea>
+                    </div>
+                </div>
+                <div class="secSmsText">
+                    <div class="content">
+                        <span>SMS-Text (<span class="spnNumChars"></span> characters):</span>
+                        <textarea class="txtMsg form-control" rows="1" spellcheck="false"></textarea>
+                    </div>
+                </div>
+                <div class="secGroups2"></div>
+            </div>
+            <div class="footer">
+                <button type="button" class="btn btn-default btnCancel" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btnSave">Send</button>
+            </div>
+        </div>
 
-	<div class="dialog-templates">
+        <div class="info-dialog">
+            <div class="header">
+                <h4 class="modal-title">Information</h4>
+                <br>
+                <ul class="nav nav-tabs">
+                    <li class="active"><a href="#info-dialog-tab-info" data-toggle="tab">Info</a></li>
+                    <li><a href="#info-dialog-tab-geofon" data-toggle="tab">GEOFON</a></li>
+                    <li><a href="#info-dialog-tab-others" data-toggle="tab">Other Sources</a></li>
+                </ul>
+            </div>
+            <div class="content tab-content">
+                <div id="info-dialog-tab-info" class="tab-pane active">
+                    <span class="learn">
+                        Currently, we use a rough and simple threshold mechanism to identify the tsunami potential
+                        of an earthquake. If the location of the earthquake is inland, deeper than 100km, or has
+                        a magnitude less than 5.5 then we don't consider the earthquake for any wave propagation
+                        computation. However, if you think the earthquake is relevant for computation then you can
+                        do so by using 'Modify and reprocess'. <br><br>Anyhow, in the near future we plan to use an
+                        improved mechanism by adopting region dependent decision matrices defined by the UNESCO-IOC
+                        ICGs, that is ICG/NEAMTWS, ICG/IOTWS, ICG/PTWS, and ICG/CARIBE EWS.
+                    </span>
+                </div>
+                <div id="info-dialog-tab-geofon" class="tab-pane">
+                    <iframe src=""></iframe>
+                </div>
+                <div id="info-dialog-tab-others" class="tab-pane">
+                    <div class="source-template">
+                        <h3 class="source-provider"><img src="" alt=""/><span></span></h3>
+                        <dl>
+                            <dt>Region</dt>
+                            <dd class="source-region"></dd>
+                            <dt>Event type</dt>
+                            <dd class="source-evt-type"></dd>
+                            <dt>Coordinates</dt>
+                            <dd class="source-coords"></dd>
+                            <dt>Magnitude</dt>
+                            <dd class="source-magnitude"></dd>
+                            <dt>Depth</dt>
+                            <dd class="source-depth"></dd>
+                            <dt><a class="source-link" href="" target="_blank">Go to source</a></dt>
+                            <dd></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
 
-		<!-- AdminDialog -->
-		<div class="admin">
-			<div class="header">
-				<h4 class="modal-title">Admin-Interface</h4><br>
-				<ul class="nav nav-tabs">
-					<li class="active"><a href="#adminTabUser" data-toggle="tab">Users</a></li>
-					<li><a href="#adminTabInst" data-toggle="tab">Institutions</a></li>
-					<li><a href="#adminTabStats" data-toggle="tab">Statistics</a></li>
-				</ul>
-			</div>
-			<div class="content tab-content">
-				<div id="adminTabUser" class="tab-pane active">
-					<div class="secProp"></div>
-					<div class="secPerm"></div>
-					<div class="secButtons">
-						<button type="button" class="btn btn-default pull-left btnClear">Clear</button>
-						<button type="button" class="btn btn-success pull-right btnSave">Save new user</button>
-						<button type="button" class="btn btn-primary pull-right btnModify">Modify user</button>
-						<button type="button" class="btn btn-danger pull-right btnDelete">Delete user</button>
-					</div>
-				</div>
-				<div id="adminTabInst" class="tab-pane">
-					<div class="secInputs"></div>
-					<div class="secButtons">
-						<button type="button" class="btn btn-default pull-left btnClear">Clear</button>
-						<button type="button" class="btn btn-success pull-right btnSave">Save new institution</button>
-						<button type="button" class="btn btn-primary pull-right btnModify">Modify institution</button>
-						<button type="button" class="btn btn-danger pull-right btnDelete">Delete institution</button>
-					</div>
-				</div>
-				<div id="adminTabStats" class="tab-pane">
-					<div class="user-logins input-group input-group-sm prop-label">
-						<span class="input-group-addon">
-							<span class="user pull-left"></span>
-							<span class="logins pull-right"></span>
-						</span>
-					</div>
-				</div>
-			</div>
-			<div class="footer">
-				<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-			</div>
-		</div>
+        <div class="buildings-dialog">
+            <div class="header">
+                <h4 class="modal-title">Affected Buildings</h4>
+                <br>
+            </div>
+            <div class="content">
+                <table></table>
+            </div>
+            <div class="footer">
+                <button type="button" class="btn btn-default btnClose" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 
-		<!-- MailDialog -->
-		<div class="mail-dialog">
-			<div class="header">
-				<h4 class="modal-title">Send messages</h4><br>
-			</div>
-			<div class="content">
-				<div class="secGroups1"></div>
-				<div class="secFtp">
-					<div class="content">
-						<span class="spnChk form-control"><input type="checkbox"></span>
-						<input class="txtPath form-control" readonly>
-						<span class="spnSlash input-group-addon">/</span>
-						<input type="text" class="txtFile form-control">
-					</div>
-				</div>
-				<div class="secMailText">
-					<div class="content">
-						<div class="btn-group btn-group-justified" data-toggle="buttons">
-						  <label class="btn btn-default active"><input class="btnInfo" name="options" type="radio">Information/Watch/Advisory</label>
-						  <label class="btn btn-default"><input class="btnEnd" name="options" type="radio">End</label>
-						  <label class="btn btn-default"><input class="btnCancel" name="options" type="radio">Cancelation</label>
-						</div>
-						<div class="subject"></div>
-						<textarea class="txtMsg form-control" rows="1" spellcheck="false"></textarea>
-					</div>
-				</div>
-				<div class="secSmsText">
-					<div class="content">
-						<span>SMS-Text (<span class="spnNumChars"></span> characters):</span>
-					  	<textarea class="txtMsg form-control" rows="1" spellcheck="false"></textarea>
-					</div>
-				</div>
-				<div class="secGroups2"></div>
-			</div>
-			<div class="footer">
-				<button type="button" class="btn btn-default btnCancel" data-dismiss="modal">Cancel</button>
-				<button type="button" class="btn btn-primary btnSave">Send</button>
-			</div>
-		</div>
+    <div class="dynamic"></div>
 
-		<div class="info-dialog">
-			<div class="header">
-				<h4 class="modal-title">Information</h4><br>
-				<ul class="nav nav-tabs">
-					<li class="active"><a href="#info-dialog-tab-info" data-toggle="tab">Info</a></li>
-					<li><a href="#info-dialog-tab-geofon" data-toggle="tab">GEOFON</a></li>
-					<li><a href="#info-dialog-tab-others" data-toggle="tab">Other Sources</a></li>
-				</ul>
-			</div>
-			<div class="content tab-content">
-				<div id="info-dialog-tab-info" class="tab-pane active">
-					<span class="learn">
-						Currently, we use a rough and simple threshold mechanism to identify the tsunami potential
-						of an earthquake. If the location of the earthquake is inland, deeper than 100km, or has
-						a magnitude less than 5.5 then we don't consider the earthquake for any wave propagation
-						computation. However, if you think the earthquake is relevant for computation then you can
-						do so by using 'Modify and reprocess'. <br><br>Anyhow, in the near future we plan to use an
-						improved mechanism by adopting region dependent decision matrices defined by the UNESCO-IOC
-						ICGs, that is ICG/NEAMTWS, ICG/IOTWS, ICG/PTWS, and ICG/CARIBE EWS.
-					</span>
-				</div>
-				<div id="info-dialog-tab-geofon" class="tab-pane">
-					<iframe src=""></iframe>
-				</div>
-				<div id="info-dialog-tab-others" class="tab-pane">
-					<div class="source-template">
-						<h3 class="source-provider"><img src="" alt=""/><span></span></h3>
-						<dl>
-							<dt>Region</dt>
-							<dd class="source-region"></dd>
-							<dt>Event type</dt>
-							<dd class="source-evt-type"></dd>
-							<dt>Coordinates</dt>
-							<dd class="source-coords"></dd>
-							<dt>Magnitude</dt>
-							<dd class="source-magnitude"></dd>
-							<dt>Depth</dt>
-							<dd class="source-depth"></dd>
-							<dt><a class="source-link" href="" target="_blank">Go to source</a></dt>
-							<dd></dd>
-						</dl>
-					</div>
-				</div>
-			</div>
-			<div class="footer">
-				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-			</div>
-		</div>
+    <div class="templates">
+        <!-- HtmlTextGroup -->
+        <div class="html-textgroup input-group input-group-sm prop-label">
+            <span class="html-label input-group-addon"></span>
+            <input class="html-text form-control" type="text">
+            <span class="html-icon input-group-addon">
+                <span class="glyphicon"></span>
+            </span>
+            <span class="html-btn input-group-btn">
+                <button type="button" class="btn btn-default">
+                    <span class="glyphicon"></span>
+            </button>
+            </span>
+        </div>
 
-		<div class="buildings-dialog">
-			<div class="header">
-				<h4 class="modal-title">Affected Buildings</h4><br>
-			</div>
-			<div class="content">
-				<table></table>
-			</div>
-			<div class="footer">
-				<button type="button" class="btn btn-default btnClose" data-dismiss="modal">Close</button>
-			</div>
-		</div>
+        <!-- HtmlInputGroup -->
+        <div class="html-inputgroup input-group input-group-sm prop-label">
+            <span class="html-label input-group-addon"></span>
+            <span class="html-input"></span>
+            <span class="html-icon input-group-addon prop-right">
+                <span class="glyphicon"></span>
+            </span>
+        </div>
 
-	</div>
+        <!-- HtmlRangeGroup -->
+        <div class="html-rangegroup input-group input-group-sm prop-label">
+            <span class="html-label input-group-addon"></span>
+            <input class="html-text1 form-control" type="text">
+            <span class="html-label-colon input-group-addon">:</span>
+            <input class="html-text2 form-control" type="text">
+            <span class="html-label-colon input-group-addon">:</span>
+            <input class="html-text3 form-control" type="text">
+            <span class="html-label-right input-group-addon prop-right"></span>
+        </div>
 
-	<div class="dynamic"></div>
+        <!-- HtmlBlock -->
+        <div class="html-block"></div>
 
-	<div class="templates">
+        <!-- HtmlButton -->
+        <button type="button" class="html-button btn btn-primary"></button>
 
-		<!-- HtmlTextGroup -->
-		<div class="html-textgroup input-group input-group-sm prop-label">
-			<span class="html-label input-group-addon"></span>
-			<input class="html-text form-control" type="text">
-			<span class="html-icon input-group-addon">
-				<span class="glyphicon"></span>
-			</span>
-			<span class="html-btn input-group-btn">
-				<button type="button" class="btn btn-default">
-					<span class="glyphicon"></span>
-				</button>
-			</span>
- 		</div>
+        <!-- HtmlCheckBox -->
+        <div class="html-checkbox">
+            <input class="html-check" type="checkbox">
+            <span class="html-label"></span>
+        </div>
 
- 		<!-- HtmlInputGroup -->
-		<div class="html-inputgroup input-group input-group-sm prop-label">
-			<span class="html-label input-group-addon"></span>
-			<span class="html-input"></span>
-			<span class="html-icon input-group-addon prop-right">
-				<span class="glyphicon"></span>
-			</span>
- 		</div>
+        <!-- HtmlDynGroup -->
+        <div class="html-dyngroup">
+            <div class="html-header">
+                <span class="html-label"></span>
+                <a class="html-arrow" href="#">
+                    <span class="glyphicon glyphicon-chevron-up"></span>
+                </a>
+            </div>
+            <div class="html-content"></div>
+        </div>
 
- 		<!-- HtmlRangeGroup -->
-		<div class="html-rangegroup input-group input-group-sm prop-label">
-			<span class="html-label input-group-addon"></span>
-			<input class="html-text1 form-control" type="text">
-			<span class="html-label-colon input-group-addon">:</span>
-			<input class="html-text2 form-control" type="text">
-			<span class="html-label-colon input-group-addon">:</span>
-			<input class="html-text3 form-control" type="text">
-			<span class="html-label-right input-group-addon prop-right"></span>
- 		</div>
+        <!-- HtmlTabHeader -->
+        <ul>
+            <li class="html-tabheader">
+                <a data-toggle="tab"></a>
+            </li>
+        </ul>
 
- 		<!-- HtmlBlock -->
- 		<div class="html-block"></div>
+        <!-- HtmlTabGroup -->
+        <div class="html-tabgroup">
+            <ul class="html-header nav nav-tabs"></ul>
+            <div class="html-content tab-content"></div>
+        </div>
 
- 		<!-- HtmlButton -->
- 		<button type="button" class="html-button btn btn-primary"></button>
+        <!-- HtmlDropDown -->
+        <div class="html-dropdown dropdown">
+            <button class="btn btn-default dropdown-toggle form-control" type="button" data-toggle="dropdown">
+                <span class="html-text"></span>
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu"></ul>
+        </div>
 
- 		<!-- HtmlCheckBox -->
- 		<div class="html-checkbox">
- 			<input class="html-check" type="checkbox">
-	  		<span class="html-label"></span>
- 		</div>
+        <!-- HtmlDropDownAuto -->
+        <div class="html-dropdown-auto input-group input-group-sm prop-label">
+            <input class="html-text form-control">
+        </div>
 
- 		<!-- HtmlDynGroup -->
- 		<div class="html-dyngroup">
-   			<div class="html-header">
-   				<span class="html-label"></span>
-   				<a class="html-arrow" href="#">
-   					<span class="glyphicon glyphicon-chevron-up"></span>
-   				</a>
-   			</div>
-   			<div class="html-content"></div>
-		</div>
+        <!-- HtmlDialog -->
+        <div class="html-dialog modal fade" tabindex="-1">
+            <div class="modal-status"><i class="fa fa-spinner fa-spin fa-lg"></i></div>
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-overlay"></div>
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body"></div>
+                    <div class="modal-footer"></div>
+                </div>
+                <!-- /.modal-content -->
+            </div>
+            <!-- /.modal-dialog -->
+        </div>
+        <!-- /.modal -->
 
-		<!-- HtmlTabHeader -->
-		<ul><li class="html-tabheader"><a data-toggle="tab"></a></li></ul>
+        <div class="html-range-slider"></div>
 
-		<!-- HtmlTabGroup -->
- 		<div class="html-tabgroup">
- 			<ul class="html-header nav nav-tabs"></ul>
- 			<div class="html-content tab-content"></div>
- 		</div>
+        <!-- HtmlStatusField -->
+        <div class="html-status">
+            <div class="error"></div>
+            <div class="success"></div>
+            <i class="load fa fa-spinner fa-spin fa-lg"></i>
+        </div>
 
- 		<!-- HtmlDropDown -->
- 		<div class="html-dropdown dropdown">
-			<button class="btn btn-default dropdown-toggle form-control" type="button" data-toggle="dropdown">
-				<span class="html-text"></span>
-		    	<span class="caret"></span>
-		  	</button>
-		  	<ul class="dropdown-menu"></ul>
-		</div>
+        <!-- HtmlColorGroup -->
+        <div class="html-colorgroup input-group input-group-sm prop-label">
+            <span class="html-label input-group-addon"></span>
+            <input class="html-text form-control" type="text" value="">
+            <span class="html-color input-group-addon"><i></i></span>
+        </div>
 
- 		<!-- HtmlDropDownAuto -->
- 		<div class="html-dropdown-auto input-group input-group-sm prop-label">
- 			<input class="html-text form-control" class="form-control">
- 		</div>
+        <div class="html-activity-view">
+            <table>
+                <tr></tr>
+            </table>
+        </div>
 
- 		<!-- HtmlDialog -->
- 		<div class="html-dialog modal fade" tabindex="-1">
- 		  <div class="modal-status"><i class="fa fa-spinner fa-spin fa-lg"></i></div>
-		  <div class="modal-dialog modal-sm">
-		    <div class="modal-content">
-		      <div class="modal-overlay"></div>
-		      <div class="modal-header">
-		        <button type="button" class="close" data-dismiss="modal">&times;</button>
-		      </div>
-		      <div class="modal-body"></div>
-		      <div class="modal-footer"></div>
-		    </div><!-- /.modal-content -->
-		  </div><!-- /.modal-dialog -->
-		</div><!-- /.modal -->
+        <!-- DownloadDialog -->
+        <div class="download-dialog">
+            <div class="header">
+                <h4 class="modal-title">Data Download</h4>
+                <br>
+                <!--
+                <ul class="nav nav-tabs">
+                    <li class="active"><a href="#downloadTabGeneral" data-toggle="tab">General</a></li>
+                </ul>
+                -->
+            </div>
+            <div class="content">
+                <!-- <div id="downloadTabGeneral" class="tab-pane active"> -->
+                <div class="secProducts"></div>
+                <div class="secOptions"></div>
+                <div class="status">
+                    <div class="progress-text">Download is being prepared...</div>
+                    <div class="progress progress-striped active">
+                        <div class="progress-bar"></div>
+                    </div>
+                </div>
+                <div class="error"></div>
+                <!-- </div> -->
+            </div>
+            <div class="footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary btnDownload">Download</button>
+            </div>
+        </div>
 
-		<div class="html-range-slider"></div>
+        <!-- ReportDialogs -->
+        <div class="report-dialog">
+            <div class="header">
+                <h4 class="modal-title">Reports</h4>
+                <br>
+            </div>
+            <div class="content">
+            </div>
+            <div class="footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
 
-		<!-- HtmlStatusField -->
-		<div class="html-status">
-			<div class="error"></div>
-			<div class="success"></div>
-			<i class="load fa fa-spinner fa-spin fa-lg"></i>
-		</div>
+        <div class="report-new-dialog">
+            <div class="header">
+                <h4 class="modal-title">Edit Report</h4>
+                <br>
+            </div>
+            <div class="content">
+            </div>
+            <div class="footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary">Save</button>
+            </div>
+        </div>
 
-		<!-- HtmlColorGroup -->
-		<div class="html-colorgroup input-group input-group-sm prop-label">
-			<span class="html-label input-group-addon"></span>
-		    <input class="html-text form-control" type="text" value="">
-		    <span class="html-color input-group-addon"><i></i></span>
-		</div>
+        <!-- Flood - Location - Entry -->
+        <div class="flood-location-entry">
+            <div class="id pull-left"></div>
+            <input class="pull-right" type=checkbox checked>
+            <div class="clearfix"></div>
+        </div>
 
-		<div class="html-activity-view">
-			<table><tr></tr></table>
-		</div>
-
-		<!-- DownloadDialog -->
-		<div class="download-dialog">
-			<div class="header">
-				<h4 class="modal-title">Data Download</h4><br>
-				<!-- <ul class="nav nav-tabs">
-					<li class="active"><a href="#downloadTabGeneral" data-toggle="tab">General</a></li>
-				</ul> -->
-			</div>
-			<div class="content">
-				<!-- <div id="downloadTabGeneral" class="tab-pane active"> -->
-					<div class="secProducts"></div>
-					<div class="secOptions"></div>
-					<div class="status">
-						<div class="progress-text">Download is being prepared...</div>
-						<div class="progress progress-striped active">
-	  						<div class="progress-bar"></div>
-						</div>
-					</div>
-					<div class="error"></div>
-				<!-- </div> -->
-			</div>
-			<div class="footer">
-				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-				<button type="button" class="btn btn-primary btnDownload">Download</button>
-			</div>
-		</div>
-
-		<!-- ReportDialogs -->
-		<div class="report-dialog">
-			<div class="header">
-				<h4 class="modal-title">Reports</h4><br>
-			</div>
-			<div class="content">
-			</div>
-			<div class="footer">
-				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-			</div>
-		</div>
-
-		<div class="report-new-dialog">
-			<div class="header">
-				<h4 class="modal-title">Edit Report</h4><br>
-			</div>
-			<div class="content">
-			</div>
-			<div class="footer">
-				<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-				<button type="button" class="btn btn-primary">Save</button>
-			</div>
-		</div>
-
-		<!-- Flood - Location - Entry -->
-		<div class="flood-location-entry">
-			<div class="id pull-left"></div>
-			<input class="pull-right" type=checkbox checked>
-			<div class="clearfix"></div>
-		</div>
-
-		<!-- sidebar flood-entry template -->
-		<div class="row flood-entry entry">
-			<div class="col-md-12" >
-				<div class="row row-subject">
-					<div class="col-md-2"></div>
-					<div class="col-md-10">
-						<div class="row">
-							<a href="#" class="big subject"></a>
-						</div>
-					</div>
-				</div>
-				<div class="row">
-					<div class="col-md-2">
-						<div class="row row-marker">
-						</div>
-						<div class="row">
-							<h4 class="mag"></h4>
-						</div>
-					</div>
-					<div class="col-md-10">
-						<div class="row">
-							<div class="col-md-10">
-								<div class="row">
-									<span class="small timestamp"></span>
-								</div>
-								<div class="row">
-									<span class="small locations"></span>
-								</div>
-							</div>
-						</div>
-						<div class="row process">
-							<div class="progress">
-								<div class="progress-bar"></div>
-							</div>
-							<span class="medium status"></span>
-							<a class="lnkDownload pull-right" href="#"><span class="glyphicon glyphicon-download-alt"></span></a>
-							<a class="lnkDialog pull-right" href="#"><span class="glyphicon glyphicon-list"></span></a>
-						</div>
-						<div class="calc-data">
-							<div class="row">
-								<span class="small layers"></span>
-							</div>
-							<div class="row">
-								<span class="small resource"></span>
-							</div>
-							<div class="row">
-								<span class="small runtime"></span>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
-	</div>
-
+        <!-- sidebar flood-entry template -->
+        <div class="row flood-entry entry">
+            <div class="col-md-12">
+                <div class="row row-subject">
+                    <div class="col-md-2"></div>
+                    <div class="col-md-10">
+                        <div class="row">
+                            <a href="#" class="big subject"></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="row row-marker">
+                        </div>
+                        <div class="row">
+                            <h4 class="mag"></h4>
+                        </div>
+                    </div>
+                    <div class="col-md-10">
+                        <div class="row">
+                            <div class="col-md-10">
+                                <div class="row">
+                                    <span class="small timestamp"></span>
+                                </div>
+                                <div class="row">
+                                    <span class="small locations"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row process">
+                            <div class="progress">
+                                <div class="progress-bar"></div>
+                            </div>
+                            <span class="medium status"></span>
+                            <a class="lnkDownload pull-right" href="#"><span class="glyphicon glyphicon-download-alt"></span></a>
+                            <a class="lnkDialog pull-right" href="#"><span class="glyphicon glyphicon-list"></span></a>
+                        </div>
+                        <div class="calc-data">
+                            <div class="row">
+                                <span class="small layers"></span>
+                            </div>
+                            <div class="row">
+                                <span class="small resource"></span>
+                            </div>
+                            <div class="row">
+                                <span class="small runtime"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
+
 </html>

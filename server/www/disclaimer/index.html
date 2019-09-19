@@ -1,124 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-	<title>GeoPeril</title>
+    <title>GeoPeril</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link href="../css/bootstrap.css" rel="stylesheet">
-	<link href="style.css" rel="stylesheet">
-	<link href="../geohazardcloud.css" rel="stylesheet">
+    <link href="../css/bootstrap.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+    <link href="../geohazardcloud.css" rel="stylesheet">
 </head>
+
 <body>
-	<div class="outside">
-	<div class="wrapper">
-	<div class="border">
-	<div class="container fullsize">
-		<div class="row gfz-head">
-  			<img class="gfz-logo pull-left" alt="GFZ Logo" src="../img/logo_gfz_en.gif">
-  			<img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="../img/wordmark_gfz_en.gif">
-  		</div>
-  		<hr>
-	  	<div class="headline">
-	  		<ul class="head-blk head-right">
-	  			<li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
-				<li class="divider"><span>|</span></li>
-				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
-				<li class="divider"><span>|</span></li>
-				<li><a href="#AboutDia" data-toggle="modal">About</a></li>
-				<li class="divider"><span>|</span></li>
-				<li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
-	  		</ul>
-	  		<ul class="head-blk head-right head-buttons">
-	  			<li id="grpSignOut" class="btn-group">
-					<button id="btnProp" type="button" class="btn btn-default">
-						<span class="glyphicon glyphicon-cog"></span>
-					</button>
-					<button id="btnAdmin" type="button" class="btn btn-default">
-						<span class="glyphicon glyphicon-user"></span>
-					</button>
-					<button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
-				</li>
-	  		</ul>
-	  		<ul class="head-blk head-right">
-	  			<li><a href="" id="lnkUser"></a></li>
-	  		</ul>
-	  		<ul class="clear"></ul>
-	  	</div> <!-- end of headline -->
-		<hr>
-		<div class="sec-label">Product Information and Disclaimer</div>
-		<div class="text">
-			<p>This product is of informal nature and has been produced
-				for piloting and research purposes only. It is for purely
-				informational purposes and does not constitute either legal,
-				professional or any other advice or an endorsement or a
-				recommendation, and should not be considered to be such, or
-				relied or acted upon in that regard. It may not cover important
-				issues that affect the users and may not address all such issues,
-				or address them in sufficient detail for the users' particular
-				needs.</p>
-			<p>This product provides information obtained on the basis of
-				data and software delivered by third parties and may involve
-				technically complex and error prone issues for its production. It
-				has been produced either automatically without any verification
-				or semi-automatically with interaction of individuals which may
-				not have the required expertise and knowledge to produce this
-				product with reliable information. So the product may contain
-				technical inaccuracies and other errors, may be updated from time
-				to time, and may at times be out of date.</p>
-			<p>This product has not been produced within control of a
-				single party or individual, which do not therefore guarantee for
-				the accuracy, completeness, quality, topicality, or otherwise, of
-				the provided information. All information provided in this
-				product is non-binding and without obligation.</p>
-			<p>This product is provided 'as is', without warranty, promise
-				and/or representation of any kind, expressed or implied,
-				including but not limited to the warranties, promises and/or
-				representations of merchantability, fitness for a particular
-				purpose and noninfringement.</p>
-			<p>In no event shall the parties and individuals involved in
-				producing and providing this product be liable for any claim,
-				damage of whatever nature (direct, indirect, consequential, or
-				other) or other liability, whether in an action of contract, tort
-				or otherwise, arising from, out of or in connection with the
-				product or the use (or the inability to use) or other dealings
-				with the product, or from the use of (or failure to use) the
-				information in this product.</p>
-			<p>The parties and individuals do not accept any
-				responsibility or liability for the accuracy, clarity,
-				comprehensiveness, content, completeness, fitness-for-purpose,
-				legality, up-to-date nature, quality, reliability, topicality,
-				usefulness, or otherwise, of the information, quantitative and
-				qualitative analysis, assessment, and other content contained in
-				this product.</p>
-			<p>No responsibility is accepted for keeping the information
-				in this product up to date or any liability whatsoever for any
-				failure to do so. Moreover, the right to modify or delete parts
-				of or the entire production process providing the products at
-				intervals or for good without prior notice is distinctly
-				retained.</p>
-			<p>No responsibility is accepted for any loss or damage
-				claimed to arise from any reliance on, or action taken by any
-				person or organisation, wherever they are based, as a result,
-				direct or otherwise, of, information contained in, or accessed
-				through, this product, and no liability is accepted whatsoever in
-				respect of, or arising from, any errors or omissions or any
-				reliance on, or use of, such information.</p>
-			<p>It is the users' responsibility to inspect and to verify
-				this product and to consult with an expert in order to satisfy
-				themselves as to the suitability of the products to their
-				particular purpose. Users contemplating action in respect of
-				matters set out on this product should seek appropriate
-				professional, or other, advice from a suitably qualified person
-				or adviser based on their unique requirements and/or should
-				contact the particular agency or agencies responsible.</p>
-			<p>The users are responsible for the appropriate, safe and
-				legal use, processing and handling of this product. By using this
-				product, the user agrees that the use of information obtained
-				from or through this product is at the user's sole discretion and
-				risk.</p>
-		</div>
-		
-		</div>
-	</div></div></div>
+    <div class="outside">
+        <div class="wrapper">
+            <div class="border">
+                <div class="container fullsize">
+                    <div class="row gfz-head">
+                        <img class="gfz-logo pull-left" alt="GFZ Logo" src="../img/logo_gfz_en.gif">
+                        <img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="../img/wordmark_gfz_en.gif">
+                    </div>
+                    <hr>
+                    <div class="headline">
+                        <ul class="head-blk head-right">
+                            <li><a href="http://trac.gfz-potsdam.de/easywave" target="_blank">easyWave</a></li>
+                            <li class="divider"><span>|</span></li>
+                            <li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
+                            <li class="divider"><span>|</span></li>
+                            <li><a href="#AboutDia" data-toggle="modal">About</a></li>
+                            <li class="divider"><span>|</span></li>
+                            <li><a href="#ContactDialog" data-toggle="modal">Connect</a></li>
+                        </ul>
+                        <ul class="head-blk head-right head-buttons">
+                            <li id="grpSignOut" class="btn-group">
+                                <button id="btnProp" type="button" class="btn btn-default">
+                                    <span class="glyphicon glyphicon-cog"></span>
+                                </button>
+                                <button id="btnAdmin" type="button" class="btn btn-default">
+                                    <span class="glyphicon glyphicon-user"></span>
+                                </button>
+                                <button id="btnSignOut" type="button" class="btn btn-primary">Sign Out</button>
+                            </li>
+                        </ul>
+                        <ul class="head-blk head-right">
+                            <li>
+                                <a href="" id="lnkUser"></a>
+                            </li>
+                        </ul>
+                        <ul class="clear"></ul>
+                    </div>
+                    <!-- end of headline -->
+                    <hr>
+                    <div class="sec-label">Product Information and Disclaimer</div>
+                    <div class="text">
+                        <p>This product is of informal nature and has been produced for piloting and research purposes only. It is for purely informational purposes and does not constitute either legal, professional or any other advice or an endorsement or a recommendation, and should not be considered to be such, or relied or acted upon in that regard. It may not cover important issues that affect the users and may not address all such issues, or address them in sufficient detail for the users' particular needs.
+                        </p>
+                        <p>This product provides information obtained on the basis of data and software delivered by third parties and may involve technically complex and error prone issues for its production. It has been produced either automatically without any verification or semi-automatically with interaction of individuals which may not have the required expertise and knowledge to produce this product with reliable information. So the product may contain technical inaccuracies and other errors, may be updated from time to time, and may at times be out of date.</p>
+                        <p>This product has not been produced within control of a single party or individual, which do not therefore guarantee for the accuracy, completeness, quality, topicality, or otherwise, of the provided information. All information provided in this product is non-binding and without obligation.</p>
+                        <p>This product is provided 'as is', without warranty, promise and/or representation of any kind, expressed or implied, including but not limited to the warranties, promises and/or representations of merchantability, fitness for a particular purpose and noninfringement.</p>
+                        <p>In no event shall the parties and individuals involved in producing and providing this product be liable for any claim, damage of whatever nature (direct, indirect, consequential, or other) or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the product or the use (or the inability to use) or other dealings with the product, or from the use of (or failure to use) the information in this product.</p>
+                        <p>The parties and individuals do not accept any responsibility or liability for the accuracy, clarity, comprehensiveness, content, completeness, fitness-for-purpose, legality, up-to-date nature, quality, reliability, topicality, usefulness, or otherwise, of the information, quantitative and qualitative analysis, assessment, and other content contained in this product.</p>
+                        <p>No responsibility is accepted for keeping the information in this product up to date or any liability whatsoever for any failure to do so. Moreover, the right to modify or delete parts of or the entire production process providing the products at intervals or for good without prior notice is distinctly retained.
+                        </p>
+                        <p>No responsibility is accepted for any loss or damage claimed to arise from any reliance on, or action taken by any person or organisation, wherever they are based, as a result, direct or otherwise, of, information contained in, or accessed through, this product, and no liability is accepted whatsoever in respect of, or arising from, any errors or omissions or any reliance on, or use of, such information.</p>
+                        <p>It is the users' responsibility to inspect and to verify this product and to consult with an expert in order to satisfy themselves as to the suitability of the products to their particular purpose. Users contemplating action in respect of matters set out on this product should seek appropriate professional, or other, advice from a suitably qualified person or adviser based on their unique requirements and/or should contact the particular agency or agencies responsible.</p>
+                        <p>The users are responsible for the appropriate, safe and legal use, processing and handling of this product. By using this product, the user agrees that the use of information obtained from or through this product is at the user's sole discretion and risk.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
+
 </html>
