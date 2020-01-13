@@ -275,7 +275,7 @@ Best Double Couple:.*?
             'dip': float(properties[0][8]),
             'rake': float(properties[0][9]),
             # ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
-            'date': '{0}Z'.format(date_time.isoformat()[:-3])
+            'date': '{0}Z'.format(date_time.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3])
         }
         return entry
     except requests.RequestException as err:
