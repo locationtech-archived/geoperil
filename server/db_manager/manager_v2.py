@@ -39,6 +39,7 @@ import logging
 import time
 import sys
 import re
+from json.decoder import JSONDecodeError
 from datetime import datetime, timedelta
 import requests
 from pymongo import MongoClient, errors as pymongo_error, DESCENDING
@@ -334,22 +335,26 @@ def main():
     # get the features
     features = []
     try:
-        request = requests.get(
-            '{0}eqinfo/list.php?fmt=geojson&nmax={1}&datemin={2}{3}'.format(
-                GEOFON_BASE_URL,
-                GEOFON_GEOJSON_ITEMS,
-                (latest_entry['timestamp'] - timedelta(
-                    days=TIMEDELTA_IN_DAYS
-                )).strftime('%Y-%m-%d'),
-                GEOFON_GEOJSON_EXTRA_PARAMS
-            )
+        url = '{0}eqinfo/list.php?fmt=geojson&nmax={1}&datemin={2}{3}'.format(
+            GEOFON_BASE_URL,
+            GEOFON_GEOJSON_ITEMS,
+            (latest_entry['timestamp'] - timedelta(
+                days=TIMEDELTA_IN_DAYS
+            )).strftime('%Y-%m-%d'),
+            GEOFON_GEOJSON_EXTRA_PARAMS
         )
+        request = requests.get(url)
         if 'features' in request.json():
             features = request.json()['features']
         else:
             logger.error('no features in response')
     except requests.exceptions.RequestException as err:
         logger.error('Failed to open GEOFON URL: %', err)
+    except JSONDecodeError as err:
+        logger.error(
+            'Failed to decode on url %s, request status: %s, response: %s, error: %s',
+            url, request.status_code, request.text, err
+        )
     finally:
         request.close()
 
