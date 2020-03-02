@@ -234,7 +234,7 @@ def read_mt(feature):
     """
 
     # regular expression to parse the MT file
-    regex = """(\d\d/\d\d/\d\d) (\d\d:\d\d:\d\d.\d\d)
+    regex = """(\d\d/\d\d/\d\d) (\d\d:\d\d:\d\d.\d+)
 (.*?)
 Epicenter: (.*?) (.*?)
 MW (.*?)
@@ -257,6 +257,7 @@ Best Double Couple:.*?
         url = '{0}data/alerts/{1}/{2}/mt.txt'.format(
             GEOFON_BASE_URL, year, feature['id']
         )
+        logger.debug('request mt file: %s', url)
         request = requests.get(url)
         properties = re.findall(regex, request.text)
         if not properties:
