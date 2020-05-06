@@ -37,5 +37,3 @@ def build_basemap_cpt(cpt_path, color):
     cpt_file.write('\nN\t128/128/128')
 
     cpt_file.close()
-
-# build_basemap_cpt('/home/basti/GMT/Tsunami_report/test.cpt', '90/130/153')

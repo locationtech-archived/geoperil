@@ -376,8 +376,7 @@ input_param = [
         "variable": "output",
         "Flag1": "-o",
         "Flag2": "--output",
-        "default": "/home/basti/Tsunami_report/SVN/GMT/Tsunami_report/" +
-                   "PS_files/default_output.ps",
+        "default": "GMT/Tsunami_report/PS_files/default_output.ps",
         "help": "Path of Output PS-File",
         "user": False
     },

@@ -28,8 +28,8 @@
 
 
 #output=PS_files/test.ps
-#wave_height_data=/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/HDF600/eWave.2D.sshmax
-#wave_height_temp=/home/basti/Schreibtisch/sf_Lubuntu_shared/GMT/data/tsunami/HDF600/eWave_height_temp.nc
+#wave_height_data=data/tsunami/HDF600/eWave.2D.sshmax
+#wave_height_temp=data/tsunami/HDF600/eWave_height_temp.nc
 #expression=0.05
 #wave_height_cpt=cpt/waveheight_3.cpt
 

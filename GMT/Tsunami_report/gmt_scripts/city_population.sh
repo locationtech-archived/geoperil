@@ -31,7 +31,6 @@ J=${3}
 
 y_map_dist=${4}
 
-#city_pop_data="/home/basti/Schreibtisch/Tsunami_report/data/cities.csv"
 city_pop_data=${5}
 
 cities_pop=${6}
