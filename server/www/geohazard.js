@@ -5754,7 +5754,6 @@ function showSplash(show) {
     $('.wrapper .border').css('height', '100%');
     $('.wrapper .border').addClass('normal');
     $('.wrapper .border').removeClass('border');
-    $('.gfz-head').hide();
     $('.wrapper hr').hide();
     $('.wrapper').css('width', '100%');
     $('.wrapper').css('height', '100%');

@@ -229,28 +229,15 @@ if( $ret['status'] != 'success' ) {
 <script src="//openlayers.org/en/v3.4.0/build/ol.js" type="text/javascript"></script>
 <script type="text/javascript">
 	window.onscroll = function () {
-		var scrollPos = document.body.scrollTop;
 		var headline = document.getElementById("headline-fixed");
-		var gfz_head = document.getElementById("gfz-head");
 		var nav = document.getElementById("nav");
 		var nav_cover = document.getElementById("nav-cover");
 
-		if( scrollPos > gfz_head.clientHeight ) {
-			headline.className = "headline-fixed";
+		headline.className = "headline-abs";
 <?php if( isset( $_GET["id"] ) ) : ?>
-			var top1 = nav_cover.getBoundingClientRect().top;
-			var top2 = gfz_head.getBoundingClientRect().top;
-			nav.style.top = (top1 - top2 - gfz_head.clientHeight) + "px";
-			nav.style.width = nav_cover.clientWidth + "px";
-			nav.className = "nav fixed";
+		nav.className = "nav";
+		nav.style.top = "";
 <?php endif; ?>
-		} else {
-			headline.className = "headline-abs";
-<?php if( isset( $_GET["id"] ) ) : ?>
-			nav.className = "nav";
-			nav.style.top = "";
-<?php endif; ?>
-		}
 	};
 </script>
 </head>
@@ -259,11 +246,6 @@ if( $ret['status'] != 'success' ) {
 	<div class="wrapper">
 	<div class="border">
 	<div class="container fullsize">
-		<div id="gfz-head" class="row gfz-head">
-			<img class="gfz-logo pull-left" alt="GFZ Logo" src="../img/logo_gfz_en.gif">
-			<img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="../img/wordmark_gfz_en.gif">
-		</div>
-		<hr>
 		<div id="headline-fixed" class="headline-abs">
 		<div class="headline">
 			<ul class="head-blk head-right">

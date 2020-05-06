@@ -113,12 +113,6 @@
 	<div class="wrapper">
 	<div class="border">
 	<div class="container fullsize">
-
-		<div class="row gfz-head">
-			<img class="gfz-logo pull-left" alt="GFZ Logo" src="../img/logo_gfz_en.gif">
-			<img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="../img/wordmark_gfz_en.gif">
-		</div>
-		<hr>
 		<div class="headline">
 			<ul class="head-blk head-right">
 				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
