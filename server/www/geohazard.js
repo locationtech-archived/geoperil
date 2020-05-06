@@ -66,7 +66,6 @@ function Earthquake(meta) {
   };
 
   this.select = function() {
-    console.log("select()");
     if (this.selected) {
       this.loadStations();
       this.load();
@@ -75,7 +74,6 @@ function Earthquake(meta) {
 
   /* TODO: check if the type handling is suitable */
   this.load = function(callback, type) {
-    console.log("load()");
     /* if the following yields true, we already fetched the results from the
      * server */
     if (this.isLoaded(type))
@@ -121,11 +119,9 @@ function Earthquake(meta) {
   this.loadTsunamiJets = function() {
     if (this.jets_loaded)
       return;
-    console.log("loadTsunamiJets()");
     ajax_mt('webguisrv/getjets', {
       evid: this._id
     }, (function(result) {
-      console.log(result);
       /* traverse different EWH levels */
       if (!result.jets) return;
       for (var i = 0; i < result.jets.length; i++) {
@@ -174,7 +170,6 @@ function Earthquake(meta) {
     ajax_mt('webguisrv/gettfps', {
       evid: this._id
     }, (function(result) {
-      console.log(result);
       if (!result.comp) return;
       for (var i = 0; i < result.comp.length; i++) {
         var tfp = new TFP(result.comp[i]);
@@ -198,7 +193,6 @@ function Earthquake(meta) {
     }, (function(result) {
       if (!result.comp) return;
       this.objects[type] = new Container().setList(result.comp);
-      console.log(this.objects[type]);
       /* TODO */
       //this.notifyOn('loaded_OBJS');
       //this.checkLoaded();
@@ -213,7 +207,6 @@ function Earthquake(meta) {
       evid: this._id,
       arr: this.last_arr
     }, (function(result) {
-      console.log(result);
       this.pending_isos = 0;
       if (!result.comp || result.comp.length == 0) return;
       for (var i = 0; i < result.comp.length; i++) {
@@ -372,14 +365,11 @@ function EventSet(meta) {
   };
 
   this.loadStations = function() {
-    console.log("Skip loadStations()");
   };
   this.showStations = function() {
-    console.log("Skip showStations()");
   };
 
   this.load = function(callback, type) {
-    console.log("load(): ", callback);
     if (this.isLoaded(type))
       return true;
     if (this.progress < 100)
@@ -409,7 +399,7 @@ function EntryMap() {
 
   this.add = function(entry) {
     if (this.map[entry['_id']])
-      console.log("Warning: entry with id " + entry['_id'] +
+      console.warn("Warning: entry with id " + entry['_id'] +
         " already in map.");
 
     var result = this.map[entry['_id']] = entry;
@@ -738,7 +728,7 @@ function Station(meta, eq) {
                 [0, 0]
               ],
               [1], [1]);
-            console.log(
+            console.debug(
               this.name, ": Joined", result.data.length,
               "live values in", Date.now() - this.profile1.stime, "ms"
             );
@@ -752,7 +742,6 @@ function Station(meta, eq) {
            * if the data has changed, notify everyone who is
            * interested
            */
-          //console.log(this.name, "live notifyUpdate");
           this.notifyUpdate();
 
         } else if (reactivated) {
@@ -760,7 +749,6 @@ function Station(meta, eq) {
            * nothing has changed after re-activating, inform listeners
            * about that
            */
-          //console.log(this.name, "live notifyNoUpdate");
           this.notifyNoUpdate();
         }
       }).bind(this),
@@ -793,7 +781,6 @@ function Station(meta, eq) {
          * nothing has changed after re-activating, inform listeners
          * about that
          */
-        //console.log(this.name, "sim notifyNoUpdate");
         this.notifyNoUpdate();
       return;
     }
@@ -830,14 +817,12 @@ function Station(meta, eq) {
             this.curSimTime = new Date(result.last * 1000);
 
           /* notify everyone who is interested */
-          //console.log(this.name, "sim notifyUpdate");
           this.notifyUpdate();
         } else if (reactivated) {
           /*
            * nothing has changed after re-activating, inform listeners
            * about that
            */
-          //console.log(this.name, "sim notifyNoUpdate");
           this.notifyNoUpdate();
         }
 
@@ -989,8 +974,6 @@ function Chart(data, width, height) {
   };
 
   this.ready = function() {
-    /*console.log("Chart", this.data.name, "drawn in", Date.now()
-        - this.profile.stime, "ms");*/
     this.div.find('.spanLoad').css('display', 'none');
   };
 
@@ -2220,7 +2203,6 @@ function VsdbPlayer(div) {
 
   this.start = function() {
     function success(result) {
-      console.log(result);
     }
 
     var params;
@@ -2239,7 +2221,6 @@ function VsdbPlayer(div) {
 
   this.stop = function() {
     function success(result) {
-      console.log(result);
     }
 
     this.cancelled = true;
@@ -2338,7 +2319,7 @@ function VsdbPlayer(div) {
           callback(result);
       },
       error: function() {
-        console.log('Error while sending a request to the VSDB-Player.');
+        console.error('Error while sending a request to the VSDB-Player.');
       }
     });
   };
@@ -2639,7 +2620,6 @@ function GlobalControl() {
       this.deselect();
       this.active = eq._id;
       eq.selected = true;
-      console.log('notifyOn select');
       eq.notifyOn('select');
     }
 
@@ -2773,7 +2753,6 @@ function GlobalControl() {
       params.evtid = event._id;
     /* Retrieve buildings from server. */
     ajax('webguisrv/getbuildings/', params, (function(result) {
-      console.log(result);
       /* Walk through list of buildings and create appropriate polygons. */
       //func(result.buildings);
       var cont = new Container(function(a, b) {
@@ -3169,7 +3148,7 @@ function ListWidget(div, data, map, callbacks) {
         eqwidget = new EQWidget(elem, marker);
       }
     } else {
-      return console.log("Unknown data tpye in ListWidget.");
+      return console.error("Unknown data type in ListWidget.");
     }
 
     /* TODO: improve callback handling with uniqe object id */
@@ -4028,8 +4007,6 @@ function ICallbacks() {
         //   );
 
         ICallbacks.total++;
-        if (ICallbacks.total % 20 == 0)
-          console.log('Total notfifications: ' + ICallbacks.total);
         this.callbacks[action][j].apply(this, vargs);
       }
   };
@@ -4378,7 +4355,6 @@ function getUpdates(timestamp) {
         } else if (obj['event'] == 'update') {
           entry = entries.add(new Earthquake(obj));
           parent = eqlist.getByKey('id', entry.id).item;
-          console.log('update', parent);
 
           // replace parent
           eqlist.replace('id', entry);
@@ -4669,8 +4645,6 @@ function signIn(user, password) {
     dataType: 'json',
     success: function(result) {
       resObj = result;
-
-      console.log(resObj.status);
     },
     error: function() {},
     complete: function() {
@@ -4946,7 +4920,7 @@ function markMsgAsRead(msg) {
       timeline.notifyOn('change');
     },
     error: function() {
-      console.log("#error");
+      console.error("#error msgsrv/readmsg");
     },
     complete: function() {}
   });
@@ -4980,7 +4954,7 @@ function markMsgAsDisplayed(msg) {
       timeline.notifyOn('change');
     },
     error: function() {
-      console.log("#error");
+      console.error("#error msgsrv/displaymapmsg");
     },
     complete: function() {}
   });
@@ -5684,7 +5658,7 @@ function createStaticLink(entry) {
       }
     },
     error: function() {
-      console.log("#error");
+      console.error("#error srv/staticLnk");
     },
     complete: function() {}
   });
@@ -6264,7 +6238,6 @@ function MailDialog() {
       this.msgnr = 0;
 
     if (this.txtCloud.value() != '') {
-      console.log('Sent internal message!');
       sent = true;
       ajax_mt(
         'msgsrv/intmsg', {
@@ -6277,13 +6250,11 @@ function MailDialog() {
           msgnr: this.msgnr
         },
         function(result) {
-          console.log(result.status);
         }
       );
     }
 
     if (this.txtTo.value() != '' || this.txtCc.value() != '') {
-      console.log('Sent email!');
       sent = true;
       ajax_mt(
         'msgsrv/mail', {
@@ -6297,13 +6268,11 @@ function MailDialog() {
           msgnr: this.msgnr
         },
         function(result) {
-          console.log(result.status);
         }
       );
     }
 
     if (this.txtFax.value() != '') {
-      console.log('Sent fax!');
       sent = true;
       ajax_mt(
         'msgsrv/fax', {
@@ -6315,13 +6284,11 @@ function MailDialog() {
           msgnr: this.msgnr
         },
         function(result) {
-          console.log(result.status);
         }
       );
     }
 
     if (this.chkFtp.is(':checked') && this.txtFtpFile.val() != '') {
-      console.log('Published on FTP-Server!');
       sent = true;
       ajax_mt(
         'msgsrv/ftp', {
@@ -6333,13 +6300,11 @@ function MailDialog() {
           msgnr: this.msgnr
         },
         function(result) {
-          console.log(result.status);
         }
       );
     }
 
     if (this.txtSMS.value() != '') {
-      console.log('Sent sms!');
       sent = true;
       ajax_mt(
         'msgsrv/sms', {
@@ -6350,7 +6315,6 @@ function MailDialog() {
           parentid: this.txtParentId.value(),
         },
         function(result) {
-          console.log(result.status);
         }
       );
     }
@@ -6635,7 +6599,7 @@ function AdminDialog() {
     this.userlist.clear();
 
     if (result.status != "success") {
-      console.log("Error in webguisrv/userlist");
+      console.error("Error in webguisrv/userlist");
       return;
     }
 
@@ -6649,7 +6613,7 @@ function AdminDialog() {
     this.instlist.clear();
 
     if (result.status != "success") {
-      console.log("Error in webguisrv/instlist");
+      console.error("Error in webguisrv/instlist");
       return;
     }
 
@@ -6778,7 +6742,7 @@ function AdminDialog() {
           this.userlist.notifyOn('change');
           this.clear();
         } else {
-          console.log('Error:', result.errors);
+          console.error('Error:', result.errors);
         }
       }).bind(this));
   };
@@ -6802,7 +6766,7 @@ function AdminDialog() {
     }
 
     if (result.status != 'success') {
-      console.log('Unable to register user.');
+      console.error('Unable to register user.');
       return;
     }
 
@@ -6937,7 +6901,7 @@ function AdminDialog() {
           this.clearInst();
           this.controlInst();
         } else {
-          console.log('Error:', result.errors);
+          console.error('Error:', result.errors);
         }
       }).bind(this));
   };
@@ -7516,7 +7480,6 @@ function HtmlInputGroup(label, icon, box) {
     this.input = this.div.find('> .html-input');
 
     if (box) {
-      console.log(box.find('> .content').children());
       this.input.replaceWith(box.find('> .content').children());
       box.html(this.div);
     }
@@ -7764,7 +7727,7 @@ function ajax_internal(ajaxObj) {
         ajaxObj.callback(result);
     },
     error: function() {
-      console.log('Internal error in ajax request: ', ajaxObj);
+      console.error('Internal error in ajax request: ', ajaxObj);
     }
   });
 }
@@ -7806,7 +7769,6 @@ function Layer(name, map) {
     /* if data was set previously, we need to deregister the callback and
      * clear the layer */
     if (this.data) {
-      console.log("delCallback");
       this.data.delCallback('update', this.cid);
       this.clear();
     }
@@ -7857,7 +7819,6 @@ function ObjectLayer(name, map, fun_enabled, fun_data, args) {
     ajax('webguisrv/getoois', {
       kind: this.args.type
     }, (function(result) {
-      console.log(result);
       this.objects = new Container().setList(result.objs);
       for (var i = 0; i < this.objects.length(); i++) {
         var obj = this.objects.get(i);
@@ -8570,7 +8531,6 @@ function FloodComposeTab(div) {
     var reader = new FileReader();
     reader.onload = (function(e) {
       var lines = e.target.result.split('\n');
-      console.log(lines.length);
       // var num = /^(\d+)$/.exec(lines[0]);
       var list = lines[2].trim().split(/\s+/);
       this.hydroList = new Container(sort_string.bind(this, 'id'));
@@ -8687,7 +8647,6 @@ function FloodComposeTab(div) {
       name: this.txtName.value(),
       test: JSON.stringify(data)
     }, function(result) {
-      console.log(result);
     });
     this.layer.clear();
     /* TODO */
@@ -9292,7 +9251,6 @@ function ActionFlag(val, callback) {
   this.callback = callback;
 
   this.set = function(val) {
-    console.log('ActionFlag: ' + val);
     if (arguments.length == 0 || val == true) {
       this.val = val;
       this.notifyOn('update');
@@ -9363,11 +9321,9 @@ function FloodEvent(meta) {
   this.loadWaterHeights = function() {
     if (this.heights_loaded)
       return;
-    console.log("loadWaterHeights()");
     ajax_mt('webguisrv/getwaterheights', {
       evid: this._id
     }, (function(result) {
-      console.log(result);
       /* traverse different water levels */
       if (!result.heights) return;
       for (var i = 0; i < result.heights.length; i++) {
@@ -9462,7 +9418,6 @@ function BuildingsLayer(name, map, fun_enabled) {
     $('.map_progress').show();
     /* Retrieve buildings from server. */
     ajax('webguisrv/getbuildings/', params, (function(result) {
-      console.log(result);
       /* Clear layer and underlying container. */
       this.clear();
       this.buildings.clear();
@@ -9641,7 +9596,6 @@ function DownloadDialog(data) {
           return o.show.indexOf(key) != -1;
         }
       );
-      console.log(result.products);
       this.drpProducts.setToString(function(o) {
         return o.shortdesc;
       });
@@ -9657,7 +9611,6 @@ function DownloadDialog(data) {
         var param;
         for (var i = 0; i < this.params.length(); i++) {
           param = this.params.get(i);
-          console.log(param);
           if (!this.categories.findItem('category', param.category))
             this.categories.insert({
               'group': new HtmlDynGroup(param.category),
@@ -10017,9 +9970,7 @@ function ComposeForm(div) {
       algo: this.drpAlgo.selectedItem().name,
       gridres: this.drpResolution.selectedItem()
     };
-    console.log(data);
     ajax_mt('srv/compute', this.removeNulls(data), (function(result) {
-      console.log(result);
       if (result.status == 'success') {
         this.notifyOn('started');
       }

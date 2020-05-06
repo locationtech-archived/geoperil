@@ -49,7 +49,6 @@
 				},
 				dataType : 'json',
 				success : function(result) {
-					console.log( result );
 					if( result.status == "success" || result.nologin )
 						//history.go(-1);
 						document.location.reload(false);
