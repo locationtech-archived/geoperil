@@ -72,7 +72,7 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 		/* user needs to enter its credentials */
 		$data = array();
 	} else {
-		/* auto-login with special user provided for cases outside the cloud */
+		/* auto-login with special user provided for cases outside the production environment */
 		$data = array(
 			'user' => 'nologin',
 			'password' => '123456'
@@ -93,7 +93,7 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 <title>EQ-Info</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <link href="../css/bootstrap.css" rel="stylesheet">
-<link href="../geohazardcloud.css" rel="stylesheet">
+<link href="../geohazard.css" rel="stylesheet">
 <link rel="stylesheet" href="http://openlayers.org/en/v3.4.0/css/ol.css" type="text/css">
 <style>
 	.headline-fixed {

@@ -134,7 +134,7 @@ class WebGuiSrv(BaseSrv):
                     "permissions": {
                         # can change permission, create users, change users
                         "admin": False,
-                        # can send internal cloud messages
+                        # can send internal messages
                         "intmsg": False,
                         # can send fax messages
                         "fax": False,
@@ -514,7 +514,7 @@ class WebGuiSrv(BaseSrv):
                     )
                 file.close()
             else:
-                print("CLOUD: grid file not found!")
+                print("grid file not found!")
         return res
 
     @cherrypy.expose
@@ -1242,7 +1242,7 @@ class WebGuiSrv(BaseSrv):
             )
             if not os.path.isfile(dst):
                 print(
-                    "CLOUD: create_missing_image for event " +
+                    "create_missing_image for event " +
                     str(evt["_id"]) + " (" + str(evt["shared_link"]) + ")"
                 )
                 self.make_image(str(evt["shared_link"]))
@@ -1346,7 +1346,7 @@ class WebGuiSrv(BaseSrv):
                         text
                     )
                     print(
-                        "CLOUD SMS-Notification: " + user["username"] +
+                        "SMS-Notification: " + user["username"] +
                         ", " + sendto + ", " + str(ret[0])
                     )
                 if user["notify"].get("mail"):
@@ -1372,7 +1372,7 @@ class WebGuiSrv(BaseSrv):
                         text
                     )
                     print(
-                        "CLOUD Mail-Notification: " + user["username"] +
+                        "Mail-Notification: " + user["username"] +
                         ", " + sendto + ", " + str(ret[0])
                     )
 

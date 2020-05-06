@@ -34,7 +34,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link href="../css/bootstrap.css" rel="stylesheet">
-	<link href="../geohazardcloud.css" rel="stylesheet">
+	<link href="../geohazard.css" rel="stylesheet">
 	<link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
 	<script src="https://code.jquery.com/jquery.js"></script>
     <script src="../jquery.cookie.js"></script>

@@ -1626,7 +1626,7 @@ public final class Services {
                 }
 
                 System.out.println(
-                    "CLOUD " + new Date() + " SignIn from user " + username
+                    new Date() + " SignIn from user " + username
                 );
                 DBObject login = new BasicDBObject("date", new Date())
                     .append("user", username);
@@ -1670,7 +1670,7 @@ public final class Services {
                 response.addCookie(sessionCookie);
 
                 System.out.println(
-                    "CLOUD " + new Date() + " SignOut from user " + username
+                    new Date() + " SignOut from user " + username
                 );
                 return jssuccess();
             }
@@ -1704,8 +1704,7 @@ public final class Services {
             }
 
             System.out.println(
-                "CLOUD " + new Date() + " Resuming session for user "
-                + user.name
+                new Date() + " Resuming session for user " + user.name
             );
 
             return gson.toJson(result);
