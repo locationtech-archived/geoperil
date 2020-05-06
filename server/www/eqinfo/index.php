@@ -26,21 +26,21 @@
 
 /* checks whether IP is 127.0.0.1 or starts with 139.17. */
 function check_ip() {
-        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        	$ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-        } else {
-        	$ip = $_SERVER['REMOTE_ADDR'];
-        }
+	if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+		$ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+	} else {
+		$ip = $_SERVER['REMOTE_ADDR'];
+	}
 
 	return ($ip == '127.0.0.1' || strpos($ip,'139.17.') === 0);
 }
 
 function server_name() {
-        if (isset($_SERVER['HTTP_X_FORWARDED_SERVER'])) {
-                return $_SERVER['HTTP_X_FORWARDED_SERVER'];
-        } else {
-                return $_SERVER['SERVER_NAME'];
-        }
+	if (isset($_SERVER['HTTP_X_FORWARDED_SERVER'])) {
+			return $_SERVER['HTTP_X_FORWARDED_SERVER'];
+	} else {
+			return $_SERVER['SERVER_NAME'];
+	}
 }
 
 function ajax($url,$data) {
@@ -49,8 +49,8 @@ function ajax($url,$data) {
 		'http'=> array(
 			'method' => "POST",
 			'header' => "Content-type: application/x-www-form-urlencoded\r\n"
-			          . "Content-length: " . strlen($content) . "\r\n"
-				      . "Cookie: " . $_SERVER['HTTP_COOKIE'] . "\r\n",
+				. "Content-length: " . strlen($content) . "\r\n"
+				. "Cookie: " . $_SERVER['HTTP_COOKIE'] . "\r\n",
 			'content' => $content
 		)
 	);
@@ -64,8 +64,8 @@ function post_url($url,$data,$content_type="text/plain") {
 		'http'=> array(
 			'method' => "POST",
 			'header' => "Content-type: ".$content_type."\r\n"
-			          . "Content-length: " . strlen($data) . "\r\n"
-				      . "Cookie: " . $_SERVER['HTTP_COOKIE'] . "\r\n",
+				. "Content-length: " . strlen($data) . "\r\n"
+				. "Cookie: " . $_SERVER['HTTP_COOKIE'] . "\r\n",
 			'content' => $data
 		)
 	);
@@ -86,10 +86,10 @@ function get_url($url) {
 }
 
 function array_time_sort($a,$b) {
-        if ( (! isset($a['time'])) || (! isset($b['time'])) || ($a['time'] == $b['time'])) {
-                return 0;
-        }
-        return ($a['time'] < $b['time']) ? -1 : 1;
+	if ( (! isset($a['time'])) || (! isset($b['time'])) || ($a['time'] == $b['time'])) {
+		return 0;
+	}
+	return ($a['time'] < $b['time']) ? -1 : 1;
 }
 
 function do_post_request($url, $data)
@@ -241,7 +241,7 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 	.sections > h3 a {
 		color: white;
 		text-align: right;
- 		font-size: 14px;
+		font-size: 14px;
 		float: right;
 	}
 	.sec.geoperil img {
@@ -252,12 +252,12 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 		width: 90%;
 		white-space: pre-wrap;
 		margin-left: 50px;
- 		padding: 1em;
+		padding: 1em;
 		background-color: #eeeeee;
 	}
 	.sec.geoperil dl {
 		margin-left: 50px;
- 		margin-right: 50px;
+		margin-right: 50px;
 		float: left;
 	}
 	.sec.geoperil dd {
@@ -272,7 +272,7 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 	}
 	.sec.hazards dl {
 		margin-left: 50px;
- 		margin-right: 50px;
+		margin-right: 50px;
 	}
 	.sec.hazards dd {
 		margin-left: 25px;
@@ -292,28 +292,28 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 <script src="//openlayers.org/en/v3.4.0/build/ol.js" type="text/javascript"></script>
 <script type="text/javascript">
 	window.onscroll = function () {
-	    var scrollPos = document.body.scrollTop;
-	    var headline = document.getElementById("headline-fixed");
-	    var gfz_head = document.getElementById("gfz-head");
-	    var nav = document.getElementById("nav");
-	    var nav_cover = document.getElementById("nav-cover");
+		var scrollPos = document.body.scrollTop;
+		var headline = document.getElementById("headline-fixed");
+		var gfz_head = document.getElementById("gfz-head");
+		var nav = document.getElementById("nav");
+		var nav_cover = document.getElementById("nav-cover");
 
-	    if( scrollPos > gfz_head.clientHeight ) {
-		    headline.className = "headline-fixed";
+		if( scrollPos > gfz_head.clientHeight ) {
+			headline.className = "headline-fixed";
 <?php if( isset( $_GET["id"] ) ) : ?>
 			var top1 = nav_cover.getBoundingClientRect().top;
 			var top2 = gfz_head.getBoundingClientRect().top;
-		    nav.style.top = (top1 - top2 - gfz_head.clientHeight) + "px";
-		    nav.style.width = nav_cover.clientWidth + "px";
-		    nav.className = "nav fixed";
+			nav.style.top = (top1 - top2 - gfz_head.clientHeight) + "px";
+			nav.style.width = nav_cover.clientWidth + "px";
+			nav.className = "nav fixed";
 <?php endif; ?>
-	    } else {
-	    	headline.className = "headline-abs";
+		} else {
+			headline.className = "headline-abs";
 <?php if( isset( $_GET["id"] ) ) : ?>
-	    	nav.className = "nav";
-	    	nav.style.top = "";
+			nav.className = "nav";
+			nav.style.top = "";
 <?php endif; ?>
-	    }
+		}
 	};
 </script>
 </head>
@@ -323,27 +323,27 @@ if( $ret['status'] != 'success' && ! $ret['nologin'] ) {
 	<div class="border">
 	<div class="container fullsize">
 		<div id="gfz-head" class="row gfz-head">
-  			<img class="gfz-logo pull-left" alt="GFZ Logo" src="../img/logo_gfz_en.gif">
-  			<img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="../img/wordmark_gfz_en.gif">
-  		</div>
-  		<hr>
-  		<div id="headline-fixed" class="headline-abs">
-	  	<div class="headline">
-	  		<ul class="head-blk head-right">
+			<img class="gfz-logo pull-left" alt="GFZ Logo" src="../img/logo_gfz_en.gif">
+			<img class="gfz-wordmark pull-right" alt="GFZ Wordmark" src="../img/wordmark_gfz_en.gif">
+		</div>
+		<hr>
+		<div id="headline-fixed" class="headline-abs">
+		<div class="headline">
+			<ul class="head-blk head-right">
 				<li><a href="http://geofon.gfz-potsdam.de/eqinfo/list.php?mode=mt" target="_blank">GEOFON</a></li>
 				<li class="divider"><span>|</span></li>
-	                        <?php if( check_ip() ):	?>
+				<?php if( check_ip() ): ?>
 				<li><a href="http://eq.gfz-potsdam.de/" target="_blank">EQUATOR II</a></li>
 				<li class="divider"><span>|</span></li>
-                        	<?php endif; ?>
+				<?php endif; ?>
 				<li><a href="http://localhost/" target="_blank">GeoPeril</a></li>
 				<li class="divider"><span>|</span></li>
 				<li><a href="http://kinherd.org" target="_blank">KINHERD</a></li>
-	  		</ul>
-	  		<ul class="clear"></ul>
-	  		<hr>
-	  	</div> <!-- end of headline -->
-	  	</div> <!-- end of headline-fixed -->
+			</ul>
+			<ul class="clear"></ul>
+			<hr>
+		</div> <!-- end of headline -->
+		</div> <!-- end of headline-fixed -->
 
 		<div class="row content">
 
@@ -352,13 +352,13 @@ if( ! isset( $_GET["id"] ) ) :
 ?>
 <table cellpadding="5" width="100%">
 <tr class="head">
-  <th class="left"><strong>Origin Time</strong><br />UTC </th>
-  <th><strong>Mag</strong></th>
-  <th><strong>Latitude</strong><br />degrees</th>
-  <th><strong>Longitude</strong><br />degrees</th>
-  <th><strong>Depth</strong><br />km</th>
-  <th>&nbsp;</th>
-  <th class="left"><strong>Flinn-Engdahl Region Name</strong></th>
+	<th class="left"><strong>Origin Time</strong><br />UTC </th>
+	<th><strong>Mag</strong></th>
+	<th><strong>Latitude</strong><br />degrees</th>
+	<th><strong>Longitude</strong><br />degrees</th>
+	<th><strong>Depth</strong><br />km</th>
+	<th>&nbsp;</th>
+	<th class="left"><strong>Flinn-Engdahl Region Name</strong></th>
 </tr>
 <?php
 	$ret = ajax(
@@ -387,8 +387,8 @@ if( ! isset( $_GET["id"] ) ) :
 	$evtid = htmlspecialchars( $_GET["id"] );
 	$url = 'https://'. server_name() .'/webguisrv/get_event_info';
 	$data = array(
-			'apikey' => "6fc1358f8d505c34bce1eaa466e1d179",
-			'evid' => $evtid
+		'apikey' => "6fc1358f8d505c34bce1eaa466e1d179",
+		'evid' => $evtid
 	);
 	$ret = ajax($url,$data);
 	$eq = $ret['eq'];
@@ -399,13 +399,13 @@ if( ! isset( $_GET["id"] ) ) :
 <div id="nav-cover" class="nav-cover">
 <ul id="nav" class="nav">
 	<li><a href="#geofon">GEOFON</a></li>
-	<?php if( check_ip() ):	?>
-	        <li><a href="#equator2">Equator II</a></li>
+	<?php if( check_ip() ): ?>
+		<li><a href="#equator2">Equator II</a></li>
 	<?php endif; ?>
 	<li><a href="#geoperil">GeoPeril</a></li>
 	<li><a href="#kinherd">KINHERD</a></li>
 	<li><a href="#hazards">Other Sources</a></li>
-	<?php if( check_ip() ):	?>
+	<?php if( check_ip() ): ?>
 		<li><a href="#eq-context">EQ in Context</a></li>
 	<?php endif; ?>
 	<li class="back"><a href=".">&#10094; &nbsp; Back to list</a></li>
@@ -434,95 +434,94 @@ if( ! isset( $_GET["id"] ) ) :
 	?>
 	</div>
 
-	<?php if( check_ip() ):	?>
+	<?php if( check_ip() ): ?>
 	<h3 id="equator2">Equator II
 		<?php if( ! empty( $div[1] ) ) : ?>
 			<a href="http://eq.gfz-potsdam.de/#/events/<?php echo $eq['geofonid'];?>/">Go to source</a>
 		<?php endif;?>
 	</h3>
 	<div class="sec">
-<!--            <b>Re-integration implemented soon.</b>-->
-            <?php if( true ): ?>
-            <?php
-            $url = "http://eq.gfz-potsdam.de/events/".$eq['geofonid'];
-            if (! file_get_contents($url)) {
-                post_url($url,'{"eid":"'.$eq['geofonid'].'"}',"application/json");
-                echo "<b>Computation startet. Please reload in 60 seconds.</b>";
-            } else {
-            ?>
-            <h3>Epicenter and source mechanism</h3>
-            <img src="http://eq.gfz-potsdam.de/events/<?php echo $eq['geofonid'];?>/maps/location.png">
-            <h4>Description</h4>
-            <p>
-            <?php
-                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/location");
-                usort($ret, "array_time_sort");
-                $ret = array_pop($ret);
-                echo $ret ? $ret['text'] : "No data available.";
-            ?>
-            </p>
-            <h3>Seismotectonics</h3>
-            <img src="http://eq.gfz-potsdam.de/events/<?php echo $eq['geofonid'];?>/maps/region.png">
-            <h4>Plate boundaries, faults, geology</h4>
-            <p>
-            <?php
-                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/region_geology");
-                usort($ret, "array_time_sort");
-                $ret = array_pop($ret);
-                echo $ret ? $ret['text'] : "No data available.";
-            ?>
-            </p>
-            <h4>Regional seismicity and zones</h4>
-            <p>
-            <?php
-                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/region_seismicity");
-                usort($ret, "array_time_sort");
-                $ret = array_pop($ret);
-                echo $ret ? $ret['text'] : "No data available.";
-            ?>
-            </p>
-            <h4>Historical earthquakes</h4>
-            <p>
-            <?php
-                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/region_historical");
-                usort($ret, "array_time_sort");
-                $ret = array_pop($ret);
-                echo $ret ? $ret['text'] : "No data available.";
-            ?>
-            </p>
-            <h3>Hazard</h3>
-            <img src="http://eq.gfz-potsdam.de/events/<?php echo $eq['geofonid'];?>/maps/gshap.png">
-            <h4>GSHAP map description</h4>
-            <p>
-            <?php
-                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/hazard_description");
-                usort($ret, "array_time_sort");
-                $ret = array_pop($ret);
-                echo $ret ? $ret['text'] : "No data available.";
-            ?>
-            </p>
-            <h4>Statistical hazard</h4>
-            <p>
-            <?php
-                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/hazard_statistics");
-                usort($ret, "array_time_sort");
-                $ret = array_pop($ret);
-                echo $ret ? $ret['text'] : "No data available.";
-            ?>
-            </p>
-            <h4>Damage</h4>
-            <p>
-            <?php
-                $ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/hazard_damage");
-                usort($ret, "array_time_sort");
-                $ret = array_pop($ret);
-                echo $ret ? $ret['text'] : "No data available.";
-            ?>
-            </p>
-            <?php
-            }
-            ?>
-            <?php endif; ?>
+		<?php if( true ): ?>
+		<?php
+		$url = "http://eq.gfz-potsdam.de/events/".$eq['geofonid'];
+		if (! file_get_contents($url)) {
+			post_url($url,'{"eid":"'.$eq['geofonid'].'"}',"application/json");
+			echo "<b>Computation startet. Please reload in 60 seconds.</b>";
+		} else {
+		?>
+		<h3>Epicenter and source mechanism</h3>
+		<img src="http://eq.gfz-potsdam.de/events/<?php echo $eq['geofonid'];?>/maps/location.png">
+		<h4>Description</h4>
+		<p>
+		<?php
+			$ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/location");
+			usort($ret, "array_time_sort");
+			$ret = array_pop($ret);
+			echo $ret ? $ret['text'] : "No data available.";
+		?>
+		</p>
+		<h3>Seismotectonics</h3>
+		<img src="http://eq.gfz-potsdam.de/events/<?php echo $eq['geofonid'];?>/maps/region.png">
+		<h4>Plate boundaries, faults, geology</h4>
+		<p>
+		<?php
+			$ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/region_geology");
+			usort($ret, "array_time_sort");
+			$ret = array_pop($ret);
+			echo $ret ? $ret['text'] : "No data available.";
+		?>
+		</p>
+		<h4>Regional seismicity and zones</h4>
+		<p>
+		<?php
+			$ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/region_seismicity");
+			usort($ret, "array_time_sort");
+			$ret = array_pop($ret);
+			echo $ret ? $ret['text'] : "No data available.";
+		?>
+		</p>
+		<h4>Historical earthquakes</h4>
+		<p>
+		<?php
+			$ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/region_historical");
+			usort($ret, "array_time_sort");
+			$ret = array_pop($ret);
+			echo $ret ? $ret['text'] : "No data available.";
+		?>
+		</p>
+		<h3>Hazard</h3>
+		<img src="http://eq.gfz-potsdam.de/events/<?php echo $eq['geofonid'];?>/maps/gshap.png">
+		<h4>GSHAP map description</h4>
+		<p>
+		<?php
+			$ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/hazard_description");
+			usort($ret, "array_time_sort");
+			$ret = array_pop($ret);
+			echo $ret ? $ret['text'] : "No data available.";
+		?>
+		</p>
+		<h4>Statistical hazard</h4>
+		<p>
+		<?php
+			$ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/hazard_statistics");
+			usort($ret, "array_time_sort");
+			$ret = array_pop($ret);
+			echo $ret ? $ret['text'] : "No data available.";
+		?>
+		</p>
+		<h4>Damage</h4>
+		<p>
+		<?php
+			$ret = get_url("http://eq.gfz-potsdam.de/comments/".$eq['geofonid']."/hazard_damage");
+			usort($ret, "array_time_sort");
+			$ret = array_pop($ret);
+			echo $ret ? $ret['text'] : "No data available.";
+		?>
+		</p>
+		<?php
+		}
+		?>
+		<?php endif; ?>
 	</div>
 	<?php endif; ?>
 
@@ -535,27 +534,27 @@ if( ! isset( $_GET["id"] ) ) :
 		<?php if( ! empty($eq['geofonid']) ) : ?>
 		<h3><?php echo $eq['prop']['region']; ?></h3>
 		<dl>
-		  <dt>Event ID</dt>
-		  <dd><?php echo $eq['evid']; ?></dd>
-		  <dt>Date</dt>
-		  <dd><?php echo $eq['prop']['date']; ?></dd>
-		  <dt>Magnitude</dt>
-		  <dd><?php echo $eq['prop']['magnitude']; ?></dd>
-		  <dt>Coordinates</dt>
-		  <dd>
-		  	<?php echo 'Lat: '. $eq['prop']['latitude'];?>&deg;,
-		  	<?php echo 'Lon: '. $eq['prop']['longitude'];?>&deg;
-		  </dd>
-		  <dt>Depth</dt>
-		  <dd><?php echo $eq['prop']['depth']; ?> km</dd>
-		  <dt>Fault</dt>
-		  <?php if( ! empty($eq['simulation']) ) : ?>
+			<dt>Event ID</dt>
+			<dd><?php echo $eq['evid']; ?></dd>
+			<dt>Date</dt>
+			<dd><?php echo $eq['prop']['date']; ?></dd>
+			<dt>Magnitude</dt>
+			<dd><?php echo $eq['prop']['magnitude']; ?></dd>
+			<dt>Coordinates</dt>
+			<dd>
+			<?php echo 'Lat: '. $eq['prop']['latitude'];?>&deg;,
+			<?php echo 'Lon: '. $eq['prop']['longitude'];?>&deg;
+			</dd>
+			<dt>Depth</dt>
+			<dd><?php echo $eq['prop']['depth']; ?> km</dd>
+			<dt>Fault</dt>
+			<?php if( ! empty($eq['simulation']) ) : ?>
 			<dd>Dip: <?php echo $eq['prop']['dip']; ?> &deg;</dd>
 			<dd>Strike: <?php echo $eq['prop']['strike']; ?> &deg;</dd>
 			<dd>Rake: <?php echo $eq['prop']['rake']; ?> &deg;</dd>
-		  <?php else:?>
-		  	<dd>-</dd>
-		  <?php endif;?>
+			<?php else:?>
+			<dd>-</dd>
+			<?php endif;?>
 		</dl>
 		<?php
 			$sim = ! empty($eq['simulation']);
@@ -564,21 +563,21 @@ if( ! isset( $_GET["id"] ) ) :
 			$calcTime = $sim ? $eq['simulation']['calcTime'] / 1000 .' sec' : '-';
 		?>
 		<dl>
-		  <dt>Simulation</dt>
-		  <dd><?php echo $simTime; ?></dd>
-		  <dt>Resource</dt>
-		  <dd><?php echo $resources; ?></dd>
-		  <dt>Computation time</dt>
-		  <dd><?php echo $calcTime; ?></dd>
-		  <dt>Bounding box</dt>
-		  <?php if( ! empty($eq['simulation']) ) : ?>
-		  	<dd>LatMin: <?php echo $eq['simulation']['grid_dim']['latMin']; ?> &deg;</dd>
+			<dt>Simulation</dt>
+			<dd><?php echo $simTime; ?></dd>
+			<dt>Resource</dt>
+			<dd><?php echo $resources; ?></dd>
+			<dt>Computation time</dt>
+			<dd><?php echo $calcTime; ?></dd>
+			<dt>Bounding box</dt>
+			<?php if( ! empty($eq['simulation']) ) : ?>
+			<dd>LatMin: <?php echo $eq['simulation']['grid_dim']['latMin']; ?> &deg;</dd>
 			<dd>LatMax: <?php echo $eq['simulation']['grid_dim']['latMax']; ?> &deg;</dd>
 			<dd>LonMin: <?php echo $eq['simulation']['grid_dim']['lonMin']; ?> &deg;</dd>
 			<dd>LonMax: <?php echo $eq['simulation']['grid_dim']['lonMax']; ?> &deg;</dd>
-		  <?php else:?>
-		  	<dd>-</dd>
-		  <?php endif;?>
+			<?php else:?>
+			<dd>-</dd>
+			<?php endif;?>
 		</dl>
 		<div class="clear"></div>
 		<?php endif;?>
@@ -620,20 +619,20 @@ if( ! isset( $_GET["id"] ) ) :
 			'eventtype' => 'EQ',
 			'y' => $eq['prop']['latitude'],
 			'x' => $eq['prop']['longitude'],
-                        'mag' => $eq['prop']['magnitude'],
+			'mag' => $eq['prop']['magnitude'],
 			'time' => strtotime($eq['prop']['date'] . 'UTC')
 		);
 		$ret = ajax($url,$data);
 	?>
 	<script type="text/javascript">
 		function initialize() {
-	<?php if( empty( $ret['hazard_events'] ) ):	?>
-			document.getElementById('mapview').style.display = "none";
+	<?php if( empty( $ret['hazard_events'] ) ): ?>
+		document.getElementById('mapview').style.display = "none";
 	<?php endif; ?>
 
 			var mapOptions = {
 				zoom: 8,
-			    center: new google.maps.LatLng(0,0)
+				center: new google.maps.LatLng(0,0)
 			};
 			var map = new google.maps.Map(document.getElementById('mapview'), mapOptions);
 			var marker;
@@ -697,7 +696,7 @@ if( ! isset( $_GET["id"] ) ) :
 		}
 	?>
 	</div>
-	<?php if( check_ip() ):	?>
+	<?php if( check_ip() ): ?>
 	<h3 id="eq-context">
 		EQ in Context <a href="http://eqsrv.gfz-potsdam.de/">Go to source</a>
 	</h3>
@@ -709,19 +708,22 @@ if( ! isset( $_GET["id"] ) ) :
 			var lat = <?php echo $eq['prop']['latitude'];?>;
 			var lon = <?php echo $eq['prop']['longitude'];?>;
 			var map = new ol.Map({
-		    	target:'olmap',
-		        renderer:'canvas',
-		        layers : [
-		        	new ol.layer.Tile({
+				target:'olmap',
+				renderer:'canvas',
+				layers : [
+					new ol.layer.Tile({
 						source:	new ol.source.TileWMS({
-									url: 'http://rz-vm65.gfz-potsdam.de:8080/geoserver/wms',
-									params: {'LAYERS': 'Quakes:etopo3857', 'VERSION': '1.1.1'}
-								})
+							url: 'http://rz-vm65.gfz-potsdam.de:8080/geoserver/wms',
+							params: {
+								'LAYERS': 'Quakes:etopo3857',
+								'VERSION': '1.1.1'
+							}
+						})
 					})
 				],
-		    	view: new ol.View({
-		    		center: ol.proj.transform([lon,lat], 'EPSG:4326', 'EPSG:3857'),
-		    		zoom:3
+				view: new ol.View({
+					center: ol.proj.transform([lon,lat], 'EPSG:4326', 'EPSG:3857'),
+					zoom:3
 				})
 			});
 
@@ -736,7 +738,8 @@ if( ! isset( $_GET["id"] ) ) :
 							'TILED':true
 						}
 					})
-			}));
+				})
+			);
 
 			map.addLayer(
 				new ol.layer.Tile({
@@ -750,27 +753,29 @@ if( ! isset( $_GET["id"] ) ) :
 						}
 					}),
 					opacity: 0.75
-			}));
+				})
+			);
 
 			map.addLayer(
 				new ol.layer.Vector({
-				  	source: new ol.source.Vector({
-				  		features: [new ol.Feature({
-				  			geometry: new ol.geom.Point(ol.proj.transform([lon, lat], 'EPSG:4326','EPSG:3857')),
-				  		  	name: 'quake'
-				  		})]
+					source: new ol.source.Vector({
+						features: [new ol.Feature({
+							geometry: new ol.geom.Point(ol.proj.transform([lon, lat], 'EPSG:4326','EPSG:3857')),
+							name: 'quake'
+						})]
 					}),
-				  	style: new ol.style.Style({
-				  		image: 	new ol.style.Circle({
-					          		radius: 10,
-					          		stroke:new ol.style.Stroke({
-					      				color:'#FFFFFF',
-					      				width:3
-					      			}),
-					          		fill: new ol.style.Fill({color: '#1E00FF'})
-				        	   	})
+					style: new ol.style.Style({
+						image: new ol.style.Circle({
+							radius: 10,
+							stroke:new ol.style.Stroke({
+								color:'#FFFFFF',
+								width:3
+							}),
+							fill: new ol.style.Fill({color: '#1E00FF'})
+						})
 					})
-			}));
+				})
+			);
 		}
 		google.maps.event.addDomListener(window, 'load', load_eq_context);
 	</script>

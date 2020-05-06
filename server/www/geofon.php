@@ -15,15 +15,15 @@
 	.sections > h3 {
 		background-color: white;
 		color: white;
- 		padding: 0.5em;
-                margin: 0px;
+		padding: 0.5em;
+		margin: 0px;
 		font-weight: bold;
 		width: calc(100%-1em);
 	}
 	.sections > h3 a {
 		color: #428bca;
 		text-align: right;
- 		font-size: 14px;
+		font-size: 14px;
 		float: right;
 	}
 </style>
@@ -38,7 +38,6 @@
 	$geofon = str_replace("='/data/", "='http://geofon.gfz-potsdam.de/data/", $geofon);
 	$geofon = str_replace("=\"/eqinfo/", "=\"http://geofon.gfz-potsdam.de/eqinfo/", $geofon);
 	$geofon = str_replace("<a href='list.php'>Back to the earthquake list</a><br />", "", $geofon);
-	//$geofon = str_replace("<a href", "<a "
 	preg_match('/<div id="GEcontent">(.*?)<\/div> <!-- GEcontent -->/s', $geofon, $div);
 ?>
 <h3 id="geofon">GEOFON
