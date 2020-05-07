@@ -522,7 +522,7 @@ class WebGuiSrv(BaseSrv):
         user = self.getUser()
         if user is not None or self.auth_shared(evid):
             params = self._db["settings"].find({"type": "jet_color"})
-            pmap = dict((str(p["threshold"]), p["color"]) for p in params)
+            pmap = dict((p["threshold"], p["color"]) for p in params)
             jets = list(
                 self._db["comp"].find({
                     "id": evid, "type": "JET"

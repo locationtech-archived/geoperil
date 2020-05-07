@@ -43,8 +43,8 @@ public final class SshConnection extends Connection {
 
     @Override
     public void connect() throws IOException {
-        File tmp = File.createTempFile("worker", "log");
-        System.out.println("sh " + tmp.getAbsolutePath());
+        File tmp = File.createTempFile("worker", ".log");
+        System.out.println("log for worker: " + tmp.getAbsolutePath());
         process = new ProcessBuilder(ssh.split(" ")).redirectError(tmp).start();
         super.connect();
     }

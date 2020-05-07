@@ -36,8 +36,10 @@ public final class LocalConnection extends Connection {
 
     @Override
     public void connect() throws IOException {
-        File tmp = File.createTempFile("worker", "log");
-        System.out.println("sh " + tmp.getAbsolutePath());
+        File tmp = File.createTempFile("worker", ".log");
+        System.out.println(
+            "log for local connection: " + tmp.getAbsolutePath()
+        );
         process = new ProcessBuilder("sh").redirectError(tmp).start();
         super.connect();
     }

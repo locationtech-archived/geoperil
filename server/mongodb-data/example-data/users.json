@@ -8,7 +8,7 @@
             "key": "da2489ca66484d869131e46482c47727",
             "enabled": true
         },
-        "countries" : [ "USA" ],
+        "countries" : [ "Indonesia" ],
         "permissions": {
             "api": true,
             "population": false,

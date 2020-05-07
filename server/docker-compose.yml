@@ -1,21 +1,21 @@
-version: '3'
+version: '3.6'
 
 services:
   mongo:
     image: mongo:3.6.12
     container_name: geoperil-mongo
-    ports:
-      - '27017:27017'
     volumes:
-      - 'data-volume:/data/db'
+      - 'mongo-data-volume:/data/db'
 
   mongo-data:
-    image: geoperil-mondodb-data
+    image: geoperil-mongodb-data
     build:
       context: ./mongodb-data
       dockerfile: Dockerfile
-    container_name: geoperil-mondodb-data
+    container_name: geoperil-mongodb-data
     depends_on:
+      - mongo
+    links:
       - mongo
     volumes:
       - ./mongodb-data/example-data:/tmp/example-data
@@ -34,14 +34,36 @@ services:
       - '8080:80'
     depends_on:
       - mongo
+      - worker-easywavecpu
+    links:
+      - 'worker-easywavecpu:worker'
+      - 'mongo'
     volumes:
+      - server-tmp-data-volume:/tmp/geoperil
       - ./wsgi:/var/www/geoperil/wsgi
       - ./www:/var/www/geoperil/htdocs
       - ../tools:/opt/geoperil/tools
       - ../worker:/opt/geoperil/worker
       - ../GMT:/opt/geoperil/GMT
-      - 'geoperil-logs:/var/log'
+
+  global-grid-datasets:
+    image: gitext.gfz-potsdam.de:5000/geoperil/global-grid-datasets:20200526
+    container_name: geoperil-grids
+    volumes:
+      - grid-data-volume:/data
+
+  worker-easywavecpu:
+    build:
+      context: ../worker
+      dockerfile: Dockerfile.easywaveCPU
+    image: geoperil-worker
+    container_name: geoperil-worker
+    volumes:
+      - grid-data-volume:/data
+    depends_on:
+      - global-grid-datasets
 
 volumes:
-  data-volume:
-  geoperil-logs:
+  server-tmp-data-volume:
+  mongo-data-volume:
+  grid-data-volume:

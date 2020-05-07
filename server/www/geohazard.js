@@ -3518,7 +3518,12 @@ function EQWidget(data, marker) {
         this.div.find('.progress').hide();
         this.div.find('.calc_data').hide();
       } else {
-        var grid = process.grid_dim;
+        var grid = process.grid_dim ? process.grid_dim : {
+          'latMin': Number(NaN),
+          'latMax': Number(NaN),
+          'lonMin': Number(NaN),
+          'lonMax': Number(NaN)
+        };
         var latMin = grid.latMin.toFixed(2);
         var lonMin = grid.lonMin.toFixed(2);
         var latMax = grid.latMax.toFixed(2);
@@ -4586,6 +4591,10 @@ function showGrid(pointer, visible) {
     return;
 
   var grid = entry['process'][0]['grid_dim'];
+
+  if (!grid) {
+    return;
+  }
 
   var latMin = Math.max(grid['latMin'], -85.05115);
   var latMax = Math.min(grid['latMax'], 85.05115);

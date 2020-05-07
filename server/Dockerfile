@@ -8,7 +8,8 @@ RUN apt-get update && \
     python3.7 \
     python3-cherrypy3 \
     python3-pip \
-    libapache2-mod-wsgi-py3 apache2 \
+    libapache2-mod-wsgi-py3 \
+    apache2 \
     tomcat8 \
     maven \
     php7.2-fpm \
@@ -60,32 +61,34 @@ RUN mkdir -p /tmp/geoperil/localdir && \
     mkdir -p /var/log/tomcat8 && \
     chown -R tomcat8 /var/log/tomcat8 && \
     mkdir -p /var/lib/tomcat8/.ssh && \
+    chmod 0700 /var/lib/tomcat8/.ssh && \
     mkdir -p /opt/geoperil/simenv && \
-    mkdir /opt/geoperil/events
+    chown -R tomcat8 /opt/geoperil/simenv
 
 COPY ./scripts/getShape.py /tmp/geoperil/localdir
 COPY ./scripts/getFlood.py /tmp/geoperil/localdir
 COPY ./scripts/getEWH.py /tmp/geoperil/localdir
 
-# insert entry of remote CUDA server in this file
-COPY ./conf/ssh/known_hosts /var/lib/tomcat8/.ssh/
-
-# id_rsa.pub needs to be added in ~/.ssh/authorized_keys on remote CUDA server
-COPY ./conf/ssh/id_rsa /var/lib/tomcat8/.ssh/
-COPY ./conf/ssh/id_rsa.pub /var/lib/tomcat8/.ssh/
-
-RUN chmod 600 /var/lib/tomcat8/.ssh/id_rsa && \
-    chown -Rv tomcat8 /var/lib/tomcat8/.ssh
+COPY ./conf/ssh/id_rsa /var/lib/tomcat8/.ssh
+COPY ./conf/ssh/id_rsa.pub /var/lib/tomcat8/.ssh
+COPY ./conf/ssh/generate-known-hosts.sh /var/lib/tomcat8
 
 WORKDIR /root/GeoHazardServices
 
-RUN sed -i -e 's@localhost@mongo@' src/main/resources/config.properties && \
+RUN chown -Rv tomcat8:tomcat8 /var/lib/tomcat8/.ssh && \
+    chmod 600 /var/lib/tomcat8/.ssh/id_rsa && \
+    chmod 644 /var/lib/tomcat8/.ssh/id_rsa.pub && \
+    sed -i -e 's@localhost@mongo@' src/main/resources/config.properties && \
     mvn clean package && \
     cp /root/GeoHazardServices/target/*.war /var/lib/tomcat8/webapps/geohazardservices.war
 
-# workaround with "true" for bug https://github.com/moby/moby/issues/6800
+# workaround with "|| true" for bug https://github.com/moby/moby/issues/6800
+# need sleep because of waiting for log files to be initially created
 CMD service php7.2-fpm start && \
     service apache2 start && \
     service tomcat8 start || true && \
-    tail -f /var/log/apache2/*geoperil.log /var/log/tomcat8/*
+    sleep 3 && \
+    /var/lib/tomcat8/generate-known-hosts.sh && \
+    tail -f /var/log/apache2/error*.log /var/log/tomcat8/catalina.out \
+        | grep --line-buffered -F -v "INFO:cherrypy.access"
 EXPOSE 80

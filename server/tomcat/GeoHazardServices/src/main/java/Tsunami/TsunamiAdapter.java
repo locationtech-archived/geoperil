@@ -295,13 +295,15 @@ public abstract class TsunamiAdapter implements IAdapter {
         );
         String resdir = (String) dirs.get("results") + "/events/" + task.id;
         localCon.runCmds(
-            String.format("mkdir -p -m 0777 %s", resdir),
-            String.format("chmod 0666 %s/*", resdir)
+            String.format("mkdir -p -m 0777 %s", resdir)
         );
         String[] files = {"eWave.2D.sshmax", "eWave.2D.time"};
         for (String f: files) {
             sshCon[0].copyFile(f, resdir + "/" + f);
         }
+        localCon.runCmds(
+            String.format("chmod 0666 %s/*", resdir)
+        );
         /* Data was successfully stored --> mark event in database. */
         db.getCollection("eqs").update(
             new BasicDBObject("_id", task.id),
@@ -628,6 +630,7 @@ public abstract class TsunamiAdapter implements IAdapter {
         }
 
         String kmlFile = String.format("heights.%s.kml", ewh);
+        String kmlFileSimple = String.format("heights.%s.simple.kml", ewh);
 
         /* ssh should be okay upon here, therefore run commands */
         sshCon[0].runCmds(
@@ -637,12 +640,12 @@ public abstract class TsunamiAdapter implements IAdapter {
                 ewh
             ),
             String.format(
-                "ogr2ogr -f kml -simplify 0.001 heights.%1$s.kml "
+                "ogr2ogr -f kml -simplify 0.001 heights.%1$s.simple.kml "
                 + "heights.%1$s.kml",
                 ewh
             )
         );
-        sshCon[0].copyFile(kmlFile, workdir + "/" + kmlFile);
+        sshCon[0].copyFile(kmlFileSimple, workdir + "/" + kmlFile);
 
         localCon.runCmd(
             String.format(
@@ -666,15 +669,15 @@ public abstract class TsunamiAdapter implements IAdapter {
         }
 
         /* Use second ssh connection. */
-        sshCon[1].runCmd(
-            String.format(
-                "ogr2ogr -f kml -simplify 0.001 arrival.%1$d.kml "
-                + "arrival.%1$d.kml",
-                time - timeOffset
-            )
-        );
         String kmlFile = String.format("arrival.%d.kml", time - timeOffset);
-        sshCon[1].copyFile(kmlFile, workdir + "/" + kmlFile);
+        String kmlFileSimple = String.format(
+            "arrival.%d.simple.kml",
+            time - timeOffset
+        );
+        sshCon[1].runCmd(
+            "ogr2ogr -f kml -simplify 0.001 " + kmlFileSimple + " " + kmlFile
+        );
+        sshCon[1].copyFile(kmlFileSimple, workdir + "/" + kmlFile);
         localCon.runCmd(
             String.format(
                 "python3 ../getShape.py arrival.%1$d.kml %1$d %2$s",

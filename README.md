@@ -15,9 +15,11 @@ tsunamis, including:
 
 You can start a local development environment by using docker containers.
 
-First build all needed images by running `docker-compose` in the `server` directory:
+First pull and build all needed images by running `docker-compose` in the
+`server` directory:
 
 ```bash
+docker-compose pull
 docker-compose build
 ```
 
@@ -40,9 +42,10 @@ for a less privileged user `test`/`test`.
 The main frontend is based on Bootstrap and jQuery. Also GoogleMaps, Proj4js,
 jQuery UI, jQuery Cookie, Font Awesome and Bootstrap Colorpicker are used.
 
-You can find the main frontend at [server/www](server/www). Some other frontend components
-are written in PHP or are plain HTML files, for example
-[server/www/geofon.php](server/www/geofon.php) and [server/www/apidoc](server/www/apidoc).
+You can find the main frontend at [server/www](server/www).
+Some other frontend components are written in PHP or are plain HTML files,
+for example [server/www/geofon.php](server/www/geofon.php) and
+[server/www/apidoc](server/www/apidoc).
 
 ## Backend
 
@@ -70,7 +73,7 @@ For data management a MongoDB with following collections is used:
 
 | Collection | Contents |
 | :----- | :----- |
-| comp | Results of computations |
+| comp | Results of computations including geometries of travel times and wave jets |
 | eqs | Earthquakes automatically fetched from earthquake catalogs with all their data (lat, lon, magnitude, slip, dip, rake ...) ; also modified or manually created earthquakes will be stored in this collection |
 | events | Like a changelog of created/imported earthquakes and simulation progresses |
 | evtsets | Eventsets |
@@ -91,18 +94,17 @@ For data management a MongoDB with following collections is used:
 The simulations are processed by registered workers and are accessed from the
 `GeoHazardServices` component via SSH.
 
-Following steps are needed to setup a server as a worker:
+As an example there is an EasyWave (CPU) worker already registered within the
+docker-compose environment, but you can also add your own workers.
+
+Following steps are needed to setup a server as a worker and adding it to the
+framework:
 
 * add a new user with a home directory (in this example the user is named `worker`)
 * install [easyWave](https://gitext.gfz-potsdam.de/geoperil/easyWave) and/or [Tsunami-HySEA](https://edanya.uma.es/hysea/index.php/models/tsunami-hysea) for the newly created user (so that the user can execute the binaries)
-* create directories ending with a number counting from 0, e.g. `/home/worker/easywave/web/worker0` (the number of directories depends on the desired slot counts -> number of parallel simulations)
-* generate a new SSH key pair for the tomcat user and save the public key in [server/conf/ssh/id_rsa.pub](server/conf/ssh/id_rsa.pub) and the private key in [server/conf/ssh/id_rsa](server/conf/ssh/id_rsa.pub)
-* connect to the worker via SSH once to get an entry in the `known_hosts` file, add this line to the file [server/conf/ssh/known_hosts](server/conf/ssh/known_hosts)
-* add the generated public key also to the worker user on the remote machine in the file `/hom/worker/.ssh/authorized_keys`
-
-After those steps or if you change one of the mentioned files you need to
-rebuild the docker image of the server component again with
-`docker-compose build`.
+* create directories ending with a number counting from 0, e.g. `/home/worker/easywave/web/worker0` (the number of directories depends on the desired slot counts -> number of parallel simulations per worker)
+* add the public key of the tomcat8 user to the `authorized_keys` file of the worker
+* get the `known_hosts` entry of the worker with `ssh-keyscan <hostname or IP>` and add it the `known_hosts` file of the tomcat8 user
 
 To register the worker to the framework you need to add an entry in the
 `settings` collection with following parameters:

@@ -91,7 +91,7 @@ public final class HySeaAdapter extends TsunamiAdapter {
             String.format(
                 Locale.US,
                 "gdal_translate -projwin %f %f %f %f -of GSBG "
-                + "../grid_%d.grd range.grd",
+                + "/data/grid_%d.grd range.grd",
                 ulx, uly, lrx, lry, task.gridres
             ),
             String.format(

@@ -1,0 +1,52 @@
+FROM ubuntu:18.04
+
+RUN apt-get update && \
+    apt-get install -y \
+        autoconf \
+        g++ \
+        binutils \
+        make \
+        openssh-server \
+        gdal-bin \
+        python3-pymongo \
+        python-gdal && \
+    adduser --disabled-password --gecos "" --shell /bin/bash --home /home/worker worker && \
+    mkdir -p /home/worker/easywave/web/worker0 && \
+    mkdir -p /home/worker/easywave/web/worker1 && \
+    mkdir /home/worker/.ssh
+
+COPY ./authorized_keys /home/worker/.ssh
+
+ARG COMMIT_SHA=909c7ae0a4b35244d0747dd492cff35f8bf9413f
+ARG DOWNLOAD_URL=https://gitext.gfz-potsdam.de/api/v4/projects/263/repository/archive.tar.gz?sha=$COMMIT_SHA
+ADD $DOWNLOAD_URL /root/easywave.tar.gz
+
+WORKDIR /root
+
+# shadow workaround needed: https://github.com/camptocamp/puppet-accounts/issues/35#issuecomment-366412237
+# /var/run/sshd bug: https://bugs.launchpad.net/ubuntu/+source/openssh/+bug/45234
+
+RUN chown worker:worker -R /home/worker && \
+    chmod 0700 /home/worker/.ssh && \
+    tar xf /root/easywave.tar.gz && \
+    rm /root/easywave.tar.gz && \
+    cd easyWave-$COMMIT_SHA-$COMMIT_SHA/code && \
+    /bin/sh ./bootstrap.sh && \
+    ./configure --prefix=/usr && \
+    make && \
+    make install && \
+    which easywave && \
+    ssh-keygen -A && \
+    chown worker:worker /home/worker/.ssh/authorized_keys && \
+    chmod 600 /home/worker/.ssh/authorized_keys && \
+    sed -i s/worker:!/"worker:*"/g /etc/shadow && \
+    echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config && \
+    mkdir /var/run/sshd && \
+    chmod 0755 /var/run/sshd
+
+# for debugging purposes: get version of easywave
+RUN easywave --help || true
+
+EXPOSE 22
+
+ENTRYPOINT ["/bin/sh", "-c", "exec /usr/sbin/sshd -D -e"]

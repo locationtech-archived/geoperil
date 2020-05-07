@@ -286,7 +286,7 @@ public final class Services {
 
         cursor = coll.find(new BasicDBObject("type", "jet_color"));
         for (DBObject obj: cursor) {
-            Double threshold = (Double) obj.get("threshold");
+            Double threshold = Double.valueOf(obj.get("threshold").toString());
             String color = (String) obj.get("color");
 
             GlobalParameter.jets.put(threshold, color);

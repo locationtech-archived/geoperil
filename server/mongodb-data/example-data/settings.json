@@ -7,7 +7,7 @@
     {
         "_id": { "$oid": "666666666666666666666666" },
         "type" : "dirs",
-        "results": "/tmp/geoperil/results/"
+        "results": "/tmp/geoperil/results"
     },
     {
         "_id": { "$oid": "888888888888888888888888" },
@@ -16,28 +16,51 @@
         "value": "/tmp/geoperil/localdir"
     },
     {
-        "_id": { "$oid": "999999999999999999999999" },
-        "args": "-gpu -gpu-nreal 2 -gpu-nvirt 2",
-        "count": 2,
-        "dir": "/home/worker/EasyWave/web/worker",
-        "hardware": "GeForce GTX TITAN X",
-        "host": "cuda-server",
-        "priority": 10,
-        "remote": true,
-        "slots": 0,
-        "type": "worker",
-        "user": "worker"
+        "_id": { "$oid": "555555555555555555555500" },
+        "type": "jet_color",
+        "threshold": "10.0",
+        "color": "#5c005c"
     },
     {
-        "_id": { "$oid": "101010101010101010101010" },
+        "_id": { "$oid": "555555555555555555555501" },
+        "type": "jet_color",
+        "threshold": "5.0",
+        "color": "#fe00fa"
+    },
+    {
+        "_id": { "$oid": "555555555555555555555502" },
+        "type": "jet_color",
+        "threshold": "2.0",
+        "color": "#ad0000"
+    },
+    {
+        "_id": { "$oid": "555555555555555555555503" },
+        "type": "jet_color",
+        "threshold": "1.0",
+        "color": "#f50000"
+    },
+    {
+        "_id": { "$oid": "555555555555555555555504" },
+        "type": "jet_color",
+        "threshold": "0.5",
+        "color": "#ff6100"
+    },
+    {
+        "_id": { "$oid": "555555555555555555555505" },
+        "type": "jet_color",
+        "threshold": "0.3",
+        "color": "#fdfd01"
+    },
+    {
+        "_id": { "$oid": "999999999999999999999999" },
         "args": "",
         "count": 2,
-        "dir": "/home/worker/HySEA/web/worker",
-        "hardware": "GeForce GTX TITAN X",
-        "host": "cuda-server",
+        "dir": "/home/worker/easywave/web/worker",
+        "hardware": "CPU",
+        "host": "worker",
         "priority": 10,
         "remote": true,
-        "slots": 2,
+        "slots": 1,
         "type": "worker",
         "user": "worker"
     },

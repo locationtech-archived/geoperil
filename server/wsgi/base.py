@@ -185,7 +185,7 @@ def floatdef(val, default=0.0):
 
 loadconfig("config.cfg")
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 cherrypy.config.update({
     'environment': 'embedded',

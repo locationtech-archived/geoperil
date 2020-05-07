@@ -152,10 +152,11 @@ public final class EasyWaveAdapter extends TsunamiAdapter {
     throws IOException, SimulationException {
         int simTime = task.duration + extraTime;
         String cmdParams = String.format(
-            "-grid ../grid_%d.grd -poi locations.inp -poi_dt_out 30 -poi_"
+            "-grid /data/grid_%d.grd -poi locations.inp -poi_dt_out 30 -poi_"
             + "search_dist 20 -source fault.inp -propagation %d -step 1 "
-            + "-ssh_arrival 0.001 -time %d -verbose -adjust_ztop %s",
-            task.gridres, task.dt_out, simTime, args
+            + "-dump %d -ssh_arrival 0.001 -time %d -verbose -adjust_ztop %s",
+            task.gridres, task.dt_out, task.dt_out * convertToSeconds,
+            simTime, args
         );
         String line;
         task.curSimTime = 0;
@@ -209,10 +210,9 @@ public final class EasyWaveAdapter extends TsunamiAdapter {
         /* Generate travel times as KML file. */
         sshCon[1].runCmd(
             String.format(
-                "gdal_contour -f kml -i 10 -fl %1$d eWave.2D.%2$05d.time "
+                "gdal_contour -f kml -i 10 -fl %1$d eWave.2D.time "
                 + "arrival.%1$d.kml",
-                time - extraTime,
-                time * convertToSeconds
+                time - extraTime
             )
         );
         return super.createIsolines(task, time);
