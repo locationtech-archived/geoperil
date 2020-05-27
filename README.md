@@ -11,6 +11,15 @@ tsunamis, including:
 * individual accounts with different permission levels
 * modifying earthquake parameters or creating fictional earthquakes to simulate a scenario
 
+## Google Maps API
+
+You will need a Google Maps API key to activate the core features. Add the key
+to following files:
+
+* server/www/embed-data/index.php
+* server/www/eqinfo/index.php
+* server/www/index.html
+
 ## Development environment
 
 You can start a local development environment by using docker containers.
