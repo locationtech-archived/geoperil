@@ -1,0 +1,5 @@
+FROM nginx:1.19
+
+COPY nginx-dev.conf /etc/nginx/nginx.conf
+
+EXPOSE 8080

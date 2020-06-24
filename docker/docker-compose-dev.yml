@@ -1,0 +1,73 @@
+version: '3.7'
+
+services:
+  nginx:
+    # rewrites frontend endpoint to localhost:8080/
+    # and tomcat endpoint to localhost:8080/api
+    image: geoperil-nginx
+    build:
+      context: ../backend/nginx
+      dockerfile: Dockerfile.dev
+    container_name: geoperil-nginx
+    depends_on:
+      - geoperil-api
+      - geoperil-frontend
+    links:
+      - geoperil-api
+      - geoperil-frontend
+    ports:
+      - 8080:8080
+
+  mongo:
+    image: mongo:3.6.12
+    container_name: geoperil-mongo
+    volumes:
+      - 'mongo-data-volume:/data/db'
+
+  mongo-data:
+    image: geoperil-mongodb-data
+    build:
+      context: ../backend/mongodb-data
+      dockerfile: Dockerfile
+    container_name: geoperil-mongodb-data
+    depends_on:
+      - mongo
+    links:
+      - mongo
+    volumes:
+      - ../backend/mongodb-data/example-data:/tmp/example-data
+    command: ["/tmp/scripts/wait-for-mongodb.sh", "/tmp/scripts/import-example-data.sh"]
+    environment:
+      - MONGO_HOST=mongo
+      - MONGO_DB=geoperil
+
+  geoperil-api:
+    # Tomcat with port 8080 and endpoint /geoperil-api/srv/
+    build:
+      context: ../backend/api
+      dockerfile: Dockerfile
+    image: geoperil-api
+    container_name: geoperil-api
+    depends_on:
+      - mongo
+    links:
+      - 'mongo'
+
+  geoperil-frontend:
+    # nuxt server with port 3000
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.dev
+    image: geoperil-frontend
+    container_name: geoperil-frontend
+    volumes:
+      - ../frontend:/opt/geoperil-frontend
+    environment:
+      HOST: 0.0.0.0
+      API_URL: http://localhost:8080/api/
+
+
+
+
+volumes:
+  mongo-data-volume:

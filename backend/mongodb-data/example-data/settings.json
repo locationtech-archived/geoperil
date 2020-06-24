@@ -1,0 +1,88 @@
+[
+    {
+        "_id": { "$oid": "333333333333333333333333" },
+        "type": "urls",
+        "wsgi": "localhost"
+    },
+    {
+        "_id": { "$oid": "666666666666666666666666" },
+        "type" : "dirs",
+        "results": "/tmp/geoperil/results"
+    },
+    {
+        "_id": { "$oid": "888888888888888888888888" },
+        "type": "parameter",
+        "name": "localdir",
+        "value": "/tmp/geoperil/localdir"
+    },
+    {
+        "_id": { "$oid": "555555555555555555555500" },
+        "type": "jet_color",
+        "threshold": "10.0",
+        "color": "#5c005c"
+    },
+    {
+        "_id": { "$oid": "555555555555555555555501" },
+        "type": "jet_color",
+        "threshold": "5.0",
+        "color": "#fe00fa"
+    },
+    {
+        "_id": { "$oid": "555555555555555555555502" },
+        "type": "jet_color",
+        "threshold": "2.0",
+        "color": "#ad0000"
+    },
+    {
+        "_id": { "$oid": "555555555555555555555503" },
+        "type": "jet_color",
+        "threshold": "1.0",
+        "color": "#f50000"
+    },
+    {
+        "_id": { "$oid": "555555555555555555555504" },
+        "type": "jet_color",
+        "threshold": "0.5",
+        "color": "#ff6100"
+    },
+    {
+        "_id": { "$oid": "555555555555555555555505" },
+        "type": "jet_color",
+        "threshold": "0.3",
+        "color": "#fdfd01"
+    },
+    {
+        "_id": { "$oid": "999999999999999999999999" },
+        "args": "",
+        "count": 2,
+        "dir": "/home/worker/easywave/web/worker",
+        "hardware": "CPU",
+        "host": "worker",
+        "priority": 10,
+        "remote": true,
+        "slots": 1,
+        "type": "worker",
+        "user": "worker"
+    },
+    {
+        "_id": { "$oid": "aaaaaaaaaaaaaaaaaaaaaaaa" },
+        "type": "msg_template",
+        "provider": "PROVIDER",
+        "prolog": "%s %s %s",
+        "summary": "SUMMARY",
+        "advise": "ADVISE",
+        "params": "%s %s %s %s %s %s %s %s",
+        "measurements": "%s",
+        "eval_watch_first": "",
+        "eval_advisory_first": "",
+        "eval_info_first": "",
+        "eval_watch_mid": "",
+        "eval_advisory_mid": "",
+        "eval_watch_end": "",
+        "eval_advisory_end": "",
+        "tfps": "%s",
+        "supplement": "",
+        "final": "",
+        "epilog": "%s"
+    }
+]

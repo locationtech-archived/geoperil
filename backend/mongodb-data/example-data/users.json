@@ -1,0 +1,41 @@
+[
+    {
+        "_id": { "$oid": "111111111111111111111111" },
+        "username": "admin",
+        "password": "jGl25bVBBBW96Qi9Te4V37Fnqchz/Eu4qB9vKrRIqRg=",
+        "inst": { "$oid": "444444444444444444444444" },
+        "api": {
+            "key": "da2489ca66484d869131e46482c47727",
+            "enabled": true
+        },
+        "countries" : [ "Indonesia" ],
+        "permissions": {
+            "api": true,
+            "population": false,
+            "comp": true,
+            "chart": true,
+            "fax": true,
+            "new_report": false,
+            "evtset": false,
+            "admin": true,
+            "notify": true,
+            "flood": false,
+            "hysea": true,
+            "sms": true,
+            "intmsg": true,
+            "share": true,
+            "report": true,
+            "manage": true,
+            "ftp": true,
+            "timeline": true,
+            "data": true,
+            "mail": true
+        }
+    },
+    {
+        "_id": { "$oid": "222222222222222222222222" },
+        "username": "test",
+        "password": "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
+        "inst": { "$oid": "444444444444444444444444" }
+    }
+]

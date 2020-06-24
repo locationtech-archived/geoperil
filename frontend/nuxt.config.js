@@ -31,6 +31,7 @@ export default {
   ** https://nuxtjs.org/guide/plugins
   */
   plugins: [
+    { src: '~/plugins/resume-session.js', ssr: false }
   ],
   /*
   ** Nuxt.js dev-modules
@@ -79,5 +80,8 @@ export default {
   ** See https://nuxtjs.org/api/configuration-build/
   */
   build: {
+  },
+  env: {
+    apiUrl: process.env.API_URL || 'http://localhost:8080/geoperil-api/srv/'
   }
 }
