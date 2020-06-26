@@ -5,6 +5,7 @@
   >
     <v-toolbar-title>GeoPeril</v-toolbar-title>
     <v-spacer></v-spacer>
+    <span v-if="$store.state.authUser">{{ $store.state.authUser.username }}</span>
     <SettingsButton v-if="$store.state.authUser" />
     <LogoutButton v-if="$store.state.authUser" />
   </v-app-bar>

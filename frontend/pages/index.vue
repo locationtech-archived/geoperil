@@ -6,6 +6,7 @@ import LoginForm from '../components/LoginForm.vue';
       <v-layout
         column
         align-center
+        fill-height
       >
         <LoginForm v-if="!$store.state.authUser">
         </LoginForm>
@@ -29,3 +30,9 @@ export default {
   }
 }
 </script>
+
+<style>
+.v-application {
+  line-height: 0;
+}
+</style>
