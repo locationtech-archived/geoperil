@@ -9,7 +9,7 @@
 
     <v-tabs-items v-model="tab">
       <TabItem>
-        Test 1
+        <RecentList />
       </TabItem>
 
       <TabItem>
@@ -25,11 +25,13 @@
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import TabItem from './TabItem.vue';
+import TabItem from './TabItem.vue'
+import RecentList from './RecentList.vue';
 
 @Component({
   components: {
-    TabItem
+    TabItem,
+    RecentList
   }
 })
 export default class LeftMenu extends Vue {
