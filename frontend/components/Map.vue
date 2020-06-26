@@ -35,4 +35,12 @@ export default class Map extends Vue {
 #geoperil-map {
   height: 100%;
 }
+
+.ol-attribution.ol-uncollapsible {
+  line-height: 0;
+}
+
+.v-application ul {
+  padding-left: 5px;
+}
 </style>

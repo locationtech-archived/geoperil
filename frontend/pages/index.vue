@@ -30,9 +30,3 @@ export default {
   }
 }
 </script>
-
-<style>
-.v-application {
-  line-height: 0;
-}
-</style>

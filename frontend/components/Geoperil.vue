@@ -15,6 +15,7 @@
         <LeftMenu />
       </v-col>
       <v-col
+        id="map-col"
         cols="9"
         class="fill-height"
       >
@@ -38,3 +39,9 @@ import LeftMenu from './LeftMenu.vue';
 export default class Geoperil extends Vue {
 }
 </script>
+
+<style>
+#map-col {
+  line-height: 0;
+}
+</style>
