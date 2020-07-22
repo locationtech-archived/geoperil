@@ -1,4 +1,5 @@
 import { GetterTree, ActionTree, MutationTree } from 'vuex'
+import type { RootState, Event } from "~/types"
 import axios from 'axios'
 import querystring from 'querystring'
 
@@ -14,8 +15,6 @@ export const FORM_ENCODE_CONFIG = {
 export const state: any = () => ({
   authUser: null
 })
-
-export type RootState = ReturnType<typeof state>
 
 export const getters: GetterTree<RootState, RootState> = {
   user: state => state.authUser
