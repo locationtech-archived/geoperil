@@ -1,5 +1,6 @@
 <template>
   <v-tab-item
+    class="fill-height"
     :transition="false"
     :reverse-transition="false"
   >

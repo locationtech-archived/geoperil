@@ -1,28 +1,22 @@
 <template>
-  <v-container
-    class="ma-0 pa-0"
-    fluid
-    fill-height
+  <v-row
+    class="fill-height"
+    no-gutters
   >
-    <v-row
-      no-gutters
+    <v-col
       class="fill-height"
+      cols="3"
     >
-      <v-col
-        cols="3"
-        class="fill-height"
-      >
-        <LeftMenu />
-      </v-col>
-      <v-col
-        id="map-col"
-        cols="9"
-        class="fill-height"
-      >
-        <Map />
-      </v-col>
-    </v-row>
-  </v-container>
+      <LeftMenu />
+    </v-col>
+    <v-col
+      class="fill-height"
+      id="map-col"
+      cols="9"
+    >
+      <Map />
+    </v-col>
+  </v-row>
 </template>
 
 <script lang="ts">

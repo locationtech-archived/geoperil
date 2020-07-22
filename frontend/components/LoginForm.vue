@@ -1,49 +1,53 @@
 <template>
-  <v-card
-    id="login-form-card"
-    min-width="400"
+  <v-row
+    justify="center"
   >
-    <v-card-title class="headline">Login</v-card-title>
-    <v-card-text>
-      <v-form
-        id="login-form"
-        ref="form"
-        v-model="valid"
-        @submit.prevent="login"
-      >
-        <v-alert v-if="formError" type="error">
-          {{ formError }}
-        </v-alert>
-
-        <v-text-field
-          v-model="formUsername"
-          label="E-Mail"
-          name="username"
-          :rules="nameRules"
-          required
+    <v-card
+      id="login-form-card"
+      min-width="400"
+    >
+      <v-card-title class="headline">Login</v-card-title>
+      <v-card-text>
+        <v-form
+          id="login-form"
+          ref="form"
+          v-model="valid"
+          @submit.prevent="login"
         >
-        </v-text-field>
+          <v-alert v-if="formError" type="error">
+            {{ formError }}
+          </v-alert>
 
-        <v-text-field
-          v-model="formPassword"
-          type="password"
-          label="Password"
-          name="password"
-          :rules="passwordRules"
-          required
-        >
-        </v-text-field>
+          <v-text-field
+            v-model="formUsername"
+            label="E-Mail"
+            name="username"
+            :rules="nameRules"
+            required
+          >
+          </v-text-field>
 
-        <v-btn
-          type="submit"
-          :disabled="!valid"
-          color="success"
-        >
-          Login
-        </v-btn>
-      </v-form>
-    </v-card-text>
-  </v-card>
+          <v-text-field
+            v-model="formPassword"
+            type="password"
+            label="Password"
+            name="password"
+            :rules="passwordRules"
+            required
+          >
+          </v-text-field>
+
+          <v-btn
+            type="submit"
+            :disabled="!valid"
+            color="success"
+          >
+            Login
+          </v-btn>
+        </v-form>
+      </v-card-text>
+    </v-card>
+  </v-row>
 </template>
 
 <script lang="ts">

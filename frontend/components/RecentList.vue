@@ -1,10 +1,12 @@
 <template>
-  <v-container
+  <v-list
+    id="recent-list"
     class="ma-0 pa-0"
-    fluid
   >
-    <v-row
-      class="ma-0 pa-0"
+    <v-list-item
+      v-for="(item, index) in testdata"
+      :key="index"
+      class="ma-0 pa-0 recent-list-item"
     >
       <v-col
         class="ma-0 pa-0 col-icon"
@@ -31,12 +33,12 @@
                 <a
                   href="#"
                   @click="selectEvent"
-                >Fiji Islands Region</a>
+                >{{ item.name }}</a>
               </div>
-              <div class="item-metadata">2020/06/09 &middot; 10:07 UTC &middot; gfz2020sfjkl_gf_2</div>
-              <div class="item-metadata">Lat -17.47° &middot; Lon -176.95° &middot; Depth 542 km</div>
-              <div class="item-metadata">Dip 85° &middot; Strike 138° &middot; Rake 34°</div>
-              <div class="item-potential">No tsunami potential</div>
+              <div class="item-metadata">{{ item.date }} &middot; {{ item.time }} &middot; {{ item.identifier }}</div>
+              <div class="item-metadata">Lat {{ item.lat }}° &middot; Lon {{ item.lon }}° &middot; Depth {{ item.depth }} km</div>
+              <div class="item-metadata">Dip {{ item.dip }}° &middot; Strike {{ item.strike }}° &middot; Rake {{ item.rake }}°</div>
+              <div class="item-potential">{{ item.infotext }}</div>
             </v-list-item-content>
           </v-list-item>
 
@@ -63,8 +65,8 @@
       >
         <v-icon>mdi-web</v-icon>
       </v-col>
-    </v-row>
-  </v-container>
+    </v-list-item>
+  </v-list>
 </template>
 
 <script lang="ts">
@@ -72,6 +74,22 @@ import { Vue, Component } from 'nuxt-property-decorator'
 
 @Component
 export default class RecentList extends Vue {
+  private testdata: Object = [
+    {
+      name: 'Fiji Islands Region',
+      date: '2020/06/09',
+      time: '10:07 UTC',
+      identifier: 'gfz2020sfjkl_gf_2',
+      lat: -17.47,
+      lon: -176.95,
+      depth: 542,
+      dip: 85,
+      strike: 138,
+      rake: 34,
+      infotext: 'No tsunami potential'
+    }
+  ]
+
   public async selectEvent() {
     console.log('selectEvent')
     const id = 'TODO'
@@ -108,5 +126,16 @@ export default class RecentList extends Vue {
 
 .col-icon {
   text-align: center;
+}
+
+div#recent-list {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.recent-list-item {
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #bbb;
 }
 </style>

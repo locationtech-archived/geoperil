@@ -3,16 +3,17 @@ import LoginForm from '../components/LoginForm.vue';
   <v-app>
     <AppBar />
     <v-main>
-      <v-layout
-        column
+      <v-container
+        id="main-container"
+        class="ma-0 pa-0"
         align-center
-        fill-height
+        fluid
       >
         <LoginForm v-if="!$store.state.authUser">
         </LoginForm>
         <Geoperil v-else>
         </Geoperil>
-      </v-layout>
+      </v-container>
     </v-main>
   </v-app>
 </template>
@@ -30,3 +31,9 @@ export default {
   }
 }
 </script>
+
+<style>
+#main-container {
+  height: calc(100vh - 64px);
+}
+</style>
