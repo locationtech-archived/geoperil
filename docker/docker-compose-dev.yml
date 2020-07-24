@@ -15,6 +15,7 @@ services:
     links:
       - geoperil-api
       - geoperil-frontend
+      # - geoperil-wsgi
     ports:
       - 8080:8080
 
@@ -51,7 +52,7 @@ services:
     depends_on:
       - mongo
     links:
-      - 'mongo'
+      - mongo
 
   geoperil-frontend:
     # nuxt server with port 3000
@@ -66,8 +67,29 @@ services:
       HOST: 0.0.0.0
       API_URL: http://localhost:8080/api/
 
+  geoperil-wsgi:
+    build:
+      context: ../backend/wsgi
+      dockerfile: Dockerfile.dev
+    image: geoperil-wsgi
+    container_name: geoperil-wsgi
+    volumes:
+      - ../backend/wsgi:/srv/geoperil/wsgi
+    depends_on:
+      - mongo
+    links:
+      - mongo
 
-
+  geoperil-eventfeeder:
+    build:
+      context: ../backend/eventfeeder
+      dockerfile: Dockerfile
+    image: geoperil-eventfeeder
+    container_name: geoperil-eventfeeder
+    depends_on:
+      - geoperil-wsgi
+    links:
+      - geoperil-wsgi
 
 volumes:
   mongo-data-volume:

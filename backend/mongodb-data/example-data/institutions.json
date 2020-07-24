@@ -9,5 +9,16 @@
         },
         "descr": "INST DESCR",
         "msg_name": "MSG TEST"
+    },
+    {
+        "_id": { "$oid": "129038741092358720985723" },
+        "name": "eventfeeder",
+        "secret": "fff38afc-0863-4ed0-94ca-dc76b06524e6",
+        "api": {
+            "key": "db289dbee40e4d2199c30004124d858f",
+            "enabled": true
+        },
+        "descr": "Eventfeeder",
+        "msg_name": "MSG TEST"
     }
 ]
