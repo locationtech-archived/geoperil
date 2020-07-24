@@ -3,7 +3,7 @@ version: '3.7'
 services:
   nginx:
     # rewrites frontend endpoint to localhost:8080/
-    # and tomcat endpoint to localhost:8080/api
+    # and tomcat endpoint to localhost:8080/srv
     image: geoperil-nginx
     build:
       context: ../backend/nginx
@@ -12,6 +12,7 @@ services:
     depends_on:
       - geoperil-api
       - geoperil-frontend
+      # - geoperil-wsgi
     links:
       - geoperil-api
       - geoperil-frontend
@@ -22,6 +23,8 @@ services:
   mongo:
     image: mongo:3.6.12
     container_name: geoperil-mongo
+    ports:
+      - 27017:27017 # TODO: remove in production
     volumes:
       - 'mongo-data-volume:/data/db'
 
@@ -65,7 +68,7 @@ services:
       - ../frontend:/opt/geoperil-frontend
     environment:
       HOST: 0.0.0.0
-      API_URL: http://localhost:8080/api/
+      API_URL: http://localhost:8080/srv/
 
   geoperil-wsgi:
     build:
@@ -90,6 +93,22 @@ services:
       - geoperil-wsgi
     links:
       - geoperil-wsgi
+
+  geoperil-db-manager:
+    build:
+      context: ../backend/db-manager
+      dockerfile: Dockerfile
+    image: geoperil-db-manager
+    container_name: geoperil-db-manager
+    depends_on:
+      - mongo
+      - nginx
+    links:
+      - mongo
+      - nginx
+    environment:
+      - MONGO_CONNECTION=mongodb://mongo:27017
+      - DATA_INSERT_URL=http://nginx:8080/srv/data_insert
 
 volumes:
   mongo-data-volume:

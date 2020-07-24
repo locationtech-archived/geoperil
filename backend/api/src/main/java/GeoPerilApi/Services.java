@@ -1395,9 +1395,11 @@ public final class Services {
             // computeById(
             // request, null, null, id, refineId, comp, useAccel, useApiKey
             // );
-            computeByIdForUser(
-                user, compId.toString(), comp, useAccel, gridres, algo
-            );
+            // TODO: handle computation
+            System.out.println("TODO: process simulation");
+            //computeByIdForUser(
+            //   user, compId.toString(), comp, useAccel, gridres, algo
+            //);
         } else {
             /* run request in a separate thread to avoid blocking */
             new Thread() {
