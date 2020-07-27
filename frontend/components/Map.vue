@@ -2,6 +2,7 @@
   <vl-map
     :load-tiles-while-animating="true"
     :load-tiles-while-interacting="true"
+    data-projection="EPSG:4326"
     id="geoperil-map"
   >
     <vl-view
@@ -15,6 +16,22 @@
     <vl-layer-tile id="osm">
       <vl-source-osm></vl-source-osm>
     </vl-layer-tile>
+
+    <vl-layer-vector>
+      <vl-source-vector>
+        <vl-feature
+          v-for="(item, index) in recentEvents"
+          :key="index"
+        >
+          <vl-geom-point :coordinates="[ item.lon, item.lat ]"></vl-geom-point>
+          <!--
+          <vl-style-box>
+            <vl-style-icon src="marker.png"></vl-style-icon>
+          </vl-style-box>
+          -->
+        </vl-feature>
+      </vl-source-vector>
+    </vl-layer-vector>
   </vl-map>
 </template>
 
@@ -28,6 +45,10 @@ export default class Map extends Vue {
   private minZoom: Number = 2
   private center: Number[] = [0, 0]
   private rotation: Number = 0
+
+  get recentEvents(): Event[] {
+    return this.$store.getters.events
+  }
 }
 </script>
 
