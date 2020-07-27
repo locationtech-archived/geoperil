@@ -8,6 +8,7 @@
       cols="2"
     >
       <v-icon>mdi-map-marker</v-icon>
+      <p class="item-mag">{{ data.mag }}</p>
     </v-col>
     <v-col
       class="ma-0 pa-0"
@@ -27,12 +28,12 @@
               <a
                 href="#"
                 @click="selectEvent"
-              >{{ data.name }}</a>
+              >{{ data.region }}</a>
             </div>
             <div class="item-metadata">{{ data.date }} &middot; {{ data.time }} &middot; {{ data.identifier }}</div>
             <div class="item-metadata">Lat {{ data.lat }}° &middot; Lon {{ data.lon }}° &middot; Depth {{ data.depth }} km</div>
-            <div class="item-metadata">Dip {{ data.dip }}° &middot; Strike {{ data.strike }}° &middot; Rake {{ data.rake }}°</div>
-            <div class="item-potential">{{ data.infotext }}</div>
+            <div class="item-metadata" v-if="data.dip && data.strike && data.rake">Dip {{ data.dip }}° &middot; Strike {{ data.strike }}° &middot; Rake {{ data.rake }}°</div>
+            <div class="item-potential">{{ getInfoText }}</div>
           </v-list-item-content>
         </v-list-item>
 
@@ -64,7 +65,7 @@
 
 <script lang="ts">
 import { Vue, Component, Prop } from 'nuxt-property-decorator'
-import type { Event } from "~/types"
+import { Event } from "~/types"
 
 @Component
 export default class EventItem extends Vue {
@@ -72,6 +73,23 @@ export default class EventItem extends Vue {
     required: true
   })
   data!: Event
+
+  get getInfoText(): string {
+    const data: Event = this.data
+
+    // TODO analyse data.dip/rake/strike + seaArea
+    if (!data.seaArea) {
+      return 'Inland, no simulation processed'
+    }
+
+    if (!(data.lat && data.lon && data.mag && data.depth
+      && data.dip && data.rake && data.strike)) {
+      return 'Missing parameters'
+    }
+
+    // TODO: check if simulation was processed -> 'prepared', 'done'
+    return 'No tsunami potential'
+  }
 
   public async selectEvent() {
     console.log('selectEvent')
@@ -97,12 +115,16 @@ export default class EventItem extends Vue {
   text-decoration: underline;
 }
 
+p.item-mag {
+  font-weight: bold;
+}
+
 .item-metadata {
-  font-size: small;
+  font-size: 12px;
 }
 
 .item-potential {
-  font-size: big;
+  font-size: 14px;
   margin-top: 5px;
   color: #1976d2;
 }

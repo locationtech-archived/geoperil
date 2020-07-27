@@ -1,5 +1,6 @@
 <template>
   <v-row
+    v-if="!isLoading"
     class="fill-height"
     no-gutters
   >
@@ -31,6 +32,11 @@ import LeftMenu from './LeftMenu.vue';
   }
 })
 export default class Geoperil extends Vue {
+  private isLoading: boolean = true
+  async mounted() {
+    await this.$store.dispatch('fetchEvents')
+    this.isLoading = false
+  }
 }
 </script>
 

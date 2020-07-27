@@ -22,18 +22,21 @@ import LoginForm from '../components/LoginForm.vue';
 import LoginForm from '../components/LoginForm.vue'
 import AppBar from '../components/AppBar.vue'
 import Geoperil from '../components/Geoperil.vue'
+import { Vue, Component } from 'nuxt-property-decorator'
 
-export default {
+@Component({
   components: {
     Geoperil,
     AppBar,
     LoginForm
   }
+})
+export default class Index extends Vue {
 }
 </script>
 
 <style>
 #main-container {
-  height: calc(100vh - 64px);
+  height: calc(100vh - 50px);
 }
 </style>

@@ -1,27 +1,31 @@
 import { GetterTree, ActionTree, MutationTree } from 'vuex'
-import type { RootState, Event } from "~/types"
+import { RootState, Event } from "~/types"
 import axios from 'axios'
 import querystring from 'querystring'
 
 export const API_SIGNIN_URL = process.env.apiUrl + 'signin'
 export const API_SESSION_URL = process.env.apiUrl + 'session'
 export const API_SIGNOUT_URL = process.env.apiUrl + 'signout'
+export const API_FETCH_URL = process.env.apiUrl + 'fetch'
 export const FORM_ENCODE_CONFIG = {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
   }
 }
 
-export const state: any = () => ({
+export const state = (): RootState => ({
+  recentEvents: [],
   authUser: null
 })
 
 export const getters: GetterTree<RootState, RootState> = {
-  user: state => state.authUser
+  user: state => state.authUser,
+  events: state => state.recentEvents
 }
 
 export const mutations: MutationTree<RootState> = {
-  SET_USER: (state, user: any) => ( state.authUser = user )
+  SET_USER: (state, user: any) => ( state.authUser = user ),
+  SET_EVENTS: (state, events: Event[]) => ( state.recentEvents = events )
 }
 
 export const actions: ActionTree<RootState, RootState> = {
@@ -30,6 +34,52 @@ export const actions: ActionTree<RootState, RootState> = {
     if (req.session && req.session.authUser) {
       commit('SET_USER', req.session.authUser)
     }
+  },
+
+  async fetchEvents({ commit }) {
+    var evArr: Event[] = []
+
+    const { data } = await axios.post(
+      API_FETCH_URL,
+      querystring.stringify({
+        limit: 200,
+        delay: 0}
+      ),
+      FORM_ENCODE_CONFIG
+    )
+
+    if (! ('main' in data)) {
+      throw new Error('Invalid response from fetch backend')
+    }
+
+    for (let i = 0; i < data.main.length; i++) {
+      const entry = data.main[i]
+      const props = entry.prop
+      const datetime = new Date(props.date)
+      const date = datetime.getUTCFullYear() + '/'
+        + (datetime.getUTCMonth() + 1).toString().padStart(2, '0') + '/'
+        + datetime.getUTCDate().toString().padStart(2, '0')
+      const time = datetime.getUTCHours().toString().padStart(2, '0') + ':'
+        + datetime.getUTCMinutes().toString().padStart(2, '0') + ' UTC'
+      evArr.push(
+        {
+          identifier: entry._id,
+          region: props.region,
+          date: date,
+          time: time,
+          lat: props.latitude,
+          lon: props.longitude,
+          mag: props.magnitude,
+          depth: props.depth,
+          dip: props.dip,
+          rake: props.rake,
+          strike: props.strike,
+          seaArea: props.sea_area
+        } as Event
+      )
+    }
+
+    commit('SET_EVENTS', evArr)
   },
 
   async login ({ commit }, { username, password }: any) {

@@ -4,7 +4,7 @@
     class="ma-0 pa-0"
   >
     <EventItem
-      v-for="(item, index) in testdata"
+      v-for="(item, index) in recentEvents"
       :key="index"
       :data="item"
     >
@@ -13,8 +13,9 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component } from 'nuxt-property-decorator'
+import { Vue, Component, Watch } from 'nuxt-property-decorator'
 import EventItem from './EventItem.vue'
+import { Event } from '../types'
 
 @Component({
   components: {
@@ -22,21 +23,9 @@ import EventItem from './EventItem.vue'
   }
 })
 export default class RecentList extends Vue {
-  private testdata: Object = [
-    {
-      name: 'Fiji Islands Region',
-      date: '2020/06/09',
-      time: '10:07 UTC',
-      identifier: 'gfz2020sfjkl_gf_2',
-      lat: -17.47,
-      lon: -176.95,
-      depth: 542,
-      dip: 85,
-      strike: 138,
-      rake: 34,
-      infotext: 'No tsunami potential'
-    }
-  ]
+  get recentEvents(): Event[] {
+    return this.$store.getters.events
+  }
 }
 </script>
 

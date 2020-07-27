@@ -1,3 +1,6 @@
-// import { Event } from "~/types";
+import { User, Event } from "~/types";
 
-export type RootState = ReturnType<any>
+export interface RootState {
+    recentEvents: Event[],
+    authUser: User | null
+}
