@@ -1,6 +1,7 @@
 <template>
   <v-list-item
     class="ma-0 pa-0 recent-list-item"
+    :class="isSelected ? 'selected' : ''"
     @mouseover="hoverEvent"
     @mouseleave="hoverEnd"
   >
@@ -95,6 +96,14 @@ export default class EventItem extends Vue {
     return 'No tsunami potential'
   }
 
+  get isSelected(): boolean {
+    const sel = this.$store.getters.selectedEvent
+    if (!sel) {
+      return false
+    }
+    return sel.identifier == this.data.identifier
+  }
+
   public hoverEnd() {
     this.hover = false
     this.$store.commit('SET_HOVERED', null)
@@ -108,10 +117,8 @@ export default class EventItem extends Vue {
     this.$store.commit('SET_HOVERED', this.data)
   }
 
-  public async selectEvent() {
-    console.log('selectEvent')
-    const id = 'TODO'
-    await this.$store.dispatch('selectEvent', id)
+  public selectEvent() {
+    this.$store.commit('SET_SELECTED', this.data)
   }
 }
 </script>
@@ -154,6 +161,15 @@ p.item-mag {
   border-bottom-width: 1px;
   border-bottom-style: solid;
   border-bottom-color: #bbb;
+}
+
+.recent-list-item.selected {
+  border-left: 8px solid rgb(198, 0, 0);
+  background-color: rgb(225, 238, 250);
+}
+
+.recent-list-item.selected div {
+  background-color: rgb(225, 238, 250);
 }
 
 .recent-list-item:hover {

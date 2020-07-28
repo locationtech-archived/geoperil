@@ -17,6 +17,7 @@ export const state = (): RootState => ({
   recentEvents: [],
   recentEventsGeojson: [],
   hoveredEvent: null,
+  selectedEvent: null,
   authUser: null
 })
 
@@ -24,14 +25,26 @@ export const getters: GetterTree<RootState, RootState> = {
   authUser: state => state.authUser,
   recentEvents: state => state.recentEvents,
   recentEventsGeojson: state => state.recentEventsGeojson,
-  hoveredEvent: state => state.hoveredEvent
+  hoveredEvent: state => state.hoveredEvent,
+  selectedEvent: state => state.selectedEvent,
 }
 
 export const mutations: MutationTree<RootState> = {
-  SET_USER: (state, user: any) => ( state.authUser = user ),
-  SET_EVENTS: (state, events: Event[]) => ( state.recentEvents = events ),
-  SET_EVENTS_GEOJSON: (state, events: any) => ( state.recentEventsGeojson = events ),
-  SET_HOVERED: (state, hovered: Event | null) => ( state.hoveredEvent = hovered )
+  SET_USER: (state, user: any) => (
+    state.authUser = user
+  ),
+  SET_EVENTS: (state, events: Event[]) => (
+    state.recentEvents = events
+  ),
+  SET_EVENTS_GEOJSON: (state, events: any) => (
+    state.recentEventsGeojson = events
+  ),
+  SET_HOVERED: (state, hovered: Event | null) => (
+    state.hoveredEvent = hovered
+  ),
+  SET_SELECTED: (state, selected: Event | null) => (
+    state.selectedEvent = selected
+  ),
 }
 
 export const actions: ActionTree<RootState, RootState> = {
@@ -91,6 +104,10 @@ export const actions: ActionTree<RootState, RootState> = {
           geometry: {
             type: "Point",
             coordinates: [ props.longitude, props.latitude ]
+          },
+          properties: {
+            mag: props.magnitude,
+            depth: props.depth
           }
         }
       )
