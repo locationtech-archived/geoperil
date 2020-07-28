@@ -1208,6 +1208,7 @@ public final class Services {
         @FormParam("rake") final Double rake,
         @FormParam("date") final String dateStr,
         @FormParam("sea_area") final String sea_area,
+        @FormParam("bb_url") final String bb_url,
         @FormParam("root") final String root,
         @FormParam("parent") final String parent,
         @FormParam("comp") final Integer comp,
@@ -1302,6 +1303,7 @@ public final class Services {
         sub.put("strike", strike);
         sub.put("rake", rake);
         sub.put("sea_area", sea_area);
+        sub.put("bb_url", bb_url);
 
         if (useAccel == null) {
             useAccel = 1;
@@ -1349,7 +1351,7 @@ public final class Services {
             refineId = (Long) entry.get("refineId");
 
             if (refineId == null) {
-                refineId = new Long(0);
+                refineId = 0L;
             }
 
             refineId++;

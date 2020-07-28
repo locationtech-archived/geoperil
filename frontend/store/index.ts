@@ -94,7 +94,8 @@ export const actions: ActionTree<RootState, RootState> = {
           dip: props.dip,
           rake: props.rake,
           strike: props.strike,
-          seaArea: props.sea_area
+          seaArea: props.sea_area,
+          bbUrl: props.bb_url,
         } as Event
       )
 

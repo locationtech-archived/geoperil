@@ -1,7 +1,7 @@
 export * from './state'
 
 export interface User {
-  username: string
+  username: string,
 }
 
 export interface Event {
@@ -16,5 +16,6 @@ export interface Event {
   dip: number,
   strike: number,
   rake: number,
-  seaArea: string
+  seaArea: string,
+  bbUrl: string,
 }

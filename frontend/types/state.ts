@@ -5,5 +5,5 @@ export interface RootState {
     hoveredEvent: Event | null,
     selectedEvent: Event | null,
     recentEventsGeojson: any,
-    authUser: User | null
+    authUser: User | null,
 }

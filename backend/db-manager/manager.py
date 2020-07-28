@@ -134,7 +134,7 @@ def get_type(dbm, inst, entry, areas, names):
     return "existing"
 
 
-def read_mt(entry, year, eventid):
+def read_mt(alertsurl, entry, year, eventid):
     pattern = r"""(\d\d/\d\d/\d\d) (\d\d:\d\d:\d\d.\d\d)
 (.*?)
 Epicenter: (.*?) (.*?)
@@ -147,11 +147,9 @@ Best Double Couple:.*?
  NP1:Strike=([ \d]{1,3}) Dip=([ \d]{1,2}) Slip=([- \d]{1,4})
 """
 
-    response = urllib.request.urlopen(
-        "https://geofon.gfz-potsdam.de/data/alerts/"
-        + str(year) + "/"
-        + eventid + "/mt.txt"
-    )
+    urlprefix = alertsurl + "/" + str(year) + "/" + eventid + "/"
+
+    response = urllib.request.urlopen(urlprefix + "mt.txt")
     data = response.read()
     txt = data.decode('utf-8')
 
@@ -165,6 +163,8 @@ Best Double Couple:.*?
     entry["strike"] = float(prop[7])
     entry["dip"] = float(prop[8])
     entry["rake"] = float(prop[9])
+
+    entry["bb_url"] = urlprefix + "bb32.png"
 
     return 0
 
@@ -185,6 +185,7 @@ def init_world_seas_lookup(regions_file):
 def main():
     mongo_connection = os.environ['MONGO_CONNECTION']
     data_insert_url = os.environ['DATA_INSERT_URL']
+    geofon_alerts_url = os.environ['GEOFON_ALERTS_URL']
 
     start_time = time.time()
 
@@ -232,7 +233,7 @@ def main():
 
         # get moment tensor if available
         if event['hasMT'] == 'yes':
-            ret = read_mt(entry, date.year, event['id'])
+            ret = read_mt(geofon_alerts_url, entry, date.year, event['id'])
 
             if ret != 0:
                 print('Error: ', entry["id"])

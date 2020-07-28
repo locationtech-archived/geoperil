@@ -61,7 +61,7 @@
       align-self="center"
       cols="2"
     >
-      <v-icon>mdi-web</v-icon>
+      <img v-if="'bbUrl' in data" :src="data.bbUrl" />
     </v-col>
   </v-list-item>
 </template>
