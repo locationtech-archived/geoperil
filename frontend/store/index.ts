@@ -15,17 +15,23 @@ export const FORM_ENCODE_CONFIG = {
 
 export const state = (): RootState => ({
   recentEvents: [],
+  recentEventsGeojson: [],
+  hoveredEvent: null,
   authUser: null
 })
 
 export const getters: GetterTree<RootState, RootState> = {
-  user: state => state.authUser,
-  events: state => state.recentEvents
+  authUser: state => state.authUser,
+  recentEvents: state => state.recentEvents,
+  recentEventsGeojson: state => state.recentEventsGeojson,
+  hoveredEvent: state => state.hoveredEvent
 }
 
 export const mutations: MutationTree<RootState> = {
   SET_USER: (state, user: any) => ( state.authUser = user ),
-  SET_EVENTS: (state, events: Event[]) => ( state.recentEvents = events )
+  SET_EVENTS: (state, events: Event[]) => ( state.recentEvents = events ),
+  SET_EVENTS_GEOJSON: (state, events: any) => ( state.recentEventsGeojson = events ),
+  SET_HOVERED: (state, hovered: Event | null) => ( state.hoveredEvent = hovered )
 }
 
 export const actions: ActionTree<RootState, RootState> = {
@@ -38,6 +44,7 @@ export const actions: ActionTree<RootState, RootState> = {
 
   async fetchEvents({ commit }) {
     var evArr: Event[] = []
+    var evGeojsonArr: any[] = []
 
     const { data } = await axios.post(
       API_FETCH_URL,
@@ -77,9 +84,20 @@ export const actions: ActionTree<RootState, RootState> = {
           seaArea: props.sea_area
         } as Event
       )
+
+      evGeojsonArr.push(
+        {
+          type: "Feature",
+          geometry: {
+            type: "Point",
+            coordinates: [ props.longitude, props.latitude ]
+          }
+        }
+      )
     }
 
     commit('SET_EVENTS', evArr)
+    commit('SET_EVENTS_GEOJSON', evGeojsonArr)
   },
 
   async login ({ commit }, { username, password }: any) {
@@ -121,7 +139,7 @@ export const actions: ActionTree<RootState, RootState> = {
   },
 
   async logout ({ commit }) {
-    const user = this.getters.user
+    const user = this.getters.authUser
 
     if (!('username' in user) || !user.username) {
       throw new Error('You are not logged in')

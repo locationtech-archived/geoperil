@@ -1,6 +1,8 @@
 <template>
   <v-list-item
     class="ma-0 pa-0 recent-list-item"
+    @mouseover="hoverEvent"
+    @mouseleave="hoverEnd"
   >
     <v-col
       class="ma-0 pa-0 col-icon"
@@ -74,6 +76,8 @@ export default class EventItem extends Vue {
   })
   data!: Event
 
+  private hover: boolean = false
+
   get getInfoText(): string {
     const data: Event = this.data
 
@@ -89,6 +93,19 @@ export default class EventItem extends Vue {
 
     // TODO: check if simulation was processed -> 'prepared', 'done'
     return 'No tsunami potential'
+  }
+
+  public hoverEnd() {
+    this.hover = false
+    this.$store.commit('SET_HOVERED', null)
+  }
+
+  public hoverEvent() {
+    if (this.hover) {
+      return
+    }
+    this.hover = true
+    this.$store.commit('SET_HOVERED', this.data)
   }
 
   public async selectEvent() {
@@ -137,5 +154,13 @@ p.item-mag {
   border-bottom-width: 1px;
   border-bottom-style: solid;
   border-bottom-color: #bbb;
+}
+
+.recent-list-item:hover {
+  background-color: rgb(195, 211, 225);
+}
+
+.recent-list-item:hover div {
+  background-color: rgb(195, 211, 225);
 }
 </style>

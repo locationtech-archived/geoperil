@@ -24,7 +24,7 @@ import { Event } from '../types'
 })
 export default class RecentList extends Vue {
   get recentEvents(): Event[] {
-    return this.$store.getters.events
+    return this.$store.getters.recentEvents
   }
 }
 </script>

@@ -6,6 +6,8 @@ export default {
   ** See https://nuxtjs.org/api/configuration-mode
   */
   mode: 'spa',
+  //mode: 'universal',
+  //devtools: true,
   /*
   ** Headers of the page
   ** See https://nuxtjs.org/api/configuration-head
@@ -85,5 +87,5 @@ export default {
   },
   env: {
     apiUrl: process.env.API_URL || 'http://localhost:8080/geoperil-api/srv/'
-  }
+  },
 }
