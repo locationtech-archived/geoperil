@@ -7,6 +7,7 @@
       v-for="(item, index) in recentEvents"
       :key="index"
       :data="item"
+      @change-to-compose-tab="handleChangeComposeTab"
     >
     </EventItem>
   </v-list>
@@ -25,6 +26,10 @@ import { Event } from '../types'
 export default class RecentList extends Vue {
   get recentEvents(): Event[] {
     return this.$store.getters.recentEvents
+  }
+
+  public handleChangeComposeTab(): void {
+    this.$emit('change-to-compose-tab')
   }
 }
 </script>

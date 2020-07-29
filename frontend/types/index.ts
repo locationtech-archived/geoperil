@@ -4,8 +4,16 @@ export interface User {
   username: string,
 }
 
+export interface ComputeRequest {
+  event: Event,
+  duration: number,
+  algorithm: string,
+  gridres: number,
+}
+
 export interface Event {
   region: string,
+  datetime: Date,
   date: string,
   time: string,
   identifier: string,
@@ -16,6 +24,9 @@ export interface Event {
   dip: number,
   strike: number,
   rake: number,
+  slip: number,
+  len: number,
+  width: number,
   seaArea: string,
   bbUrl: string,
 }

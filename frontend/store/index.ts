@@ -1,12 +1,17 @@
 import { GetterTree, ActionTree, MutationTree } from 'vuex'
-import { RootState, Event } from "~/types"
+import { RootState, Event, ComputeRequest } from "~/types"
 import axios from 'axios'
 import querystring from 'querystring'
 
-export const API_SIGNIN_URL = process.env.apiUrl + 'signin'
-export const API_SESSION_URL = process.env.apiUrl + 'session'
-export const API_SIGNOUT_URL = process.env.apiUrl + 'signout'
-export const API_FETCH_URL = process.env.apiUrl + 'fetch'
+// add trailing slash to API URL if not present
+// 'as string' needed since apiUrl could be undefined, but shouldn't !
+export const API_BASE_URL = process.env.apiUrl
+  + ((process.env.apiUrl as string).endsWith('/') ? '' : '/')
+export const API_SIGNIN_URL = API_BASE_URL + 'signin'
+export const API_SESSION_URL = API_BASE_URL + 'session'
+export const API_SIGNOUT_URL = API_BASE_URL + 'signout'
+export const API_FETCH_URL = API_BASE_URL + 'fetch'
+export const API_COMPUTE_URL = API_BASE_URL + 'compute'
 export const FORM_ENCODE_CONFIG = {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
@@ -18,21 +23,20 @@ export const state = (): RootState => ({
   recentEventsGeojson: [],
   hoveredEvent: null,
   selectedEvent: null,
+  composeEvent: null,
   authUser: null
 })
 
 export const getters: GetterTree<RootState, RootState> = {
-  authUser: state => state.authUser,
   recentEvents: state => state.recentEvents,
   recentEventsGeojson: state => state.recentEventsGeojson,
   hoveredEvent: state => state.hoveredEvent,
   selectedEvent: state => state.selectedEvent,
+  composeEvent: state => state.composeEvent,
+  authUser: state => state.authUser,
 }
 
 export const mutations: MutationTree<RootState> = {
-  SET_USER: (state, user: any) => (
-    state.authUser = user
-  ),
   SET_EVENTS: (state, events: Event[]) => (
     state.recentEvents = events
   ),
@@ -45,11 +49,17 @@ export const mutations: MutationTree<RootState> = {
   SET_SELECTED: (state, selected: Event | null) => (
     state.selectedEvent = selected
   ),
+  SET_COMPOSE: (state, compose: Event | null) => (
+    state.composeEvent = compose
+  ),
+  SET_USER: (state, user: any) => (
+    state.authUser = user
+  ),
 }
 
 export const actions: ActionTree<RootState, RootState> = {
   // nuxtServerInit is called by Nuxt.js before server-rendering every page
-  nuxtServerInit ({ commit }, { req }) {
+  nuxtServerInit({ commit }, { req }) {
     if (req.session && req.session.authUser) {
       commit('SET_USER', req.session.authUser)
     }
@@ -85,6 +95,7 @@ export const actions: ActionTree<RootState, RootState> = {
         {
           identifier: entry._id,
           region: props.region,
+          datetime: datetime,
           date: date,
           time: time,
           lat: props.latitude,
@@ -118,7 +129,7 @@ export const actions: ActionTree<RootState, RootState> = {
     commit('SET_EVENTS_GEOJSON', evGeojsonArr)
   },
 
-  async login ({ commit }, { username, password }: any) {
+  async login({ commit }, { username, password }: any) {
     const requestBody = {
       username: username,
       password: password
@@ -145,7 +156,7 @@ export const actions: ActionTree<RootState, RootState> = {
     }
   },
 
-  async session ({ commit }) {
+  async session({ commit }) {
     const { data } = await axios.post(API_SESSION_URL)
     if ('status' in data
       && 'user' in data
@@ -156,7 +167,7 @@ export const actions: ActionTree<RootState, RootState> = {
     }
   },
 
-  async logout ({ commit }) {
+  async logout({ commit }) {
     const user = this.getters.authUser
 
     if (!('username' in user) || !user.username) {
@@ -177,5 +188,59 @@ export const actions: ActionTree<RootState, RootState> = {
     } else {
       throw new Error('Logout was not succesfull')
     }
-  }
+  },
+
+  async sendCompute({ commit }, compute: ComputeRequest) {
+    const event = compute.event
+
+    let requestBody = {}
+
+    if (!!event.mag) {
+      requestBody = {
+        name: event.region,
+        lat: event.lat,
+        lon: event.lon,
+        depth: event.depth,
+        dip: event.dip,
+        strike: event.strike,
+        rake: event.rake,
+        dur: compute.duration,
+        mag: event.mag,
+        // root
+        // parent
+        date: event.datetime.toISOString(),
+        algo: compute.algorithm.toLowerCase(),
+        gridres: compute.gridres
+      }
+    } else {
+      requestBody = {
+        name: event.region,
+        lat: event.lat,
+        lon: event.lon,
+        depth: event.depth,
+        dip: event.dip,
+        strike: event.strike,
+        rake: event.rake,
+        dur: compute.duration,
+        slip: event.slip,
+        length: event.len,
+        width: event.width,
+        // root
+        // parent
+        date: event.datetime.toISOString(),
+        algo: compute.algorithm.toLowerCase(),
+        gridres: compute.gridres
+      }
+    }
+
+    const { data } = await axios.post(
+      API_COMPUTE_URL,
+      querystring.stringify(requestBody),
+      FORM_ENCODE_CONFIG
+    )
+
+    if (!('status' in data && data.status == 'success')) {
+      throw new Error('Sending the computation request was not successful')
+    }
+  },
 }

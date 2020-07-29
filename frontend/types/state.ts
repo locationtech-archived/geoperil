@@ -1,9 +1,10 @@
-import { User, Event } from "~/types";
+import { User, Event } from "~/types"
 
 export interface RootState {
     recentEvents: Event[],
+    recentEventsGeojson: any,
     hoveredEvent: Event | null,
     selectedEvent: Event | null,
-    recentEventsGeojson: any,
+    composeEvent: Event | null,
     authUser: User | null,
 }

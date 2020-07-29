@@ -36,7 +36,7 @@
             <div class="item-metadata">{{ data.date }} &middot; {{ data.time }} &middot; {{ data.identifier }}</div>
             <div class="item-metadata">Lat {{ data.lat }}° &middot; Lon {{ data.lon }}° &middot; Depth {{ data.depth }} km</div>
             <div class="item-metadata" v-if="data.dip && data.strike && data.rake">Dip {{ data.dip }}° &middot; Strike {{ data.strike }}° &middot; Rake {{ data.rake }}°</div>
-            <div class="item-potential">{{ getInfoText }}</div>
+            <div class="item-potential">{{ eventInfoText }}</div>
           </v-list-item-content>
         </v-list-item>
 
@@ -46,12 +46,31 @@
             justify="start"
             class="ma-0"
           >
-            <v-btn class="pl-1 pr-1" min-width="0" text><v-icon color="#154f8a" size="16">mdi-cloud-download</v-icon></v-btn>
-            <v-btn class="pl-1 pr-1" min-width="0" text><v-icon color="#154f8a" size="16">mdi-information-outline</v-icon></v-btn>
-            <v-btn class="pl-1 pr-1" min-width="0" text><v-icon color="#154f8a" size="16">mdi-reload</v-icon></v-btn>
-            <v-btn class="pl-1 pr-1" min-width="0" text><v-icon color="#154f8a" size="16">mdi-telegram</v-icon></v-btn>
-            <v-btn class="pl-1 pr-1" min-width="0" text><v-icon color="#154f8a" size="16">mdi-share</v-icon></v-btn>
-            <v-btn class="pl-1 pr-1" min-width="0" text><v-icon color="#154f8a" size="16">mdi-sort-ascending</v-icon></v-btn>
+            <ActionButton
+              icon="mdi-cloud-download"
+              helpText="Download report"
+            />
+            <ActionButton
+              icon="mdi-information-outline"
+              helpText="Inspect event"
+            />
+            <ActionButton
+              icon="mdi-reload"
+              helpText="Modify and reprocess"
+              @click="handleCompose"
+            />
+            <ActionButton
+              icon="mdi-telegram"
+              helpText="Send message"
+            />
+            <ActionButton
+              icon="mdi-share"
+              helpText="Share map"
+            />
+            <ActionButton
+              icon="mdi-sort-ascending"
+              helpText="Show timeline"
+            />
           </v-row>
         </v-card-actions>
       </v-card>
@@ -69,17 +88,19 @@
 <script lang="ts">
 import { Vue, Component, Prop } from 'nuxt-property-decorator'
 import { Event } from "~/types"
+import ActionButton from './ActionButton.vue'
 
-@Component
+@Component({
+  components: {
+    ActionButton,
+  }
+})
 export default class EventItem extends Vue {
-  @Prop({
-    required: true
-  })
-  data!: Event
+  @Prop({ required: true }) data!: Event
 
   private hover: boolean = false
 
-  get getInfoText(): string {
+  get eventInfoText(): string {
     const data: Event = this.data
 
     // TODO analyse data.dip/rake/strike + seaArea
@@ -119,6 +140,11 @@ export default class EventItem extends Vue {
 
   public selectEvent() {
     this.$store.commit('SET_SELECTED', this.data)
+  }
+
+  public handleCompose() {
+    this.$store.commit('SET_COMPOSE', this.data)
+    this.$emit('change-to-compose-tab')
   }
 }
 </script>

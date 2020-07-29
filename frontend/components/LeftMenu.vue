@@ -13,7 +13,9 @@
       v-model="tab"
     >
       <TabItem>
-        <RecentList />
+        <RecentList
+          @change-to-compose-tab="changeTab(2)"
+        />
       </TabItem>
 
       <TabItem>
@@ -21,7 +23,9 @@
       </TabItem>
 
       <TabItem>
-        Test 3
+        <ComposeSimulation
+          @change-to-mylist-tab="changeTab(1)"
+        />
       </TabItem>
     </v-tabs-items>
   </v-tabs>
@@ -30,16 +34,26 @@
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
 import TabItem from './TabItem.vue'
-import RecentList from './RecentList.vue';
+import RecentList from './RecentList.vue'
+import ComposeSimulation from './ComposeSimulation.vue'
 
 @Component({
   components: {
     TabItem,
-    RecentList
+    RecentList,
+    ComposeSimulation,
   }
 })
 export default class LeftMenu extends Vue {
   private tab: any = null
+
+  public changeTab(which: number) {
+    this.tab = which
+  }
+
+  get composeEvent(): Event | null {
+    return this.$store.getters.composeEvent
+  }
 }
 </script>
 
