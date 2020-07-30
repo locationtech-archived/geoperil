@@ -7,4 +7,5 @@ export interface RootState {
     selectedEvent: Event | null,
     composeEvent: Event | null,
     authUser: User | null,
+    lastUpdate: string | null,
 }

@@ -1,0 +1,43 @@
+FROM python:3.7-buster
+
+ARG COMMIT_SHA=909c7ae0a4b35244d0747dd492cff35f8bf9413f
+ARG DOWNLOAD_URL=https://gitext.gfz-potsdam.de/api/v4/projects/263/repository/archive.tar.gz?sha=$COMMIT_SHA
+
+WORKDIR /root
+
+RUN wget "$DOWNLOAD_URL" -O easywave.tar.gz && \
+    tar xf easywave.tar.gz && \
+    rm easywave.tar.gz
+
+RUN apt-get update && \
+    apt-get install -y \
+        autoconf \
+        g++ \
+        binutils \
+        make \
+        gdal-bin \
+        python-gdal
+
+RUN cd easyWave-$COMMIT_SHA-$COMMIT_SHA/code && \
+    /bin/sh ./bootstrap.sh && \
+    ./configure --prefix=/usr && \
+    make && \
+    make install && \
+    which easywave
+
+# for debugging purposes: get version of easywave
+RUN easywave --help || true
+
+COPY wps/requirements.txt .
+
+RUN pip3 install -r requirements.txt
+
+COPY wps /srv/
+
+WORKDIR /srv/wps
+
+VOLUME [ "/data" ]
+
+EXPOSE 5000
+
+CMD ["/usr/bin/python3.7", "wps.py" ]

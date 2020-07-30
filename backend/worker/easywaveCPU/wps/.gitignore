@@ -1,0 +1,3 @@
+logs/pywps-logs.sqlite3
+logs/pywps.log
+outputs/*.xml

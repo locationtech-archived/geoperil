@@ -147,6 +147,8 @@ def parseesmc(data, idprefix="ESMC-"):
             time.strptime(evtime, '%Y-%m-%d %H:%M:%S %Z')
         )
         evmag = elm.findtext("{https://www.emsc-csem.org}magnitude").strip()
+        # remove multiple spaces to avoid empty splits
+        evmag = re.sub(r" +", " ", evmag)
         event["mag"] = float(evmag.split(" ")[1])
         event["magtype"] = evmag.split(" ")[0]
         event["depth"] = float(

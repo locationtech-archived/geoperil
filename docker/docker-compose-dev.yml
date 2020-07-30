@@ -10,13 +10,11 @@ services:
       dockerfile: Dockerfile.dev
     container_name: geoperil-nginx
     depends_on:
-      - geoperil-api
       - geoperil-frontend
-      # - geoperil-wsgi
+      - geoperil-wsgi
     links:
-      - geoperil-api
       - geoperil-frontend
-      # - geoperil-wsgi
+      - geoperil-wsgi
     ports:
       - 8080:8080
 
@@ -45,18 +43,6 @@ services:
       - MONGO_HOST=mongo
       - MONGO_DB=geoperil
 
-  geoperil-api:
-    # Tomcat with port 8080 and endpoint /geoperil-api/srv/
-    build:
-      context: ../backend/api
-      dockerfile: Dockerfile
-    image: geoperil-api
-    container_name: geoperil-api
-    depends_on:
-      - mongo
-    links:
-      - mongo
-
   geoperil-frontend:
     # nuxt server with port 3000
     build:
@@ -68,7 +54,7 @@ services:
       - ../frontend:/opt/geoperil-frontend
     environment:
       HOST: 0.0.0.0
-      API_URL: http://localhost:8080/srv/
+      WEBGUISRV_URL: http://localhost:8080/webguisrv/
 
   geoperil-wsgi:
     build:
@@ -80,8 +66,10 @@ services:
       - ../backend/wsgi:/srv/geoperil/wsgi
     depends_on:
       - mongo
+      - geoperil-easywave-worker-0
     links:
       - mongo
+      - geoperil-easywave-worker-0
 
   geoperil-eventfeeder:
     build:
@@ -93,6 +81,8 @@ services:
       - geoperil-wsgi
     links:
       - geoperil-wsgi
+    environment:
+      - FEEDERSRV_URL=http://geoperil-wsgi/feedersrv/feedhazardevent
 
   geoperil-db-manager:
     build:
@@ -110,5 +100,26 @@ services:
       - MONGO_CONNECTION=mongodb://mongo:27017
       - DATA_INSERT_URL=http://nginx:8080/srv/data_insert
 
+  global-grid-datasets:
+    image: gitext.gfz-potsdam.de:5000/geoperil/global-grid-datasets:20200526
+    container_name: geoperil-grids
+    volumes:
+      - grid-data-volume:/data
+
+  geoperil-easywave-worker-0:
+    build:
+      context: ../backend/worker/easywaveCPU
+      dockerfile: Dockerfile.dev
+    image: geoperil-easywave-worker-0
+    container_name: geoperil-easywave-worker-0
+    ports:
+      - 5000:5000 # TODO: remove in production
+    volumes:
+      - ../backend/worker/easywaveCPU/wps:/srv/wps
+      - grid-data-volume:/data
+    depends_on:
+      - global-grid-datasets
+
 volumes:
   mongo-data-volume:
+  grid-data-volume:

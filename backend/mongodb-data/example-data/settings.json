@@ -2,7 +2,7 @@
     {
         "_id": { "$oid": "333333333333333333333333" },
         "type": "urls",
-        "wsgi": "localhost"
+        "wsgi": "http://localhost/"
     },
     {
         "_id": { "$oid": "666666666666666666666666" },
@@ -53,16 +53,11 @@
     },
     {
         "_id": { "$oid": "999999999999999999999999" },
-        "args": "",
-        "count": 2,
-        "dir": "/home/worker/easywave/web/worker",
         "hardware": "CPU",
-        "host": "worker",
-        "priority": 10,
-        "remote": true,
-        "slots": 1,
-        "type": "worker",
-        "user": "worker"
+        "algorithm": "easywave",
+        "wpsurl": "http://geoperil-worker-0/wps",
+        "wpsprocess": "easywavecpu",
+        "type": "worker"
     },
     {
         "_id": { "$oid": "aaaaaaaaaaaaaaaaaaaaaaaa" },

@@ -86,6 +86,6 @@ export default {
   build: {
   },
   env: {
-    apiUrl: process.env.API_URL || 'http://localhost:8080/geoperil-api/srv/'
+    webguisrvUrl: process.env.WEBGUISRV_URL || 'http://localhost:8080/geoperil-wsgi/webguisrv/',
   },
 }

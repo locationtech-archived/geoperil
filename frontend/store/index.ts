@@ -3,15 +3,15 @@ import { RootState, Event, ComputeRequest } from "~/types"
 import axios from 'axios'
 import querystring from 'querystring'
 
-// add trailing slash to API URL if not present
-// 'as string' needed since apiUrl could be undefined, but shouldn't !
-export const API_BASE_URL = process.env.apiUrl
-  + ((process.env.apiUrl as string).endsWith('/') ? '' : '/')
-export const API_SIGNIN_URL = API_BASE_URL + 'signin'
-export const API_SESSION_URL = API_BASE_URL + 'session'
-export const API_SIGNOUT_URL = API_BASE_URL + 'signout'
-export const API_FETCH_URL = API_BASE_URL + 'fetch'
-export const API_COMPUTE_URL = API_BASE_URL + 'compute'
+// add trailing slash to URL if not present
+// 'as string' needed for TS since it could be undefined, but should not
+export const WEBGUISRV_BASE_URL = process.env.webguisrvUrl
+  + ((process.env.webguisrvUrl as string).endsWith('/') ? '' : '/')
+export const API_SIGNIN_URL = WEBGUISRV_BASE_URL + 'signin'
+export const API_SESSION_URL = WEBGUISRV_BASE_URL + 'session'
+export const API_SIGNOUT_URL = WEBGUISRV_BASE_URL + 'signout'
+export const API_FETCH_URL = WEBGUISRV_BASE_URL + 'get_events'
+export const API_COMPUTE_URL = WEBGUISRV_BASE_URL + 'compute'
 export const FORM_ENCODE_CONFIG = {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
@@ -24,7 +24,8 @@ export const state = (): RootState => ({
   hoveredEvent: null,
   selectedEvent: null,
   composeEvent: null,
-  authUser: null
+  authUser: null,
+  lastUpdate: null,
 })
 
 export const getters: GetterTree<RootState, RootState> = {
@@ -34,6 +35,7 @@ export const getters: GetterTree<RootState, RootState> = {
   selectedEvent: state => state.selectedEvent,
   composeEvent: state => state.composeEvent,
   authUser: state => state.authUser,
+  lastUpdate: state => state.lastUpdate,
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -55,6 +57,9 @@ export const mutations: MutationTree<RootState> = {
   SET_USER: (state, user: any) => (
     state.authUser = user
   ),
+  SET_LAST_UPDATE: (state, ts: string) => (
+    state.lastUpdate = ts
+  ),
 }
 
 export const actions: ActionTree<RootState, RootState> = {
@@ -73,17 +78,16 @@ export const actions: ActionTree<RootState, RootState> = {
       API_FETCH_URL,
       querystring.stringify({
         limit: 200,
-        delay: 0}
-      ),
+      }),
       FORM_ENCODE_CONFIG
     )
 
-    if (! ('main' in data)) {
+    if (!('events' in data) || !('ts' in data)) {
       throw new Error('Invalid response from fetch backend')
     }
 
-    for (let i = 0; i < data.main.length; i++) {
-      const entry = data.main[i]
+    for (let i = 0; i < data.events.length; i++) {
+      const entry = data.events[i]
       const props = entry.prop
       const datetime = new Date(props.date)
       const date = datetime.getUTCFullYear() + '/'
@@ -127,6 +131,7 @@ export const actions: ActionTree<RootState, RootState> = {
 
     commit('SET_EVENTS', evArr)
     commit('SET_EVENTS_GEOJSON', evGeojsonArr)
+    commit('SET_LAST_UPDATE', data.ts)
   },
 
   async login({ commit }, { username, password }: any) {

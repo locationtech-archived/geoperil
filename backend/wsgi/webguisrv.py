@@ -54,7 +54,10 @@ class WebGuiSrv(BaseSrv):
     def session(self):
         user = self.getUser()
         if user is not None:
-            return jssuccess(username=user["username"])
+            userret = {
+                "username": user["username"]
+            }
+            return jssuccess(user=userret)
         return jsfail()
 
     @cherrypy.expose
@@ -91,7 +94,10 @@ class WebGuiSrv(BaseSrv):
                 cookie['server_cookie']['path'] = '/'
                 cookie['server_cookie']['max-age'] = 3600
                 cookie['server_cookie']['version'] = 1
-                return jssuccess()
+                user = {
+                    "username": user["username"]
+                }
+                return jssuccess(user=user)
         return jsfail()
 
     @cherrypy.expose
