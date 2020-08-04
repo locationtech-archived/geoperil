@@ -2,7 +2,6 @@ version: '3.7'
 
 services:
   nginx:
-    # rewrites frontend endpoint to localhost:8080/
     # and tomcat endpoint to localhost:8080/srv
     image: geoperil-nginx
     build:
@@ -98,7 +97,7 @@ services:
       - nginx
     environment:
       - MONGO_CONNECTION=mongodb://mongo:27017
-      - DATA_INSERT_URL=http://nginx:8080/srv/data_insert
+      - DATA_INSERT_URL=http://nginx:8080/webguisrv/data_insert
 
   global-grid-datasets:
     image: gitext.gfz-potsdam.de:5000/geoperil/global-grid-datasets:20200526

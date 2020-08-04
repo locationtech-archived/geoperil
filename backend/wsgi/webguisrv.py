@@ -34,6 +34,7 @@ import binascii
 import logging
 import hashlib
 import json
+import pymongo
 from uuid import uuid4
 from textwrap import wrap
 from base64 import b64encode
@@ -1717,6 +1718,291 @@ class WebGuiSrv(BaseSrv):
         ]
         res = self._db["logins"].aggregate(aggr)
         return jssuccess(users=list(res))
+
+    def getApiAuth(self, apikey, which):
+        if apikey is None:
+            return None
+
+        inst = self._db["institutions"].find_one({
+            "api.key": apikey,
+            "api.enabled": True
+        })
+        user = self._db["institutions"].find_one({
+            "api.key": apikey,
+            "api.enabled": True,
+            "permissions.api": True
+        })
+
+        if user is not None and (which is None or which == "user"):
+            return user
+
+        if inst is not None and (which is None or which == "inst"):
+            return inst
+
+        return None
+
+    def getInst(self, dbUser):
+        instId = dbUser["inst"]
+        instObj = self._db["institutions"].find_one({
+            "_id": instId
+        })
+
+        if instObj is None:
+            return None
+
+        return instObj["name"]
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def data_insert(
+        self, **params
+    ):
+        inst = params.get("inst")
+        secret = params.get("secret")
+        id = params.get("id")
+        name = params.get("name")
+        lon = params.get("lon")
+        lat = params.get("lat")
+        mag = params.get("mag")
+        slip = params.get("slip")
+        length = params.get("length")
+        width = params.get("width")
+        depth = params.get("depth")
+        dip = params.get("dip")
+        strike = params.get("strike")
+        rake = params.get("rake")
+        date = params.get("date")
+        sea_area = params.get("sea_area")
+        root = params.get("root")
+        parent = params.get("parent")
+        comp = params.get("comp")
+        accel = params.get("accel")
+        gridres = params.get("gridres")
+        apikey = params.get("apikey")
+        algo = params.get("algo", "easywave")
+        bb_url = params.get("bb_url")
+
+        if lat is not None:
+            lat = float(lat)
+
+        if lon is not None:
+            lon = float(lon)
+
+        if depth is not None:
+            depth = float(depth)
+
+        if mag is not None:
+            mag = float(mag)
+
+        if slip is not None:
+            slip = float(slip)
+
+        if length is not None:
+            length = float(length)
+
+        if width is not None:
+            width = float(width)
+
+        if dip is not None:
+            dip = int(dip)
+
+        if strike is not None:
+            strike = int(strike)
+
+        if rake is not None:
+            rake = int(rake)
+
+        if gridres is not None:
+            gridres = int(gridres)
+
+        useApiKey = apikey
+        useAccel = accel
+        useRoot = root
+
+        # Check for invalid parameter configurations.
+        if (inst is not None or secret is not None) and useApiKey is not None:
+            return jsfail(error="Don't mix 'apikey' and 'secret'.")
+
+        if (
+            mag is not None
+            and (slip is not None or length is not None or width is not None)
+        ):
+            return jsfail(
+                error="Don't mix 'mag' with 'slip', 'length' and 'width'."
+            )
+
+        # Support 'inst' and 'secret' for compatibility reasons.
+        if inst is not None and secret is not None:
+            # Obtain the 'apikey' and pretend a call to the new api.
+            tmpInst = self._db["institutions"].find_one({
+                "name": inst,
+                "secret": secret
+            })
+
+            if tmpInst is None:
+                return jsdeny()
+
+            if "api" not in tmpInst and "key" not in tmpInst["api"]:
+                return jsfail(error="No 'apikey' set for this institution!")
+
+            useApiKey = tmpInst["api"]["key"]
+
+        # Continue with the new API.
+        if useApiKey is None or id is None or name is None or date is None:
+            return jsfail(error="required parameters are missing")
+
+        dbUser = self.getApiAuth(useApiKey, "user")
+        dbInst = self.getApiAuth(useApiKey, "inst")
+
+        # check if we got a valid institution and the correct secret
+        userId = None
+        username = None
+        user = None
+
+        if dbUser is not None:
+            userId = dbUser["_id"]
+            username = dbUser["username"]
+            user = {
+                "name": username,
+                "objId": userId,
+                "inst": self.getInst(dbUser)
+            }
+        elif dbInst is not None:
+            userId = dbInst["_id"]
+            username = dbInst["name"]
+            user = {
+                "name": username,
+                "secret": dbInst["secret"],
+                "inst": username
+            }
+        else:
+            return jsdeny(error="Not allowed to use API")
+
+        # get Date object from date string
+        date_time = datetime.datetime.strptime(
+            date, r"%Y-%m-%dT%H:%M:%S.%fZ"
+        )
+
+        if date_time is None:
+            return jsfail(error="Invalid date format")
+
+        # get current timestamp
+        timestamp = datetime.datetime.now()
+
+        # create new sub object that stores the properties
+        sub = {
+            "date": date_time,
+            "region": name,
+            "latitude": lat,
+            "longitude": lon,
+            "magnitude": mag,
+            "slip": slip,
+            "length": length,
+            "width": width,
+            "depth": depth,
+            "dip": dip,
+            "strike": strike,
+            "rake": rake,
+            "sea_area": sea_area,
+            "bb_url": bb_url
+        }
+
+        if useAccel is None:
+            useAccel = 1
+
+        # create new DB object that should be added to the eqs collection
+        obj = {
+            "id": id,
+            "user": userId,
+            "timestamp": timestamp,
+            "prop": sub,
+            "root": useRoot,
+            "parent": parent,
+            "accel": useAccel
+        }
+
+        # create a new event
+        event = {
+            "user": userId,
+            "timestamp": timestamp,
+            "event": "new"
+        }
+
+        refineId = 0
+
+        # get earthquake collection
+        coll = self._db["eqs"]
+
+        # search for given id
+        found = coll.find(
+            {
+                "id": id,
+                "user": userId
+            },
+            sort=[('refineId', pymongo.DESCENDING)]
+        )
+
+        entry = None
+
+        # if id is already used, make a refinement
+        for cursor in found:
+            entry = cursor
+            coll.update(entry, {
+                "$set": {
+                    "depr": True
+                }
+            })
+
+            refineId = entry["refineId"]
+
+            if refineId is None:
+                refineId = 0
+
+            refineId += 1
+
+            # override parent and root attributes
+            if entry.get("root") is None:
+                useRoot = entry["_id"]
+            else:
+                useRoot = entry["root"]
+
+            entry["root"] = useRoot
+            entry["parent"] = entry["_id"]
+
+            # override event type
+            entry["event"] = "update"
+
+            break
+
+        # set refinement and compound Ids
+        compId = id + "_" + username + "_" + str(refineId)
+        obj["_id"] = compId
+        obj["refineId"] = refineId
+        event["id"] = compId
+
+        # insert object into 'eqs' collection
+        coll.insert_one(obj)
+
+        simulate = False
+
+        if comp is not None and (
+            (
+                id is not None and lon is not None and lat is not None
+                and mag is not None and depth is not None and dip is not None
+                and strike is not None and rake is not None
+            ) or (
+                id is not None and lon is not None and lat is not None
+                and slip is not None and length is not None
+                and width is not None and depth is not None and dip is not None
+                and strike is not None and rake is not None
+            )
+        ):
+            # TODO: start simulation
+            pass
+
+        self._db["events"].insert_one(event)
+
+        return jssuccess(refineid=refineId, evtid=compId)
 
 
 application = startapp(WebGuiSrv)

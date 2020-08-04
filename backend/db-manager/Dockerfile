@@ -1,7 +1,7 @@
 FROM python:3.7-buster
 
 ENV MONGO_CONNECTION mongodb://mongo
-ENV DATA_INSERT_URL http://localhost/srv/data_insert
+ENV DATA_INSERT_URL http://localhost/webguisrv/data_insert
 ENV GEOFON_LIST_URL https://geofon.gfz-potsdam.de/eqinfo/list.php
 ENV GEOFON_ALERTS_URL https://geofon.gfz-potsdam.de/data/alerts
 

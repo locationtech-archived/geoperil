@@ -160,9 +160,9 @@ Best Double Couple:.*?
 
     prop = prop[0]
 
-    entry["strike"] = float(prop[7])
-    entry["dip"] = float(prop[8])
-    entry["rake"] = float(prop[9])
+    entry["strike"] = int(prop[7])
+    entry["dip"] = int(prop[8])
+    entry["rake"] = int(prop[9])
 
     entry["bb_url"] = urlprefix + "bb32.png"
 
@@ -275,7 +275,11 @@ def main():
             data_insert_url,
             data
         )
-        urllib.request.urlopen(req).read()
+        try:
+            urllib.request.urlopen(req).read()
+        except:
+            print('Calling the URL failed: ' + data_insert_url)
+            raise
 
         time.sleep(0.05)
 
