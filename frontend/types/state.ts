@@ -6,6 +6,6 @@ export interface RootState {
     hoveredEvent: Event | null,
     selectedEvent: Event | null,
     composeEvent: Event | null,
-    authUser: User | null,
+    user: User | null,
     lastUpdate: string | null,
 }

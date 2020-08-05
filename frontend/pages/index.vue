@@ -9,7 +9,7 @@ import LoginForm from '../components/LoginForm.vue';
         align-center
         fluid
       >
-        <LoginForm v-if="!$store.state.authUser">
+        <LoginForm v-if="!$store.state.user">
         </LoginForm>
         <Geoperil v-else>
         </Geoperil>

@@ -1,5 +1,5 @@
 export default function ({ store, error }: any) {
-  if (!store.state.authUser) {
+  if (!store.state.user) {
     error({
       message: 'You are not connected',
       statusCode: 403

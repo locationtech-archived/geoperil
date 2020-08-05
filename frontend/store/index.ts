@@ -24,7 +24,7 @@ export const state = (): RootState => ({
   hoveredEvent: null,
   selectedEvent: null,
   composeEvent: null,
-  authUser: null,
+  user: null,
   lastUpdate: null,
 })
 
@@ -34,7 +34,7 @@ export const getters: GetterTree<RootState, RootState> = {
   hoveredEvent: state => state.hoveredEvent,
   selectedEvent: state => state.selectedEvent,
   composeEvent: state => state.composeEvent,
-  authUser: state => state.authUser,
+  user: state => state.user,
   lastUpdate: state => state.lastUpdate,
 }
 
@@ -54,8 +54,8 @@ export const mutations: MutationTree<RootState> = {
   SET_COMPOSE: (state, compose: Event | null) => (
     state.composeEvent = compose
   ),
-  SET_USER: (state, user: any) => (
-    state.authUser = user
+  SET_USER: (state, setuser: any) => (
+    state.user = setuser
   ),
   SET_LAST_UPDATE: (state, ts: string) => (
     state.lastUpdate = ts
@@ -65,8 +65,8 @@ export const mutations: MutationTree<RootState> = {
 export const actions: ActionTree<RootState, RootState> = {
   // nuxtServerInit is called by Nuxt.js before server-rendering every page
   nuxtServerInit({ commit }, { req }) {
-    if (req.session && req.session.authUser) {
-      commit('SET_USER', req.session.authUser)
+    if (req.session && req.session.user) {
+      commit('SET_USER', req.session.user)
     }
   },
 
@@ -173,21 +173,13 @@ export const actions: ActionTree<RootState, RootState> = {
   },
 
   async logout({ commit }) {
-    const user = this.getters.authUser
+    const user = this.getters.user
 
     if (!('username' in user) || !user.username) {
       throw new Error('You are not logged in')
     }
 
-    const username = user.username
-    const requestBody = {
-      username: username
-    }
-    const { data } = await axios.post(
-      API_SIGNOUT_URL,
-      querystring.stringify(requestBody),
-      FORM_ENCODE_CONFIG
-    )
+    const { data } = await axios.post(API_SIGNOUT_URL)
     if ('status' in data && data.status == 'success') {
       commit('SET_USER', null)
     } else {
@@ -244,7 +236,7 @@ export const actions: ActionTree<RootState, RootState> = {
       FORM_ENCODE_CONFIG
     )
 
-    if (!('status' in data && data.status == 'success')) {
+    if (!data || !('status' in data && data.status == 'success')) {
       throw new Error('Sending the computation request was not successful')
     }
   },

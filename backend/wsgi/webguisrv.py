@@ -24,17 +24,22 @@
 '''
 
 import time
-import datetime
 import calendar
 import subprocess
 import math
 import re
 import os
+import threading
+import random
 import binascii
 import logging
 import hashlib
 import json
 import pymongo
+import owslib.wps as wps
+from datetime import datetime
+from datetime import timedelta
+from pymongo.database import Database
 from uuid import uuid4
 from textwrap import wrap
 from base64 import b64encode
@@ -47,7 +52,7 @@ from base import \
 from basesrv import BaseSrv
 from msgsrv import sendmail, sendtwilliosms
 
-logger = logging.getLogger("MsgSrv")
+logger = logging.getLogger("WebguiSrv")
 
 
 class WebGuiSrv(BaseSrv):
@@ -83,7 +88,7 @@ class WebGuiSrv(BaseSrv):
             if res:
                 sessionid = str(uuid4())
                 while self._db["users"].find_one(
-                        {"session": sessionid}
+                    {"session": sessionid}
                 ) is not None:
                     sessionid = str(uuid4())
                 self._db["users"].update(
@@ -95,10 +100,8 @@ class WebGuiSrv(BaseSrv):
                 cookie['server_cookie']['path'] = '/'
                 cookie['server_cookie']['max-age'] = 3600
                 cookie['server_cookie']['version'] = 1
-                user = {
-                    "username": user["username"]
-                }
-                return jssuccess(user=user)
+                userObj = self._get_user_obj(user)
+                return jssuccess(user=userObj)
         return jsfail()
 
     @cherrypy.expose
@@ -300,7 +303,7 @@ class WebGuiSrv(BaseSrv):
                 stations = self._db["stations"].find({"inst": inst})
             for station in stations:
                 res.append(station)
-            isotime = datetime.datetime.utcnow().strftime(
+            isotime = datetime.utcnow().strftime(
                 "%Y-%m-%dT%H:%M:%S.%fZ"
             )
             return jssuccess(stations=res, serverTime=isotime)
@@ -352,20 +355,20 @@ class WebGuiSrv(BaseSrv):
                     "_id": user["inst"]
                 })["name"]
             start = calendar.timegm(
-                datetime.datetime.strptime(
+                datetime.strptime(
                     start,
                     "%Y-%m-%dT%H:%M:%S.%fZ"
                 ).timetuple()
             )
             if end is not None:
                 end = calendar.timegm(
-                    datetime.datetime.strptime(
+                    datetime.strptime(
                         end,
                         "%Y-%m-%dT%H:%M:%S.%fZ"
                     ).timetuple()
                 )
             else:
-                end = time.mktime(datetime.datetime.now().timetuple())
+                end = time.mktime(datetime.now().timetuple())
             request = {
                 "inst": inst,
                 "station": station,
@@ -383,7 +386,7 @@ class WebGuiSrv(BaseSrv):
                     res["last"] = val["timestamp"]
                 res["data"].append(
                     (
-                        datetime.datetime.utcfromtimestamp(
+                        datetime.utcfromtimestamp(
                             val["timestamp"]
                         ).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                         val["value"]
@@ -398,20 +401,20 @@ class WebGuiSrv(BaseSrv):
         if user is not None and user["permissions"].get("chart", False):
             ff = max(int(ff), 1)
             start = calendar.timegm(
-                datetime.datetime.strptime(
+                datetime.strptime(
                     start,
                     "%Y-%m-%dT%H:%M:%S.%fZ"
                 ).timetuple()
             )
             if end is not None:
                 end = calendar.timegm(
-                    datetime.datetime.strptime(
+                    datetime.strptime(
                         end,
                         "%Y-%m-%dT%H:%M:%S.%fZ"
                     ).timetuple()
                 )
             else:
-                end = time.mktime(datetime.datetime.now().timetuple())
+                end = time.mktime(datetime.now().timetuple())
             request = {
                 "evid": evid,
                 "station": station,
@@ -434,7 +437,7 @@ class WebGuiSrv(BaseSrv):
                     val["reltime"] = newreltime
                 res["data"].append(
                     (
-                        datetime.datetime.utcfromtimestamp(
+                        datetime.utcfromtimestamp(
                             val["timestamp"]
                         ).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                         val["value"]
@@ -655,7 +658,7 @@ class WebGuiSrv(BaseSrv):
         # check previous message
         msgnr = 1
         now = eqs["prop"]["date"] + (
-            datetime.datetime.utcnow() - eqs["prop"]["date"]
+            datetime.utcnow() - eqs["prop"]["date"]
         ) * 1  # eq["accel"]
         rootid = eqs["root"] if eqs["root"] else eqs["_id"]
         cursor = self._db["messages_sent"].find({
@@ -687,7 +690,7 @@ class WebGuiSrv(BaseSrv):
             for tfp in tfps:
                 arr_min = math.floor(tfp["eta"])
                 arr_sec = math.floor((tfp["eta"] % 1) * 60.0)
-                arr_time = eqs["prop"]["date"] + datetime.timedelta(
+                arr_time = eqs["prop"]["date"] + timedelta(
                     minutes=arr_min,
                     seconds=arr_sec
                 )
@@ -936,7 +939,7 @@ class WebGuiSrv(BaseSrv):
                 for item in country_map:
                     arr_min = math.floor(item["eta"])
                     arr_sec = math.floor((item["eta"] % 1) * 60.0)
-                    arrival = eqs["prop"]["date"] + datetime.timedelta(
+                    arrival = eqs["prop"]["date"] + timedelta(
                         minutes=arr_min,
                         seconds=arr_sec
                     )
@@ -981,7 +984,7 @@ class WebGuiSrv(BaseSrv):
                 level = self.get_tfp_level(cfz)
                 arr_min = math.floor(cfz["eta"])
                 arr_sec = math.floor((cfz["eta"] % 1) * 60.0)
-                arrival = eqs["prop"]["date"] + datetime.timedelta(
+                arrival = eqs["prop"]["date"] + timedelta(
                     minutes=arr_min,
                     seconds=arr_sec
                 )
@@ -1038,7 +1041,7 @@ class WebGuiSrv(BaseSrv):
         msg = template["prolog"] % (
             msgnr,
             provider,
-            datetime.datetime.utcnow().strftime("%H%MZ %d %b %Y").upper()
+            datetime.utcnow().strftime("%H%MZ %d %b %Y").upper()
         )
         # summaries
         for level in sorted(data, key=len):
@@ -1208,7 +1211,7 @@ class WebGuiSrv(BaseSrv):
             "lon": float(lon),
             "lat": float(lat),
             "zoom": int(zoom),
-            "timestamp": datetime.datetime.utcnow(),
+            "timestamp": datetime.utcnow(),
             "userid": userid
         }
         # return ID of inserted object
@@ -1254,6 +1257,192 @@ class WebGuiSrv(BaseSrv):
                 )
                 self.make_image(str(evt["shared_link"]))
         return jssuccess()
+
+    def newRandomId(self, username):
+        found = True
+
+        while found:
+            newid = username + "." + str(uuid4()).split("-")[0]
+            obj1 = self._db["eqs"].find_one({"_id": newid})
+            # TODO search in evtset too?
+            found = (obj1 is not None)
+
+        return newid
+
+    def start_worker(
+        self, worker, user, name, lat, lon, depth, dip, strike, rake, dur, mag,
+        slip, length, width, date, gridres
+    ):
+        url = worker.get("wpsurl")
+        process = worker.get("wpsprocess")
+
+        if url is None or process is None:
+            return jsfail(error="Missing configuration for worker")
+
+        # TODO: start WPS request with owslib and monitor the execution in a
+        # separate thread
+
+        try:
+            server = wps.WebProcessingService(url, version="1.0.0")
+        except Exception:
+            return jsfail(error="Could not connect to WPS server")
+
+        found = False
+
+        for pro in server.processes:
+            if pro.identifier == process:
+                found = True
+                break
+
+        if not found:
+            return jsfail(
+                error="The WPS does not offer the configured process"
+            )
+
+        if slip is None:
+            inputs = [
+                ('lat', lat),
+                ('lon', lon),
+                ('depth', depth),
+                ('dip', dip),
+                ('strike', strike),
+                ('rake', rake),
+                ('duration', dur),
+                ('mag', mag),
+                ('date', date),
+                ('gridres', gridres),
+            ]
+        else:
+            inputs = [
+                ('lat', lat),
+                ('lon', lon),
+                ('depth', depth),
+                ('dip', dip),
+                ('strike', strike),
+                ('rake', rake),
+                ('duration', dur),
+                ('slip', slip),
+                ('length', length),
+                ('width', width),
+                ('date', date),
+                ('gridres', gridres),
+            ]
+
+        execution = server.execute(
+            identifier=process,
+            inputs=inputs,
+            output=[
+                ('arrivaltimes', False)
+            ]
+        )
+
+        newid = self.newRandomId(user["username"])
+        # TODO: parent ?
+        curTime = datetime.now()
+
+        self._db["eqs"].insert_one({
+            "_id": newid,
+            "id": newid,
+            "user": user["_id"],
+            "timestamp": curTime,
+            "progress": 0,
+            "prop": {
+                "date": date,
+                "region": name,
+                "latitude": lat,
+                "longitude": lon,
+                "magnitude": mag,
+                "slip": slip,
+                "length": length,
+                "width": width,
+                "depth": depth,
+                "dip": dip,
+                "strike": strike,
+                "rake": rake
+            }
+            # TODO: root
+            # TODO: parent
+            # TODO: accel ?
+        })
+
+        # TODO: really needed?
+        self._db["events"].insert_one({
+            "id": newid,
+            "user": user["_id"],
+            "timestamp": curTime,
+            "event": "new"
+        })
+
+        thread = WatchExecution(self._db, execution, newid)
+        thread.start()
+
+        return jssuccess()
+
+    @cherrypy.expose
+    def compute(self, **params):
+        name = params.get("name")
+        lat = params.get("lat")
+        lon = params.get("lon")
+        depth = params.get("depth")
+        dip = params.get("dip")
+        strike = params.get("strike")
+        rake = params.get("rake")
+        dur = params.get("dur")
+        mag = params.get("mag")
+        slip = params.get("slip")
+        length = params.get("length")
+        width = params.get("width")
+        date = params.get("date")
+        algo = params.get("algo")
+        gridres = params.get("gridres")
+
+        user = self.getUser()
+
+        if user is None:
+            return jsdeny()
+
+        # TODO: distribute incoming requests evenly on workers
+        # for example with index counter of last used worker in mongo DB
+        # TODO: add exclusive worker for automated computation only
+        # but should be a different function called by data_insert only
+
+        if mag is None and (slip is None or length is None or width is None):
+            return jsfail(
+                error="Either magnitude or slip (with length and width) "
+                + "is required"
+            )
+
+        if (
+            name is None or lat is None or lon is None or depth is None
+            or dur is None or date is None or algo is None or gridres is None
+        ):
+            return jsfail(error="Required parameters are missing")
+
+        algo = algo.lower()
+
+        if algo != "easywave" and algo != "hysea":
+            return jsfail(error="Unknown algorithm")
+
+        worker = list(
+            self._db["settings"].find({
+                "type": "worker",
+                "algorithm": algo
+            })
+        )
+
+        available = len(worker)
+
+        if available < 1:
+            return jsfail(
+                error="No worker for the requested algorithm available"
+            )
+
+        selected = worker[random.randint(0, available - 1)]
+
+        return self.start_worker(
+            selected, user, name, lat, lon, depth, dip, strike, rake, dur, mag,
+            slip, length, width, date, gridres
+        )
 
     # this method is called by the tomcat-server if the computation
     # of an earthquake event is completed - just a workaround until
@@ -1397,15 +1586,14 @@ class WebGuiSrv(BaseSrv):
 
     # retrieve a UTC timestamp from a given datetime object in UTC
     def _get_utc_timestamp(self, utc_date):
-        return (utc_date - datetime.datetime(1970, 1, 1)) / \
-            datetime.timedelta(seconds=1)
+        return (utc_date - datetime(1970, 1, 1)) / timedelta(seconds=1)
 
     # retrieve a UCT datetime object from a given UTC timestamp
     def _get_utc_date(self, utc_timestamp):
         sec_ms = str(utc_timestamp).split('.')
         sec = int(sec_ms[0])
         mic = int(sec_ms[1].ljust(6, '0')) if len(sec_ms) > 1 else 0
-        return datetime.datetime.utcfromtimestamp(sec).replace(microsecond=mic)
+        return datetime.utcfromtimestamp(sec).replace(microsecond=mic)
 
     def _get_events(self, user=None, inst=None, etime=0.0, limit=200):
         query = []
@@ -1483,7 +1671,7 @@ class WebGuiSrv(BaseSrv):
                 {
                     "$set": {
                         "data": json.loads(data),
-                        "modified": datetime.datetime.utcnow()
+                        "modified": datetime.utcnow()
                     }
                 },
                 upsert=True
@@ -1579,6 +1767,7 @@ class WebGuiSrv(BaseSrv):
     # the client - sensible information need to be removed
     def _get_user_obj(self, user):
         user["inst"] = self._db["institutions"].find_one({"_id": user["inst"]})
+        user.pop("_id", None)
         user["inst"].pop("_id", None)
         user["inst"].pop("secret", None)
         user["inst"].pop("apikey", None)
@@ -1719,28 +1908,6 @@ class WebGuiSrv(BaseSrv):
         res = self._db["logins"].aggregate(aggr)
         return jssuccess(users=list(res))
 
-    def getApiAuth(self, apikey, which):
-        if apikey is None:
-            return None
-
-        inst = self._db["institutions"].find_one({
-            "api.key": apikey,
-            "api.enabled": True
-        })
-        user = self._db["institutions"].find_one({
-            "api.key": apikey,
-            "api.enabled": True,
-            "permissions.api": True
-        })
-
-        if user is not None and (which is None or which == "user"):
-            return user
-
-        if inst is not None and (which is None or which == "inst"):
-            return inst
-
-        return None
-
     def getInst(self, dbUser):
         instId = dbUser["inst"]
         instObj = self._db["institutions"].find_one({
@@ -1851,8 +2018,8 @@ class WebGuiSrv(BaseSrv):
         if useApiKey is None or id is None or name is None or date is None:
             return jsfail(error="required parameters are missing")
 
-        dbUser = self.getApiAuth(useApiKey, "user")
-        dbInst = self.getApiAuth(useApiKey, "inst")
+        dbUser = self.auth_api(useApiKey, "user")
+        dbInst = self.auth_api(useApiKey, "inst")
 
         # check if we got a valid institution and the correct secret
         userId = None
@@ -1879,7 +2046,7 @@ class WebGuiSrv(BaseSrv):
             return jsdeny(error="Not allowed to use API")
 
         # get Date object from date string
-        date_time = datetime.datetime.strptime(
+        date_time = datetime.strptime(
             date, r"%Y-%m-%dT%H:%M:%S.%fZ"
         )
 
@@ -1887,7 +2054,7 @@ class WebGuiSrv(BaseSrv):
             return jsfail(error="Invalid date format")
 
         # get current timestamp
-        timestamp = datetime.datetime.now()
+        timestamp = datetime.now()
 
         # create new sub object that stores the properties
         sub = {
@@ -1983,8 +2150,6 @@ class WebGuiSrv(BaseSrv):
         # insert object into 'eqs' collection
         coll.insert_one(obj)
 
-        simulate = False
-
         if comp is not None and (
             (
                 id is not None and lon is not None and lat is not None
@@ -1997,12 +2162,58 @@ class WebGuiSrv(BaseSrv):
                 and strike is not None and rake is not None
             )
         ):
-            # TODO: start simulation
+            # TODO: trigger simulation
             pass
 
+        # TODO: really needed?
         self._db["events"].insert_one(event)
 
         return jssuccess(refineid=refineId, evtid=compId)
+
+
+class WatchExecution(threading.Thread):
+    db: Database = None
+    execution: wps.WPSExecution = None
+    eqsId: str = None
+
+    def __init__(
+        self,
+        db: Database,
+        execution: wps.WPSExecution,
+        eqsId: str
+    ):
+        threading.Thread.__init__(self)
+        self.db = db
+        self.execution = execution
+        self.eqsId = eqsId
+
+    def run(self):
+        eqs = self.db["eqs"].find_one({
+            "id": self.eqsId
+        })
+
+        if eqs is None:
+            raise Exception("Internal error: eqs entry in DB expected")
+
+        while self.execution.isComplete() is False:
+            self.execution.checkStatus(sleepSecs=1)
+            self.db["eqs"].update(eqs, {
+                "$set": {
+                    "progress": self.execution.percentCompleted
+                }
+            })
+
+        if not self.execution.isSucceded():
+            for ex in self.execution.errors:
+                logger.error(
+                    'Error: code=%s, locator=%s, text=%s' %
+                    (ex.code, ex.locator, ex.text)
+                )
+            self.db["eqs"].update(eqs, {
+                "$set": {
+                    "progress": -1
+                }
+            })
 
 
 application = startapp(WebGuiSrv)

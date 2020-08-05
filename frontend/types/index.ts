@@ -1,7 +1,21 @@
 export * from './state'
 
+export interface UserApi {
+  key: string,
+  enabled: boolean,
+}
+
+export interface Institution {
+  name: string,
+  api: UserApi,
+  descr: string,
+  msg_name: string,
+}
+
 export interface User {
   username: string,
+  inst: Institution,
+  countries: any, // TODO
 }
 
 export interface ComputeRequest {

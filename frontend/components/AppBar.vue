@@ -6,9 +6,9 @@
   >
     <v-toolbar-title>GeoPeril</v-toolbar-title>
     <v-spacer></v-spacer>
-    <span v-if="$store.state.authUser">{{ $store.state.authUser.username }}</span>
-    <SettingsButton v-if="$store.state.authUser" />
-    <LogoutButton v-if="$store.state.authUser" />
+    <span v-if="$store.state.user">{{ $store.state.user.username }}</span>
+    <SettingsButton v-if="$store.state.user" />
+    <LogoutButton v-if="$store.state.user" />
   </v-app-bar>
 </template>
 
