@@ -1,5 +1,5 @@
 import { GetterTree, ActionTree, MutationTree } from 'vuex'
-import { RootState, Event, ComputeRequest } from "~/types"
+import { RootState, Event, User, ComputeRequest } from "~/types"
 import axios from 'axios'
 import querystring from 'querystring'
 
@@ -12,15 +12,19 @@ export const API_SESSION_URL = WEBGUISRV_BASE_URL + 'session'
 export const API_SIGNOUT_URL = WEBGUISRV_BASE_URL + 'signout'
 export const API_FETCH_URL = WEBGUISRV_BASE_URL + 'get_events'
 export const API_COMPUTE_URL = WEBGUISRV_BASE_URL + 'compute'
+export const API_UPDATE_URL = WEBGUISRV_BASE_URL + 'update'
 export const FORM_ENCODE_CONFIG = {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
   }
 }
+export const UPDATE_INTERVAL_MSEC = 1000
 
 export const state = (): RootState => ({
   recentEvents: [],
   recentEventsGeojson: [],
+  userEvents: [],
+  userEventsGeojson: [],
   hoveredEvent: null,
   selectedEvent: null,
   composeEvent: null,
@@ -31,6 +35,8 @@ export const state = (): RootState => ({
 export const getters: GetterTree<RootState, RootState> = {
   recentEvents: state => state.recentEvents,
   recentEventsGeojson: state => state.recentEventsGeojson,
+  userEvents: state => state.userEvents,
+  userEventsGeojson: state => state.userEventsGeojson,
   hoveredEvent: state => state.hoveredEvent,
   selectedEvent: state => state.selectedEvent,
   composeEvent: state => state.composeEvent,
@@ -44,6 +50,12 @@ export const mutations: MutationTree<RootState> = {
   ),
   SET_EVENTS_GEOJSON: (state, events: any) => (
     state.recentEventsGeojson = events
+  ),
+  SET_USEREVENTS: (state, events: Event[]) => (
+    state.userEvents = events
+  ),
+  SET_USEREVENTS_GEOJSON: (state, events: any) => (
+    state.userEventsGeojson = events
   ),
   SET_HOVERED: (state, hovered: Event | null) => (
     state.hoveredEvent = hovered
@@ -60,6 +72,58 @@ export const mutations: MutationTree<RootState> = {
   SET_LAST_UPDATE: (state, ts: string) => (
     state.lastUpdate = ts
   ),
+  ADD_EVENTS: (state, events: Event[]) => {
+    for (let i = 0; i < events.length; i++) {
+      addEntryToArr(events[i], state.recentEvents, state.recentEventsGeojson)
+    }
+  },
+  ADD_USEREVENTS: (state, events: Event[]) => {
+    for (let i = 0; i < events.length; i++) {
+      addEntryToArr(events[i], state.userEvents, state.userEventsGeojson)
+    }
+  },
+}
+
+function addEntryToArr(entry: any, evArr: Event[], geojsonArr: any[]) {
+  const props = entry.prop
+  const datetime = new Date(props.date)
+  const date = datetime.getUTCFullYear() + '/'
+    + (datetime.getUTCMonth() + 1).toString().padStart(2, '0') + '/'
+    + datetime.getUTCDate().toString().padStart(2, '0')
+  const time = datetime.getUTCHours().toString().padStart(2, '0') + ':'
+    + datetime.getUTCMinutes().toString().padStart(2, '0') + ' UTC'
+  evArr.push(
+    {
+      identifier: entry._id,
+      region: props.region,
+      datetime: datetime,
+      date: date,
+      time: time,
+      lat: props.latitude,
+      lon: props.longitude,
+      mag: props.magnitude,
+      depth: props.depth,
+      dip: props.dip,
+      rake: props.rake,
+      strike: props.strike,
+      seaArea: props.sea_area,
+      bbUrl: props.bb_url,
+    } as Event
+  )
+
+  geojsonArr.push(
+    {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [ props.longitude, props.latitude ]
+      },
+      properties: {
+        mag: props.magnitude,
+        depth: props.depth
+      }
+    }
+  )
 }
 
 export const actions: ActionTree<RootState, RootState> = {
@@ -71,67 +135,92 @@ export const actions: ActionTree<RootState, RootState> = {
   },
 
   async fetchEvents({ commit }) {
+    const user: User = this.getters.user
     var evArr: Event[] = []
+    var evUserArr: Event[] = []
     var evGeojsonArr: any[] = []
+    var evUserGeojsonArr: any[] = []
 
-    const { data } = await axios.post(
-      API_FETCH_URL,
-      querystring.stringify({
-        limit: 200,
-      }),
-      FORM_ENCODE_CONFIG
-    )
+    const { data } = await axios.post(API_FETCH_URL)
 
-    if (!('events' in data) || !('ts' in data)) {
-      throw new Error('Invalid response from fetch backend')
+    if (
+      !('events' in data)
+      || !('userevents' in data)
+      || !('maxtime' in data)
+    ) {
+      throw new Error('Invalid response from fetch endpoint')
     }
 
     for (let i = 0; i < data.events.length; i++) {
       const entry = data.events[i]
-      const props = entry.prop
-      const datetime = new Date(props.date)
-      const date = datetime.getUTCFullYear() + '/'
-        + (datetime.getUTCMonth() + 1).toString().padStart(2, '0') + '/'
-        + datetime.getUTCDate().toString().padStart(2, '0')
-      const time = datetime.getUTCHours().toString().padStart(2, '0') + ':'
-        + datetime.getUTCMinutes().toString().padStart(2, '0') + ' UTC'
-      evArr.push(
-        {
-          identifier: entry._id,
-          region: props.region,
-          datetime: datetime,
-          date: date,
-          time: time,
-          lat: props.latitude,
-          lon: props.longitude,
-          mag: props.magnitude,
-          depth: props.depth,
-          dip: props.dip,
-          rake: props.rake,
-          strike: props.strike,
-          seaArea: props.sea_area,
-          bbUrl: props.bb_url,
-        } as Event
-      )
+      addEntryToArr(entry, evArr, evGeojsonArr)
+    }
 
-      evGeojsonArr.push(
-        {
-          type: "Feature",
-          geometry: {
-            type: "Point",
-            coordinates: [ props.longitude, props.latitude ]
-          },
-          properties: {
-            mag: props.magnitude,
-            depth: props.depth
-          }
-        }
-      )
+    for (let i = 0; i < data.userevents.length; i++) {
+      const entry = data.events[i]
+      addEntryToArr(entry, evUserArr, evUserGeojsonArr)
     }
 
     commit('SET_EVENTS', evArr)
     commit('SET_EVENTS_GEOJSON', evGeojsonArr)
-    commit('SET_LAST_UPDATE', data.ts)
+    commit('SET_USEREVENTS', evUserArr)
+    commit('SET_USEREVENTS_GEOJSON', evUserGeojsonArr)
+    commit('SET_LAST_UPDATE', data.maxtime)
+  },
+
+  async registerUpdater({ commit }) {
+    const updateCall = async () => {
+      var extraMsec = 0
+      const lastts = this.getters.lastUpdate
+
+      if (!lastts) {
+        // initial fetch of events did not finish yet
+        setTimeout(updateCall, UPDATE_INTERVAL_MSEC)
+        return
+      }
+
+      const requestBody = {
+        ts: lastts
+      }
+
+      try {
+        const { data } = await axios.post(
+          API_UPDATE_URL,
+          querystring.stringify(requestBody),
+          FORM_ENCODE_CONFIG
+        )
+
+        if (!('events' in data && 'userevents' in data && 'maxtime' in data)) {
+          console.error('Invalid response from update endpoint')
+          return
+        }
+
+        const events = data.events
+        const userevents = data.userevents
+        const maxtime = data.maxtime
+
+        if (events.length > 0) {
+          commit('ADD_EVENTS', events)
+        }
+
+        if (userevents.length > 0) {
+          commit('ADD_USEREVENTS', userevents)
+        }
+
+        if (maxtime) {
+          commit('SET_LAST_UPDATE', maxtime)
+        }
+      } catch (error) {
+        // wait longer to avoid spamming the server
+        extraMsec = 5000
+        // TODO: display error message in frontend
+      }
+
+      setTimeout(updateCall, UPDATE_INTERVAL_MSEC + extraMsec)
+    }
+
+    // start continuous update
+    setTimeout(updateCall, UPDATE_INTERVAL_MSEC)
   },
 
   async login({ commit }, { username, password }: any) {

@@ -56,13 +56,13 @@ logger = logging.getLogger("WebguiSrv")
 
 
 class WebGuiSrv(BaseSrv):
+    DATE_PATTERN = r"%Y-%m-%dT%H:%M:%S.%fZ"
+
     @cherrypy.expose
     def session(self):
         user = self.getUser()
         if user is not None:
-            userret = {
-                "username": user["username"]
-            }
+            userret = self._get_user_obj(user)
             return jssuccess(user=userret)
         return jsfail()
 
@@ -1595,37 +1595,51 @@ class WebGuiSrv(BaseSrv):
         mic = int(sec_ms[1].ljust(6, '0')) if len(sec_ms) > 1 else 0
         return datetime.utcfromtimestamp(sec).replace(microsecond=mic)
 
-    def _get_events(self, user=None, inst=None, etime=0.0, limit=200):
+    def _get_events(self, user=None, inst=None, etime=None, limit=200):
         query = []
-        maxtime = 0.0
+
+        if etime is None:
+            time = self._get_utc_date(0)
+        else:
+            time = datetime.strptime(etime, self.DATE_PATTERN)
+
         if user is not None:
             # TODO: check return values of database query
             userid = self._db["users"].find_one({"username": user})["_id"]
             query.append({"user": userid})
+
         if inst is not None:
             # TODO: check return values of database query
             instid = self._db["institutions"].find_one({"name": inst})["_id"]
             query.append({"user": instid})
+
         events = list(
             self._db["eqs"].find(
                 {
                     "$or": query,
                     "depr": None,
-                    "timestamp": {"$gt": self._get_utc_date(etime)}
+                    "timestamp": {"$gt": time}
                 },
                 {
                     "image": False
                 }
             ).sort("prop.date", -1).limit(int(limit))
         )
+
         if events != []:
-            maxtime = self._get_utc_timestamp(
-                max(events, key=lambda x: x["timestamp"])["timestamp"]
-            )
-        return {"events": events, "maxtime": maxtime}
+            maxtime = max(events, key=lambda x: x["timestamp"])["timestamp"]
+            return {
+                "events": events,
+                "maxtime": maxtime.strftime(self.DATE_PATTERN)
+            }
+
+        return {
+            "events": events,
+            "maxtime": None
+        }
 
     @cherrypy.expose
-    def get_geofon_events(self, time=0.0, limit=200, apikey=None):
+    def get_geofon_events(self, time=None, limit=200, apikey=None):
         if self.auth_api(apikey, "inst") is not None:
             rslt = self._get_events(None, "gfz", time, limit)
             return jssuccess(**rslt)
@@ -1634,24 +1648,70 @@ class WebGuiSrv(BaseSrv):
     @cherrypy.expose
     def get_events(self, inst=None, limit=200):
         user = self.getUser()
+
         if user is not None:
             users = [{"user": user["_id"]}]
             inst = self._db["institutions"].find_one({"name": inst})
+
             if inst is not None:
                 users.append({"user": inst["_id"]})
             elif "inst" in user:
                 users.append({"user": user["inst"]})
+
             events = list(
                 self._db["eqs"].find(
                     {"$or": users, "depr": None},
                     {"image": False}
                 ).sort("prop.date", -1).limit(int(limit))
             )
-            if events != []:
-                maxts = max(events, key=lambda x: x["timestamp"])["timestamp"]
-            else:
-                maxts = 0
-            return jssuccess(events=events, ts=maxts)
+
+            getuserevents = self._get_events(user.get("username"), None, None)
+            userevents = getuserevents.get("events")
+            maxtimeuser = getuserevents.get("maxtime")
+
+            if events != [] and userevents != []:
+                maxts_events = max(
+                    events, key=lambda x: x["timestamp"]
+                )["timestamp"]
+
+                maxts_user = datetime.strptime(
+                    maxtimeuser,
+                    self.DATE_PATTERN
+                )
+
+                return jssuccess(
+                    events=events,
+                    userevents=userevents,
+                    maxtime=max(
+                        maxts_events, maxts_user
+                    ).strftime(self.DATE_PATTERN)
+                )
+            elif events != []:
+                maxts_events = max(
+                    events, key=lambda x: x["timestamp"]
+                )["timestamp"]
+                return jssuccess(
+                    events=events,
+                    userevents=[],
+                    maxtime=maxts_events.strftime(self.DATE_PATTERN)
+                )
+            elif userevents != []:
+                maxts_user = datetime.strptime(
+                    maxtimeuser,
+                    self.DATE_PATTERN
+                )
+                return jssuccess(
+                    events=[],
+                    userevents=userevents,
+                    maxtime=maxts_user.strftime(self.DATE_PATTERN)
+                )
+
+            return jssuccess(
+                events=[],
+                userevents=[],
+                maxtime=None
+            )
+
         return jsdeny()
 
     @cherrypy.expose
@@ -1917,7 +1977,7 @@ class WebGuiSrv(BaseSrv):
         if instObj is None:
             return None
 
-        return instObj["name"]
+        return instObj
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
@@ -2029,10 +2089,11 @@ class WebGuiSrv(BaseSrv):
         if dbUser is not None:
             userId = dbUser["_id"]
             username = dbUser["username"]
+            instobj = self.getInst(dbUser)
             user = {
                 "name": username,
                 "objId": userId,
-                "inst": self.getInst(dbUser)
+                "inst": instobj.get("name")
             }
         elif dbInst is not None:
             userId = dbInst["_id"]
@@ -2046,9 +2107,7 @@ class WebGuiSrv(BaseSrv):
             return jsdeny(error="Not allowed to use API")
 
         # get Date object from date string
-        date_time = datetime.strptime(
-            date, r"%Y-%m-%dT%H:%M:%S.%fZ"
-        )
+        date_time = datetime.strptime(date, self.DATE_PATTERN)
 
         if date_time is None:
             return jsfail(error="Invalid date format")
@@ -2169,6 +2228,44 @@ class WebGuiSrv(BaseSrv):
         self._db["events"].insert_one(event)
 
         return jssuccess(refineid=refineId, evtid=compId)
+
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['POST'])
+    def update(
+        self, **params
+    ):
+        ts = params.get("ts")
+
+        if ts is None:
+            return jsfail(error="Missing request parameter")
+
+        user = self.getUser()
+
+        if user is None or user.get("username") is None:
+            return jsdeny()
+
+        userevents = self._get_events(user.get("username"), None, ts, 200)
+        geofonevents = self._get_events(None, "gfz", ts, 200)
+
+        maxtime = None
+        maxtimeuser = userevents.get("maxtime")
+        maxtimegeofon = geofonevents.get("maxtime")
+
+        if maxtimeuser is None:
+            maxtime = maxtimegeofon
+        elif maxtimegeofon is None:
+            maxtime = maxtimeuser
+        else:
+            maxtime = max(
+                datetime.strptime(maxtimeuser, self.DATE_PATTERN),
+                datetime.strptime(maxtimegeofon, self.DATE_PATTERN),
+            ).strftime(self.DATE_PATTERN)
+
+        return jssuccess(
+            events=geofonevents.get("events"),
+            userevents=userevents.get("events"),
+            maxtime=maxtime
+        )
 
 
 class WatchExecution(threading.Thread):

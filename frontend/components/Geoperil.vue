@@ -34,6 +34,7 @@ import LeftMenu from './LeftMenu.vue';
 export default class Geoperil extends Vue {
   private isLoading: boolean = true
   async mounted() {
+    this.$store.dispatch('registerUpdater')
     await this.$store.dispatch('fetchEvents')
     this.isLoading = false
   }
