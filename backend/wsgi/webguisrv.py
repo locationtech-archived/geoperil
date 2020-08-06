@@ -1301,31 +1301,31 @@ class WebGuiSrv(BaseSrv):
 
         if slip is None:
             inputs = [
-                ('lat', lat),
-                ('lon', lon),
-                ('depth', depth),
-                ('dip', dip),
-                ('strike', strike),
-                ('rake', rake),
-                ('duration', dur),
-                ('mag', mag),
+                ('lat', str(lat)),
+                ('lon', str(lon)),
+                ('depth', str(depth)),
+                ('dip', str(dip)),
+                ('strike', str(strike)),
+                ('rake', str(rake)),
+                ('duration', str(dur)),
+                ('mag', str(mag)),
                 ('date', date),
-                ('gridres', gridres),
+                ('gridres', str(gridres)),
             ]
         else:
             inputs = [
-                ('lat', lat),
-                ('lon', lon),
-                ('depth', depth),
-                ('dip', dip),
-                ('strike', strike),
-                ('rake', rake),
-                ('duration', dur),
-                ('slip', slip),
-                ('length', length),
-                ('width', width),
+                ('lat', str(lat)),
+                ('lon', str(lon)),
+                ('depth', str(depth)),
+                ('dip', str(dip)),
+                ('strike', str(strike)),
+                ('rake', str(rake)),
+                ('duration', str(dur)),
+                ('slip', str(slip)),
+                ('length', str(length)),
+                ('width', str(width)),
                 ('date', date),
-                ('gridres', gridres),
+                ('gridres', str(gridres)),
             ]
 
         execution = server.execute(
@@ -1422,6 +1422,29 @@ class WebGuiSrv(BaseSrv):
 
         if algo != "easywave" and algo != "hysea":
             return jsfail(error="Unknown algorithm")
+
+        lat = float(lat)
+        lon = float(lon)
+        depth = float(depth)
+        dur = int(dur)
+        gridres = int(gridres)
+
+        if mag is not None:
+            mag = float(mag)
+
+        if dip is not None:
+            dip = int(dip)
+
+        if strike is not None:
+            strike = int(strike)
+
+        if rake is not None:
+            rake = int(rake)
+
+        if slip is not None:
+            slip = float(slip)
+            length = float(length)
+            width = float(width)
 
         worker = list(
             self._db["settings"].find({

@@ -10,4 +10,5 @@ export interface RootState {
     composeEvent: Event | null,
     user: User | null,
     lastUpdate: string | null,
+    selectedTab: Number,
 }

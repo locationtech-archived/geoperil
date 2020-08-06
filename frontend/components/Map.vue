@@ -20,9 +20,19 @@
 
     <vl-layer-vector
       render-mode="image"
+      :visible="selectedTab == 0"
       :z-index="2"
     >
       <vl-source-vector :features="points" />
+      <vl-style-func :factory="pointsStyleFunc" />
+    </vl-layer-vector>
+
+    <vl-layer-vector
+      render-mode="image"
+      :visible="selectedTab == 1"
+      :z-index="2"
+    >
+      <vl-source-vector :features="pointsUser" />
       <vl-style-func :factory="pointsStyleFunc" />
     </vl-layer-vector>
 
@@ -80,8 +90,16 @@ export default class Map extends Vue {
   private center: Number[] = [0, 0]
   private rotation: Number = 0
 
-  get points(): any {
+  get selectedTab(): Number {
+    return this.$store.getters.selectedTab
+  }
+
+  get points(): any[] {
     return this.$store.getters.recentEventsGeojson
+  }
+
+  get pointsUser(): any[] {
+    return this.$store.getters.userEventsGeojson
   }
 
   get selected(): Event {

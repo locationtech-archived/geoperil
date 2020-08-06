@@ -4,9 +4,9 @@
     class="fill-height"
     grow
   >
-    <v-tab class="no-text-transform">Recent</v-tab>
-    <v-tab class="no-text-transform">My List</v-tab>
-    <v-tab class="no-text-transform">Compose</v-tab>
+    <v-tab class="no-text-transform" @click="changeTab(0)">Recent</v-tab>
+    <v-tab class="no-text-transform" @click="changeTab(1)">My List</v-tab>
+    <v-tab class="no-text-transform" @click="changeTab(2)">Compose</v-tab>
 
     <v-tabs-items
       class="fill-height-tabs"
@@ -19,7 +19,9 @@
       </TabItem>
 
       <TabItem>
-        Test 2
+        <UserList
+          @change-to-compose-tab="changeTab(2)"
+        />
       </TabItem>
 
       <TabItem>
@@ -35,12 +37,14 @@
 import { Vue, Component } from 'nuxt-property-decorator'
 import TabItem from './TabItem.vue'
 import RecentList from './RecentList.vue'
+import UserList from './UserList.vue'
 import ComposeSimulation from './ComposeSimulation.vue'
 
 @Component({
   components: {
     TabItem,
     RecentList,
+    UserList,
     ComposeSimulation,
   }
 })
@@ -48,7 +52,13 @@ export default class LeftMenu extends Vue {
   private tab: any = null
 
   public changeTab(which: number) {
+    if (which == this.tab) {
+      // nothing to do
+      return
+    }
+
     this.tab = which
+    this.$store.commit('SET_SELECTED_TAB', which)
   }
 
   get composeEvent(): Event | null {

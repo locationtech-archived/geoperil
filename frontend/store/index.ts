@@ -30,6 +30,7 @@ export const state = (): RootState => ({
   composeEvent: null,
   user: null,
   lastUpdate: null,
+  selectedTab: 0,
 })
 
 export const getters: GetterTree<RootState, RootState> = {
@@ -42,6 +43,7 @@ export const getters: GetterTree<RootState, RootState> = {
   composeEvent: state => state.composeEvent,
   user: state => state.user,
   lastUpdate: state => state.lastUpdate,
+  selectedTab: state => state.selectedTab,
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -71,6 +73,9 @@ export const mutations: MutationTree<RootState> = {
   ),
   SET_LAST_UPDATE: (state, ts: string) => (
     state.lastUpdate = ts
+  ),
+  SET_SELECTED_TAB: (state, tab: Number) => (
+    state.selectedTab = tab
   ),
   ADD_EVENTS: (state, events: Event[]) => {
     for (let i = 0; i < events.length; i++) {
@@ -135,7 +140,6 @@ export const actions: ActionTree<RootState, RootState> = {
   },
 
   async fetchEvents({ commit }) {
-    const user: User = this.getters.user
     var evArr: Event[] = []
     var evUserArr: Event[] = []
     var evGeojsonArr: any[] = []
@@ -152,13 +156,11 @@ export const actions: ActionTree<RootState, RootState> = {
     }
 
     for (let i = 0; i < data.events.length; i++) {
-      const entry = data.events[i]
-      addEntryToArr(entry, evArr, evGeojsonArr)
+      addEntryToArr(data.events[i], evArr, evGeojsonArr)
     }
 
     for (let i = 0; i < data.userevents.length; i++) {
-      const entry = data.events[i]
-      addEntryToArr(entry, evUserArr, evUserGeojsonArr)
+      addEntryToArr(data.userevents[i], evUserArr, evUserGeojsonArr)
     }
 
     commit('SET_EVENTS', evArr)
@@ -171,12 +173,10 @@ export const actions: ActionTree<RootState, RootState> = {
   async registerUpdater({ commit }) {
     const updateCall = async () => {
       var extraMsec = 0
-      const lastts = this.getters.lastUpdate
+      var lastts = this.getters.lastUpdate
 
       if (!lastts) {
-        // initial fetch of events did not finish yet
-        setTimeout(updateCall, UPDATE_INTERVAL_MSEC)
-        return
+        lastts = (new Date(0)).toISOString()
       }
 
       const requestBody = {

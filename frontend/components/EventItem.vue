@@ -1,6 +1,6 @@
 <template>
   <v-list-item
-    class="ma-0 pa-0 recent-list-item"
+    class="ma-0 pa-0 eventitem-list-item"
     :class="isSelected ? 'selected' : ''"
     @mouseover="hoverEvent"
     @mouseleave="hoverEnd"
@@ -183,26 +183,26 @@ p.item-mag {
   text-align: center;
 }
 
-.recent-list-item {
+.eventitem-list-item {
   border-bottom-width: 1px;
   border-bottom-style: solid;
   border-bottom-color: #bbb;
 }
 
-.recent-list-item.selected {
+.eventitem-list-item.selected {
   border-left: 8px solid rgb(198, 0, 0);
   background-color: rgb(225, 238, 250);
 }
 
-.recent-list-item.selected div {
+.eventitem-list-item.selected div {
   background-color: rgb(225, 238, 250);
 }
 
-.recent-list-item:hover {
+.eventitem-list-item:hover {
   background-color: rgb(195, 211, 225);
 }
 
-.recent-list-item:hover div {
+.eventitem-list-item:hover div {
   background-color: rgb(195, 211, 225);
 }
 </style>
