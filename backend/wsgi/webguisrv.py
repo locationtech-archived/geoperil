@@ -1271,7 +1271,7 @@ class WebGuiSrv(BaseSrv):
 
     def start_worker(
         self, worker, user, name, lat, lon, depth, dip, strike, rake, dur, mag,
-        slip, length, width, date, gridres
+        slip, length, width, date: datetime, gridres
     ):
         url = worker.get("wpsurl")
         process = worker.get("wpsprocess")
@@ -1309,7 +1309,7 @@ class WebGuiSrv(BaseSrv):
                 ('rake', str(rake)),
                 ('duration', str(dur)),
                 ('mag', str(mag)),
-                ('date', date),
+                ('date', date.strftime(self.DATE_PATTERN)),
                 ('gridres', str(gridres)),
             ]
         else:
@@ -1324,7 +1324,7 @@ class WebGuiSrv(BaseSrv):
                 ('slip', str(slip)),
                 ('length', str(length)),
                 ('width', str(width)),
-                ('date', date),
+                ('date', date.strftime(self.DATE_PATTERN)),
                 ('gridres', str(gridres)),
             ]
 
@@ -1423,6 +1423,11 @@ class WebGuiSrv(BaseSrv):
         if algo != "easywave" and algo != "hysea":
             return jsfail(error="Unknown algorithm")
 
+        dateconv = datetime.strptime(date, self.DATE_PATTERN)
+
+        if dateconv is None:
+            return jsfail(error="Unknown date format")
+
         lat = float(lat)
         lon = float(lon)
         depth = float(depth)
@@ -1464,7 +1469,7 @@ class WebGuiSrv(BaseSrv):
 
         return self.start_worker(
             selected, user, name, lat, lon, depth, dip, strike, rake, dur, mag,
-            slip, length, width, date, gridres
+            slip, length, width, dateconv, gridres
         )
 
     # this method is called by the tomcat-server if the computation
@@ -2313,7 +2318,7 @@ class WatchExecution(threading.Thread):
         })
 
         if eqs is None:
-            raise Exception("Internal error: eqs entry in DB expected")
+            raise Exception("Internal error: expected eqs entry in DB")
 
         while self.execution.isComplete() is False:
             self.execution.checkStatus(sleepSecs=1)

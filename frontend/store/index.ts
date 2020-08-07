@@ -78,18 +78,37 @@ export const mutations: MutationTree<RootState> = {
     state.selectedTab = tab
   ),
   ADD_EVENTS: (state, events: Event[]) => {
-    for (let i = 0; i < events.length; i++) {
-      addEntryToArr(events[i], state.recentEvents, state.recentEventsGeojson)
+    // we expect the entries to be in descending time order
+    const revevents = events.reverse()
+    for (let i = 0; i < revevents.length; i++) {
+      addEntryToArr(
+        revevents[i],
+        state.recentEvents,
+        state.recentEventsGeojson,
+        false
+      )
     }
   },
   ADD_USEREVENTS: (state, events: Event[]) => {
-    for (let i = 0; i < events.length; i++) {
-      addEntryToArr(events[i], state.userEvents, state.userEventsGeojson)
+    // we expect the entries to be in descending time order
+    const revevents = events.reverse()
+    for (let i = 0; i < revevents.length; i++) {
+      addEntryToArr(
+        revevents[i],
+        state.userEvents,
+        state.userEventsGeojson,
+        false
+      )
     }
   },
 }
 
-function addEntryToArr(entry: any, evArr: Event[], geojsonArr: any[]) {
+function addEntryToArr(
+  entry: any,
+  evArr: Event[],
+  geojsonArr: any[],
+  push: boolean = true
+) {
   const props = entry.prop
   const datetime = new Date(props.date)
   const date = datetime.getUTCFullYear() + '/'
@@ -97,38 +116,47 @@ function addEntryToArr(entry: any, evArr: Event[], geojsonArr: any[]) {
     + datetime.getUTCDate().toString().padStart(2, '0')
   const time = datetime.getUTCHours().toString().padStart(2, '0') + ':'
     + datetime.getUTCMinutes().toString().padStart(2, '0') + ' UTC'
-  evArr.push(
-    {
-      identifier: entry._id,
-      region: props.region,
-      datetime: datetime,
-      date: date,
-      time: time,
-      lat: props.latitude,
-      lon: props.longitude,
-      mag: props.magnitude,
-      depth: props.depth,
-      dip: props.dip,
-      rake: props.rake,
-      strike: props.strike,
-      seaArea: props.sea_area,
-      bbUrl: props.bb_url,
-    } as Event
-  )
 
-  geojsonArr.push(
-    {
-      type: "Feature",
-      geometry: {
-        type: "Point",
-        coordinates: [ props.longitude, props.latitude ]
-      },
-      properties: {
-        mag: props.magnitude,
-        depth: props.depth
-      }
+  const evObj: Event = {
+    identifier: entry._id,
+    region: props.region,
+    datetime: datetime,
+    date: date,
+    time: time,
+    lat: props.latitude,
+    lon: props.longitude,
+    mag: props.magnitude,
+    depth: props.depth,
+    dip: props.dip,
+    rake: props.rake,
+    strike: props.strike,
+    seaArea: props.sea_area,
+    bbUrl: props.bb_url,
+  } as Event
+
+  if (push) {
+    evArr.push(evObj)
+  } else {
+    evArr.unshift(evObj)
+  }
+
+  const geojsonObj = {
+    type: "Feature",
+    geometry: {
+      type: "Point",
+      coordinates: [ props.longitude, props.latitude ]
+    },
+    properties: {
+      mag: props.magnitude,
+      depth: props.depth
     }
-  )
+  }
+
+  if (push) {
+    geojsonArr.push(geojsonObj)
+  } else {
+    geojsonArr.unshift(geojsonObj)
+  }
 }
 
 export const actions: ActionTree<RootState, RootState> = {
@@ -205,6 +233,11 @@ export const actions: ActionTree<RootState, RootState> = {
 
         if (userevents.length > 0) {
           commit('ADD_USEREVENTS', userevents)
+
+          if (userevents.length == 1) {
+            // this comes from a compute request, select the last added event
+            commit('SET_SELECTED', this.state.userEvents[0])
+          }
         }
 
         if (maxtime) {
@@ -328,7 +361,5 @@ export const actions: ActionTree<RootState, RootState> = {
     if (!data || !('status' in data && data.status == 'success')) {
       throw new Error('Sending the computation request was not successful')
     }
-
-    // TODO: this.$store.commit('SET_SELECTED', -> new ID)
   },
 }
