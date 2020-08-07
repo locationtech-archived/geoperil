@@ -43,4 +43,6 @@ export interface Event {
   width: number,
   seaArea: string,
   bbUrl: string,
+  progress: number | null,
+  arrivaltimes: string | null,
 }

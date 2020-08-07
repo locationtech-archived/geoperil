@@ -77,7 +77,7 @@ export const mutations: MutationTree<RootState> = {
   SET_SELECTED_TAB: (state, tab: Number) => (
     state.selectedTab = tab
   ),
-  ADD_EVENTS: (state, events: Event[]) => {
+  ADD_EVENTS: (state, events: any[]) => {
     // we expect the entries to be in descending time order
     const revevents = events.reverse()
     for (let i = 0; i < revevents.length; i++) {
@@ -89,35 +89,51 @@ export const mutations: MutationTree<RootState> = {
       )
     }
   },
-  ADD_USEREVENTS: (state, events: Event[]) => {
+  ADD_USEREVENTS: (state, events: any[]) => {
     // we expect the entries to be in descending time order
     const revevents = events.reverse()
     for (let i = 0; i < revevents.length; i++) {
-      addEntryToArr(
-        revevents[i],
-        state.userEvents,
-        state.userEventsGeojson,
-        false
-      )
+      let foundindex = null
+
+      for (let j = 0; j < state.userEvents.length; j++) {
+        if (revevents[i].id == state.userEvents[j].identifier) {
+          foundindex = j
+          break
+        }
+      }
+
+      if (foundindex != null) {
+        // overwrite existing entry
+        // use splice to let vue detect the change
+        // see https://vuejs.org/v2/guide/reactivity.html#Change-Detection-Caveats
+        state.userEvents.splice(
+          foundindex, 1, apiToEvent(revevents[i])
+        )
+        state.userEventsGeojson.splice(
+          foundindex, 1, apiToGeojson(revevents[i])
+        )
+      } else {
+        addEntryToArr(
+          revevents[i],
+          state.userEvents,
+          state.userEventsGeojson,
+          false
+        )
+      }
     }
   },
 }
 
-function addEntryToArr(
-  entry: any,
-  evArr: Event[],
-  geojsonArr: any[],
-  push: boolean = true
-) {
+function apiToEvent(entry: any): Event {
   const props = entry.prop
   const datetime = new Date(props.date)
-  const date = datetime.getUTCFullYear() + '/'
-    + (datetime.getUTCMonth() + 1).toString().padStart(2, '0') + '/'
-    + datetime.getUTCDate().toString().padStart(2, '0')
-  const time = datetime.getUTCHours().toString().padStart(2, '0') + ':'
-    + datetime.getUTCMinutes().toString().padStart(2, '0') + ' UTC'
+  const date = datetime.getFullYear() + '/'
+    + (datetime.getMonth() + 1).toString().padStart(2, '0') + '/'
+    + datetime.getDate().toString().padStart(2, '0')
+  const time = datetime.getHours().toString().padStart(2, '0') + ':'
+    + datetime.getMinutes().toString().padStart(2, '0') + ' UTC'
 
-  const evObj: Event = {
+  return {
     identifier: entry._id,
     region: props.region,
     datetime: datetime,
@@ -132,15 +148,14 @@ function addEntryToArr(
     strike: props.strike,
     seaArea: props.sea_area,
     bbUrl: props.bb_url,
+    progress: entry.progress,
+    arrivaltimes: entry.arrivaltimes
   } as Event
+}
 
-  if (push) {
-    evArr.push(evObj)
-  } else {
-    evArr.unshift(evObj)
-  }
-
-  const geojsonObj = {
+function apiToGeojson(entry: any): any {
+  const props = entry.prop
+  return {
     type: "Feature",
     geometry: {
       type: "Point",
@@ -151,6 +166,23 @@ function addEntryToArr(
       depth: props.depth
     }
   }
+}
+
+function addEntryToArr(
+  entry: any,
+  evArr: Event[],
+  geojsonArr: any[],
+  push: boolean = true
+) {
+  const evObj = apiToEvent(entry)
+
+  if (push) {
+    evArr.push(evObj)
+  } else {
+    evArr.unshift(evObj)
+  }
+
+  const geojsonObj = apiToGeojson(entry)
 
   if (push) {
     geojsonArr.push(geojsonObj)
@@ -220,6 +252,8 @@ export const actions: ActionTree<RootState, RootState> = {
 
         if (!('events' in data && 'userevents' in data && 'maxtime' in data)) {
           console.error('Invalid response from update endpoint')
+          // try again later
+          setTimeout(updateCall, UPDATE_INTERVAL_MSEC + 5000)
           return
         }
 
@@ -233,11 +267,6 @@ export const actions: ActionTree<RootState, RootState> = {
 
         if (userevents.length > 0) {
           commit('ADD_USEREVENTS', userevents)
-
-          if (userevents.length == 1) {
-            // this comes from a compute request, select the last added event
-            commit('SET_SELECTED', this.state.userEvents[0])
-          }
         }
 
         if (maxtime) {
@@ -361,5 +390,8 @@ export const actions: ActionTree<RootState, RootState> = {
     if (!data || !('status' in data && data.status == 'success')) {
       throw new Error('Sending the computation request was not successful')
     }
+
+    // TODO: select next incoming event update if it matches the new created ID
+    // commit('SET_NEXT_SELECTED', --> new ID)
   },
 }

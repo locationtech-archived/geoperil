@@ -35,6 +35,7 @@ import binascii
 import logging
 import hashlib
 import json
+import requests
 import pymongo
 import owslib.wps as wps
 from datetime import datetime
@@ -1332,6 +1333,7 @@ class WebGuiSrv(BaseSrv):
             identifier=process,
             inputs=inputs,
             output=[
+                ('calctime', False),
                 ('arrivaltimes', False)
             ]
         )
@@ -1677,70 +1679,58 @@ class WebGuiSrv(BaseSrv):
     def get_events(self, inst=None, limit=200):
         user = self.getUser()
 
-        if user is not None:
-            users = [{"user": user["_id"]}]
-            inst = self._db["institutions"].find_one({"name": inst})
+        if user is None:
+            return jsdeny()
 
-            if inst is not None:
-                users.append({"user": inst["_id"]})
-            elif "inst" in user:
-                users.append({"user": user["inst"]})
+        if inst is None and 'inst' in user:
+            inst = self._db["institutions"].find_one({
+                "_id": user["inst"]
+            }).get("name")
 
-            events = list(
-                self._db["eqs"].find(
-                    {"$or": users, "depr": None},
-                    {"image": False}
-                ).sort("prop.date", -1).limit(int(limit))
+        getevents = self._get_events(None, inst, None)
+        events = getevents.get("events")
+        maxtimeevents = getevents.get("maxtime")
+
+        getuserevents = self._get_events(user.get("username"), None, None)
+        userevents = getuserevents.get("events")
+        maxtimeuser = getuserevents.get("maxtime")
+
+        if events != [] and userevents != []:
+            maxts_events = datetime.strptime(
+                maxtimeevents,
+                self.DATE_PATTERN
             )
 
-            getuserevents = self._get_events(user.get("username"), None, None)
-            userevents = getuserevents.get("events")
-            maxtimeuser = getuserevents.get("maxtime")
-
-            if events != [] and userevents != []:
-                maxts_events = max(
-                    events, key=lambda x: x["timestamp"]
-                )["timestamp"]
-
-                maxts_user = datetime.strptime(
-                    maxtimeuser,
-                    self.DATE_PATTERN
-                )
-
-                return jssuccess(
-                    events=events,
-                    userevents=userevents,
-                    maxtime=max(
-                        maxts_events, maxts_user
-                    ).strftime(self.DATE_PATTERN)
-                )
-            elif events != []:
-                maxts_events = max(
-                    events, key=lambda x: x["timestamp"]
-                )["timestamp"]
-                return jssuccess(
-                    events=events,
-                    userevents=[],
-                    maxtime=maxts_events.strftime(self.DATE_PATTERN)
-                )
-            elif userevents != []:
-                maxts_user = datetime.strptime(
-                    maxtimeuser,
-                    self.DATE_PATTERN
-                )
-                return jssuccess(
-                    events=[],
-                    userevents=userevents,
-                    maxtime=maxts_user.strftime(self.DATE_PATTERN)
-                )
+            maxts_user = datetime.strptime(
+                maxtimeuser,
+                self.DATE_PATTERN
+            )
 
             return jssuccess(
-                events=[],
+                events=events,
+                userevents=userevents,
+                maxtime=max(
+                    maxts_events, maxts_user
+                ).strftime(self.DATE_PATTERN)
+            )
+        elif events != []:
+            return jssuccess(
+                events=events,
                 userevents=[],
-                maxtime=None
+                maxtime=maxtimeevents
+            )
+        elif userevents != []:
+            return jssuccess(
+                events=[],
+                userevents=userevents,
+                maxtime=maxtimeuser
             )
 
-        return jsdeny()
+        return jssuccess(
+            events=[],
+            userevents=[],
+            maxtime=None
+        )
 
     @cherrypy.expose
     def gethazardevents(self, **parameters):
@@ -2312,8 +2302,21 @@ class WatchExecution(threading.Thread):
         self.execution = execution
         self.eqsId = eqsId
 
+    def updateProgress(self, progress: int):
+        self.db["eqs"].update(
+            {
+                "id": self.eqsId
+            }, {
+                "$set": {
+                    "progress": progress,
+                    "timestamp": datetime.now()
+                }
+            }
+        )
+
     def run(self):
-        eqs = self.db["eqs"].find_one({
+        eqsdb = self.db["eqs"]
+        eqs = eqsdb.find_one({
             "id": self.eqsId
         })
 
@@ -2321,12 +2324,12 @@ class WatchExecution(threading.Thread):
             raise Exception("Internal error: expected eqs entry in DB")
 
         while self.execution.isComplete() is False:
+            oldpercent = self.execution.percentCompleted
             self.execution.checkStatus(sleepSecs=1)
-            self.db["eqs"].update(eqs, {
-                "$set": {
-                    "progress": self.execution.percentCompleted
-                }
-            })
+            newpercent = self.execution.percentCompleted
+
+            if oldpercent != newpercent:
+                self.updateProgress(newpercent)
 
         if not self.execution.isSucceded():
             for ex in self.execution.errors:
@@ -2334,11 +2337,25 @@ class WatchExecution(threading.Thread):
                     'Error: code=%s, locator=%s, text=%s' %
                     (ex.code, ex.locator, ex.text)
                 )
-            self.db["eqs"].update(eqs, {
+            self.updateProgress(-1)
+            return
+
+        calctime = self.execution.processOutputs[0].data
+        arrivaltimes = self.execution.processOutputs[1].data
+
+        self.updateProgress(100)
+
+        # add outputs to DB
+        eqsdb.update(
+            {
+                "id": self.eqsId
+            }, {
                 "$set": {
-                    "progress": -1
+                    "arrivaltimes": arrivaltimes,
+                    "timestamp": datetime.now()
                 }
-            })
+            }
+        )
 
 
 application = startapp(WebGuiSrv)

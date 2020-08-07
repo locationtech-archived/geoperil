@@ -186,6 +186,7 @@ def main():
     mongo_connection = os.environ['MONGO_CONNECTION']
     data_insert_url = os.environ['DATA_INSERT_URL']
     geofon_alerts_url = os.environ['GEOFON_ALERTS_URL']
+    geofon_output = os.environ['GEOFON_OUTPUT']
 
     start_time = time.time()
 
@@ -208,7 +209,7 @@ def main():
     dbm = client['geoperil']
     inst = dbm['institutions'].find({"name": "gfz"})[0]
     elist = []
-    events = gpd.read_file("geofon-last500.geojson")
+    events = gpd.read_file(geofon_output)
 
     for index, event in events.iterrows():
         cnt_total += 1

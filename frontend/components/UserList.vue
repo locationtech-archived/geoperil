@@ -25,6 +25,7 @@ import { Event } from '../types'
 })
 export default class UserList extends Vue {
   get userEvents(): Event[] {
+    console.log("GET")
     return this.$store.getters.userEvents
   }
 
