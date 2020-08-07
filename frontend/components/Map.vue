@@ -66,9 +66,8 @@
             :coordinates="[ selected.lon, selected.lat ]"
           />
           <vl-style-box>
-            <vl-style-circle :radius="selected.mag">
-              <vl-style-fill color="#4271A7"></vl-style-fill>
-              <vl-style-stroke color="blue"></vl-style-stroke>
+            <vl-style-circle :radius="10">
+              <vl-style-stroke color="red"></vl-style-stroke>
             </vl-style-circle>
           </vl-style-box>
         </vl-feature>
@@ -108,11 +107,14 @@ export default class Map extends Vue {
 
   @Watch('selected')
   public onSelectChange(newValue: Event | null) {
-    if (!newValue) {
+    if (!newValue || !('identifier' in newValue)) {
       return
     }
-    (this.$refs.view as any).animate({
-      zoom: 7,
+
+    const view: any = this.$refs.view
+
+    view.animate({
+      zoom: 6,
       center: [ newValue.lon, newValue.lat ]
     })
   }

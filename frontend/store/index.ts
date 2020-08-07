@@ -328,5 +328,7 @@ export const actions: ActionTree<RootState, RootState> = {
     if (!data || !('status' in data && data.status == 'success')) {
       throw new Error('Sending the computation request was not successful')
     }
+
+    // TODO: this.$store.commit('SET_SELECTED', -> new ID)
   },
 }
