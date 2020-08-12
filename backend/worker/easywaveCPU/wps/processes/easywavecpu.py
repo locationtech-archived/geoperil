@@ -2,8 +2,11 @@ import os
 import re
 import subprocess
 
-from pywps import Process, LiteralInput, LiteralOutput
+from pywps import Process, LiteralInput, ComplexOutput, LiteralOutput, \
+    WPSRequest
+from pywps.response import WPSResponse
 from pywps.app.exceptions import ProcessError
+from pywps.inout.formats import FORMATS
 
 import logging
 LOGGER = logging.getLogger("PYWPS")
@@ -27,9 +30,19 @@ class EasyWaveCpu(Process):
     faultfile = 'fault.inp'
     process = None
 
+    # TODO: could be parameters for the user in the WPS request
+    intervalTimes = 10
+    intervalsWavejets = [0.3, 0.5, 1.0, 2.0, 5.0, 10.0]
+
     statusMsg = 'easyWave simulation started, waiting...'
     internalErrorMsg = 'Internal error'
-    arrivalFile = 'arrival.geojson'
+    ewOutputTime = 'eWave.2D.time'
+    ewOutputSshmax = 'eWave.2D.sshmax'
+    geotiffTime = 'arrivaltimes.tiff'
+    geotiffSshmax = 'waveheights.tiff'
+    geojsonTime = 'arrivaltimes.geojson'
+    geojsonSshmax = 'waveheights.geojson'
+    compExtraTime = 10
 
     def __init__(self):
         inputs = [
@@ -64,9 +77,23 @@ class EasyWaveCpu(Process):
             LiteralOutput(
                 'calctime', 'Calculation time in msec', data_type='integer'
             ),
-            LiteralOutput(
-                'arrivaltimes', 'Arrival times in GeoJSON format',
-                data_type='string'
+            ComplexOutput(
+                'arrivaltimes', 'Arrival times as isolines in GeoJSON format',
+                supported_formats=[FORMATS.GEOJSON]
+            ),
+            ComplexOutput(
+                'waveheights', 'Wave heights as polygons in GeoJSON format',
+                supported_formats=[FORMATS.GEOJSON]
+            ),
+            ComplexOutput(
+                'arrivaltimesRaw',
+                'Arrival times in GeoTIFF format (raw data)',
+                supported_formats=[FORMATS.GEOTIFF]
+            ),
+            ComplexOutput(
+                'waveheightsRaw',
+                'Maximum wave heights in GeoTIFF format (raw data)',
+                supported_formats=[FORMATS.GEOTIFF]
             )
         ]
 
@@ -112,7 +139,7 @@ class EasyWaveCpu(Process):
             '-step', '1',
             # TODO: needed? '-dump', '600',
             '-ssh_arrival', '0.001',
-            '-time', str(self.duration + 10),
+            '-time', str(self.duration + self.compExtraTime),
             '-verbose',
             '-adjust_ztop'
         ]
@@ -123,7 +150,7 @@ class EasyWaveCpu(Process):
             cwd=self.workdir
         )
 
-    def monitorExecution(self, response):
+    def monitorExecution(self, response: WPSResponse):
         response.update_status(self.statusMsg, 0)
 
         timematch = r'(\d\d):(\d\d):(\d\d).*elapsed: (\d*) msec'
@@ -139,9 +166,12 @@ class EasyWaveCpu(Process):
                     continue
 
                 hours = float(matched.group(1))
-                minu = float(matched.group(2))
-                totalmin = hours * 60.0 + minu
-                percentDone = (totalmin / (self.duration + 10.0)) * 100.0
+                totalmin = hours * 60.0 + float(matched.group(2))
+
+                # go only up to 80 percent
+                percentDone = (
+                    totalmin / (self.duration + self.compExtraTime)
+                ) * 80.0
 
                 response.update_status(self.statusMsg, percentDone)
 
@@ -149,15 +179,11 @@ class EasyWaveCpu(Process):
 
         response.outputs['calctime'].data = calctime
 
-    def createIsolines(self, response):
-        # gdal_contour -f geojson -fl 10 20 ... eWave.2D.time arrival.geojson
-        args = ['gdal_contour', '-f', 'geojson', '-fl']
-
-        for i in range(10, self.duration + 1, 10):
-            args.append(str(i))
-
-        args.append('eWave.2D.time')
-        args.append(self.arrivalFile)
+    def convertToGeotiff(self, filename: str, destname: str):
+        args = [
+            'gdal_translate', '-co', 'COMPRESS=DEFLATE',
+            '-of', 'GTiff', filename, destname
+        ]
 
         gdalprocess = subprocess.Popen(
             args,
@@ -174,19 +200,112 @@ class EasyWaveCpu(Process):
 
         if gdalprocess.returncode != 0:
             LOGGER.error(
-                'creating contour of arrival times failed: ' + gdaloutput
+                'converting to GeoTIFF failed: ' + gdaloutput
             )
             raise ProcessError(self.internalErrorMsg)
 
-        abspath = os.path.join(self.workdir, self.arrivalFile)
+        abspath = os.path.join(self.workdir, destname)
 
         if not os.path.exists(abspath):
-            LOGGER.error('expected output from gdal_contour is missing')
+            LOGGER.error('output from gdal_translate is missing')
             raise ProcessError(self.internalErrorMsg)
 
-        response.outputs['arrivaltimes'].data = open(abspath, 'r').read()
+    def createIsolines(self, response: WPSResponse):
+        # gdal_contour -f geojson -a time -fl 10 20 ...
+        # eWave.2D.time arrivaltimes.geojson
+        args = ['gdal_contour', '-f', 'geojson', '-a', 'time', '-fl']
 
-    def _handler(self, request, response):
+        for i in range(
+            self.intervalTimes, self.duration + 1, self.intervalTimes
+        ):
+            args.append(str(i))
+
+        args.append(self.ewOutputTime)
+        args.append(self.geojsonTime)
+
+        gdalprocess = subprocess.Popen(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=self.workdir
+        )
+
+        gdaloutput = ''
+
+        while gdalprocess.poll() is None:
+            for line in iter(gdalprocess.stdout.readline, b''):
+                gdaloutput += line.decode('ascii')
+
+        if gdalprocess.returncode != 0:
+            LOGGER.error(
+                'creating contours of arrival times failed: ' + gdaloutput
+            )
+            raise ProcessError(self.internalErrorMsg)
+
+        abspath = os.path.join(self.workdir, self.geojsonTime)
+
+        if not os.path.exists(abspath):
+            LOGGER.error('output from gdal_contour is missing (arrival times)')
+            raise ProcessError(self.internalErrorMsg)
+
+        response.outputs['arrivaltimes'].data_format = FORMATS.GEOJSON
+        response.outputs['arrivaltimes'].file = abspath
+
+        self.convertToGeotiff(self.ewOutputTime, self.geotiffTime)
+        gtpath = os.path.join(self.workdir, self.geotiffTime)
+
+        response.outputs['arrivaltimesRaw'].data_format = FORMATS.GEOTIFF
+        response.outputs['arrivaltimesRaw'].file = gtpath
+
+    def createWavejets(self, response: WPSResponse):
+        # gdal_contour -f geojson -p -amin wavemin -amax wavemax
+        # -fl 0.3 0.5 ... eWave.2D.sshmax waveheights.geojson
+        args = [
+            'gdal_contour', '-f', 'geojson', '-p', '-amin', 'wavemin',
+            '-amax', 'wavemax', '-fl'
+        ]
+
+        for i in self.intervalsWavejets:
+            args.append(str(i))
+
+        args.append(self.ewOutputSshmax)
+        args.append(self.geojsonSshmax)
+
+        gdalprocess = subprocess.Popen(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=self.workdir
+        )
+
+        gdaloutput = ''
+
+        while gdalprocess.poll() is None:
+            for line in iter(gdalprocess.stdout.readline, b''):
+                gdaloutput += line.decode('ascii')
+
+        if gdalprocess.returncode != 0:
+            LOGGER.error(
+                'creating contours of max wave heights failed: ' + gdaloutput
+            )
+            raise ProcessError(self.internalErrorMsg)
+
+        abspath = os.path.join(self.workdir, self.geojsonSshmax)
+
+        if not os.path.exists(abspath):
+            LOGGER.error('output from gdal_contour is missing (wave heights)')
+            raise ProcessError(self.internalErrorMsg)
+
+        response.outputs['waveheights'].data_format = FORMATS.GEOJSON
+        response.outputs['waveheights'].file = abspath
+
+        self.convertToGeotiff(self.ewOutputSshmax, self.geotiffSshmax)
+        gtpath = os.path.join(self.workdir, self.geotiffSshmax)
+
+        response.outputs['waveheightsRaw'].data_format = FORMATS.GEOTIFF
+        response.outputs['waveheightsRaw'].file = gtpath
+
+    def _handler(self, request: WPSRequest, response: WPSResponse):
         self.lat = request.inputs['lat'][0].data
         self.lon = request.inputs['lon'][0].data
         self.depth = request.inputs['depth'][0].data
@@ -245,8 +364,11 @@ class EasyWaveCpu(Process):
         self.runeasywave()
 
         self.monitorExecution(response)
-        self.createIsolines(response)
 
-        # TODO: createJets with gdal_contour and polygons?
+        self.createIsolines(response)
+        response.update_status(self.statusMsg, 90.0)
+
+        self.createWavejets(response)
+        response.update_status(self.statusMsg, 100.0)
 
         return response

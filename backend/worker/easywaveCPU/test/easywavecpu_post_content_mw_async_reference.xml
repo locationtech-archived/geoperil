@@ -60,19 +60,19 @@
   <wps:ResponseForm>
     <wps:ResponseDocument storeExecuteResponse="true" status="true">
       <!-- no filtering of outputs possible? except with RawDataOutput? -->
-      <wps:Output>
+      <wps:Output asReference="true">
         <ows:Identifier>calctime</ows:Identifier>
       </wps:Output>
-      <wps:Output>
+      <wps:Output asReference="true">
         <ows:Identifier>arrivaltimes</ows:Identifier>
       </wps:Output>
-      <wps:Output>
+      <wps:Output asReference="true">
         <ows:Identifier>waveheights</ows:Identifier>
       </wps:Output>
-      <wps:Output>
+      <wps:Output asReference="true">
         <ows:Identifier>arrivaltimesRaw</ows:Identifier>
       </wps:Output>
-      <wps:Output>
+      <wps:Output asReference="true">
         <ows:Identifier>waveheightsRaw</ows:Identifier>
       </wps:Output>
     </wps:ResponseDocument>

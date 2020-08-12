@@ -1,11 +1,11 @@
 version: '3.7'
 
 services:
-  global-grid-datasets:
+  easywave-worker-global-grid-datasets:
     image: gitext.gfz-potsdam.de:5000/geoperil/global-grid-datasets:20200526
-    container_name: geoperil-grids
+    container_name: easywave-worker-global-grid-datasets
     volumes:
-      - worker-grid-data-volume:/data
+      - easywave-worker-grid-data-volume:/data
 
   easywave-worker:
     build:
@@ -19,9 +19,9 @@ services:
       - 5000:5000
     volumes:
       - ./wps:/srv/wps
-      - worker-grid-data-volume:/data
+      - easywave-worker-grid-data-volume:/data
     depends_on:
-      - global-grid-datasets
+      - easywave-worker-global-grid-datasets
 
 volumes:
-  worker-grid-data-volume:
+  easywave-worker-grid-data-volume:
