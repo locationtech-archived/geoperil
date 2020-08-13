@@ -250,6 +250,12 @@ export const actions: ActionTree<RootState, RootState> = {
           FORM_ENCODE_CONFIG
         )
 
+        if ('status' in data && data.status == 'denied') {
+          // check if session is still valid
+          this.dispatch('session')
+          return
+        }
+
         if (!('events' in data && 'userevents' in data && 'maxtime' in data)) {
           console.error('Invalid response from update endpoint')
           // try again later
