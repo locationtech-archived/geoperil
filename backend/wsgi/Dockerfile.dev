@@ -3,7 +3,9 @@ FROM python:3.7-buster
 RUN apt-get update && \
     apt-get install -y \
         apache2 \
-        libapache2-mod-wsgi-py3
+        libapache2-mod-wsgi-py3 && \
+    mkdir /geoperil && \
+    chown www-data /geoperil
 
 # use current directory temporarily to install from requirements.txt
 COPY requirements.txt .
@@ -12,7 +14,7 @@ RUN pip3 install -r requirements.txt
 COPY apache.conf /etc/apache2/conf-enabled/geoperil-wsgi.conf
 
 WORKDIR /srv/geoperil/wsgi
-VOLUME [ "/srv/geoperil/wsgi" ]
+VOLUME [ "/srv/geoperil/wsgi", "/geoperil" ]
 EXPOSE 80
 
 CMD [ "/srv/geoperil/wsgi/entrypoint-dev.sh" ]

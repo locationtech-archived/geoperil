@@ -6,14 +6,8 @@
     },
     {
         "_id": { "$oid": "666666666666666666666666" },
-        "type" : "dirs",
-        "results": "/tmp/geoperil/results"
-    },
-    {
-        "_id": { "$oid": "888888888888888888888888" },
-        "type": "parameter",
-        "name": "localdir",
-        "value": "/tmp/geoperil/localdir"
+        "type" : "resultsdir",
+        "results": "/geoperil/results"
     },
     {
         "_id": { "$oid": "555555555555555555555500" },

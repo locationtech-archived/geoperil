@@ -34,10 +34,12 @@ import random
 import binascii
 import logging
 import hashlib
+import traceback
 import json
 import requests
 import pymongo
 import owslib.wps as wps
+from urllib.request import urlretrieve
 from datetime import datetime
 from datetime import timedelta
 from pymongo.database import Database
@@ -1334,7 +1336,10 @@ class WebGuiSrv(BaseSrv):
             inputs=inputs,
             output=[
                 ('calctime', False),
-                ('arrivaltimes', False)
+                ('arrivaltimes', True),
+                ('arrivaltimesRaw', True),
+                ('waveheights', True),
+                ('waveheightsRaw', True)
             ]
         )
 
@@ -1375,7 +1380,17 @@ class WebGuiSrv(BaseSrv):
             "event": "new"
         })
 
-        thread = WatchExecution(self._db, execution, newid)
+        resultsdir = self._db["settings"].find_one({"type": "resultsdir"})
+
+        if resultsdir is None or resultsdir.get("results") is None:
+            return jsfail(error="Internal error: resultsdir not configured")
+
+        inst = self._db["institutions"].find_one({"_id": user.get("inst")})
+
+        thread = WatchExecution(
+            self._db, execution, newid, resultsdir.get("results"),
+            inst.get("name"), user.get("username"), worker
+        )
         thread.start()
 
         return jssuccess()
@@ -2290,23 +2305,34 @@ class WatchExecution(threading.Thread):
     db: Database = None
     execution: wps.WPSExecution = None
     eqsId: str = None
+    inst: str = None
+    username: str = None
+    worker: dict = None
+    resultsdir: str = None
 
     def __init__(
         self,
         db: Database,
         execution: wps.WPSExecution,
-        eqsId: str
+        eqsId: str,
+        resultsdir: str,
+        inst: str,
+        username: str,
+        workerObj: dict
     ):
         threading.Thread.__init__(self)
         self.db = db
         self.execution = execution
         self.eqsId = eqsId
+        self.resultsdir = resultsdir
+        self.inst = inst
+        self.username = username
+        self.worker = workerObj
 
     def updateProgress(self, progress: int):
         self.db["eqs"].update(
+            {"id": self.eqsId},
             {
-                "id": self.eqsId
-            }, {
                 "$set": {
                     "progress": progress,
                     "timestamp": datetime.now()
@@ -2316,9 +2342,7 @@ class WatchExecution(threading.Thread):
 
     def run(self):
         eqsdb = self.db["eqs"]
-        eqs = eqsdb.find_one({
-            "id": self.eqsId
-        })
+        eqs = eqsdb.find_one({"id": self.eqsId})
 
         if eqs is None:
             raise Exception("Internal error: expected eqs entry in DB")
@@ -2329,7 +2353,11 @@ class WatchExecution(threading.Thread):
             newpercent = self.execution.percentCompleted
 
             if oldpercent != newpercent:
-                self.updateProgress(newpercent)
+                if newpercent == 100:
+                    # we still need to save the results
+                    self.updateProgress(99)
+                else:
+                    self.updateProgress(newpercent)
 
         if not self.execution.isSucceded():
             for ex in self.execution.errors:
@@ -2340,8 +2368,71 @@ class WatchExecution(threading.Thread):
             self.updateProgress(-1)
             return
 
-        calctime = self.execution.processOutputs[0].data
-        arrivaltimes = self.execution.processOutputs[1].data
+        try:
+            # /geoperil/results/inst/user/algo/processid
+            resultspath = os.path.join(
+                self.resultsdir,
+                self.inst,
+                self.username,
+                self.worker.get("algorithm", "None"),
+                self.eqsId
+            )
+
+            arrivalRef = None
+            arrivalRawRef = None
+            waveheightsRef = None
+            waveheightsRawRef = None
+
+            for output in self.execution.processOutputs:
+                ident = output.identifier
+
+                if ident == 'calctime':
+                    calctime = output.data
+                elif ident == 'arrivaltimes':
+                    arrivalRef = output.reference
+                elif ident == 'arrivaltimesRaw':
+                    arrivalRawRef = output.reference
+                elif ident == 'waveheights':
+                    waveheightsRef = output.reference
+                elif ident == 'waveheightsRaw':
+                    waveheightsRawRef = output.reference
+
+            if (
+                calctime is None
+                or arrivalRawRef is None or waveheightsRawRef is None
+            ):
+                logger.error('Unexpected output from WPS')
+                self.updateProgress(-1)
+                return
+
+            os.makedirs(resultspath)
+
+            arrivalFile = os.path.join(
+                resultspath, 'arrivaltimes_default.geojson'
+            )
+            arrivalRawFile = os.path.join(
+                resultspath, 'arrivaltimes.tiff'
+            )
+            waveheightsFile = os.path.join(
+                resultspath, 'waveheights_default.geojson'
+            )
+            waveheightsRawFile = os.path.join(
+                resultspath, 'waveheights.tiff'
+            )
+
+            urlretrieve(arrivalRawRef, arrivalRawFile)
+            urlretrieve(waveheightsRawRef, waveheightsRawFile)
+
+            if arrivalRef is not None:
+                urlretrieve(arrivalRef, arrivalFile)
+
+            if waveheightsRef is not None:
+                urlretrieve(waveheightsRef, waveheightsFile)
+
+        except Exception as ex:
+            logger.error(traceback.format_exc())
+            self.updateProgress(-1)
+            return
 
         self.updateProgress(100)
 
@@ -2351,8 +2442,8 @@ class WatchExecution(threading.Thread):
                 "id": self.eqsId
             }, {
                 "$set": {
-                    "arrivaltimes": arrivaltimes,
-                    "timestamp": datetime.now()
+                    "calctime": calctime,
+                    "resultsdir": resultspath
                 }
             }
         )

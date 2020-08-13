@@ -1,9 +1,12 @@
 FROM python:3.7-buster
 
-RUN apt-get update && \
+RUN mkdir /geoperil && \
+    apt-get update && \
     apt-get install -y \
         apache2 \
-        libapache2-mod-wsgi-py3
+        libapache2-mod-wsgi-py3 && \
+    mkdir /geoperil && \
+    chown www-data /geoperil
 
 WORKDIR /srv/geoperil/wsgi
 
@@ -15,5 +18,7 @@ COPY config.cfg .
 COPY *.py /srv/geoperil/wsgi/
 
 EXPOSE 80
+
+VOLUME [ "/geoperil" ]
 
 CMD [ "/usr/sbin/apache2ctl", "-D", "FOREGROUND" ]
