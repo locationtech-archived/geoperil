@@ -5,6 +5,7 @@ import flask
 
 import pywps
 from pywps import Service
+import pywps.configuration as config
 
 from processes.echo import Echo
 from processes.sleepecho import SleepEcho
@@ -69,5 +70,13 @@ if __name__ == "__main__":
     development = False
     if os.environ.get('DEVELOPMENT') is not None:
         development = True
+
+    server_url = os.environ.get('SERVER_URL')
+    if server_url is not None:
+        config.CONFIG.set('server', 'url', server_url)
+
+    output_url = os.environ.get('OUTPUT_URL')
+    if output_url is not None:
+        config.CONFIG.set('server', 'outputurl', output_url)
 
     app.run(threaded=True, host='0.0.0.0', debug=development)

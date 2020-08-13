@@ -15,6 +15,8 @@ services:
     container_name: easywave-worker
     environment:
       - DEVELOPMENT=1
+      - SERVER_URL=http://localhost:5000/wps
+      - OUTPUT_URL=http://localhost:5000/outputs/
     ports:
       - 5000:5000
     volumes:

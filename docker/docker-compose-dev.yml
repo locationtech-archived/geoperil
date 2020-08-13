@@ -111,6 +111,9 @@ services:
       dockerfile: Dockerfile.dev
     image: geoperil-easywave-worker-0
     container_name: geoperil-easywave-worker-0
+    environment:
+      - SERVER_URL=http://geoperil-easywave-worker-0:5000/wps
+      - OUTPUT_URL=http://geoperil-easywave-worker-0:5000/outputs/
     ports:
       - 5000:5000 # TODO: remove in production
     volumes:
