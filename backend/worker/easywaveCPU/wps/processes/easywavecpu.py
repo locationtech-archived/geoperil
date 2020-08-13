@@ -42,6 +42,7 @@ class EasyWaveCpu(Process):
     geotiffSshmax = 'waveheights.tiff'
     geojsonTime = 'arrivaltimes.geojson'
     geojsonSshmax = 'waveheights.geojson'
+    errorFile = 'error.msg'
     compExtraTime = 10
 
     def __init__(self):
@@ -176,6 +177,12 @@ class EasyWaveCpu(Process):
                 response.update_status(self.statusMsg, percentDone)
 
                 calctime = int(matched.group(4))
+
+        abspath = os.path.join(self.workdir, self.errorFile)
+
+        if os.path.exists(abspath):
+            LOGGER.error(open(abspath, 'r').read())
+            raise ProcessError(self.internalErrorMsg)
 
         response.outputs['calctime'].data = calctime
 
