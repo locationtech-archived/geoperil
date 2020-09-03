@@ -126,17 +126,23 @@ export const mutations: MutationTree<RootState> = {
 
 function apiToEvent(entry: any): Event {
   const props = entry.prop
-  const datetime = new Date(props.date)
-  const date = datetime.getFullYear() + '/'
-    + (datetime.getMonth() + 1).toString().padStart(2, '0') + '/'
-    + datetime.getDate().toString().padStart(2, '0')
-  const time = datetime.getHours().toString().padStart(2, '0') + ':'
-    + datetime.getMinutes().toString().padStart(2, '0') + ' UTC'
+  const datetime = new Date(props.date) // this has the local timezone
+  const year = datetime.getFullYear()
+  const month = datetime.getMonth()
+  const day = datetime.getDate()
+  const hour = datetime.getHours()
+  const min = datetime.getMinutes()
+  const sec = datetime.getSeconds()
+  const date = year + '/'
+    + (month + 1).toString().padStart(2, '0') + '/'
+    + day.toString().padStart(2, '0')
+  const time = hour.toString().padStart(2, '0') + ':'
+    + min.toString().padStart(2, '0') + ' UTC'
 
   return {
     identifier: entry._id,
     region: props.region,
-    datetime: datetime,
+    datetime: new Date(Date.UTC(year, month, day, hour, min, sec)),
     date: date,
     time: time,
     lat: props.latitude,

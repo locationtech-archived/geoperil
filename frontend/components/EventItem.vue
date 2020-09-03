@@ -113,7 +113,6 @@ export default class EventItem extends Vue {
   get eventInfoText(): string {
     const data: Event = this.data
 
-    // TODO analyse data.dip/rake/strike + seaArea
     if (!data.seaArea) {
       return 'Inland, no simulation processed'
     }
@@ -123,7 +122,8 @@ export default class EventItem extends Vue {
       return 'Missing parameters'
     }
 
-    // TODO: check if simulation was processed -> 'prepared', 'done'
+    // TODO: check slip + width
+
     return 'No tsunami potential'
   }
 
