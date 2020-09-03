@@ -36,6 +36,7 @@ class EasyWaveCpu(Process):
 
     statusMsg = 'easyWave simulation started, waiting...'
     internalErrorMsg = 'Internal error'
+    zeroDisplacementMsg = 'Zero initial displacement'
     ewOutputTime = 'eWave.2D.time'
     ewOutputSshmax = 'eWave.2D.sshmax'
     geotiffTime = 'arrivaltimes.tiff'
@@ -181,8 +182,13 @@ class EasyWaveCpu(Process):
         abspath = os.path.join(self.workdir, self.errorFile)
 
         if os.path.exists(abspath):
-            LOGGER.error(open(abspath, 'r').read())
-            raise ProcessError(self.internalErrorMsg)
+            ewerror = open(abspath, 'r').read()
+            LOGGER.error(ewerror)
+
+            if bool(re.match(self.zeroDisplacementMsg, ewerror)):
+                raise ProcessError(self.zeroDisplacementMsg)
+            else:
+                raise ProcessError(self.internalErrorMsg)
 
         response.outputs['calctime'].data = calctime
 
