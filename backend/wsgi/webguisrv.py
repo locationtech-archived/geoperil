@@ -1640,7 +1640,9 @@ class WebGuiSrv(BaseSrv):
         mic = int(sec_ms[1].ljust(6, '0')) if len(sec_ms) > 1 else 0
         return datetime.utcfromtimestamp(sec).replace(microsecond=mic)
 
-    def _get_events(self, user=None, inst=None, etime=None, limit=200):
+    def _get_events(
+        self, user=None, inst=None, etime=None, limit=200, sortby="prop.date"
+    ):
         query = []
 
         if etime is None:
@@ -1668,7 +1670,7 @@ class WebGuiSrv(BaseSrv):
                 {
                     "image": False
                 }
-            ).sort("prop.date", -1).limit(int(limit))
+            ).sort(sortby, pymongo.DESCENDING).limit(int(limit))
         )
 
         if events != []:
@@ -1702,11 +1704,13 @@ class WebGuiSrv(BaseSrv):
                 "_id": user["inst"]
             }).get("name")
 
-        getevents = self._get_events(None, inst, None)
+        getevents = self._get_events(None, inst)
         events = getevents.get("events")
         maxtimeevents = getevents.get("maxtime")
 
-        getuserevents = self._get_events(user.get("username"), None, None)
+        getuserevents = self._get_events(
+            user.get("username"), sortby="timestamp"
+        )
         userevents = getuserevents.get("events")
         maxtimeuser = getuserevents.get("maxtime")
 
