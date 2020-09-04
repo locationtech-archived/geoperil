@@ -233,8 +233,9 @@ class EasyWaveCpu(Process):
         ):
             args.append(str(i))
 
+        geojsonTimeTemp = 'arrival_temp.geojson'
         args.append(self.ewOutputTime)
-        args.append(self.geojsonTime)
+        args.append(geojsonTimeTemp)
 
         gdalprocess = subprocess.Popen(
             args,
@@ -252,6 +253,35 @@ class EasyWaveCpu(Process):
         if gdalprocess.returncode != 0:
             LOGGER.error(
                 'creating contours of arrival times failed: ' + gdaloutput
+            )
+            raise ProcessError(self.internalErrorMsg)
+
+        abspath = os.path.join(self.workdir, geojsonTimeTemp)
+
+        if not os.path.exists(abspath):
+            LOGGER.error('output from gdal_contour is missing (arrival times)')
+            raise ProcessError(self.internalErrorMsg)
+
+        simplifyArgs = [
+            'ogr2ogr', '-f', 'geojson', '-simplify', '0.001',
+            self.geojsonTime, geojsonTimeTemp
+        ]
+
+        ogrprocess = subprocess.Popen(
+            simplifyArgs,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=self.workdir
+        )
+
+        ogroutput = ''
+        while ogrprocess.poll() is None:
+            for line in iter(ogrprocess.stdout.readline, b''):
+                ogroutput += line.decode('ascii')
+
+        if ogrprocess.returncode != 0:
+            LOGGER.error(
+                'simplifying arrival times failed: ' + ogroutput
             )
             raise ProcessError(self.internalErrorMsg)
 
