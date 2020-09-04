@@ -11,4 +11,6 @@ export interface RootState {
     user: User | null,
     lastUpdate: string | null,
     selectedTab: Number,
+    mapIsLoading: Boolean,
+    resultArrivaltimes: Array<any> | null,
 }

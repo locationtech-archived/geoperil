@@ -57,6 +57,10 @@ from msgsrv import sendmail, sendtwilliosms
 
 logger = logging.getLogger("WebguiSrv")
 
+ARRIVALTIMES_DEFAULT_FILE = "arrivaltimes_default.geojson"
+ARRIVALTIMES_RAW_FILE = "arrivaltimes.tiff"
+WAVEHEIGHTS_DEFAULT_FILE = "waveheights_default.geojson"
+WAVEHEIGHTS_RAW_FILE = "waveheights.tiff"
 
 class WebGuiSrv(BaseSrv):
     DATE_PATTERN = r"%Y-%m-%dT%H:%M:%S.%fZ"
@@ -566,15 +570,30 @@ class WebGuiSrv(BaseSrv):
         return jsdeny()
 
     @cherrypy.expose
-    def getisos(self, evid, arr):
+    def getisos(self, evid):
+        # TODO additional parameter for getting different arrivaltime outputs
         user = self.getUser()
+
         if user is not None or self.auth_shared(evid):
-            res = list(
-                self._db["comp"].find({
-                    "id": evid, "type": "ISO", "arrT": {"$gt": int(arr)}
-                })
+            evt = self._db["eqs"].find_one({
+                "id": evid
+            })
+
+            if evt is None or "resultsdir" not in evt:
+                return jsfail(error="Could not get results for event")
+
+            default = os.path.join(
+                evt["resultsdir"],
+                ARRIVALTIMES_DEFAULT_FILE
             )
-            return jssuccess(comp=res)
+
+            if not os.path.isfile(default):
+                return jsfail(error="Could not get default output file")
+
+            with open(default) as json_file:
+                res = json.load(json_file)
+
+            return jssuccess(isos=res)
         return jsdeny()
 
     @cherrypy.expose
@@ -2411,17 +2430,13 @@ class WatchExecution(threading.Thread):
 
             os.makedirs(resultspath)
 
-            arrivalFile = os.path.join(
-                resultspath, 'arrivaltimes_default.geojson'
-            )
-            arrivalRawFile = os.path.join(
-                resultspath, 'arrivaltimes.tiff'
-            )
+            arrivalFile = os.path.join(resultspath, ARRIVALTIMES_DEFAULT_FILE)
+            arrivalRawFile = os.path.join(resultspath, ARRIVALTIMES_RAW_FILE)
             waveheightsFile = os.path.join(
-                resultspath, 'waveheights_default.geojson'
+                resultspath, WAVEHEIGHTS_DEFAULT_FILE
             )
             waveheightsRawFile = os.path.join(
-                resultspath, 'waveheights.tiff'
+                resultspath, WAVEHEIGHTS_RAW_FILE
             )
 
             urlretrieve(arrivalRawRef, arrivalRawFile)

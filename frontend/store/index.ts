@@ -13,6 +13,7 @@ export const API_SIGNOUT_URL = WEBGUISRV_BASE_URL + 'signout'
 export const API_FETCH_URL = WEBGUISRV_BASE_URL + 'get_events'
 export const API_COMPUTE_URL = WEBGUISRV_BASE_URL + 'compute'
 export const API_UPDATE_URL = WEBGUISRV_BASE_URL + 'update'
+export const API_GETISOS_URL = WEBGUISRV_BASE_URL + 'getisos'
 export const FORM_ENCODE_CONFIG = {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
@@ -31,6 +32,8 @@ export const state = (): RootState => ({
   user: null,
   lastUpdate: null,
   selectedTab: 0,
+  mapIsLoading: false,
+  resultArrivaltimes: null,
 })
 
 export const getters: GetterTree<RootState, RootState> = {
@@ -44,6 +47,8 @@ export const getters: GetterTree<RootState, RootState> = {
   user: state => state.user,
   lastUpdate: state => state.lastUpdate,
   selectedTab: state => state.selectedTab,
+  mapIsLoading: state => state.mapIsLoading,
+  resultArrivaltimes: state => state.resultArrivaltimes,
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -76,6 +81,12 @@ export const mutations: MutationTree<RootState> = {
   ),
   SET_SELECTED_TAB: (state, tab: Number) => (
     state.selectedTab = tab
+  ),
+  SET_MAP_IS_LOADING: (state, loading: Boolean) => (
+    state.mapIsLoading = loading
+  ),
+  SET_RESULT_ARRIVALTIMES: (state, arr: Array<any> | null) => (
+    state.resultArrivaltimes = arr
   ),
   ADD_EVENTS: (state, events: any[]) => {
     // we expect the entries to be in descending time order
@@ -326,6 +337,7 @@ export const actions: ActionTree<RootState, RootState> = {
 
   async session({ commit }) {
     const { data } = await axios.post(API_SESSION_URL)
+
     if ('status' in data
       && 'user' in data
       && data.status == 'success') {
@@ -352,7 +364,6 @@ export const actions: ActionTree<RootState, RootState> = {
 
   async sendCompute({ commit }, compute: ComputeRequest) {
     const event = compute.event
-
     let requestBody = {}
 
     if (!!event.mag) {
@@ -405,5 +416,27 @@ export const actions: ActionTree<RootState, RootState> = {
 
     // TODO: select next incoming event update if it matches the new created ID
     // commit('SET_NEXT_SELECTED', --> new ID)
+  },
+
+  async fetchResults({ commit }) {
+    const selected: Event = this.getters.selectedEvent
+
+    if (selected && selected.progress == 100) {
+      const { data } = await axios.post(
+        API_GETISOS_URL,
+        querystring.stringify({evid: selected.identifier}),
+        FORM_ENCODE_CONFIG
+      )
+
+      if (!data || !('status' in data && data.status == 'success')) {
+        throw new Error('Getting the arrival times was not successful')
+      }
+
+      commit('SET_RESULT_ARRIVALTIMES', data.isos)
+
+      // TODO: fetch wavejets
+    } else {
+      commit('SET_RESULT_ARRIVALTIMES', null)
+    }
   },
 }

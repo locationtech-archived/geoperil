@@ -73,6 +73,16 @@
         </vl-feature>
       </vl-source-vector>
     </vl-layer-vector>
+
+    <vl-layer-vector
+      render-mode="image"
+      :z-index="5"
+    >
+      <vl-source-vector ref="sourceArrivaltimes" />
+      <vl-style-box>
+        <vl-style-stroke color="#4271A7"></vl-style-stroke>
+      </vl-style-box>
+    </vl-layer-vector>
   </vl-map>
 </template>
 
@@ -80,6 +90,9 @@
 import { Vue, Component, Watch } from 'nuxt-property-decorator'
 import { Event } from '~/types'
 import { Style, Circle, Fill, Stroke } from 'ol/style.js'
+import VectorSource from 'ol/source/Vector'
+import Feature from 'ol/Feature'
+import LineString from 'ol/geom/LineString'
 
 @Component
 export default class Map extends Vue {
@@ -101,8 +114,46 @@ export default class Map extends Vue {
     return this.$store.getters.userEventsGeojson
   }
 
+  get mapIsLoading(): Boolean {
+    return this.$store.getters.mapIsLoading
+  }
+
   get selected(): Event {
     return this.$store.getters.selectedEvent || { lat: 0, lon: 0}
+  }
+
+  get resultArrivaltimes(): Array<any> | null {
+    const res = this.$store.getters.resultArrivaltimes
+    if (res && 'features' in res) {
+      return res.features
+    }
+    return []
+  }
+
+  @Watch('resultArrivaltimes')
+  public onArrivaltimesChange(newValue: Array<any> | null) {
+    this.$store.commit('SET_MAP_IS_LOADING', true)
+
+    const sourceRef: any = this.$refs.sourceArrivaltimes
+    const source: VectorSource = sourceRef.$source
+
+    if (source) {
+      source.clear()
+    }
+
+    if (!newValue || newValue.length == 0) {
+      return
+    }
+
+    const features = newValue.map(f => {
+      const line = new LineString(f.geometry.coordinates)
+      line.transform('EPSG:4326', 'EPSG:3857')
+      return new Feature({
+        geometry: line,
+      })
+    })
+
+    source.addFeatures(features as Feature[])
   }
 
   @Watch('selected')
@@ -126,6 +177,12 @@ export default class Map extends Vue {
 
   get recentEvents(): Event[] {
     return this.$store.getters.recentEvents
+  }
+
+  updated() {
+    if (this.mapIsLoading) {
+      this.$store.commit('SET_MAP_IS_LOADING', false)
+    }
   }
 
   public isHovered(item: Event, hover: Event | null): boolean {
