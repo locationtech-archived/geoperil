@@ -3,6 +3,9 @@
     id="user-list"
     class="ma-0 pa-0"
   >
+    <v-list-item v-if="!userEvents || userEvents.length == 0">
+      <em>There are no items in your list.</em>
+    </v-list-item>
     <EventItem
       v-for="(item, index) in userEvents"
       :key="index"
