@@ -75,7 +75,9 @@
     </vl-layer-vector>
 
     <vl-layer-vector
+      ref="layerArrivaltimes"
       render-mode="image"
+      :overlay="true"
       :z-index="5"
     >
       <vl-source-vector ref="sourceArrivaltimes" />
@@ -90,6 +92,7 @@
 import { Vue, Component, Watch } from 'nuxt-property-decorator'
 import { Event } from '~/types'
 import { Style, Circle, Fill, Stroke } from 'ol/style.js'
+import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import Feature from 'ol/Feature'
 import LineString from 'ol/geom/LineString'
@@ -132,10 +135,10 @@ export default class Map extends Vue {
 
   @Watch('resultArrivaltimes')
   public onArrivaltimesChange(newValue: Array<any> | null) {
-    this.$store.commit('SET_MAP_IS_LOADING', true)
-
     const sourceRef: any = this.$refs.sourceArrivaltimes
     const source: VectorSource = sourceRef.$source
+    const layerRef: any = this.$refs.layerArrivaltimes
+    const layer: VectorLayer = layerRef.$layer
 
     if (source) {
       source.clear()
@@ -145,15 +148,18 @@ export default class Map extends Vue {
       return
     }
 
-    const features = newValue.map(f => {
+    const features: Feature[] = newValue.map(f => {
       const line = new LineString(f.geometry.coordinates)
       line.transform('EPSG:4326', 'EPSG:3857')
       return new Feature({
         geometry: line,
       })
     })
+    source.addFeatures(features)
 
-    source.addFeatures(features as Feature[])
+    this.$nextTick(function () {
+      this.$store.commit('SET_MAP_IS_LOADING', false)
+    })
   }
 
   @Watch('selected')
@@ -177,12 +183,6 @@ export default class Map extends Vue {
 
   get recentEvents(): Event[] {
     return this.$store.getters.recentEvents
-  }
-
-  updated() {
-    if (this.mapIsLoading) {
-      this.$store.commit('SET_MAP_IS_LOADING', false)
-    }
   }
 
   public isHovered(item: Event, hover: Event | null): boolean {

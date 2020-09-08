@@ -422,6 +422,8 @@ export const actions: ActionTree<RootState, RootState> = {
     const selected: Event = this.getters.selectedEvent
 
     if (selected && selected.progress == 100) {
+      commit('SET_MAP_IS_LOADING', true)
+
       const { data } = await axios.post(
         API_GETISOS_URL,
         querystring.stringify({evid: selected.identifier}),
