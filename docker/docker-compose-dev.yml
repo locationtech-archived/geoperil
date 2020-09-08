@@ -71,18 +71,18 @@ services:
       - mongo
       - geoperil-easywave-worker-0
 
-  geoperil-eventfeeder:
-    build:
-      context: ../backend/eventfeeder
-      dockerfile: Dockerfile
-    image: geoperil-eventfeeder
-    container_name: geoperil-eventfeeder
-    depends_on:
-      - geoperil-wsgi
-    links:
-      - geoperil-wsgi
-    environment:
-      - FEEDERSRV_URL=http://geoperil-wsgi/feedersrv/feedhazardevent
+  # geoperil-eventfeeder:
+  #   build:
+  #     context: ../backend/eventfeeder
+  #     dockerfile: Dockerfile
+  #   image: geoperil-eventfeeder
+  #   container_name: geoperil-eventfeeder
+  #   depends_on:
+  #     - geoperil-wsgi
+  #   links:
+  #     - geoperil-wsgi
+  #   environment:
+  #     - FEEDERSRV_URL=http://geoperil-wsgi/feedersrv/feedhazardevent
 
   geoperil-db-manager:
     build:
