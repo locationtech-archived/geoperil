@@ -263,7 +263,9 @@ class EasyWaveCpu(Process):
             raise ProcessError(self.internalErrorMsg)
 
         simplifyArgs = [
-            'ogr2ogr', '-f', 'geojson', '-simplify', '0.001',
+            'ogr2ogr', '-f', 'geojson',
+            '-lco', 'COORDINATE_PRECISION=3',
+            '-simplify', '0.01',
             self.geojsonTime, geojsonTimeTemp
         ]
 
