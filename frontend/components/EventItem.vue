@@ -44,6 +44,7 @@
               v-if="data.progress > 0 && data.progress < 100"
               color="light-blue"
               height="10"
+              class="item-progress-bar"
               :value="data.progress"
               striped
             ></v-progress-linear>
@@ -163,6 +164,15 @@ export default class EventItem extends Vue {
 <style>
 .sim-error {
   color: red;
+  font-size: 15px;
+}
+
+.item-progress-bar {
+  border: 1px solid #bbb;
+}
+
+.v-progress-linear__buffer {
+  z-index: -1;
 }
 
 .item-headline {
