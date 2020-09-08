@@ -37,58 +37,58 @@ export const state = (): RootState => ({
 })
 
 export const getters: GetterTree<RootState, RootState> = {
-  recentEvents: state => state.recentEvents,
-  recentEventsGeojson: state => state.recentEventsGeojson,
-  userEvents: state => state.userEvents,
-  userEventsGeojson: state => state.userEventsGeojson,
-  hoveredEvent: state => state.hoveredEvent,
-  selectedEvent: state => state.selectedEvent,
-  composeEvent: state => state.composeEvent,
-  user: state => state.user,
-  lastUpdate: state => state.lastUpdate,
-  selectedTab: state => state.selectedTab,
-  mapIsLoading: state => state.mapIsLoading,
-  resultArrivaltimes: state => state.resultArrivaltimes,
+  recentEvents: (state: RootState) => state.recentEvents,
+  recentEventsGeojson: (state: RootState) => state.recentEventsGeojson,
+  userEvents: (state: RootState) => state.userEvents,
+  userEventsGeojson: (state: RootState) => state.userEventsGeojson,
+  hoveredEvent: (state: RootState) => state.hoveredEvent,
+  selectedEvent: (state: RootState) => state.selectedEvent,
+  composeEvent: (state: RootState) => state.composeEvent,
+  user: (state: RootState) => state.user,
+  lastUpdate: (state: RootState) => state.lastUpdate,
+  selectedTab: (state: RootState) => state.selectedTab,
+  mapIsLoading: (state: RootState) => state.mapIsLoading,
+  resultArrivaltimes: (state: RootState) => state.resultArrivaltimes,
 }
 
 export const mutations: MutationTree<RootState> = {
-  SET_EVENTS: (state, events: Event[]) => (
+  SET_EVENTS: (state: RootState, events: Event[]) => (
     state.recentEvents = events
   ),
-  SET_EVENTS_GEOJSON: (state, events: any) => (
+  SET_EVENTS_GEOJSON: (state: RootState, events: any) => (
     state.recentEventsGeojson = events
   ),
-  SET_USEREVENTS: (state, events: Event[]) => (
+  SET_USEREVENTS: (state: RootState, events: Event[]) => (
     state.userEvents = events
   ),
-  SET_USEREVENTS_GEOJSON: (state, events: any) => (
+  SET_USEREVENTS_GEOJSON: (state: RootState, events: any) => (
     state.userEventsGeojson = events
   ),
-  SET_HOVERED: (state, hovered: Event | null) => (
+  SET_HOVERED: (state: RootState, hovered: Event | null) => (
     state.hoveredEvent = hovered
   ),
-  SET_SELECTED: (state, selected: Event | null) => (
+  SET_SELECTED: (state: RootState, selected: Event | null) => (
     state.selectedEvent = selected
   ),
-  SET_COMPOSE: (state, compose: Event | null) => (
+  SET_COMPOSE: (state: RootState, compose: Event | null) => (
     state.composeEvent = compose
   ),
-  SET_USER: (state, setuser: any) => (
+  SET_USER: (state: RootState, setuser: User | null) => (
     state.user = setuser
   ),
-  SET_LAST_UPDATE: (state, ts: string) => (
+  SET_LAST_UPDATE: (state: RootState, ts: string) => (
     state.lastUpdate = ts
   ),
-  SET_SELECTED_TAB: (state, tab: Number) => (
+  SET_SELECTED_TAB: (state: RootState, tab: Number) => (
     state.selectedTab = tab
   ),
-  SET_MAP_IS_LOADING: (state, loading: Boolean) => (
+  SET_MAP_IS_LOADING: (state: RootState, loading: Boolean) => (
     state.mapIsLoading = loading
   ),
-  SET_RESULT_ARRIVALTIMES: (state, arr: Array<any> | null) => (
+  SET_RESULT_ARRIVALTIMES: (state: RootState, arr: Array<any> | null) => (
     state.resultArrivaltimes = arr
   ),
-  ADD_EVENTS: (state, events: any[]) => {
+  ADD_EVENTS: (state: RootState, events: any[]) => {
     // we expect the entries to be in descending time order
     const revevents = events.reverse()
     for (let i = 0; i < revevents.length; i++) {
@@ -100,7 +100,7 @@ export const mutations: MutationTree<RootState> = {
       )
     }
   },
-  ADD_USEREVENTS: (state, events: any[]) => {
+  ADD_USEREVENTS: (state: RootState, events: any[]) => {
     // we expect the entries to be in descending time order
     const revevents = events.reverse()
     for (let i = 0; i < revevents.length; i++) {
@@ -210,13 +210,13 @@ function addEntryToArr(
 
 export const actions: ActionTree<RootState, RootState> = {
   // nuxtServerInit is called by Nuxt.js before server-rendering every page
-  nuxtServerInit({ commit }, { req }) {
+  nuxtServerInit({ commit }: any, { req }: any) {
     if (req.session && req.session.user) {
       commit('SET_USER', req.session.user)
     }
   },
 
-  async fetchEvents({ commit }) {
+  async fetchEvents({ commit }: any) {
     var evArr: Event[] = []
     var evUserArr: Event[] = []
     var evGeojsonArr: any[] = []
@@ -247,7 +247,7 @@ export const actions: ActionTree<RootState, RootState> = {
     commit('SET_LAST_UPDATE', data.maxtime)
   },
 
-  async registerUpdater({ commit }) {
+  async registerUpdater({ commit }: any) {
     const updateCall = async () => {
       var extraMsec = 0
       var lastts = this.getters.lastUpdate
@@ -308,7 +308,7 @@ export const actions: ActionTree<RootState, RootState> = {
     setTimeout(updateCall, UPDATE_INTERVAL_MSEC)
   },
 
-  async login({ commit }, { username, password }: any) {
+  async login({ commit }: any, { username, password }: any) {
     const requestBody = {
       username: username,
       password: password
@@ -335,7 +335,7 @@ export const actions: ActionTree<RootState, RootState> = {
     }
   },
 
-  async session({ commit }) {
+  async session({ commit }: any) {
     const { data } = await axios.post(API_SESSION_URL)
 
     if ('status' in data
@@ -347,7 +347,7 @@ export const actions: ActionTree<RootState, RootState> = {
     }
   },
 
-  async logout({ commit }) {
+  async logout({ commit }: any) {
     const user = this.getters.user
 
     if (!('username' in user) || !user.username) {
@@ -362,7 +362,7 @@ export const actions: ActionTree<RootState, RootState> = {
     }
   },
 
-  async sendCompute({ commit }, compute: ComputeRequest) {
+  async sendCompute({ commit }: any, compute: ComputeRequest) {
     const event = compute.event
     let requestBody = {}
 
@@ -418,7 +418,7 @@ export const actions: ActionTree<RootState, RootState> = {
     // commit('SET_NEXT_SELECTED', --> new ID)
   },
 
-  async fetchResults({ commit }) {
+  async fetchResults({ commit }: any) {
     const selected: Event = this.getters.selectedEvent
 
     if (selected && selected.progress == 100) {
