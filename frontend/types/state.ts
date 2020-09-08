@@ -13,4 +13,5 @@ export interface RootState {
     selectedTab: Number,
     mapIsLoading: Boolean,
     resultArrivaltimes: Array<any> | null,
+    resultWavejets: Array<any> | null,
 }

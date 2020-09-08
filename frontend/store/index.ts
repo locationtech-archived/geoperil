@@ -14,6 +14,7 @@ export const API_FETCH_URL = WEBGUISRV_BASE_URL + 'get_events'
 export const API_COMPUTE_URL = WEBGUISRV_BASE_URL + 'compute'
 export const API_UPDATE_URL = WEBGUISRV_BASE_URL + 'update'
 export const API_GETISOS_URL = WEBGUISRV_BASE_URL + 'getisos'
+export const API_GETJETS_URL = WEBGUISRV_BASE_URL + 'getjets'
 export const FORM_ENCODE_CONFIG = {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
@@ -34,6 +35,7 @@ export const state = (): RootState => ({
   selectedTab: 0,
   mapIsLoading: false,
   resultArrivaltimes: null,
+  resultWavejets: null,
 })
 
 export const getters: GetterTree<RootState, RootState> = {
@@ -49,6 +51,7 @@ export const getters: GetterTree<RootState, RootState> = {
   selectedTab: (state: RootState) => state.selectedTab,
   mapIsLoading: (state: RootState) => state.mapIsLoading,
   resultArrivaltimes: (state: RootState) => state.resultArrivaltimes,
+  resultWavejets: (state: RootState) => state.resultWavejets,
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -87,6 +90,9 @@ export const mutations: MutationTree<RootState> = {
   ),
   SET_RESULT_ARRIVALTIMES: (state: RootState, arr: Array<any> | null) => (
     state.resultArrivaltimes = arr
+  ),
+  SET_RESULT_WAVEJETS: (state: RootState, arr: Array<any> | null) => (
+    state.resultWavejets = arr
   ),
   ADD_EVENTS: (state: RootState, events: any[]) => {
     // we expect the entries to be in descending time order
@@ -424,20 +430,46 @@ export const actions: ActionTree<RootState, RootState> = {
     if (selected && selected.progress == 100) {
       commit('SET_MAP_IS_LOADING', true)
 
-      const { data } = await axios.post(
+      const arrResp = await axios.post(
         API_GETISOS_URL,
         querystring.stringify({evid: selected.identifier}),
         FORM_ENCODE_CONFIG
       )
 
-      if (!data || !('status' in data && data.status == 'success')) {
+      const arrivaldata = arrResp.data
+
+      if (
+        !arrivaldata
+        || !('status' in arrivaldata && arrivaldata.status == 'success')
+        || !('isos' in arrivaldata)
+      ) {
+        commit('SET_MAP_IS_LOADING', false)
         throw new Error('Getting the arrival times was not successful')
       }
 
-      commit('SET_RESULT_ARRIVALTIMES', data.isos)
+      const waveResp = await axios.post(
+        API_GETJETS_URL,
+        querystring.stringify({evid: selected.identifier}),
+        FORM_ENCODE_CONFIG
+      )
 
-      // TODO: fetch wavejets
+      const wavedata = waveResp.data
+
+      if (
+        !wavedata
+        || !('status' in wavedata && wavedata.status == 'success')
+        || !('jets' in wavedata)
+      ) {
+        commit('SET_MAP_IS_LOADING', false)
+        throw new Error('Getting the wavejets was not successful')
+      }
+
+      // we use arrival times as indicator for a new result data set,
+      // so setting it at last is important
+      commit('SET_RESULT_WAVEJETS', wavedata.jets)
+      commit('SET_RESULT_ARRIVALTIMES', arrivaldata.isos)
     } else {
+      commit('SET_RESULT_WAVEJETS', null)
       commit('SET_RESULT_ARRIVALTIMES', null)
     }
   },

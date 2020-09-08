@@ -536,18 +536,29 @@ class WebGuiSrv(BaseSrv):
 
     @cherrypy.expose
     def getjets(self, evid):
+        # TODO additional parameters for getting different wavejet outputs
         user = self.getUser()
+
         if user is not None or self.auth_shared(evid):
-            params = self._db["settings"].find({"type": "jet_color"})
-            pmap = dict((p["threshold"], p["color"]) for p in params)
-            jets = list(
-                self._db["comp"].find({
-                    "id": evid, "type": "JET"
-                }).sort([("ewh", 1)])
+            evt = self._db["eqs"].find_one({
+                "id": evid
+            })
+
+            if evt is None or "resultsdir" not in evt:
+                return jsfail(error="Could not get results for event")
+
+            default = os.path.join(
+                evt["resultsdir"],
+                WAVEHEIGHTS_DEFAULT_FILE
             )
-            for j in jets:
-                j["color"] = pmap[j["ewh"]]
-            return jssuccess(jets=jets)
+
+            if not os.path.isfile(default):
+                return jsfail(error="Could not get default output file")
+
+            with open(default) as json_file:
+                res = json.load(json_file)
+
+            return jssuccess(jets=res)
         return jsdeny()
 
     @cherrypy.expose
@@ -571,7 +582,7 @@ class WebGuiSrv(BaseSrv):
 
     @cherrypy.expose
     def getisos(self, evid):
-        # TODO additional parameter for getting different arrivaltime outputs
+        # TODO additional parameters for getting different arrivaltime outputs
         user = self.getUser()
 
         if user is not None or self.auth_shared(evid):

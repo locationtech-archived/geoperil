@@ -75,10 +75,18 @@
     </vl-layer-vector>
 
     <vl-layer-vector
+      ref="layerWavejets"
+      render-mode="image"
+      :z-index="5"
+    >
+      <vl-source-vector ref="sourceWavejets" />
+      <vl-style-func :factory="wavejetsStyleFunc" />
+    </vl-layer-vector>
+
+    <vl-layer-vector
       ref="layerArrivaltimes"
       render-mode="image"
-      :overlay="true"
-      :z-index="5"
+      :z-index="6"
     >
       <vl-source-vector ref="sourceArrivaltimes" />
       <vl-style-box>
@@ -96,6 +104,7 @@ import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import Feature from 'ol/Feature'
 import LineString from 'ol/geom/LineString'
+import MultiPolygon from 'ol/geom/MultiPolygon'
 
 @Component
 export default class Map extends Vue {
@@ -125,7 +134,15 @@ export default class Map extends Vue {
     return this.$store.getters.selectedEvent || { lat: 0, lon: 0}
   }
 
-  get resultArrivaltimes(): Array<any> | null {
+  get resultWavejets(): Array<any> {
+    const res = this.$store.getters.resultWavejets
+    if (res && 'features' in res) {
+      return res.features
+    }
+    return []
+  }
+
+  get resultArrivaltimes(): Array<any> {
     const res = this.$store.getters.resultArrivaltimes
     if (res && 'features' in res) {
       return res.features
@@ -135,14 +152,21 @@ export default class Map extends Vue {
 
   @Watch('resultArrivaltimes')
   public onArrivaltimesChange(newValue: Array<any> | null) {
+    this.$nextTick(function () {
+      this.$store.commit('SET_MAP_IS_LOADING', false)
+    })
+
     const sourceRef: any = this.$refs.sourceArrivaltimes
     const source: VectorSource = sourceRef.$source
     const layerRef: any = this.$refs.layerArrivaltimes
     const layer: VectorLayer = layerRef.$layer
+    const sourceWaveRef: any = this.$refs.sourceWavejets
+    const sourceWave: VectorSource = sourceWaveRef.$source
+    const layerWaveRef: any = this.$refs.layerWavejets
+    const layerWave: VectorLayer = layerWaveRef.$layer
 
-    if (source) {
-      source.clear()
-    }
+    source.clear()
+    sourceWave.clear()
 
     if (!newValue || newValue.length == 0) {
       return
@@ -151,15 +175,30 @@ export default class Map extends Vue {
     const features: Feature[] = newValue.map(f => {
       const line = new LineString(f.geometry.coordinates)
       line.transform('EPSG:4326', 'EPSG:3857')
-      return new Feature({
+      const newFeature = new Feature({
         geometry: line,
       })
+      newFeature.setProperties(f.properties)
+      return newFeature
     })
     source.addFeatures(features)
 
-    this.$nextTick(function () {
-      this.$store.commit('SET_MAP_IS_LOADING', false)
+    const wavejets = this.resultWavejets
+    if (!wavejets || wavejets.length <= 1) {
+      // length = 1 -> we got only the bbox
+      return
+    }
+
+    const featuresWave: Feature[] = wavejets.map(f => {
+      const poly = new MultiPolygon(f.geometry.coordinates)
+      poly.transform('EPSG:4326', 'EPSG:3857')
+      const newFeature = new Feature({
+        geometry: poly,
+      })
+      newFeature.setProperties(f.properties)
+      return newFeature
     })
+    sourceWave.addFeatures(featuresWave)
   }
 
   @Watch('selected')
@@ -225,6 +264,41 @@ export default class Map extends Vue {
       return [
         baseStyle,
       ]
+    }
+  }
+
+  public wavejetsStyleFunc(): any {
+    return (feature: any) => {
+      const wavemin = feature.get('wavemin')
+      const wavemax = feature.get('wavemax')
+      var color = 'rgb(0,0,0)'
+
+      if (wavemax < 0.3) {
+        // skip first interval
+        return []
+      } else if (wavemax == 0.3) {
+        color = '#fdfd01'
+      } else if (wavemax == 0.5) {
+        color = '#ff6100'
+      } else if (wavemax == 1.0) {
+        color = '#f50000'
+      } else if (wavemax == 2.0) {
+        color = '#ad0000'
+      } else if (wavemax == 5.0) {
+        color = '#fe00fa'
+      } else if (wavemax == 10.0) {
+        color = '#5c005c'
+      }
+
+      let style = new Style({
+        /*stroke: new Stroke({
+          color: '#4271A7'
+        }),*/
+        fill: new Fill({
+          color: color,
+        }),
+      })
+      return [ style ]
     }
   }
 }
