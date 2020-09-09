@@ -226,7 +226,13 @@ class EasyWaveCpu(Process):
     def createIsolines(self, response: WPSResponse):
         # gdal_contour -f geojson -a time -fl 10 20 ...
         # eWave.2D.time arrivaltimes.geojson
-        args = ['gdal_contour', '-f', 'geojson', '-a', 'time', '-fl']
+        args = [
+            'gdal_contour',
+            '-f', 'geojson',
+            '-a', 'time',
+            '-snodata', '-1.0',
+            '-fl'
+        ]
 
         for i in range(
             self.intervalTimes, self.duration + 1, self.intervalTimes
