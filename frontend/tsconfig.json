@@ -25,7 +25,8 @@
     },
     "types": [
       "@types/node",
-      "@nuxt/types"
+      "@nuxt/types",
+      "plugins/vueLayers.d.ts"
     ]
   },
   "exclude": [

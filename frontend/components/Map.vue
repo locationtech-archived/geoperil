@@ -5,6 +5,58 @@
     data-projection="EPSG:4326"
     id="geoperil-map"
   >
+    <vl-interaction-select
+      :features="selectedFeature"
+      :layers="['arrivaltimesId', 'wavejetsId']"
+      :hitTolerance="5"
+    >
+      <template slot-scope="select">
+        <vl-overlay
+          v-for="feature in select.features" :key="feature.id" :id="feature.id"
+          :position="pointOnSurface(feature.geometry)"
+          :auto-pan="true"
+          :auto-pan-animation="{ duration: 300 }"
+        >
+          <template slot-scope="popup">
+            <v-card
+              v-if="featureHasProperty(feature, 'time')"
+              class="pa-0"
+            >
+              <v-card-text class="pa-0 pl-2">
+                <span class="mt-2">Arrival time: {{ feature.properties['time'] }} min</span>
+                <v-btn
+                  class="pa-0 pl-1 pr-2"
+                  min-width="0"
+                  height="16px"
+                  @click="selectedFeature = []"
+                  text
+                >
+                  <v-icon color="#154f8a" size="16">mdi-close</v-icon>
+                </v-btn>
+              </v-card-text>
+            </v-card>
+            <v-card
+              v-if="featureHasProperty(feature, 'wavemin')"
+              class="pa-0"
+            >
+              <v-card-text class="pa-0 pl-2">
+                <span>Wave heights greater than {{ feature.properties['wavemin'] }} m</span>
+                <v-btn
+                  class="pa-0 pl-1 pr-2"
+                  min-width="0"
+                  height="16px"
+                  @click="selectedFeature = []"
+                  text
+                >
+                  <v-icon color="#154f8a" size="16">mdi-close</v-icon>
+                </v-btn>
+              </v-card-text>
+            </v-card>
+          </template>
+        </vl-overlay>
+      </template>
+    </vl-interaction-select>
+
     <vl-view
       ref="view"
       :zoom.sync="zoom"
@@ -75,6 +127,7 @@
     </vl-layer-vector>
 
     <vl-layer-vector
+      id="wavejetsId"
       ref="layerWavejets"
       render-mode="image"
       :z-index="5"
@@ -84,6 +137,7 @@
     </vl-layer-vector>
 
     <vl-layer-vector
+      id="arrivaltimesId"
       ref="layerArrivaltimes"
       render-mode="image"
       :z-index="6"
@@ -99,6 +153,7 @@
 <script lang="ts">
 import { Vue, Component, Watch } from 'nuxt-property-decorator'
 import { Event } from '~/types'
+import { findPointOnSurface } from 'vuelayers/lib/ol-ext'
 import { Style, Circle, Fill, Stroke } from 'ol/style.js'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
@@ -113,6 +168,7 @@ export default class Map extends Vue {
   private minZoom: Number = 2
   private center: Number[] = [0, 0]
   private rotation: Number = 0
+  private selectedFeature: any[] = []
 
   get selectedTab(): Number {
     return this.$store.getters.selectedTab
@@ -150,6 +206,18 @@ export default class Map extends Vue {
     return []
   }
 
+  public featureHasProperty(feature: any, prop: string) {
+    return feature
+      && 'properties' in feature
+      && feature.properties
+      && prop in feature.properties
+      && feature.properties[prop]
+  }
+
+  public pointOnSurface(g: any) {
+    return findPointOnSurface(g)
+  }
+
   @Watch('resultArrivaltimes')
   public onArrivaltimesChange(newValue: Array<any> | null) {
     this.$nextTick(function () {
@@ -167,6 +235,7 @@ export default class Map extends Vue {
 
     source.clear()
     sourceWave.clear()
+    this.selectedFeature = []
 
     if (!newValue || newValue.length == 0) {
       return
@@ -175,9 +244,18 @@ export default class Map extends Vue {
     const features: Feature[] = newValue.map(f => {
       const line = new LineString(f.geometry.coordinates)
       line.transform('EPSG:4326', 'EPSG:3857')
+
       const newFeature = new Feature({
         geometry: line,
       })
+
+      if ('ID' in f.properties) {
+        newFeature.setId(f.properties['ID'])
+      } else {
+        // random number
+        newFeature.setId(Math.floor(Math.random() * 999999))
+      }
+
       newFeature.setProperties(f.properties)
       return newFeature
     })
@@ -195,10 +273,23 @@ export default class Map extends Vue {
       const newFeature = new Feature({
         geometry: poly,
       })
+
+      if ('ID' in f.properties) {
+        newFeature.setId(f.properties['ID'])
+      } else {
+        // random number
+        newFeature.setId(Math.floor(Math.random() * 999999))
+      }
+
       newFeature.setProperties(f.properties)
       return newFeature
     })
     sourceWave.addFeatures(featuresWave)
+  }
+
+  @Watch('selectedTab')
+  public onSelectedTabChange(newValue: any) {
+    this.selectedFeature = []
   }
 
   @Watch('selected')
