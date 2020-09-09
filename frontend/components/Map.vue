@@ -73,7 +73,7 @@
     <vl-layer-vector
       render-mode="image"
       :visible="selectedTab == 0"
-      :z-index="2"
+      :z-index="4"
     >
       <vl-source-vector :features="points" />
       <vl-style-func :factory="pointsStyleFunc" />
@@ -82,7 +82,7 @@
     <vl-layer-vector
       render-mode="image"
       :visible="selectedTab == 1"
-      :z-index="2"
+      :z-index="4"
     >
       <vl-source-vector :features="pointsUser" />
       <vl-style-func :factory="pointsStyleFunc" />
@@ -91,7 +91,7 @@
     <vl-layer-vector
       render-mode="image"
       :visible="'identifier' in hovered"
-      :z-index="3"
+      :z-index="5"
     >
       <vl-source-vector>
         <vl-feature>
@@ -130,7 +130,7 @@
       id="wavejetsId"
       ref="layerWavejets"
       render-mode="image"
-      :z-index="5"
+      :z-index="2"
     >
       <vl-source-vector ref="sourceWavejets" />
       <vl-style-func :factory="wavejetsStyleFunc" />
@@ -140,7 +140,7 @@
       id="arrivaltimesId"
       ref="layerArrivaltimes"
       render-mode="image"
-      :z-index="6"
+      :z-index="3"
     >
       <vl-source-vector ref="sourceArrivaltimes" />
       <vl-style-box>
