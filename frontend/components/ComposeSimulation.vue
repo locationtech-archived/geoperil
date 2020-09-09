@@ -159,7 +159,7 @@ import { Event, ComputeRequest } from '../types'
 export default class ComposeSimulation extends Vue {
   private name: string = ''
   private date: string = ''
-  private datetime: Date | null = null
+  private datetime: Date | null = new Date()
   private lat: number | null = null
   private lon: number | null = null
   private mag: number | null = null
