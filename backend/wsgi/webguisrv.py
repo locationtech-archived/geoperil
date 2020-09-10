@@ -541,7 +541,7 @@ class WebGuiSrv(BaseSrv):
 
         if user is not None or self.auth_shared(evid):
             evt = self._db["eqs"].find_one({
-                "id": evid
+                "_id": evid
             })
 
             if evt is None or "resultsdir" not in evt:
@@ -587,7 +587,7 @@ class WebGuiSrv(BaseSrv):
 
         if user is not None or self.auth_shared(evid):
             evt = self._db["eqs"].find_one({
-                "id": evid
+                "_id": evid
             })
 
             if evt is None or "resultsdir" not in evt:
@@ -692,7 +692,7 @@ class WebGuiSrv(BaseSrv):
         msgnr = 1
         now = eqs["prop"]["date"] + (
             datetime.utcnow() - eqs["prop"]["date"]
-        ) * 1  # eq["accel"]
+        ) * 1
         rootid = eqs["root"] if eqs["root"] else eqs["_id"]
         cursor = self._db["messages_sent"].find({
             "EventID": rootid,
@@ -1304,7 +1304,7 @@ class WebGuiSrv(BaseSrv):
 
     def start_worker(
         self, worker, user, name, lat, lon, depth, dip, strike, rake, dur, mag,
-        slip, length, width, date: datetime, gridres
+        slip, length, width, date: datetime, gridres, algo, existingId=None
     ):
         url = worker.get("wpsurl")
         process = worker.get("wpsprocess")
@@ -1373,42 +1373,49 @@ class WebGuiSrv(BaseSrv):
             ]
         )
 
-        newid = self.newRandomId(user["username"])
-        # TODO: parent ?
-        curTime = datetime.now()
+        if existingId is None:
+            newid = self.newRandomId(user["username"])
+            # TODO: parent ?
+            curTime = datetime.now()
 
-        self._db["eqs"].insert_one({
-            "_id": newid,
-            "id": newid,
-            "user": user["_id"],
-            "timestamp": curTime,
-            "progress": 0,
-            "prop": {
-                "date": date,
-                "region": name,
-                "latitude": lat,
-                "longitude": lon,
-                "magnitude": mag,
-                "slip": slip,
-                "length": length,
-                "width": width,
-                "depth": depth,
-                "dip": dip,
-                "strike": strike,
-                "rake": rake
-            }
-            # TODO: root
-            # TODO: parent
-            # TODO: accel ?
-        })
+            self._db["eqs"].insert_one({
+                "_id": newid,
+                "id": newid,
+                "user": user["_id"],
+                "timestamp": curTime,
+                "progress": 0,
+                "prop": {
+                    "date": date,
+                    "region": name,
+                    "latitude": lat,
+                    "longitude": lon,
+                    "magnitude": mag,
+                    "slip": slip,
+                    "length": length,
+                    "width": width,
+                    "depth": depth,
+                    "dip": dip,
+                    "strike": strike,
+                    "rake": rake,
+                    "comp": dur,
+                    "gridres": gridres,
+                    "algo": algo
+                }
+                # TODO: root ?
+                # TODO: parent ?
+            })
 
-        # TODO: really needed?
-        self._db["events"].insert_one({
-            "id": newid,
-            "user": user["_id"],
-            "timestamp": curTime,
-            "event": "new"
-        })
+            # TODO: really needed?
+            self._db["events"].insert_one({
+                "id": newid,
+                "user": user["_id"],
+                "timestamp": curTime,
+                "event": "new"
+            })
+
+            evId = newid
+        else:
+            evId = existingId
 
         resultsdir = self._db["settings"].find_one({"type": "resultsdir"})
 
@@ -1418,7 +1425,7 @@ class WebGuiSrv(BaseSrv):
         inst = self._db["institutions"].find_one({"_id": user.get("inst")})
 
         thread = WatchExecution(
-            self._db, execution, newid, resultsdir.get("results"),
+            self._db, execution, evId, resultsdir.get("results"),
             inst.get("name"), user.get("username"), worker
         )
         thread.start()
@@ -1516,7 +1523,7 @@ class WebGuiSrv(BaseSrv):
 
         return self.start_worker(
             selected, user, name, lat, lon, depth, dip, strike, rake, dur, mag,
-            slip, length, width, dateconv, gridres
+            slip, length, width, dateconv, gridres, algo
         )
 
     # this method is called by the tomcat-server if the computation
@@ -2053,7 +2060,7 @@ class WebGuiSrv(BaseSrv):
     ):
         inst = params.get("inst")
         secret = params.get("secret")
-        id = params.get("id")
+        evid = params.get("id")
         name = params.get("name")
         lon = params.get("lon")
         lat = params.get("lat")
@@ -2070,7 +2077,6 @@ class WebGuiSrv(BaseSrv):
         root = params.get("root")
         parent = params.get("parent")
         comp = params.get("comp")
-        accel = params.get("accel")
         gridres = params.get("gridres")
         apikey = params.get("apikey")
         algo = params.get("algo", "easywave")
@@ -2110,7 +2116,6 @@ class WebGuiSrv(BaseSrv):
             gridres = int(gridres)
 
         useApiKey = apikey
-        useAccel = accel
         useRoot = root
 
         # Check for invalid parameter configurations.
@@ -2156,19 +2161,13 @@ class WebGuiSrv(BaseSrv):
         if dbUser is not None:
             userId = dbUser["_id"]
             username = dbUser["username"]
-            instobj = self.getInst(dbUser)
-            user = {
-                "name": username,
-                "objId": userId,
-                "inst": instobj.get("name")
-            }
+            user = dbUser
         elif dbInst is not None:
             userId = dbInst["_id"]
             username = dbInst["name"]
             user = {
-                "name": username,
-                "secret": dbInst["secret"],
-                "inst": username
+                "username": username,
+                "inst": dbInst.get("_id")
             }
         else:
             return jsdeny(error="Not allowed to use API")
@@ -2197,21 +2196,20 @@ class WebGuiSrv(BaseSrv):
             "strike": strike,
             "rake": rake,
             "sea_area": sea_area,
-            "bb_url": bb_url
+            "bb_url": bb_url,
+            "comp": comp,
+            "gridres": gridres,
+            "algo": algo
         }
-
-        if useAccel is None:
-            useAccel = 1
 
         # create new DB object that should be added to the eqs collection
         obj = {
-            "id": id,
+            "id": evid,
             "user": userId,
             "timestamp": timestamp,
             "prop": sub,
             "root": useRoot,
-            "parent": parent,
-            "accel": useAccel
+            "parent": parent
         }
 
         # create a new event
@@ -2229,7 +2227,7 @@ class WebGuiSrv(BaseSrv):
         # search for given id
         found = coll.find(
             {
-                "id": id,
+                "id": evid,
                 "user": userId
             },
             sort=[('refineId', pymongo.DESCENDING)]
@@ -2268,7 +2266,7 @@ class WebGuiSrv(BaseSrv):
             break
 
         # set refinement and compound Ids
-        compId = id + "_" + username + "_" + str(refineId)
+        compId = evid + "_" + username + "_" + str(refineId)
         obj["_id"] = compId
         obj["refineId"] = refineId
         event["id"] = compId
@@ -2278,18 +2276,41 @@ class WebGuiSrv(BaseSrv):
 
         if comp is not None and (
             (
-                id is not None and lon is not None and lat is not None
+                evid is not None and lon is not None and lat is not None
                 and mag is not None and depth is not None and dip is not None
                 and strike is not None and rake is not None
             ) or (
-                id is not None and lon is not None and lat is not None
+                evid is not None and lon is not None and lat is not None
                 and slip is not None and length is not None
                 and width is not None and depth is not None and dip is not None
                 and strike is not None and rake is not None
             )
         ):
-            # TODO: trigger simulation
-            pass
+            worker = list(
+                self._db["settings"].find({
+                    "type": "worker",
+                    "algorithm": algo
+                })
+            )
+
+            available = len(worker)
+
+            if available < 1:
+                return jsfail(
+                    error="No worker for the requested algorithm available"
+                )
+
+            # TODO: better scheduling
+            # -> memorize last used slot for this algo in DB
+            selected = worker[random.randint(0, available - 1)]
+
+            # TODO: really needed?
+            self._db["events"].insert_one(event)
+
+            return self.start_worker(
+                selected, user, name, lat, lon, depth, dip, strike, rake, comp,
+                mag, slip, length, width, date_time, gridres, algo, compId
+            )
 
         # TODO: really needed?
         self._db["events"].insert_one(event)
@@ -2343,6 +2364,7 @@ class WatchExecution(threading.Thread):
     username: str = None
     worker: dict = None
     resultsdir: str = None
+    zeroDisplacementMsg: str = "Zero initial displacement"
 
     def __init__(
         self,
@@ -2365,7 +2387,7 @@ class WatchExecution(threading.Thread):
 
     def updateProgress(self, progress: int):
         self.db["eqs"].update(
-            {"id": self.eqsId},
+            {"_id": self.eqsId},
             {
                 "$set": {
                     "progress": progress,
@@ -2376,10 +2398,13 @@ class WatchExecution(threading.Thread):
 
     def run(self):
         eqsdb = self.db["eqs"]
-        eqs = eqsdb.find_one({"id": self.eqsId})
+        eqs = eqsdb.find_one({"_id": self.eqsId})
 
         if eqs is None:
             raise Exception("Internal error: expected eqs entry in DB")
+
+        # set initial progress to notify frontend
+        self.updateProgress(0)
 
         while self.execution.isComplete() is False:
             oldpercent = self.execution.percentCompleted
@@ -2394,12 +2419,18 @@ class WatchExecution(threading.Thread):
                     self.updateProgress(newpercent)
 
         if not self.execution.isSucceded():
+            status = -1
+
             for ex in self.execution.errors:
-                logger.error(
-                    'Error: code=%s, locator=%s, text=%s' %
-                    (ex.code, ex.locator, ex.text)
-                )
-            self.updateProgress(-1)
+                if bool(re.match(r'.*' + self.zeroDisplacementMsg, ex.text)):
+                    status = -2
+                else:
+                    logger.error(
+                        'Error: code=%s, locator=%s, text=%s' %
+                        (ex.code, ex.locator, ex.text)
+                    )
+
+            self.updateProgress(status)
             return
 
         try:
@@ -2439,7 +2470,8 @@ class WatchExecution(threading.Thread):
                 self.updateProgress(-1)
                 return
 
-            os.makedirs(resultspath)
+            if not os.path.exists(resultspath):
+                os.makedirs(resultspath)
 
             arrivalFile = os.path.join(resultspath, ARRIVALTIMES_DEFAULT_FILE)
             arrivalRawFile = os.path.join(resultspath, ARRIVALTIMES_RAW_FILE)
@@ -2464,16 +2496,15 @@ class WatchExecution(threading.Thread):
             self.updateProgress(-1)
             return
 
-        self.updateProgress(100)
-
         # add outputs to DB
         eqsdb.update(
             {
-                "id": self.eqsId
+                "_id": self.eqsId
             }, {
                 "$set": {
                     "calctime": calctime,
-                    "resultsdir": resultspath
+                    "resultsdir": resultspath,
+                    "progress": 100
                 }
             }
         )

@@ -98,12 +98,33 @@ export const mutations: MutationTree<RootState> = {
     // we expect the entries to be in descending time order
     const revevents = events.reverse()
     for (let i = 0; i < revevents.length; i++) {
-      addEntryToArr(
-        revevents[i],
-        state.recentEvents,
-        state.recentEventsGeojson,
-        false
-      )
+      let foundindex = null
+
+      for (let j = 0; j < state.recentEvents.length; j++) {
+        if (revevents[i].id == state.recentEvents[j].identifier) {
+          foundindex = j
+          break
+        }
+      }
+
+      if (foundindex != null) {
+        // overwrite existing entry
+        // use splice to let vue detect the change
+        // see https://vuejs.org/v2/guide/reactivity.html#Change-Detection-Caveats
+        state.recentEvents.splice(
+          foundindex, 1, apiToEvent(revevents[i])
+        )
+        state.recentEventsGeojson.splice(
+          foundindex, 1, apiToGeojson(revevents[i])
+        )
+      } else {
+        addEntryToArr(
+          revevents[i],
+          state.recentEvents,
+          state.recentEventsGeojson,
+          false
+        )
+      }
     }
   },
   ADD_USEREVENTS: (state: RootState, events: any[]) => {
@@ -157,7 +178,8 @@ function apiToEvent(entry: any): Event {
     + min.toString().padStart(2, '0') + ' UTC'
 
   return {
-    identifier: entry._id,
+    compId: entry._id,
+    identifier: entry.id,
     region: props.region,
     datetime: new Date(Date.UTC(year, month, day, hour, min, sec)),
     date: date,
@@ -432,7 +454,7 @@ export const actions: ActionTree<RootState, RootState> = {
 
       const arrResp = await axios.post(
         API_GETISOS_URL,
-        querystring.stringify({evid: selected.identifier}),
+        querystring.stringify({evid: selected.compId}),
         FORM_ENCODE_CONFIG
       )
 
@@ -449,7 +471,7 @@ export const actions: ActionTree<RootState, RootState> = {
 
       const waveResp = await axios.post(
         API_GETJETS_URL,
-        querystring.stringify({evid: selected.identifier}),
+        querystring.stringify({evid: selected.compId}),
         FORM_ENCODE_CONFIG
       )
 

@@ -269,7 +269,7 @@ def main():
 
         if "sea_area" in entry and entry["mag"] > 5.5 and entry["depth"] < 100:
             cnt_sim += 1
-            entry.update({"comp": 180})
+            entry.update({"comp": 180, "gridres": 120})
 
         data = urllib.parse.urlencode(entry).encode('ascii')
         req = urllib.request.Request(

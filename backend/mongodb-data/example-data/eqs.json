@@ -1,3 +1,3 @@
 [
-    { "_id" : "gfz2019mjvc_gfz_0", "id" : "gfz2019mjvc", "user" : {"$oid": "444444444444444444444444"}, "timestamp" : {"$date": "2019-07-30T11:51:38.772Z"}, "prop" : { "date" : {"$date": "2019-06-26T03:18:16.330Z"}, "region" : "Solomon Islands", "latitude" : -9.51, "longitude" : 157.58, "magnitude" : 5.6, "slip" : null, "length" : null, "width" : null, "depth" : 18, "dip" : 59, "strike" : 347, "rake" : 175, "sea_area" : null }, "root" : null, "parent" : null, "accel" : 1, "refineId" : 0 }
+    { "_id" : "gfz2019mjvc_gfz_0", "id" : "gfz2019mjvc", "user" : {"$oid": "444444444444444444444444"}, "timestamp" : {"$date": "2019-07-30T11:51:38.772Z"}, "prop" : { "date" : {"$date": "2019-06-26T03:18:16.330Z"}, "region" : "Solomon Islands", "latitude" : -9.51, "longitude" : 157.58, "magnitude" : 5.6, "slip" : null, "length" : null, "width" : null, "depth" : 18, "dip" : 59, "strike" : 347, "rake" : 175, "sea_area" : null }, "root" : null, "parent" : null, "refineId" : 0 }
 ]

@@ -3,6 +3,9 @@
     id="recent-list"
     class="ma-0 pa-0"
   >
+    <v-list-item v-if="!recentEvents || recentEvents.length == 0">
+      <em>There are no recent events.</em>
+    </v-list-item>
     <EventItem
       v-for="(item, index) in recentEvents"
       :key="index"

@@ -81,20 +81,24 @@ class EasyWaveCpu(Process):
             ),
             ComplexOutput(
                 'arrivaltimes', 'Arrival times as isolines in GeoJSON format',
+                as_reference=True,
                 supported_formats=[FORMATS.GEOJSON]
             ),
             ComplexOutput(
                 'waveheights', 'Wave heights as polygons in GeoJSON format',
+                as_reference=True,
                 supported_formats=[FORMATS.GEOJSON]
             ),
             ComplexOutput(
                 'arrivaltimesRaw',
                 'Arrival times in GeoTIFF format (raw data)',
+                as_reference=True,
                 supported_formats=[FORMATS.GEOTIFF]
             ),
             ComplexOutput(
                 'waveheightsRaw',
                 'Maximum wave heights in GeoTIFF format (raw data)',
+                as_reference=True,
                 supported_formats=[FORMATS.GEOTIFF]
             )
         ]
@@ -270,8 +274,8 @@ class EasyWaveCpu(Process):
 
         simplifyArgs = [
             'ogr2ogr', '-f', 'geojson',
-            '-lco', 'COORDINATE_PRECISION=3',
-            '-simplify', '0.01',
+            '-lco', 'COORDINATE_PRECISION=4',
+            '-simplify', '0.001',
             self.geojsonTime, geojsonTimeTemp
         ]
 

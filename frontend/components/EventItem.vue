@@ -33,12 +33,14 @@
                 @click="selectEvent"
               >{{ data.region }}</a>
             </div>
-            <div class="item-metadata">{{ data.date }} &middot; {{ data.time }} &middot; {{ data.identifier }}</div>
+            <div class="item-metadata">{{ data.date }} &middot; {{ data.time }} &middot; {{ data.compId }}</div>
             <div class="item-metadata">Lat {{ data.lat }}° &middot; Lon {{ data.lon }}° &middot; Depth {{ data.depth }} km</div>
             <div class="item-metadata" v-if="data.dip && data.strike && data.rake">Dip {{ data.dip }}° &middot; Strike {{ data.strike }}° &middot; Rake {{ data.rake }}°</div>
             <div v-if="data.progress == null" class="item-potential">{{ eventInfoText }}</div>
+            <div v-if="data.progress > 0 && data.progress < 100" class="item-potential">Simulation in progress</div>
             <div v-if="data.progress == 100" class="item-potential">Simulation processed</div>
             <div v-if="data.progress == -1" class="sim-error">Simulation failed</div>
+            <div v-if="data.progress == -2" class="item-potential">Simulation processed: No tsunami potential</div>
             <div v-if="data.progress == 0" class="item-potential">Simulation is being prepared</div>
             <v-progress-linear
               v-if="data.progress > 0 && data.progress < 100"
