@@ -2452,7 +2452,7 @@ class WatchExecution(threading.Thread):
                 ident = output.identifier
 
                 if ident == 'calctime':
-                    calctime = output.data
+                    calctime = output.data[0]
                 elif ident == 'arrivaltimes':
                     arrivalRef = output.reference
                 elif ident == 'arrivaltimesRaw':
@@ -2502,7 +2502,7 @@ class WatchExecution(threading.Thread):
                 "_id": self.eqsId
             }, {
                 "$set": {
-                    "calctime": calctime,
+                    "calctime": int(calctime),
                     "resultsdir": resultspath,
                     "progress": 100
                 }

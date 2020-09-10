@@ -36,6 +36,7 @@
             <div class="item-metadata">{{ data.date }} &middot; {{ data.time }} &middot; {{ data.compId }}</div>
             <div class="item-metadata">Lat {{ data.lat }}° &middot; Lon {{ data.lon }}° &middot; Depth {{ data.depth }} km</div>
             <div class="item-metadata" v-if="data.dip && data.strike && data.rake">Dip {{ data.dip }}° &middot; Strike {{ data.strike }}° &middot; Rake {{ data.rake }}°</div>
+            <div class="item-metadata" v-if="data.progress > 0">{{ algorithmName }} &middot; Resolution {{ data.gridres }}° <br> Duration {{ data.duration }} min <template v-if="data.progress == 100">&middot; Runtime {{ calctimeInSec }} sec</template></div>
             <div v-if="data.progress == null" class="item-potential">{{ eventInfoText }}</div>
             <div v-if="data.progress > 0 && data.progress < 100" class="item-potential">Simulation in progress</div>
             <div v-if="data.progress == 100" class="item-potential">Simulation processed</div>
@@ -112,6 +113,25 @@ export default class EventItem extends Vue {
   @Prop({ required: true }) data!: Event
 
   private hover: boolean = false
+
+  get calctimeInSec(): string {
+    if (this.data.calctime) {
+      return (this.data.calctime / 1000).toFixed(1)
+    }
+    return ''
+  }
+
+  get algorithmName(): string {
+    if (this.data.algo == 'easywave') {
+      return 'easyWave'
+    }
+
+    if (this.data.algo == 'hysea') {
+      return 'HySea'
+    }
+
+    return 'unknown'
+  }
 
   get eventInfoText(): string {
     const data: Event = this.data

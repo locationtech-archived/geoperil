@@ -188,13 +188,19 @@ function apiToEvent(entry: any): Event {
     lon: props.longitude,
     mag: props.magnitude,
     depth: props.depth,
+    slip: props.slip,
+    len: props['length'],
+    width: props.width,
     dip: props.dip,
     rake: props.rake,
     strike: props.strike,
     seaArea: props.sea_area,
     bbUrl: props.bb_url,
     progress: entry.progress,
-    arrivaltimes: entry.arrivaltimes
+    calctime: entry.calctime,
+    gridres: props.gridres,
+    algo: props.algo,
+    duration: props.comp
   } as Event
 }
 
