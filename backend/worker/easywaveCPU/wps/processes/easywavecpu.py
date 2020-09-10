@@ -32,7 +32,7 @@ class EasyWaveCpu(Process):
 
     # TODO: could be parameters for the user in the WPS request
     intervalTimes = 10
-    intervalsWavejets = [0.2, 0.3, 0.5, 1.0, 2.0, 5.0, 10.0]
+    intervalsWavejets = [0.05, 0.3, 0.5, 1.0, 2.0, 5.0, 10.0]
 
     statusMsg = 'easyWave simulation started, waiting...'
     internalErrorMsg = 'Internal error'

@@ -364,27 +364,28 @@ export default class Map extends Vue {
       const wavemax = feature.get('wavemax')
       var color = 'rgb(0,0,0)'
 
-      if (wavemax < 0.3) {
+      if (wavemin == 0) {
         // skip first interval
         return []
-      } else if (wavemax == 0.3) {
+      } else if (wavemin == 0.05) {
+        color = '#2d9f33'
+      } else if (wavemin == 0.3) {
         color = '#fdfd01'
-      } else if (wavemax == 0.5) {
+      } else if (wavemin == 0.5) {
         color = '#ff6100'
-      } else if (wavemax == 1.0) {
+      } else if (wavemin == 1.0) {
         color = '#f50000'
-      } else if (wavemax == 2.0) {
+      } else if (wavemin == 2.0) {
         color = '#ad0000'
-      } else if (wavemax == 5.0) {
+      } else if (wavemin == 5.0) {
         color = '#fe00fa'
-      } else if (wavemax == 10.0) {
+      } else if (wavemin == 10.0) {
         color = '#5c005c'
+      } else {
+        return []
       }
 
       let style = new Style({
-        /*stroke: new Stroke({
-          color: '#4271A7'
-        }),*/
         fill: new Fill({
           color: color,
         }),
