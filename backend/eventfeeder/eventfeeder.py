@@ -467,7 +467,7 @@ def feedevent(event):
     params = {
         "apiver": "1",
         "inst": "eventfeeder",
-        "secret": "fff38afc-0863-4ed0-94ca-dc76b06524e6",
+        "secret": "fff38afc08634ed094cadc76b06524e6",
         "event": json.dumps(event),
     }
     resp = requests.post(url, data=params, timeout=60)
