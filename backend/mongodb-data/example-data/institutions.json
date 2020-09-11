@@ -20,5 +20,17 @@
         },
         "descr": "Eventfeeder",
         "msg_name": "MSG TEST"
+    },
+    {
+        "_id": { "$oid": "479238151615448527685778" },
+        "name": "slm",
+        "secret": "cbec15fe1aa14073a50abe35460c1431",
+        "api": {
+            "key": "a2d3827cdc5941efb375abc76d7576c4",
+            "enabled": true
+        },
+        "feedstations": true,
+        "descr": "Sea level monitoring feeder",
+        "msg_name": "MSG TEST"
     }
 ]
