@@ -9,10 +9,11 @@ import LoginForm from '../components/LoginForm.vue';
         align-center
         fluid
       >
-        <LoginForm v-if="!$store.state.user">
+        <LoginForm v-if="!isLoggedIn">
         </LoginForm>
         <Geoperil v-else>
         </Geoperil>
+        <SettingsDialog v-if="isLoggedIn && showSettings" />
       </v-container>
     </v-main>
   </v-app>
@@ -20,18 +21,27 @@ import LoginForm from '../components/LoginForm.vue';
 
 <script lang="ts">
 import LoginForm from '../components/LoginForm.vue'
-import AppBar from '../components/AppBar.vue'
+import AppBar from '../components/AppBar.vue';
 import Geoperil from '../components/Geoperil.vue'
 import { Vue, Component } from 'nuxt-property-decorator'
+import SettingsDialog from '../components/SettingsDialog.vue'
 
 @Component({
   components: {
     Geoperil,
     AppBar,
-    LoginForm
+    LoginForm,
+    SettingsDialog
   }
 })
 export default class Index extends Vue {
+  get isLoggedIn() {
+    return !!this.$store.getters.user
+  }
+
+  get showSettings() {
+    return this.$store.getters.showSettingsDialog
+  }
 }
 </script>
 

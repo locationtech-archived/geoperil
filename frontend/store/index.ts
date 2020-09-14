@@ -36,6 +36,7 @@ export const state = (): RootState => ({
   mapIsLoading: false,
   resultArrivaltimes: null,
   resultWavejets: null,
+  showSettingsDialog: false,
 })
 
 export const getters: GetterTree<RootState, RootState> = {
@@ -52,6 +53,7 @@ export const getters: GetterTree<RootState, RootState> = {
   mapIsLoading: (state: RootState) => state.mapIsLoading,
   resultArrivaltimes: (state: RootState) => state.resultArrivaltimes,
   resultWavejets: (state: RootState) => state.resultWavejets,
+  showSettingsDialog: (state: RootState) => state.showSettingsDialog,
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -93,6 +95,9 @@ export const mutations: MutationTree<RootState> = {
   ),
   SET_RESULT_WAVEJETS: (state: RootState, arr: Array<any> | null) => (
     state.resultWavejets = arr
+  ),
+  SET_SHOWSETTINGSDIALOG: (state: RootState, show: Boolean) => (
+    state.showSettingsDialog = show
   ),
   ADD_EVENTS: (state: RootState, events: any[]) => {
     // we expect the entries to be in descending time order

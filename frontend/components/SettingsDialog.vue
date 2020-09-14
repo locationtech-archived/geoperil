@@ -1,0 +1,64 @@
+<template>
+  <v-dialog
+    v-model="dialog"
+    :transition="false"
+    fullscreen
+    hide-overlay
+  >
+      <SettingsToolbar />
+      <v-tabs
+        v-model="tab"
+        id="settings-tabs"
+        centered
+      >
+        <v-tab class="no-text-transform">General</v-tab>
+        <v-tab class="no-text-transform">Stations</v-tab>
+
+        <v-tabs-items
+          class="fill-height-tabs"
+          v-model="tab"
+        >
+          <v-row
+            class="fill-height ma-0 pa-0"
+            justify="center"
+          >
+            <v-col
+              class="fill-height"
+              cols="6"
+            >
+              <TabItem>
+                Tab 1
+              </TabItem>
+
+              <TabItem>
+                Tab 2
+              </TabItem>
+            </v-col>
+          </v-row>
+        </v-tabs-items>
+      </v-tabs>
+  </v-dialog>
+</template>
+
+<script lang="ts">
+import { Vue, Component } from 'nuxt-property-decorator'
+import SettingsToolbar from './SettingsToolbar.vue'
+import TabItem from './TabItem.vue'
+
+@Component({
+  components: {
+    TabItem,
+    SettingsToolbar
+  }
+})
+export default class SettingsDialog extends Vue {
+  private dialog = true
+  private tab = null
+}
+</script>
+
+<style>
+#settings-tabs {
+  height: calc(100vh - 50px);
+}
+</style>
