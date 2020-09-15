@@ -1,4 +1,4 @@
-import { User, Event } from "~/types"
+import { User, Event, Station } from "~/types"
 
 export interface RootState {
     recentEvents: Event[],
@@ -15,4 +15,5 @@ export interface RootState {
     resultArrivaltimes: Array<any> | null,
     resultWavejets: Array<any> | null,
     showSettingsDialog: Boolean,
+    allStations: Station[] | null,
 }

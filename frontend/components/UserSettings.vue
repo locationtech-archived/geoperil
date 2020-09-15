@@ -13,7 +13,7 @@
       disabled
     />
 
-    <h3>Change your password:</h3>
+    <h4>Change your password:</h4>
 
     <v-text-field
       type="password"

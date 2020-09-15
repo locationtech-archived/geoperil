@@ -1,5 +1,5 @@
 import { GetterTree, ActionTree, MutationTree } from 'vuex'
-import { RootState, Event, User, ComputeRequest } from "~/types"
+import { RootState, Event, User, Station, ComputeRequest } from "~/types"
 import axios from 'axios'
 import querystring from 'querystring'
 
@@ -11,6 +11,7 @@ export const API_SIGNIN_URL = WEBGUISRV_BASE_URL + 'signin'
 export const API_SESSION_URL = WEBGUISRV_BASE_URL + 'session'
 export const API_SIGNOUT_URL = WEBGUISRV_BASE_URL + 'signout'
 export const API_FETCH_URL = WEBGUISRV_BASE_URL + 'get_events'
+export const API_STATIONLIST_URL = WEBGUISRV_BASE_URL + 'stationlist'
 export const API_COMPUTE_URL = WEBGUISRV_BASE_URL + 'compute'
 export const API_UPDATE_URL = WEBGUISRV_BASE_URL + 'update'
 export const API_GETISOS_URL = WEBGUISRV_BASE_URL + 'getisos'
@@ -38,6 +39,7 @@ export const state = (): RootState => ({
   resultArrivaltimes: null,
   resultWavejets: null,
   showSettingsDialog: false,
+  allStations: null,
 })
 
 export const getters: GetterTree<RootState, RootState> = {
@@ -55,6 +57,7 @@ export const getters: GetterTree<RootState, RootState> = {
   resultArrivaltimes: (state: RootState) => state.resultArrivaltimes,
   resultWavejets: (state: RootState) => state.resultWavejets,
   showSettingsDialog: (state: RootState) => state.showSettingsDialog,
+  allStations: (state: RootState) => state.allStations,
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -99,6 +102,9 @@ export const mutations: MutationTree<RootState> = {
   ),
   SET_SHOWSETTINGSDIALOG: (state: RootState, show: Boolean) => (
     state.showSettingsDialog = show
+  ),
+  SET_ALLSTATIONS: (state: RootState, all: Station[]) => (
+    state.allStations = all
   ),
   ADD_EVENTS: (state: RootState, events: any[]) => {
     // we expect the entries to be in descending time order
@@ -269,7 +275,7 @@ export const actions: ActionTree<RootState, RootState> = {
       || !('userevents' in data)
       || !('maxtime' in data)
     ) {
-      throw new Error('Invalid response from fetch endpoint')
+      throw new Error('Invalid response from endpoint')
     }
 
     for (let i = 0; i < data.events.length; i++) {
@@ -285,6 +291,41 @@ export const actions: ActionTree<RootState, RootState> = {
     commit('SET_USEREVENTS', evUserArr)
     commit('SET_USEREVENTS_GEOJSON', evUserGeojsonArr)
     commit('SET_LAST_UPDATE', data.maxtime)
+  },
+
+  async fetchStations({ commit }: any) {
+    const { data } = await axios.post(API_STATIONLIST_URL)
+
+    if (
+      !('status' in data) || data.status != 'success'
+      || !('stations' in data)
+    ) {
+      throw new Error('Invalid response from endpoint')
+    }
+
+    var stationArr: Station[] = []
+    for (let i = 0; i < data.stations.length; i++) {
+      const sta = data.stations[i]
+      stationArr.push(
+        {
+          id: sta._id,
+          name: sta.name,
+          country: sta.country,
+          countryname: sta.countryname,
+          lon: sta.lon,
+          lat: sta.lat,
+          location: sta.Location,
+          slmcode: sta.slmcode,
+          units: sta.units,
+          sensor: sta.sensor,
+          type: sta.slmcode,
+          inst: sta.inst,
+          offset: sta.offset,
+        } as Station
+      )
+    }
+
+    commit('SET_ALLSTATIONS', stationArr)
   },
 
   async registerUpdater({ commit }: any) {

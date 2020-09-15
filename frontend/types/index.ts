@@ -50,3 +50,19 @@ export interface Event {
   algo: string | null,
   duration: number | null,
 }
+
+export interface Station {
+  id: string,
+  name: string,
+  country: string,
+  countryname: string,
+  lon: number,
+  lat: number,
+  location: string,
+  slmcode: string,
+  units: string,
+  sensor: string,
+  type: string,
+  inst: string,
+  offset: number,
+}

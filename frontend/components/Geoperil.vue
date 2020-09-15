@@ -42,8 +42,9 @@ export default class Geoperil extends Vue {
   }
 
   async mounted() {
-    this.$store.dispatch('registerUpdater')
+    await this.$store.dispatch('registerUpdater')
     await this.$store.dispatch('fetchEvents')
+    await this.$store.dispatch('fetchStations')
     this.isLoading = false
   }
 }

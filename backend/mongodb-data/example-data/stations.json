@@ -2,9 +2,9 @@
     {
         "_id" : { "$oid": "555555555555555555555555" },
         "name" : "teststation",
-        "country" : "Indonesia",
+        "country" : "IDN",
         "lon" : 117.5000,
-        "countryname" : "IDN",
+        "countryname" : "Indonesia",
         "UTCOffset" : 0,
         "inst" : "gfz_ex_test",
         "Location" : "Bontang",
