@@ -96,7 +96,7 @@ def feeddata(station):
             tst = calendar.timegm(dtime.utctimetuple())
             val = item["slevel"]
             data.append({"timestamp": tst, "value": str(val)})
-        if data != []:
+        if len(data) > 0:
             print(
                 "Inserting %d data values for %s..." % (
                     len(data),
@@ -111,12 +111,16 @@ def feeddata(station):
                 "dataformat": "simple",
                 "json": json.dumps(data),
             }
-            sfeed = requests.post(
+
+            resp = requests.post(
                 FEEDURL + "/feedsealevel",
                 data=params,
                 timeout=TIMEOUT
-            ).json()
-            print("%s: " % station["name"], sfeed)
+            )
+            if (resp.ok):
+                print("%s: " % station["name"], resp.json())
+            else:
+                print("Request failed for %s: " % station["name"], resp)
         else:
             print("%s: No values to insert." % station["name"])
     except Exception as ex:
@@ -150,9 +154,13 @@ def feedall(station):
 
 def main():
     global FEEDURL
+    global PROCESSES
 
     if os.environ.get('FEEDERSRV_URL') is not None:
         FEEDURL = os.environ['FEEDERSRV_URL']
+
+    if os.environ.get('DEVELOPMENT') is not None:
+        PROCESSES = 1
 
     procq = Queue()
     stationlist = requests.get(
