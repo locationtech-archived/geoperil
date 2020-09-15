@@ -27,7 +27,7 @@
               cols="6"
             >
               <TabItem>
-                Tab 1
+                <UserSettings />
               </TabItem>
 
               <TabItem>
@@ -44,11 +44,13 @@
 import { Vue, Component } from 'nuxt-property-decorator'
 import SettingsToolbar from './SettingsToolbar.vue'
 import TabItem from './TabItem.vue'
+import UserSettings from './UserSettings.vue'
 
 @Component({
   components: {
     TabItem,
-    SettingsToolbar
+    SettingsToolbar,
+    UserSettings
   }
 })
 export default class SettingsDialog extends Vue {

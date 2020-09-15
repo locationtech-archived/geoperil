@@ -1826,10 +1826,47 @@ class WebGuiSrv(BaseSrv):
         return jsdeny()
 
     @cherrypy.expose
-    def saveusersettings(
-            self, props, inst, notify, api,
-            stations=None, curpwd=None, newpwd=None
-    ):
+    def changepassword(self, curpwd, newpwd):
+        user = self.getUser()
+
+        if user is None:
+            return jsdeny()
+
+        # TODO: we should find a uniform way of password handling
+        if user["password"] != b64encode(
+                hashlib.new(
+                    "sha256",
+                    bytes(curpwd, "utf-8")
+                ).digest()
+        ).decode("ascii"):
+            return jsfail(error="The current password does not match.")
+
+        if newpwd == "":
+            return jsfail(error="The new password is empty.")
+
+        newpwhash = b64encode(
+            hashlib.new(
+                "sha256",
+                bytes(newpwd, "utf-8")
+            ).digest()
+        ).decode("ascii")
+
+        # also update salt and hash for signin
+        pwsalt, pwhash = createsaltpwhash(newpwd)
+        self._db["users"].update(
+            {"username": user["username"]},
+            {"$set": {
+                "password": newpwhash,
+                "pwsalt": pwsalt,
+                "pwhash": pwhash
+            }}
+        )
+
+        return jssuccess(user=self._get_user_obj(user))
+
+
+    @cherrypy.expose
+    def saveusersettings(self, props, inst, notify, api, stations=None):
         user = self.getUser()
         if user is not None:
             try:
@@ -1847,23 +1884,7 @@ class WebGuiSrv(BaseSrv):
                     user["countries"] = json.loads(stations)
             except ValueError:
                 return jsfail(error="Invalid JSON input.")
-            # TODO: we should find a uniform way of password handling
-            if curpwd is not None and newpwd is not None:
-                if user["password"] != b64encode(
-                        hashlib.new(
-                            "sha256",
-                            bytes(curpwd, "utf-8")
-                        ).digest()
-                ).decode("ascii"):
-                    return jsfail(error="The current password does not match.")
-                if newpwd == "":
-                    return jsfail(error="The new password is empty.")
-                user["password"] = b64encode(
-                    hashlib.new(
-                        "sha256",
-                        bytes(newpwd, "utf-8")
-                    ).digest()
-                ).decode("ascii")
+
             if user["permissions"].get("manage", False):
                 # load JSON input and remove attributes that are not allowed
                 # to change
@@ -1873,6 +1894,7 @@ class WebGuiSrv(BaseSrv):
                     {"_id": user["inst"]},
                     {"$set": inst}
                 )
+
             # make sure that given API-key is valid
             if user["permissions"].get("api", False) and api["key"] != "":
                 if re.compile("^[0-9a-f]{32}$").match(api["key"]) is None:
@@ -1887,6 +1909,7 @@ class WebGuiSrv(BaseSrv):
                 }) is not None:
                     return jsfail(error="Invalid API-key given.")
                 user["api"] = api
+
             # update user entry - we need to remove the "_id" attribute to
             # make pymongo happy
             user.pop("_id", None)

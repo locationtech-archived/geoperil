@@ -15,6 +15,7 @@ export const API_COMPUTE_URL = WEBGUISRV_BASE_URL + 'compute'
 export const API_UPDATE_URL = WEBGUISRV_BASE_URL + 'update'
 export const API_GETISOS_URL = WEBGUISRV_BASE_URL + 'getisos'
 export const API_GETJETS_URL = WEBGUISRV_BASE_URL + 'getjets'
+export const API_CHANGEPWD_URL = WEBGUISRV_BASE_URL + 'changepassword'
 export const FORM_ENCODE_CONFIG = {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
@@ -504,6 +505,27 @@ export const actions: ActionTree<RootState, RootState> = {
     } else {
       commit('SET_RESULT_WAVEJETS', null)
       commit('SET_RESULT_ARRIVALTIMES', null)
+    }
+  },
+
+  async changePassword({ commit }: any, changeRequest: any) {
+    if (!('curpwd' in changeRequest && 'newpwd' in changeRequest)) {
+      console.error('Internal error: Invalid call of changePassword')
+    }
+
+    const resp = await axios.post(
+      API_CHANGEPWD_URL,
+      querystring.stringify(changeRequest),
+      FORM_ENCODE_CONFIG
+    )
+
+    const respdata = resp.data
+
+    if (
+      !respdata
+      || !('status' in respdata && respdata.status == 'success')
+    ) {
+      throw new Error('Changing the password was not successful')
     }
   },
 }
