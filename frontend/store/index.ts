@@ -17,6 +17,7 @@ export const API_UPDATE_URL = WEBGUISRV_BASE_URL + 'update'
 export const API_GETISOS_URL = WEBGUISRV_BASE_URL + 'getisos'
 export const API_GETJETS_URL = WEBGUISRV_BASE_URL + 'getjets'
 export const API_CHANGEPWD_URL = WEBGUISRV_BASE_URL + 'changepassword'
+export const API_SAVEUSERSTATIONS_URL = WEBGUISRV_BASE_URL + 'saveuserstations'
 export const FORM_ENCODE_CONFIG = {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
@@ -58,6 +59,24 @@ export const getters: GetterTree<RootState, RootState> = {
   resultWavejets: (state: RootState) => state.resultWavejets,
   showSettingsDialog: (state: RootState) => state.showSettingsDialog,
   allStations: (state: RootState) => state.allStations,
+  stationCountByCountry: (state: RootState) => {
+    var bycountry: any = {}
+
+    if (!state.allStations) {
+      return bycountry
+    }
+
+    for (let i = 0; i < state.allStations.length; i++) {
+      const name = state.allStations[i].country
+      if (!(name in bycountry)) {
+        bycountry[name] = 1
+      } else {
+        bycountry[name]++
+      }
+    }
+
+    return bycountry
+  },
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -106,6 +125,11 @@ export const mutations: MutationTree<RootState> = {
   SET_ALLSTATIONS: (state: RootState, all: Station[]) => (
     state.allStations = all
   ),
+  SET_SELECTEDSTATIONS: (state: RootState, selected: string[]) => {
+    if (state.user) {
+      state.user.countries = selected
+    }
+  },
   ADD_EVENTS: (state: RootState, events: any[]) => {
     // we expect the entries to be in descending time order
     const revevents = events.reverse()
@@ -422,7 +446,14 @@ export const actions: ActionTree<RootState, RootState> = {
     if ('status' in data
       && 'user' in data
       && data.status == 'success') {
-      commit('SET_USER', data.user)
+      commit(
+        'SET_USER',
+        {
+          username: data.user.username,
+          inst: data.user.inst,
+          countries: data.user.countries
+        } as User
+      )
     } else {
       commit('SET_USER', null)
     }
@@ -547,6 +578,32 @@ export const actions: ActionTree<RootState, RootState> = {
       commit('SET_RESULT_WAVEJETS', null)
       commit('SET_RESULT_ARRIVALTIMES', null)
     }
+  },
+
+  async saveuserstations( { commit }: any, selected: string[]) {
+    const all: any = this.getters.stationCountByCountry
+
+    if (!all || all.length == 0) {
+      throw new Error('Internal error: Could not get stations')
+    }
+
+    const resp = await axios.post(
+      API_SAVEUSERSTATIONS_URL,
+      querystring.stringify({'stations': selected}),
+      FORM_ENCODE_CONFIG
+    )
+
+    const respdata = resp.data
+
+    if (
+      !respdata
+      || !('status' in respdata && respdata.status == 'success')
+      || !('user' in respdata) || !('countries' in respdata.user)
+    ) {
+      throw new Error('Saving the stations was not successful')
+    }
+
+    commit('SET_SELECTEDSTATIONS', respdata.user.countries)
   },
 
   async changePassword({ commit }: any, changeRequest: any) {

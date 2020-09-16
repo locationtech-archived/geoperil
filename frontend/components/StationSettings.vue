@@ -4,48 +4,49 @@
     <v-row
       justify="start"
       id="stationselect-row"
-      no-gutters
-      dense
     >
       <v-col
         cols="3"
         class="pa-0"
-        v-for="(count, country) in allStationsByCountry"
+        v-for="(count, country) in stationCountByCountry"
         :key="country"
       >
         <v-checkbox
           class="ma-0 countryswitch"
           :label="getLabel(country, count)"
+          :value="country"
+          v-model="selected"
           dense
+          @click.native="boxClick"
         />
       </v-col>
     </v-row>
 
-    <v-row no-gutters dense>
-      <v-alert
-        type="error"
-        v-if="!!errorMsg"
-      >
-        {{ errorMsg }}
-      </v-alert>
+    <v-alert
+      type="error"
+      class="mt-3 mb-0"
+      v-if="!!errorMsg"
+    >
+      {{ errorMsg }}
+    </v-alert>
 
-      <v-alert
-        type="success"
-        v-if="!!successMsg"
-      >
-        {{ successMsg }}
-      </v-alert>
+    <v-alert
+      type="success"
+      class="mt-3 mb-0"
+      v-if="!!successMsg"
+    >
+      {{ successMsg }}
+    </v-alert>
 
-      <v-row justify="end">
-        <v-col cols="auto">
-          <v-btn
-            color="primary"
-            @click="send"
-          >
-            Save
-          </v-btn>
-        </v-col>
-      </v-row>
+    <v-row justify="end">
+      <v-col cols="auto">
+        <v-btn
+          color="primary"
+          @click="send"
+        >
+          Save
+        </v-btn>
+      </v-col>
     </v-row>
   </v-container>
 </template>
@@ -59,38 +60,37 @@ export default class StationSettings extends Vue {
   private valid: boolean = true
   private errorMsg: string | null = null
   private successMsg: string | null = null
+  private selected: string[] = []
 
   private getLabel(country: string, count: number) {
     return country + " (" + count + ")"
   }
 
-  get allStationsByCountry() {
-    const all: Station[] = this.$store.getters.allStations
+  private boxClick() {
+    this.errorMsg = null
+    this.successMsg = null
+  }
+
+  mounted() {
+    const user: User = this.$store.getters.user
+    if (!user.countries || user.countries.length == 0) {
+      return
+    }
+    user.countries.forEach((country) => this.selected.push(country))
+  }
+
+  get stationCountByCountry() {
+    const all: any = this.$store.getters.stationCountByCountry
 
     if (!all || all.length == 0) {
       return {}
     }
 
-    var bycountry = {}
-    var countrynames = []
+    var keys: string[] = Object.keys(all)
+    var sortedkeys = keys.sort()
+    var sorted: any = {}
 
-    for (let i = 0; i < all.length; i++) {
-      const name = all[i].country
-      if (!(name in bycountry)) {
-        bycountry[name] = 1
-        countrynames.push(name)
-      } else {
-        bycountry[name]++
-      }
-    }
-
-    countrynames.sort()
-    var sorted = {}
-
-    for (let i = 0; i < countrynames.length; i++) {
-      const name = countrynames[i]
-      sorted[name] = bycountry[name]
-    }
+    sortedkeys.forEach((value) => sorted[value] = all[value])
 
     return sorted
   }
@@ -102,13 +102,13 @@ export default class StationSettings extends Vue {
     const f: any = this.$refs.form
 
     try {
-      // TODO: await this.$store.dispatch('', {})
+      await this.$store.dispatch('saveuserstations', this.selected)
     } catch (e) {
       this.errorMsg = e.message
       return
     }
 
-    f.resetValidation()
+    this.successMsg = 'Selection of stations saved successfully'
   }
 }
 </script>

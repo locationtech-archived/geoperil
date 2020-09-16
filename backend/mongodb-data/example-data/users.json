@@ -8,7 +8,7 @@
             "key": "da2489ca66484d869131e46482c47727",
             "enabled": true
         },
-        "countries" : [ "Indonesia" ],
+        "countries" : [ "IDN" ],
         "permissions": {
             "api": true,
             "population": false,
@@ -36,6 +36,7 @@
         "_id": { "$oid": "222222222222222222222222" },
         "username": "test",
         "password": "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
-        "inst": { "$oid": "444444444444444444444444" }
+        "inst": { "$oid": "444444444444444444444444" },
+        "countries": [ "ISL" ]
     }
 ]

@@ -15,7 +15,7 @@ export interface Institution {
 export interface User {
   username: string,
   inst: Institution,
-  countries: any, // TODO
+  countries: string[],
 }
 
 export interface ComputeRequest {

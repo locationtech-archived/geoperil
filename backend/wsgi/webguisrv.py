@@ -1864,6 +1864,28 @@ class WebGuiSrv(BaseSrv):
 
         return jssuccess(user=self._get_user_obj(user))
 
+    @cherrypy.expose
+    def saveuserstations(self, stations=None):
+        user = self.getUser()
+
+        if user is None:
+            return jsdeny()
+
+        if stations is None:
+            user["countries"] = []
+        elif isinstance(stations, list):
+            user["countries"] = stations
+        else:
+            user["countries"] = [stations]
+
+        user.pop("_id", None)
+        self._db["users"].update(
+            {"username": user["username"]},
+            {"$set": user}
+        )
+
+        return jssuccess(user=self._get_user_obj(user))
+
 
     @cherrypy.expose
     def saveusersettings(self, props, inst, notify, api, stations=None):
@@ -1928,33 +1950,6 @@ class WebGuiSrv(BaseSrv):
         user["inst"].pop("_id", None)
         user["inst"].pop("secret", None)
         user["inst"].pop("apikey", None)
-        inst_name = user["inst"].get("name", "gfz_ex_test")
-        if inst_name in ("gfz", "tdss15"):
-            inst_name = "gfz_ex_test"
-        pipeline = [
-            {
-                "$match": {
-                    "$and": [
-                        {
-                            "$or": [
-                                {"sensor": "rad"},
-                                {"sensor": "prs"},
-                                {"sensor": "pr1"},
-                                {"sensor": "flt"},
-                                {"sensor": None}
-                            ]
-                        },
-                        {"inst": inst_name}
-                    ]
-                }
-            },
-            {"$group": {"_id": "$country", "count": {"$sum": 1}}},
-            {"$sort": {"_id": 1}}
-        ]
-        res = self._db["stations"].aggregate(pipeline)
-        for item in res:
-            item["on"] = (item["_id"] in user.get("countries", [])) is True
-        user["countries"] = list(res)
         # TODO: better include wanted fields explicitly instead of removing
         # irrelevant ones
         user.pop("password", None)
