@@ -10,6 +10,7 @@
 
     <v-tabs-items
       class="fill-height-tabs"
+      :show-arrows="$vuetify.breakpoint.sm"
       v-model="tab"
     >
       <TabItem>
@@ -81,5 +82,10 @@ export default class LeftMenu extends Vue {
 /* needed for height of v-window__container */
 .fill-height-tabs > div {
   height: 100%;
+}
+
+.v-slide-group__prev,
+.v-slide-group__next {
+  display: none !important;
 }
 </style>
