@@ -3,6 +3,7 @@
     :load-tiles-while-animating="true"
     :load-tiles-while-interacting="true"
     @rendercomplete="onRendercomplete"
+    ref="map"
     data-projection="EPSG:4326"
     id="geoperil-map"
   >
@@ -159,7 +160,7 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component, Watch } from 'nuxt-property-decorator'
+import { Vue, Component, Watch, Prop } from 'nuxt-property-decorator'
 import { Event, User, Station } from '~/types'
 import { findPointOnSurface } from 'vuelayers/lib/ol-ext'
 import { Style, Circle, Fill, Stroke, RegularShape } from 'ol/style.js'
@@ -172,6 +173,7 @@ import Point from 'ol/geom/Point'
 
 @Component
 export default class Map extends Vue {
+  @Prop({ type: Number, required: false }) sizeChanged!: number
   private zoom: Number = 2
   private maxZoom: Number = 12
   private minZoom: Number = 2
@@ -267,6 +269,14 @@ export default class Map extends Vue {
   @Watch('selectedStations')
   public onSelectedStationsChange(newValue: Station[]) {
     this.updateStations(newValue)
+  }
+
+  @Watch('sizeChanged')
+  public onSizeChanged(newValue: number) {
+    const map: any = this.$refs.map
+    if (map) {
+      map.updateSize()
+    }
   }
 
   public featureHasProperty(feature: any, prop: string) {

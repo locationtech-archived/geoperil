@@ -16,7 +16,28 @@
       cols="9"
     >
       <LoadingOverlay :isLoading="mapIsLoading" />
-      <Map />
+      <v-row
+        id="maprow"
+        :class="[ showStations ? 'show-stations-height' : 'fill-height' ]"
+        no-gutters
+      >
+        <Map :size-changed="sizeChanged"/>
+        <v-btn
+          id="toggle-stations-btn"
+          class="ma-0 pa-0"
+          :elevation="1"
+          @click="toggleShowStations"
+          small
+        >
+          <v-icon>{{ toggleButtonIcon }}</v-icon>
+        </v-btn>
+      </v-row>
+      <v-row
+        v-if="showStations"
+        id="stationsrow"
+        no-gutters
+      >
+      </v-row>
     </v-col>
   </v-row>
 </template>
@@ -36,9 +57,22 @@ import LoadingOverlay from './LoadingOverlay.vue'
 })
 export default class Geoperil extends Vue {
   private isLoading: boolean = true
+  private showStations: boolean = true
+  private sizeChanged: number = 0
+
+  get toggleButtonIcon(): string {
+    return this.showStations
+      ? 'mdi-chevron-double-down'
+      : 'mdi-chevron-double-up'
+  }
 
   get mapIsLoading(): Boolean {
     return this.$store.getters.mapIsLoading
+  }
+
+  public toggleShowStations() {
+    this.showStations = !this.showStations
+    this.sizeChanged = this.sizeChanged + 1
   }
 
   async mounted() {
@@ -53,5 +87,22 @@ export default class Geoperil extends Vue {
 <style>
 #map-col {
   line-height: 0;
+}
+
+#toggle-stations-btn {
+  min-width: 0;
+  height: 32px;
+  width: 32px;
+  position: relative;
+  left: 5px;
+  top: -38px;
+}
+
+.show-stations-height {
+  height: calc(100vh - 50px - 140px);
+}
+
+#stationsrow {
+  height: 140px;
 }
 </style>
