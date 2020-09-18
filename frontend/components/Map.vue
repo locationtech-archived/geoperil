@@ -2,6 +2,7 @@
   <vl-map
     :load-tiles-while-animating="true"
     :load-tiles-while-interacting="true"
+    @rendercomplete="onRendercomplete"
     data-projection="EPSG:4326"
     id="geoperil-map"
   >
@@ -128,7 +129,6 @@
 
     <vl-layer-vector
       id="wavejetsId"
-      ref="layerWavejets"
       render-mode="image"
       :z-index="2"
     >
@@ -138,7 +138,6 @@
 
     <vl-layer-vector
       id="arrivaltimesId"
-      ref="layerArrivaltimes"
       render-mode="image"
       :z-index="3"
     >
@@ -147,19 +146,29 @@
         <vl-style-stroke color="#4271A7"></vl-style-stroke>
       </vl-style-box>
     </vl-layer-vector>
+
+    <vl-layer-vector
+      id="stationsId"
+      render-mode="image"
+      :z-index="1"
+    >
+      <vl-source-vector ref="sourceStations" />
+      <vl-style-func :factory="stationsStyleFunc" />
+    </vl-layer-vector>
   </vl-map>
 </template>
 
 <script lang="ts">
 import { Vue, Component, Watch } from 'nuxt-property-decorator'
-import { Event } from '~/types'
+import { Event, User, Station } from '~/types'
 import { findPointOnSurface } from 'vuelayers/lib/ol-ext'
-import { Style, Circle, Fill, Stroke } from 'ol/style.js'
+import { Style, Circle, Fill, Stroke, RegularShape } from 'ol/style.js'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import Feature from 'ol/Feature'
 import LineString from 'ol/geom/LineString'
 import MultiPolygon from 'ol/geom/MultiPolygon'
+import Point from 'ol/geom/Point'
 
 @Component
 export default class Map extends Vue {
@@ -169,6 +178,16 @@ export default class Map extends Vue {
   private center: Number[] = [0, 0]
   private rotation: Number = 0
   private selectedFeature: any[] = []
+  private stationsRendered: boolean = false
+
+  public onRendercomplete() {
+    if (this.stationsRendered) {
+      return
+    }
+
+    this.updateStations(this.$store.getters.selectedStations)
+    this.stationsRendered = true
+  }
 
   get selectedTab(): Number {
     return this.$store.getters.selectedTab
@@ -206,6 +225,50 @@ export default class Map extends Vue {
     return []
   }
 
+  get selectedStations(): Station[] {
+    return this.$store.getters.selectedStations
+  }
+
+  public updateStations(newValue: Station[]) {
+    const sourceRef: any = this.$refs.sourceStations
+    const source: VectorSource = sourceRef.$source
+
+    if (!source) {
+      return
+    }
+
+    source.clear()
+
+    if (!newValue || newValue.length == 0) {
+      return
+    }
+
+    const features: Feature[] = newValue.map((f: Station) => {
+      const point = new Point([ f.lon, f.lat ])
+      point.transform('EPSG:4326', 'EPSG:3857')
+
+      const newFeature = new Feature({
+        geometry: point,
+      })
+
+      if ('id' in f) {
+        newFeature.setId(f.id)
+      } else {
+        // random number
+        newFeature.setId(Math.floor(Math.random() * 999999))
+      }
+
+      // newFeature.setProperties(f.properties)
+      return newFeature
+    })
+    source.addFeatures(features)
+  }
+
+  @Watch('selectedStations')
+  public onSelectedStationsChange(newValue: Station[]) {
+    this.updateStations(newValue)
+  }
+
   public featureHasProperty(feature: any, prop: string) {
     return feature
       && 'properties' in feature
@@ -226,12 +289,8 @@ export default class Map extends Vue {
 
     const sourceRef: any = this.$refs.sourceArrivaltimes
     const source: VectorSource = sourceRef.$source
-    const layerRef: any = this.$refs.layerArrivaltimes
-    const layer: VectorLayer = layerRef.$layer
     const sourceWaveRef: any = this.$refs.sourceWavejets
     const sourceWave: VectorSource = sourceWaveRef.$source
-    const layerWaveRef: any = this.$refs.layerWavejets
-    const layerWave: VectorLayer = layerWaveRef.$layer
 
     source.clear()
     sourceWave.clear()
@@ -390,6 +449,27 @@ export default class Map extends Vue {
           color: color,
         }),
       })
+      return [ style ]
+    }
+  }
+
+  public stationsStyleFunc(): any {
+    // TODO: set colors based on computation results
+
+    return (feature: any) => {
+      let style = new Style({
+        image: new RegularShape({
+          points: 3,
+          radius: 5,
+          fill: new Fill({
+            color: '#A0A1A0',
+          }),
+          stroke: new Stroke({
+            color: 'white',
+          }),
+        } as any),
+      })
+
       return [ style ]
     }
   }

@@ -77,6 +77,23 @@ export const getters: GetterTree<RootState, RootState> = {
 
     return bycountry
   },
+  selectedStations: (state: RootState) => {
+    if (
+      !state.allStations || !state.user || state.user.countries.length == 0
+    ) {
+      return []
+    }
+
+    var filtered: Station[] = []
+
+    state.allStations.forEach((f: Station) => {
+      if (state.user!.countries.includes(f.country)) {
+        filtered.push(f)
+      }
+    })
+
+    return filtered
+  },
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -125,7 +142,7 @@ export const mutations: MutationTree<RootState> = {
   SET_ALLSTATIONS: (state: RootState, all: Station[]) => (
     state.allStations = all
   ),
-  SET_SELECTEDSTATIONS: (state: RootState, selected: string[]) => {
+  SET_USERSTATIONS: (state: RootState, selected: string[]) => {
     if (state.user) {
       state.user.countries = selected
     }
@@ -603,7 +620,7 @@ export const actions: ActionTree<RootState, RootState> = {
       throw new Error('Saving the stations was not successful')
     }
 
-    commit('SET_SELECTEDSTATIONS', respdata.user.countries)
+    commit('SET_USERSTATIONS', respdata.user.countries)
   },
 
   async changePassword({ commit }: any, changeRequest: any) {
