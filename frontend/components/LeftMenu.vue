@@ -1,5 +1,6 @@
 <template>
   <v-tabs
+    id="left-menu-tabs"
     v-model="tab"
     class="fill-height"
     grow
@@ -84,8 +85,8 @@ export default class LeftMenu extends Vue {
   height: 100%;
 }
 
-.v-slide-group__prev,
-.v-slide-group__next {
+#left-menu-tabs .v-slide-group__prev,
+#left-menu-tabs .v-slide-group__next {
   display: none !important;
 }
 </style>

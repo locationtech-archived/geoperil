@@ -32,12 +32,7 @@
           <v-icon>{{ toggleButtonIcon }}</v-icon>
         </v-btn>
       </v-row>
-      <v-row
-        v-if="showStations"
-        id="stationsrow"
-        no-gutters
-      >
-      </v-row>
+      <StationBar v-if="showStations" />
     </v-col>
   </v-row>
 </template>
@@ -47,12 +42,14 @@ import { Vue, Component } from 'nuxt-property-decorator'
 import Map from './Map.vue'
 import LeftMenu from './LeftMenu.vue'
 import LoadingOverlay from './LoadingOverlay.vue'
+import StationBar from './StationBar.vue'
 
 @Component({
   components: {
     LoadingOverlay,
     LeftMenu,
-    Map
+    Map,
+    StationBar
   }
 })
 export default class Geoperil extends Vue {
@@ -80,6 +77,10 @@ export default class Geoperil extends Vue {
     await this.$store.dispatch('fetchEvents')
     await this.$store.dispatch('fetchStations')
     this.isLoading = false
+
+    if (this.$store.getters.selectedStations.length == 0) {
+      this.showStations = false
+    }
   }
 }
 </script>
@@ -100,9 +101,5 @@ export default class Geoperil extends Vue {
 
 .show-stations-height {
   height: calc(100vh - 50px - 140px);
-}
-
-#stationsrow {
-  height: 140px;
 }
 </style>
