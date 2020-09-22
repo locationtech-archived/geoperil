@@ -151,7 +151,7 @@
     <vl-layer-vector
       id="stationsId"
       render-mode="image"
-      :z-index="1"
+      :z-index="3"
     >
       <vl-source-vector ref="sourceStations" />
       <vl-style-func :factory="stationsStyleFunc" />
@@ -470,12 +470,12 @@ export default class Map extends Vue {
       let style = new Style({
         image: new RegularShape({
           points: 3,
-          radius: 5,
+          radius: 6,
           fill: new Fill({
             color: '#A0A1A0',
           }),
           stroke: new Stroke({
-            color: 'white',
+            color: '#4271A7',
           }),
         } as any),
       })

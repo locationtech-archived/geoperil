@@ -15,6 +15,7 @@
   "dependencies": {
     "@nuxt/typescript-runtime": "^0.4.10",
     "@nuxtjs/axios": "^5.11.0",
+    "@types/d3": "^5.7.2",
     "@types/ol": "^5.3.1",
     "d3": "^6.1.1",
     "nuxt": "^2.13.0",

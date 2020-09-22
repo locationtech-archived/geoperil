@@ -13,7 +13,7 @@
           v-for="station in selectedStations"
           :key="station.id"
         >
-          <div>Station {{ station.name }}</div>
+          <StationPreview :station="station" />
         </v-slide-item>
       </v-slide-group>
     </v-sheet>
@@ -23,12 +23,14 @@
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
 import { Station } from '../types'
+import StationPreview from './StationPreview.vue'
 
 @Component({
   components: {
+    StationPreview
   }
 })
-export default class SettingsDialog extends Vue {
+export default class StationBar extends Vue {
   get selectedStations(): Station[] {
     return this.$store.getters.selectedStations
   }

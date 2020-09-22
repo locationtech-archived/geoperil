@@ -16,4 +16,5 @@ export interface RootState {
     resultWavejets: Array<any> | null,
     showSettingsDialog: Boolean,
     allStations: Station[] | null,
+    stationTimestamp: Date | null,
 }

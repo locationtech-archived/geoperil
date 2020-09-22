@@ -2,28 +2,21 @@ import { GetterTree, ActionTree, MutationTree } from 'vuex'
 import { RootState, Event, User, Station, ComputeRequest } from "~/types"
 import axios from 'axios'
 import querystring from 'querystring'
-
-// add trailing slash to URL if not present
-// 'as string' needed for TS since it could be undefined, but should not
-export const WEBGUISRV_BASE_URL = process.env.webguisrvUrl
-  + ((process.env.webguisrvUrl as string).endsWith('/') ? '' : '/')
-export const API_SIGNIN_URL = WEBGUISRV_BASE_URL + 'signin'
-export const API_SESSION_URL = WEBGUISRV_BASE_URL + 'session'
-export const API_SIGNOUT_URL = WEBGUISRV_BASE_URL + 'signout'
-export const API_FETCH_URL = WEBGUISRV_BASE_URL + 'get_events'
-export const API_STATIONLIST_URL = WEBGUISRV_BASE_URL + 'stationlist'
-export const API_COMPUTE_URL = WEBGUISRV_BASE_URL + 'compute'
-export const API_UPDATE_URL = WEBGUISRV_BASE_URL + 'update'
-export const API_GETISOS_URL = WEBGUISRV_BASE_URL + 'getisos'
-export const API_GETJETS_URL = WEBGUISRV_BASE_URL + 'getjets'
-export const API_CHANGEPWD_URL = WEBGUISRV_BASE_URL + 'changepassword'
-export const API_SAVEUSERSTATIONS_URL = WEBGUISRV_BASE_URL + 'saveuserstations'
-export const FORM_ENCODE_CONFIG = {
-  headers: {
-    'Content-Type': 'application/x-www-form-urlencoded'
-  }
-}
-export const UPDATE_INTERVAL_MSEC = 1000
+import {
+  API_SIGNIN_URL,
+  API_SESSION_URL,
+  API_SIGNOUT_URL,
+  API_FETCH_URL,
+  API_STATIONLIST_URL,
+  API_COMPUTE_URL,
+  API_UPDATE_URL,
+  API_GETISOS_URL,
+  API_GETJETS_URL,
+  API_CHANGEPWD_URL,
+  API_SAVEUSERSTATIONS_URL,
+  FORM_ENCODE_CONFIG,
+  UPDATE_INTERVAL_MSEC,
+} from './constants'
 
 export const state = (): RootState => ({
   recentEvents: [],
@@ -41,6 +34,7 @@ export const state = (): RootState => ({
   resultWavejets: null,
   showSettingsDialog: false,
   allStations: null,
+  stationTimestamp: new Date(),
 })
 
 export const getters: GetterTree<RootState, RootState> = {
@@ -94,6 +88,7 @@ export const getters: GetterTree<RootState, RootState> = {
 
     return filtered
   },
+  stationTimestamp: (state: RootState) => state.stationTimestamp,
 }
 
 export const mutations: MutationTree<RootState> = {

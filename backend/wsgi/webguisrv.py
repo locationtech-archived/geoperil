@@ -356,7 +356,7 @@ class WebGuiSrv(BaseSrv):
     @cherrypy.expose
     def getdata(self, station, start, end=None, inst=None):
         user = self.getUser()
-        if user is not None and user["permissions"].get("chart", False):
+        if user is not None:
             if inst is None:
                 inst = self._db["institutions"].find_one({
                     "_id": user["inst"]
@@ -381,7 +381,6 @@ class WebGuiSrv(BaseSrv):
                 "station": station,
                 "timestamp": {"$gt": start, "$lte": end}
             }
-#            print(request)
             self._db["sealeveldata"].ensure_index(
                 [("inst", 1), ("station", 1), ("timestamp", 1)]
             )
