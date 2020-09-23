@@ -1,6 +1,14 @@
 <template>
-  <v-card outlined flat class="rounded-0 station-card">
-    <v-card-subtitle class="ma-0 pa-0 station-subtitle">{{ station.name }}</v-card-subtitle>
+  <v-card
+    :class="activeClasses"
+    @click="handleClick"
+    outlined
+    flat
+  >
+    <v-card-subtitle
+      class="ma-0 pa-0 station-subtitle"
+    >{{ station.name }}</v-card-subtitle>
+
     <v-progress-circular
       :indeterminate="isLoading"
       v-show="isLoading"
@@ -9,8 +17,18 @@
       color="primary"
       class="station-loading"
     />
-    <div class="preview-svg-container" v-show="!isLoading" :id="stationId">
-      <div class="station-no-data" v-if="!isLoading && (!this.data || this.data.length == 0)"><em>No data available.</em></div>
+
+    <div
+      class="preview-svg-container"
+      v-show="!isLoading"
+      :id="stationId"
+    >
+      <div
+        class="station-no-data"
+        v-if="!isLoading && (!this.data || this.data.length == 0)"
+      >
+        <em>No data available.</em>
+      </div>
       <svg />
     </div>
   </v-card>
@@ -41,6 +59,16 @@ export default class StationPreview extends Vue {
 
   async mounted() {
       await this.updateData()
+  }
+
+  get activeClasses() {
+    const hoveredMap = this.$store.getters.stationHoveredMap
+
+    if (hoveredMap == this.station.id) {
+      return 'rounded-0 station-card station-hovered'
+    }
+
+    return 'rounded-0 station-card'
   }
 
   get stationId(): string {
@@ -194,6 +222,10 @@ export default class StationPreview extends Vue {
       .attr('stroke-linecap', 'round')
       .attr('d', line)
   }
+
+  public handleClick() {
+    // TODO
+  }
 }
 </script>
 
@@ -213,6 +245,16 @@ export default class StationPreview extends Vue {
 
 .station-card {
   height: 140px;
+}
+
+.station-card:hover,
+.station-card.station-hovered {
+  background-color: rgb(230, 224, 224);
+  cursor: pointer;
+}
+
+.station-card.v-card--link:focus::before {
+  opacity: 0;
 }
 
 .station-loading {

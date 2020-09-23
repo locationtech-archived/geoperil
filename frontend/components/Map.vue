@@ -3,6 +3,7 @@
     :load-tiles-while-animating="true"
     :load-tiles-while-interacting="true"
     @rendercomplete="onRendercomplete"
+    @pointermove="onMapPointerMove"
     ref="map"
     data-projection="EPSG:4326"
     id="geoperil-map"
@@ -256,11 +257,14 @@ export default class Map extends Vue {
       if ('id' in f) {
         newFeature.setId(f.id)
       } else {
+        console.warn('Got a station without ID')
         // random number
         newFeature.setId(Math.floor(Math.random() * 999999))
       }
 
-      // newFeature.setProperties(f.properties)
+      newFeature.setProperties({
+        station: f.name
+      })
       return newFeature
     })
     source.addFeatures(features)
@@ -481,6 +485,26 @@ export default class Map extends Vue {
       })
 
       return [ style ]
+    }
+  }
+
+  public onMapPointerMove({ pixel }: {pixel: number[]}) {
+    const map: any = this.$refs.map
+    let hit: Feature = map.forEachFeatureAtPixel(pixel, (f: Feature) => f)
+
+    if (!hit) {
+      this.$store.commit('SET_STATIONHOVEREDMAP', null)
+      return
+    }
+
+    const props = hit.getProperties()
+
+    if (!props) {
+      return
+    }
+
+    if ('station' in props) {
+      this.$store.commit('SET_STATIONHOVEREDMAP', hit.getId())
     }
   }
 }

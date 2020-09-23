@@ -17,4 +17,5 @@ export interface RootState {
     showSettingsDialog: Boolean,
     allStations: Station[] | null,
     stationTimestamp: Date | null,
+    stationHoveredMap: string | null,
 }

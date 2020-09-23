@@ -159,6 +159,10 @@ export default class EventItem extends Vue {
   }
 
   public hoverEnd() {
+    if (!this.hover) {
+      return
+    }
+
     this.hover = false
     this.$store.commit('SET_HOVERED', null)
   }
