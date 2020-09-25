@@ -38,11 +38,12 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component } from 'nuxt-property-decorator'
+import { Vue, Component, Watch } from 'nuxt-property-decorator'
 import Map from './Map.vue'
 import LeftMenu from './LeftMenu.vue'
 import LoadingOverlay from './LoadingOverlay.vue'
 import StationBar from './StationBar.vue'
+import { Station } from '../types'
 
 @Component({
   components: {
@@ -63,13 +64,40 @@ export default class Geoperil extends Vue {
       : 'mdi-chevron-double-up'
   }
 
-  get mapIsLoading(): Boolean {
+  get mapIsLoading(): boolean {
     return this.$store.getters.mapIsLoading
   }
 
-  public toggleShowStations() {
+  public toggleShowStations(): void {
     this.showStations = !this.showStations
+  }
+
+  @Watch('showStations')
+  public onShowStationsChange() {
     this.sizeChanged = this.sizeChanged + 1
+  }
+
+  get selectedStations(): Station[] {
+    return this.$store.getters.selectedStations
+  }
+
+  @Watch('selectedStations')
+  public onSelectedStationsChange(newValue: Station[], oldValue: Station[]) {
+    if (oldValue == newValue) {
+      return
+    }
+
+    if (
+      (!oldValue || oldValue.length == 0)
+      && newValue
+      && newValue.length > 0
+    ) {
+      this.showStations = true
+    }
+
+    if (!newValue || newValue.length == 0) {
+      this.showStations = false
+    }
   }
 
   async mounted() {
