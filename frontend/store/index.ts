@@ -496,7 +496,7 @@ export const actions: ActionTree<RootState, RootState> = {
 
   async sendCompute({ commit }: any, compute: ComputeRequest) {
     const event = compute.event
-    let requestBody = {}
+    let requestBody: any = {}
 
     if (!!event.mag) {
       requestBody = {
@@ -534,6 +534,22 @@ export const actions: ActionTree<RootState, RootState> = {
         algo: compute.algorithm.toLowerCase(),
         gridres: compute.gridres
       }
+    }
+
+    const stations: Station[] = this.getters.selectedStations
+    if (stations && stations.length > 0) {
+      var pois = []
+
+      for (let i = 0; i < stations.length; i++) {
+        const cur = stations[i]
+        pois.push({
+          name: cur.name,
+          lat: cur.lat,
+          lon: cur.lon
+        })
+      }
+
+      requestBody.pois = JSON.stringify(pois)
     }
 
     const { data } = await axios.post(

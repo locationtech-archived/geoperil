@@ -1303,7 +1303,8 @@ class WebGuiSrv(BaseSrv):
 
     def start_worker(
         self, worker, user, name, lat, lon, depth, dip, strike, rake, dur, mag,
-        slip, length, width, date: datetime, gridres, algo, existingId=None
+        slip, length, width, date: datetime, gridres, algo, pois,
+        existingId=None
     ):
         url = worker.get("wpsurl")
         process = worker.get("wpsprocess")
@@ -1359,6 +1360,9 @@ class WebGuiSrv(BaseSrv):
                 ('date', date.strftime(self.DATE_PATTERN)),
                 ('gridres', str(gridres)),
             ]
+
+        if pois is not None:
+            inputs.append(('pois', str(pois)))
 
         execution = server.execute(
             identifier=process,
@@ -1448,6 +1452,7 @@ class WebGuiSrv(BaseSrv):
         date = params.get("date")
         algo = params.get("algo")
         gridres = params.get("gridres")
+        pois = params.get("pois")
 
         user = self.getUser()
 
@@ -1522,7 +1527,7 @@ class WebGuiSrv(BaseSrv):
 
         return self.start_worker(
             selected, user, name, lat, lon, depth, dip, strike, rake, dur, mag,
-            slip, length, width, dateconv, gridres, algo
+            slip, length, width, dateconv, gridres, algo, pois
         )
 
     # this method is called by the tomcat-server if the computation
@@ -2326,7 +2331,7 @@ class WebGuiSrv(BaseSrv):
 
             return self.start_worker(
                 selected, user, name, lat, lon, depth, dip, strike, rake, comp,
-                mag, slip, length, width, date_time, gridres, algo, compId
+                mag, slip, length, width, date_time, gridres, algo, None, compId
             )
 
         # TODO: really needed?

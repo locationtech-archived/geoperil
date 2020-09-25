@@ -1,8 +1,14 @@
 import os
 import re
 import subprocess
+import json
 
-from pywps import Process, LiteralInput, ComplexOutput, LiteralOutput, \
+from pywps import \
+    Process, \
+    ComplexInput, \
+    LiteralInput, \
+    ComplexOutput, \
+    LiteralOutput, \
     WPSRequest
 from pywps.response import WPSResponse
 from pywps.app.exceptions import ProcessError
@@ -26,8 +32,10 @@ class EasyWaveCpu(Process):
     slip = None
     length = None
     width = None
+    pois = None
     gridfile = None
     faultfile = 'fault.inp'
+    poisfile = 'locations.inp'
     process = None
 
     # TODO: could be parameters for the user in the WPS request
@@ -39,6 +47,7 @@ class EasyWaveCpu(Process):
     zeroDisplacementMsg = 'Zero initial displacement'
     ewOutputTime = 'eWave.2D.time'
     ewOutputSshmax = 'eWave.2D.sshmax'
+    ewOutputPois = 'eWave.poi.ssh'
     geotiffTime = 'arrivaltimes.tiff'
     geotiffSshmax = 'waveheights.tiff'
     geojsonTime = 'arrivaltimes.geojson'
@@ -73,6 +82,11 @@ class EasyWaveCpu(Process):
             LiteralInput(
                 'width', 'Fault slip width', data_type='float',
                 min_occurs=0, max_occurs=1
+            ),
+            ComplexInput(
+                'pois', 'Points of interrest',
+                min_occurs=0, max_occurs=1,
+                supported_formats=[FORMATS.JSON]
             ),
         ]
         outputs = [
@@ -133,22 +147,58 @@ class EasyWaveCpu(Process):
 
             f.write(first + second + '\n')
 
+    def createPoisFile(self):
+        abspath = os.path.join(self.workdir, self.poisfile)
+        poilist = json.loads(self.pois)
+
+        with open(abspath, 'w') as f:
+            for item in poilist:
+                if (
+                    'name' not in item
+                    or 'lon' not in item
+                    or 'lat' not in item
+                ):
+                    LOGGER.error(
+                        'JSON string for POIs not formatted as expected'
+                    )
+                    raise ProcessError(self.internalErrorMsg)
+
+                f.write(
+                    item['name'] + ' '
+                    + str(item['lon']) + ' '
+                    + str(item['lat']) + '\n'
+                )
+
     def runeasywave(self):
-        args = [
-            self.ewbinary,
-            '-grid', self.gridfile,
-            # TODO: '-poi', 'locations.inp',
-            # TODO:'-poi_dt_out', '30',
-            # TODO: '-poi_search_dist', '20',
-            '-source', self.faultfile,
-            '-propagation', '10',
-            '-step', '1',
-            # TODO: needed? '-dump', '600',
-            '-ssh_arrival', '0.001',
-            '-time', str(self.duration + self.compExtraTime),
-            '-verbose',
-            '-adjust_ztop'
-        ]
+        if self.pois is not None:
+            args = [
+                self.ewbinary,
+                '-grid', self.gridfile,
+                '-poi', self.poisfile,
+                '-poi_dt_out', '30',
+                '-poi_search_dist', '20',
+                '-source', self.faultfile,
+                '-propagation', '10',
+                '-step', '1',
+                # TODO: needed? '-dump', '600',
+                '-ssh_arrival', '0.001',
+                '-time', str(self.duration + self.compExtraTime),
+                '-verbose',
+                '-adjust_ztop'
+            ]
+        else:
+            args = [
+                self.ewbinary,
+                '-grid', self.gridfile,
+                '-source', self.faultfile,
+                '-propagation', '10',
+                '-step', '1',
+                # TODO: needed? '-dump', '600',
+                '-ssh_arrival', '0.001',
+                '-time', str(self.duration + self.compExtraTime),
+                '-verbose',
+                '-adjust_ztop'
+            ]
         self.process = subprocess.Popen(
             args,
             stdout=subprocess.PIPE,
@@ -382,6 +432,9 @@ class EasyWaveCpu(Process):
         if 'width' in request.inputs:
             self.width = request.inputs['width'][0].data
 
+        if 'pois' in request.inputs:
+            self.pois = request.inputs['pois'][0].data
+
         if self.mag is None and (
             self.slip is None or self.length is None or self.width is None
         ):
@@ -408,13 +461,15 @@ class EasyWaveCpu(Process):
                 'Mag: ' + str(self.mag), 'Slip: ' + str(self.slip),
                 'Length: ' + str(self.length), 'Width: ' + str(self.width),
                 'Gridres: ' + str(self.gridres),
+                'with POIs: ' + str(self.pois is not None),
                 'Duration: ' + str(self.duration)
             ])
         )
 
         self.createFaultFile()
 
-        # TODO: create POI file?
+        if self.pois is not None:
+            self.createPoisFile()
 
         self.runeasywave()
 
