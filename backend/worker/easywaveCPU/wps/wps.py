@@ -7,16 +7,12 @@ import pywps
 from pywps import Service
 import pywps.configuration as config
 
-from processes.echo import Echo
-from processes.sleepecho import SleepEcho
 from processes.easywavecpu import EasyWaveCpu
 
 
 app = flask.Flask(__name__)
 
 processes = [
-    Echo(),
-    SleepEcho(),
     EasyWaveCpu()
 ]
 
