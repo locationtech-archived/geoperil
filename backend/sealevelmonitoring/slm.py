@@ -172,6 +172,13 @@ def main():
         stationname = slist["Code"]
         if "sensor" in slist and slist["sensor"] is not None:
             stationname += "_" + slist["sensor"]
+        else:
+            # avoid pseudo stations/sensors
+            # "sensor" is not set if station is offline for some time
+            # we can only fetch data for a sensor
+            print("Got no sensor, skipping %s" % stationname)
+            continue
+
         station = {}
         station["name"] = stationname
         station["slmcode"] = slist["Code"]
