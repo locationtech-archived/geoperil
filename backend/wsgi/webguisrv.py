@@ -61,6 +61,7 @@ ARRIVALTIMES_DEFAULT_FILE = "arrivaltimes_default.geojson"
 ARRIVALTIMES_RAW_FILE = "arrivaltimes.tiff"
 WAVEHEIGHTS_DEFAULT_FILE = "waveheights_default.geojson"
 WAVEHEIGHTS_RAW_FILE = "waveheights.tiff"
+POISWAVEHEIGHTS_FILE = "pois.csv"
 
 class WebGuiSrv(BaseSrv):
     DATE_PATTERN = r"%Y-%m-%dT%H:%M:%S.%fZ"
@@ -1332,34 +1333,26 @@ class WebGuiSrv(BaseSrv):
                 error="The WPS does not offer the configured process"
             )
 
+        inputs = [
+            ('lat', str(lat)),
+            ('lon', str(lon)),
+            ('depth', str(depth)),
+            ('duration', str(dur)),
+            ('date', date.strftime(self.DATE_PATTERN)),
+            ('gridres', str(gridres)),
+            ('dip', str(dip)),
+            ('strike', str(strike)),
+            ('rake', str(rake)),
+        ]
+
         if slip is None:
-            inputs = [
-                ('lat', str(lat)),
-                ('lon', str(lon)),
-                ('depth', str(depth)),
-                ('dip', str(dip)),
-                ('strike', str(strike)),
-                ('rake', str(rake)),
-                ('duration', str(dur)),
-                ('mag', str(mag)),
-                ('date', date.strftime(self.DATE_PATTERN)),
-                ('gridres', str(gridres)),
-            ]
+            inputs.append(('mag', str(mag)))
         else:
-            inputs = [
-                ('lat', str(lat)),
-                ('lon', str(lon)),
-                ('depth', str(depth)),
-                ('dip', str(dip)),
-                ('strike', str(strike)),
-                ('rake', str(rake)),
-                ('duration', str(dur)),
+            inputs.extend([
                 ('slip', str(slip)),
                 ('length', str(length)),
                 ('width', str(width)),
-                ('date', date.strftime(self.DATE_PATTERN)),
-                ('gridres', str(gridres)),
-            ]
+            ])
 
         if pois is not None:
             inputs.append(('pois', str(pois)))
@@ -1372,7 +1365,8 @@ class WebGuiSrv(BaseSrv):
                 ('arrivaltimes', True),
                 ('arrivaltimesRaw', True),
                 ('waveheights', True),
-                ('waveheightsRaw', True)
+                ('waveheightsRaw', True),
+                ('poisWaveheights', True),
             ]
         )
 
@@ -2469,6 +2463,7 @@ class WatchExecution(threading.Thread):
             arrivalRawRef = None
             waveheightsRef = None
             waveheightsRawRef = None
+            poisWaveheightsRef = None
 
             for output in self.execution.processOutputs:
                 ident = output.identifier
@@ -2483,6 +2478,8 @@ class WatchExecution(threading.Thread):
                     waveheightsRef = output.reference
                 elif ident == 'waveheightsRaw':
                     waveheightsRawRef = output.reference
+                elif ident == 'poisWaveheights':
+                    poisWaveheightsRef = output.reference
 
             if (
                 calctime is None
@@ -2503,15 +2500,21 @@ class WatchExecution(threading.Thread):
             waveheightsRawFile = os.path.join(
                 resultspath, WAVEHEIGHTS_RAW_FILE
             )
+            poisWaveheightsFile = os.path.join(
+                resultspath, POISWAVEHEIGHTS_FILE
+            )
 
             urlretrieve(arrivalRawRef, arrivalRawFile)
             urlretrieve(waveheightsRawRef, waveheightsRawFile)
 
-            if arrivalRef is not None:
+            if arrivalRef:
                 urlretrieve(arrivalRef, arrivalFile)
 
-            if waveheightsRef is not None:
+            if waveheightsRef:
                 urlretrieve(waveheightsRef, waveheightsFile)
+
+            if poisWaveheightsRef:
+                urlretrieve(poisWaveheightsRef, poisWaveheightsFile)
 
         except Exception as ex:
             logger.error(traceback.format_exc())

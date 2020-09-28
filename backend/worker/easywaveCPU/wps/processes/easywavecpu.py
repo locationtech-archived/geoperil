@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import json
+import pandas
 
 from pywps import \
     Process, \
@@ -52,6 +53,7 @@ class EasyWaveCpu(Process):
     geotiffSshmax = 'waveheights.tiff'
     geojsonTime = 'arrivaltimes.geojson'
     geojsonSshmax = 'waveheights.geojson'
+    csvPois = 'pois.csv'
     errorFile = 'error.msg'
     compExtraTime = 10
 
@@ -114,6 +116,12 @@ class EasyWaveCpu(Process):
                 'Maximum wave heights in GeoTIFF format (raw data)',
                 as_reference=True,
                 supported_formats=[FORMATS.GEOTIFF]
+            ),
+            ComplexOutput(
+                'poisWaveheights',
+                'Wave heights for POIs as CSV data',
+                as_reference=True,
+                supported_formats=[FORMATS.TEXT]
             )
         ]
 
@@ -170,35 +178,26 @@ class EasyWaveCpu(Process):
                 )
 
     def runeasywave(self):
+        args = [
+            self.ewbinary,
+            '-grid', self.gridfile,
+            '-source', self.faultfile,
+            '-propagation', '10',
+            '-step', '1',
+            # TODO: needed? '-dump', '600',
+            '-ssh_arrival', '0.001',
+            '-time', str(self.duration + self.compExtraTime),
+            '-verbose',
+            '-adjust_ztop'
+        ]
+
         if self.pois is not None:
-            args = [
-                self.ewbinary,
-                '-grid', self.gridfile,
+            args.extend([
                 '-poi', self.poisfile,
                 '-poi_dt_out', '30',
-                '-poi_search_dist', '20',
-                '-source', self.faultfile,
-                '-propagation', '10',
-                '-step', '1',
-                # TODO: needed? '-dump', '600',
-                '-ssh_arrival', '0.001',
-                '-time', str(self.duration + self.compExtraTime),
-                '-verbose',
-                '-adjust_ztop'
-            ]
-        else:
-            args = [
-                self.ewbinary,
-                '-grid', self.gridfile,
-                '-source', self.faultfile,
-                '-propagation', '10',
-                '-step', '1',
-                # TODO: needed? '-dump', '600',
-                '-ssh_arrival', '0.001',
-                '-time', str(self.duration + self.compExtraTime),
-                '-verbose',
-                '-adjust_ztop'
-            ]
+                '-poi_search_dist', '20'
+            ])
+
         self.process = subprocess.Popen(
             args,
             stdout=subprocess.PIPE,
@@ -410,6 +409,21 @@ class EasyWaveCpu(Process):
         response.outputs['waveheightsRaw'].data_format = FORMATS.GEOTIFF
         response.outputs['waveheightsRaw'].file = gtpath
 
+    def createPoisResults(self, response: WPSResponse):
+        abspath = os.path.join(self.workdir, self.ewOutputPois)
+
+        if not os.path.exists(abspath):
+            LOGGER.error('results for POIs are missing')
+            raise ProcessError(self.internalErrorMsg)
+
+        poispath = os.path.join(self.workdir, self.csvPois)
+
+        csvdata = pandas.read_csv(abspath, delim_whitespace=True)
+        csvdata.to_csv(poispath, index=False)
+
+        response.outputs['poisWaveheights'].data_format = FORMATS.TEXT
+        response.outputs['poisWaveheights'].file = poispath
+
     def _handler(self, request: WPSRequest, response: WPSResponse):
         self.lat = request.inputs['lat'][0].data
         self.lon = request.inputs['lon'][0].data
@@ -474,6 +488,9 @@ class EasyWaveCpu(Process):
         self.runeasywave()
 
         self.monitorExecution(response)
+
+        if self.pois is not None:
+            self.createPoisResults(response)
 
         self.createIsolines(response)
         response.update_status(self.statusMsg, 90.0)

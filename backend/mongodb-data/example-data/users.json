@@ -37,6 +37,6 @@
         "username": "test",
         "password": "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
         "inst": { "$oid": "444444444444444444444444" },
-        "countries": [ "ISL" ]
+        "countries": [ "TUR", "ITA", "EGY", "ESP", "FRA", "HEL", "POR" ]
     }
 ]

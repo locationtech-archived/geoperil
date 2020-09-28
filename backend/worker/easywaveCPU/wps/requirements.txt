@@ -1,2 +1,3 @@
 Flask==1.1.2
 pywps==4.2.6
+pandas==1.1.2
