@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <h4 class="mb-2">Select your countries of interest:</h4>
+    <h4 class="mb-2">Select your countries of interest ({{ countSelected }} selected):</h4>
     <v-row
       justify="start"
       id="stationselect-row"
@@ -93,6 +93,20 @@ export default class StationSettings extends Vue {
     sortedkeys.forEach((value) => sorted[value] = all[value])
 
     return sorted
+  }
+
+  get countSelected() {
+    const byCountry = this.stationCountByCountry
+    const keys: string[] = Object.keys(byCountry)
+    var sum = 0
+
+    keys.forEach((value) => {
+      if (this.selected.includes(value)) {
+        sum += byCountry[value]
+      }
+    })
+
+    return sum
   }
 
   public async send() {
