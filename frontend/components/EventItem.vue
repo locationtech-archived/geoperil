@@ -176,7 +176,7 @@ export default class EventItem extends Vue {
   }
 
   public selectEvent() {
-    this.$store.commit('SET_SELECTED', this.data)
+    this.$store.commit('SET_SELECTED_EVENT', this.data)
     this.$store.dispatch('fetchResults')
   }
 

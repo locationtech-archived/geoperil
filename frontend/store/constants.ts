@@ -14,6 +14,7 @@ export const API_GETJETS_URL = WEBGUISRV_BASE_URL + 'getjets'
 export const API_CHANGEPWD_URL = WEBGUISRV_BASE_URL + 'changepassword'
 export const API_SAVEUSERSTATIONS_URL = WEBGUISRV_BASE_URL + 'saveuserstations'
 export const API_GETSTATIONDATA_URL = WEBGUISRV_BASE_URL + 'getdata'
+export const API_GETSTATIONSIMDATA_URL = WEBGUISRV_BASE_URL + 'getsimdata'
 export const FORM_ENCODE_CONFIG = {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'

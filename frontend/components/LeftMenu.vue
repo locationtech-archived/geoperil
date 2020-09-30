@@ -61,7 +61,7 @@ export default class LeftMenu extends Vue {
 
     this.tab = which
     this.$store.commit('SET_SELECTED_TAB', which)
-    this.$store.commit('SET_SELECTED', null)
+    this.$store.commit('SET_SELECTED_EVENT', null)
     this.$store.commit('SET_RESULT_ARRIVALTIMES', null)
   }
 

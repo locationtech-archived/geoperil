@@ -38,6 +38,7 @@ import traceback
 import json
 import requests
 import pymongo
+import pandas
 import owslib.wps as wps
 from urllib.request import urlretrieve
 from datetime import datetime
@@ -311,9 +312,7 @@ class WebGuiSrv(BaseSrv):
                 stations = self._db["stations"].find({"inst": inst})
             for station in stations:
                 res.append(station)
-            isotime = datetime.utcnow().strftime(
-                "%Y-%m-%dT%H:%M:%S.%fZ"
-            )
+            isotime = datetime.utcnow().strftime(self.DATE_PATTERN)
             return jssuccess(stations=res, serverTime=isotime)
         return jsdeny()
 
@@ -363,17 +362,11 @@ class WebGuiSrv(BaseSrv):
                     "_id": user["inst"]
                 })["name"]
             start = calendar.timegm(
-                datetime.strptime(
-                    start,
-                    "%Y-%m-%dT%H:%M:%S.%fZ"
-                ).timetuple()
+                datetime.strptime(start, self.DATE_PATTERN).timetuple()
             )
             if end is not None:
                 end = calendar.timegm(
-                    datetime.strptime(
-                        end,
-                        "%Y-%m-%dT%H:%M:%S.%fZ"
-                    ).timetuple()
+                    datetime.strptime(end, self.DATE_PATTERN).timetuple()
                 )
             else:
                 end = time.mktime(datetime.now().timetuple())
@@ -395,7 +388,7 @@ class WebGuiSrv(BaseSrv):
                     (
                         datetime.utcfromtimestamp(
                             val["timestamp"]
-                        ).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                        ).strftime(self.DATE_PATTERN),
                         val["value"]
                     )
                 )
@@ -403,55 +396,90 @@ class WebGuiSrv(BaseSrv):
         return jsdeny()
 
     @cherrypy.expose
-    def getsimdata(self, evid, station, start, end=None, ff=1):
+    def getsimdata(self, evid, station, end=None, ff=1):
         user = self.getUser()
-        if user is not None and user["permissions"].get("chart", False):
-            ff = max(int(ff), 1)
-            start = calendar.timegm(
-                datetime.strptime(
-                    start,
-                    "%Y-%m-%dT%H:%M:%S.%fZ"
-                ).timetuple()
+
+        if user is None:
+            return jsdeny()
+
+        if end is not None:
+            end = calendar.timegm(
+                datetime.strptime(end, self.DATE_PATTERN).timetuple()
             )
-            if end is not None:
-                end = calendar.timegm(
-                    datetime.strptime(
-                        end,
-                        "%Y-%m-%dT%H:%M:%S.%fZ"
-                    ).timetuple()
-                )
-            else:
-                end = time.mktime(datetime.now().timetuple())
-            request = {
-                "evid": evid,
-                "station": station,
-                "timestamp": {"$gt": start, "$lte": end}
-            }
-#            print(request)
-            self._db["simsealeveldata"].ensure_index(
-                [("evid", 1), ("station", 1), ("timestamp", 1)]
-            )
-            values = self._db["simsealeveldata"].find(request) \
-                .sort("timestamp", 1)
-            res = {"data": [], "last": None}
-            for val in values:
-                if res["last"] is None or res["last"] < val["timestamp"]:
-                    res["last"] = val["timestamp"]
-                if ff > 1 and "reltime" in val:
-                    newreltime = val["reltime"] // ff
-                    val["timestamp"] = val["timestamp"] - val["reltime"] \
-                        + newreltime
-                    val["reltime"] = newreltime
-                res["data"].append(
-                    (
-                        datetime.utcfromtimestamp(
-                            val["timestamp"]
-                        ).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                        val["value"]
-                    )
-                )
+        else:
+            end = time.mktime(datetime.now().timetuple())
+
+        # fast forward parameter (acceleration)
+        ff = max(int(ff), 1)
+
+        evt = self._db["eqs"].find_one({
+            "_id": evid
+        })
+
+        if (
+            evt is None
+            or evt.get("prop") is None
+            or evt.get("prop").get("date") is None
+        ):
+            return jsfail(error="event has unknown datetime")
+
+        start: datetime = evt.get("prop").get("date")
+        starttimestamp = start.timestamp()
+
+        if "resultsdir" not in evt:
+            return jsfail(error="Could not get results for event")
+
+        csvpath = os.path.join(
+            evt["resultsdir"],
+            POISWAVEHEIGHTS_FILE
+        )
+
+        if not os.path.isfile(csvpath):
+            return jsfail(error="Could not get results file")
+
+        res = {"data": [], "last": None}
+
+        try:
+            alldata = pandas.read_csv(csvpath)
+        except Exception as ex:
+            logger.error(traceback.format_exc())
+            return jsfail(error="Could not read results file")
+
+        minutes = alldata.get('Minute')
+        simdata = alldata.get(station)
+
+        if minutes is None:
+            return jsfail()
+
+        if simdata is None:
+            # no data for station in the results available
             return jssuccess(station=station, **res)
-        return jsdeny()
+
+        for i, value in enumerate(simdata):
+            reltime = minutes[i] * 60
+
+            if ff > 1:
+                # TODO: check in context of acceleration
+                newreltime = reltime // ff
+                timestamp = timestamp + newreltime
+            else:
+                timestamp = starttimestamp + reltime
+
+            if timestamp > end:
+                break
+
+            if res["last"] is None or res["last"] < timestamp:
+                res["last"] = timestamp
+
+            res["data"].append(
+                (
+                    datetime.utcfromtimestamp(
+                        timestamp
+                    ).strftime(self.DATE_PATTERN),
+                    value
+                )
+            )
+        return jssuccess(station=station, **res)
 
     @cherrypy.expose
     def getcomp(self, evid, kind):

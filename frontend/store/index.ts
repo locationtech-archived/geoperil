@@ -109,9 +109,20 @@ export const mutations: MutationTree<RootState> = {
   SET_HOVERED: (state: RootState, hovered: Event | null) => (
     state.hoveredEvent = hovered
   ),
-  SET_SELECTED: (state: RootState, selected: Event | null) => (
+  SET_SELECTED_EVENT: (state: RootState, selected: Event | null) => {
+    if (!state.selectedEvent && !selected) {
+      // do not change null to null
+      return
+    }
+
     state.selectedEvent = selected
-  ),
+
+    if (selected) {
+      state.stationTimestamp = selected.datetime
+    } else {
+      state.stationTimestamp = new Date()
+    }
+  },
   SET_COMPOSE: (state: RootState, compose: Event | null) => (
     state.composeEvent = compose
   ),

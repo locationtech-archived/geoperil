@@ -32,7 +32,7 @@
           <v-icon>{{ toggleButtonIcon }}</v-icon>
         </v-btn>
       </v-row>
-      <StationBar v-if="showStations" />
+      <StationBar v-show="showStations" />
     </v-col>
   </v-row>
 </template>

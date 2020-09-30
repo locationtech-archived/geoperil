@@ -23,12 +23,6 @@
       v-show="!isLoading"
       :id="stationId"
     >
-      <div
-        class="station-no-data"
-        v-if="!isLoading && (!this.data || this.data.length == 0)"
-      >
-        <em>No data available.</em>
-      </div>
       <svg />
     </div>
   </v-card>
@@ -36,8 +30,12 @@
 
 <script lang="ts">
 import { Vue, Component, Prop, Watch } from 'nuxt-property-decorator'
-import { Station } from '../types'
-import { API_GETSTATIONDATA_URL, FORM_ENCODE_CONFIG } from '../store/constants'
+import { Station, Event } from '../types'
+import {
+  API_GETSTATIONDATA_URL,
+  API_GETSTATIONSIMDATA_URL,
+  FORM_ENCODE_CONFIG
+} from '../store/constants'
 import LoadingOverlay from './LoadingOverlay.vue'
 import axios from 'axios'
 import querystring from 'querystring'
@@ -53,8 +51,11 @@ export default class StationPreview extends Vue {
   private margin: any = { top: 5, left: 35, bottom: 9, right: 10 }
   private width: number = 153
   private height: number = 104
+  private marginHoursBefore: number = 1
+  private marginHoursAhead: number = 2
   private isLoading: boolean = true
   private data: any[] = []
+  private simdata: any[] = []
   private svgNode: any = null
 
   async mounted() {
@@ -63,12 +64,13 @@ export default class StationPreview extends Vue {
 
   get activeClasses() {
     const hoveredMap = this.$store.getters.stationHoveredMap
+    const classes = 'rounded-0 station-card'
 
     if (hoveredMap == this.station.id) {
-      return 'rounded-0 station-card station-hovered'
+      return classes + ' station-hovered'
     }
 
-    return 'rounded-0 station-card'
+    return classes
   }
 
   get stationId(): string {
@@ -95,14 +97,43 @@ export default class StationPreview extends Vue {
       return
     }
 
-    const last3hours = new Date(ts)
-    last3hours.setHours(last3hours.getHours() - 3)
+    const endts = new Date(ts)
+    const selectedEvent: Event = this.$store.getters.selectedEvent
+    const lasthours = new Date(ts)
+    lasthours.setHours(lasthours.getHours() - this.marginHoursBefore)
+    endts.setHours(endts.getHours() + this.marginHoursAhead)
 
-    const { data } = await axios.post(
+    if (selectedEvent) {
+      var { data } = await axios.post(
+        API_GETSTATIONSIMDATA_URL,
+        querystring.stringify({
+          evid: selectedEvent.compId,
+          station: this.station.name,
+          end: endts.toISOString()
+        }),
+        FORM_ENCODE_CONFIG
+      )
+
+      if (
+        data && 'status' in data && data.status == 'success'
+        && 'data' in data && data.data instanceof Array
+      ) {
+        for (let i = 0; i < data.data.length; i++) {
+          const cur = data.data[i]
+          this.simdata.push({
+            date: new Date(cur[0]),
+            value: Number.parseFloat(cur[1])
+          })
+        }
+      }
+    }
+
+    var { data } = await axios.post(
       API_GETSTATIONDATA_URL,
       querystring.stringify({
         station: this.station.name,
-        start: last3hours.toISOString(),
+        start: lasthours.toISOString(),
+        end: endts.toISOString(),
         inst: 'slm'
       }),
       FORM_ENCODE_CONFIG
@@ -125,6 +156,7 @@ export default class StationPreview extends Vue {
   public async updateData() {
     this.isLoading = true
     this.data = []
+    this.simdata = []
 
     try {
       await this.fetchData()
@@ -141,19 +173,31 @@ export default class StationPreview extends Vue {
 
   @Watch('data')
   public onDataChange(newValue: any[]) {
-    if (!this.data || this.data.length == 0) {
-      return
-    }
-
-    const maxY = this.data.reduce((a: any, b: any) => {
-      return a.value > b.value ? a : b
-    })
-    const minY = this.data.reduce((a: any, b: any) => {
-      return a.value < b.value ? a : b
-    })
-
     const selection = d3.select('#' + this.stationId)
     selection.select('svg').selectAll('*').remove()
+
+    var maxY = { value: 0 }
+    var minY = { value: 0 }
+
+    if (this.data && this.data.length > 0) {
+      maxY = this.data.reduce((a: any, b: any) => {
+        return a.value > b.value ? a : b
+      })
+      minY = this.data.reduce((a: any, b: any) => {
+        return a.value < b.value ? a : b
+      })
+    }
+
+    if (this.simdata && this.simdata.length > 0) {
+      const simMaxY = this.simdata.reduce((a: any, b: any) => {
+        return a.value > b.value ? a : b
+      })
+      const simMinY = this.simdata.reduce((a: any, b: any) => {
+        return a.value < b.value ? a : b
+      })
+      maxY.value = Math.max(maxY.value, simMaxY.value)
+      minY.value = Math.min(minY.value, simMinY.value)
+    }
 
     const svg = selection.select('svg')
       .attr('width', this.width + this.margin.left + this.margin.right)
@@ -165,9 +209,9 @@ export default class StationPreview extends Vue {
 
     const scaleX = d3.scaleTime()
       .domain([
-        d3.timeHour.offset(this.stationTimestamp, -3),
-        d3.timeMinute.offset(this.stationTimestamp, 15)]
-      )
+        d3.timeHour.offset(this.stationTimestamp, -this.marginHoursBefore),
+        d3.timeHour.offset(this.stationTimestamp, this.marginHoursAhead)
+      ])
       .range([0, this.width - this.margin.right])
       .clamp(true)
 
@@ -212,15 +256,28 @@ export default class StationPreview extends Vue {
       .attr('class', 'y-axis')
       .call(d3.axisLeft(scaleY).ticks(5).tickFormat(d3.format('.2f')))
 
-    // the line
-    svg.append('path')
-      .datum(this.data)
-      .attr('fill', 'none')
-      .attr('stroke', 'steelblue')
-      .attr('stroke-width', 1.5)
-      .attr('stroke-linejoin', 'round')
-      .attr('stroke-linecap', 'round')
-      .attr('d', line)
+    // the lines
+    if (this.data && this.data.length > 0) {
+      svg.append('path')
+        .datum(this.data)
+        .attr('fill', 'none')
+        .attr('stroke', 'steelblue')
+        .attr('stroke-width', 1.5)
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
+        .attr('d', line)
+    }
+
+    if (this.simdata && this.simdata.length > 0) {
+      svg.append('path')
+        .datum(this.simdata)
+        .attr('fill', 'none')
+        .attr('stroke', 'red')
+        .attr('stroke-width', 1.5)
+        .attr('stroke-linejoin', 'round')
+        .attr('stroke-linecap', 'round')
+        .attr('d', line)
+    }
   }
 
   public handleClick() {

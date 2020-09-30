@@ -76,7 +76,7 @@
     <vl-layer-vector
       render-mode="image"
       :visible="selectedTab == 0"
-      :z-index="4"
+      :z-index="5"
     >
       <vl-source-vector :features="points" />
       <vl-style-func :factory="pointsStyleFunc" />
@@ -85,7 +85,7 @@
     <vl-layer-vector
       render-mode="image"
       :visible="selectedTab == 1"
-      :z-index="4"
+      :z-index="5"
     >
       <vl-source-vector :features="pointsUser" />
       <vl-style-func :factory="pointsStyleFunc" />
@@ -94,7 +94,7 @@
     <vl-layer-vector
       render-mode="image"
       :visible="'identifier' in hovered"
-      :z-index="5"
+      :z-index="6"
     >
       <vl-source-vector>
         <vl-feature>
@@ -102,8 +102,8 @@
             :coordinates="[ hovered.lon, hovered.lat ]"
           />
           <vl-style-box>
-            <vl-style-circle :radius="10">
-              <vl-style-stroke color="#4271A7"></vl-style-stroke>
+            <vl-style-circle :radius="12">
+              <vl-style-stroke :width="3" color="#4271A7"></vl-style-stroke>
             </vl-style-circle>
           </vl-style-box>
         </vl-feature>
@@ -113,7 +113,7 @@
     <vl-layer-vector
       render-mode="image"
       :visible="'identifier' in selected"
-      :z-index="4"
+      :z-index="5"
     >
       <vl-source-vector>
         <vl-feature>
@@ -121,8 +121,8 @@
             :coordinates="[ selected.lon, selected.lat ]"
           />
           <vl-style-box>
-            <vl-style-circle :radius="10">
-              <vl-style-stroke color="red"></vl-style-stroke>
+            <vl-style-circle :radius="12">
+              <vl-style-stroke :width="3" color="red"></vl-style-stroke>
             </vl-style-circle>
           </vl-style-box>
         </vl-feature>
@@ -152,7 +152,7 @@
     <vl-layer-vector
       id="stationsId"
       render-mode="image"
-      :z-index="3"
+      :z-index="4"
     >
       <vl-source-vector ref="sourceStations" />
       <vl-style-func :factory="stationsStyleFunc" />
