@@ -33,6 +33,10 @@ import StationPreview from './StationPreview.vue'
 export default class StationBar extends Vue {
   private previewWidth = 200
 
+  get selectedStationMap(): Station | null {
+    return this.$store.getters.selectedStationMap
+  }
+
   get stationHoveredMap(): string | null {
     return this.$store.getters.stationHoveredMap
   }
@@ -41,11 +45,32 @@ export default class StationBar extends Vue {
     return this.$store.getters.selectedStations
   }
 
+  @Watch('selectedStationMap')
+  public onStationSelectMapChange(newvalue: Station | null) {
+    const slide: any = this.$refs.slide
+
+    if (!slide || !newvalue || !('id' in newvalue)) {
+      return
+    }
+
+    var i
+
+    for (i = 0; i < this.selectedStations.length; i++) {
+      const cur = this.selectedStations[i]
+      if (cur.id == newvalue.id) {
+        break
+      }
+    }
+
+    slide.scrollOffset = i * this.previewWidth
+  }
+
   @Watch('stationHoveredMap')
   public onStationHoveredMapChange(newvalue: string | null) {
     const slide: any = this.$refs.slide
+    const selectedOnMap = this.$store.getters.selectedStationMap
 
-    if (!slide || !newvalue) {
+    if (!slide || !newvalue || selectedOnMap) {
       return
     }
 

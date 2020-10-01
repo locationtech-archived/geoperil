@@ -9,6 +9,14 @@
     id="geoperil-map"
   >
     <vl-interaction-select
+      :features.sync="selectedStation"
+      :layers="['stationsId']"
+      :hitTolerance="5"
+    >
+      <vl-style-func :factory="selectedStationStyleFunc" />
+    </vl-interaction-select>
+
+    <vl-interaction-select
       :features="selectedFeature"
       :layers="['arrivaltimesId', 'wavejetsId']"
       :hitTolerance="5"
@@ -112,6 +120,21 @@
 
     <vl-layer-vector
       render-mode="image"
+      :visible="'id' in hoveredStation && (selectedStation.length == 0 || hoveredStation.id != selectedStation[0].id)"
+      :z-index="6"
+    >
+      <vl-source-vector>
+        <vl-feature>
+          <vl-geom-point
+            :coordinates="[ hoveredStation.lon, hoveredStation.lat ]"
+          />
+          <vl-style-func :factory="stationHoveredStyleFunc" />
+        </vl-feature>
+      </vl-source-vector>
+    </vl-layer-vector>
+
+    <vl-layer-vector
+      render-mode="image"
       :visible="'identifier' in selected"
       :z-index="5"
     >
@@ -181,6 +204,7 @@ export default class Map extends Vue {
   private center: Number[] = [0, 0]
   private rotation: Number = 0
   private selectedFeature: any[] = []
+  private selectedStation: any[] = []
   private stationsRendered: boolean = false
 
   public onRendercomplete() {
@@ -295,6 +319,32 @@ export default class Map extends Vue {
     return findPointOnSurface(g)
   }
 
+  @Watch('selectedStation')
+  public onSelectedFeatureChange(newValue: any, oldValue: any) {
+    if (newValue == oldValue) {
+      return
+    }
+
+    if (!newValue || newValue.length != 1) {
+      this.$store.commit('SET_SELECTED_STATION_MAP', null)
+      return
+    }
+
+    const all = this.$store.getters.allStations
+
+    if (!all || all.length == 0) {
+      return
+    }
+
+    const filtered = all.filter(station => station.id == newValue[0].id)
+
+    if (filtered.length == 1) {
+      this.$store.commit('SET_SELECTED_STATION_MAP', filtered[0])
+    } else {
+      this.$store.commit('SET_SELECTED_STATION_MAP', null)
+    }
+  }
+
   @Watch('resultArrivaltimes')
   public onArrivaltimesChange(newValue: Array<any> | null) {
     this.$nextTick(function () {
@@ -382,6 +432,30 @@ export default class Map extends Vue {
   get hovered(): Event {
     // return dummy object so we don't need to use v-if
     return this.$store.getters.hoveredEvent || { lat: 0, lon: 0}
+  }
+
+  get hoveredStation() {
+    // return dummy object so we don't need to use v-if
+    const all: Station[] = this.$store.getters.allStations
+    const dummy = { lat: 0, lon: 0}
+
+    if (!all || all.length == 0) {
+      return dummy
+    }
+
+    const hov = this.$store.getters.stationHoveredMap
+
+    if (!hov) {
+      return dummy
+    }
+
+    const filtered = all.filter(station => station.id == hov)
+
+    if (filtered.length == 1) {
+      return filtered[0]
+    }
+
+    return dummy
   }
 
   get recentEvents(): Event[] {
@@ -488,12 +562,56 @@ export default class Map extends Vue {
     }
   }
 
+  public stationHoveredStyleFunc(): any {
+    // TODO: set colors based on computation results
+
+    return (feature: any) => {
+      let style = new Style({
+        image: new RegularShape({
+          points: 3,
+          radius: 12,
+          fill: new Fill({
+            color: '#A0A1A0',
+          }),
+          stroke: new Stroke({
+            color: '#4271A7',
+            width: 3,
+          }),
+        } as any),
+      })
+
+      return [ style ]
+    }
+  }
+
+  public selectedStationStyleFunc(): any {
+    // TODO: set colors based on computation results
+
+    return (feature: any) => {
+      let style = new Style({
+        image: new RegularShape({
+          points: 3,
+          radius: 6,
+          fill: new Fill({
+            color: '#A0A1A0',
+          }),
+          stroke: new Stroke({
+            color: 'red',
+            width: 3,
+          }),
+        } as any),
+      })
+
+      return [ style ]
+    }
+  }
+
   public onMapPointerMove({ pixel }: {pixel: number[]}) {
     const map: any = this.$refs.map
     let hit: Feature = map.forEachFeatureAtPixel(pixel, (f: Feature) => f)
 
     if (!hit) {
-      this.$store.commit('SET_STATIONHOVEREDMAP', null)
+      this.$store.commit('SET_STATION_HOVERED_MAP', null)
       return
     }
 
@@ -504,7 +622,7 @@ export default class Map extends Vue {
     }
 
     if ('station' in props) {
-      this.$store.commit('SET_STATIONHOVEREDMAP', hit.getId())
+      this.$store.commit('SET_STATION_HOVERED_MAP', hit.getId())
     }
   }
 }
