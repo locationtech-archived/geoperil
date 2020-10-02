@@ -5,7 +5,10 @@
     fullscreen
     hide-overlay
   >
-    <SettingsToolbar />
+    <DialogToolbar
+      :close-action="closeDialog"
+      title="Settings"
+    />
     <v-tabs
       v-model="tab"
       id="settings-tabs"
@@ -43,7 +46,7 @@
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import SettingsToolbar from './SettingsToolbar.vue'
+import DialogToolbar from './DialogToolbar.vue'
 import TabItem from './TabItem.vue'
 import UserSettings from './UserSettings.vue'
 import StationSettings from './StationSettings.vue'
@@ -51,7 +54,7 @@ import StationSettings from './StationSettings.vue'
 @Component({
   components: {
     TabItem,
-    SettingsToolbar,
+    DialogToolbar,
     UserSettings,
     StationSettings
   }
@@ -59,6 +62,10 @@ import StationSettings from './StationSettings.vue'
 export default class SettingsDialog extends Vue {
   private dialog = true
   private tab = null
+
+  public closeDialog() {
+    this.$store.commit('SET_SHOWSETTINGSDIALOG', false)
+  }
 }
 </script>
 

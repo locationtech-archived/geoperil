@@ -37,6 +37,7 @@ export const state = (): RootState => ({
   stationTimestamp: new Date(),
   stationHoveredMap: null,
   selectedStationMap: null,
+  selectedStationDetail: null,
 })
 
 export const getters: GetterTree<RootState, RootState> = {
@@ -93,6 +94,7 @@ export const getters: GetterTree<RootState, RootState> = {
   stationTimestamp: (state: RootState) => state.stationTimestamp,
   stationHoveredMap: (state: RootState) => state.stationHoveredMap,
   selectedStationMap: (state: RootState) => state.selectedStationMap,
+  selectedStationDetail: (state: RootState) => state.selectedStationDetail,
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -237,6 +239,9 @@ export const mutations: MutationTree<RootState> = {
 
     state.selectedStationMap = selected
   },
+  SET_SELECTED_STATION_DETAIL: (state: RootState, selected: Station | null) => (
+    state.selectedStationDetail = selected
+  ),
 }
 
 function apiToEvent(entry: any): Event {

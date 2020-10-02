@@ -19,4 +19,5 @@ export interface RootState {
     stationTimestamp: Date | null,
     stationHoveredMap: string | null,
     selectedStationMap: Station | null,
+    selectedStationDetail: Station | null,
 }

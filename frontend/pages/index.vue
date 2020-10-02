@@ -14,6 +14,7 @@ import LoginForm from '../components/LoginForm.vue';
         <Geoperil v-else>
         </Geoperil>
         <SettingsDialog v-if="isLoggedIn && showSettings" />
+        <StationDialog v-if="isLoggedIn && showStationDialog" />
       </v-container>
     </v-main>
   </v-app>
@@ -25,13 +26,15 @@ import AppBar from '../components/AppBar.vue';
 import Geoperil from '../components/Geoperil.vue'
 import { Vue, Component } from 'nuxt-property-decorator'
 import SettingsDialog from '../components/SettingsDialog.vue'
+import StationDialog from '../components/StationDialog.vue'
 
 @Component({
   components: {
     Geoperil,
     AppBar,
     LoginForm,
-    SettingsDialog
+    SettingsDialog,
+    StationDialog,
   }
 })
 export default class Index extends Vue {
@@ -41,6 +44,10 @@ export default class Index extends Vue {
 
   get showSettings() {
     return this.$store.getters.showSettingsDialog
+  }
+
+  get showStationDialog() {
+    return !!this.$store.getters.selectedStationDetail
   }
 }
 </script>

@@ -3,6 +3,7 @@
     class="fill-height"
     :transition="false"
     :reverse-transition="false"
+    eager
   >
     <slot />
   </v-tab-item>

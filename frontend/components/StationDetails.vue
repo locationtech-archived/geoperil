@@ -1,31 +1,34 @@
 <template>
-  <v-card
-    :class="activeClasses"
-    @click="handleClick"
-    outlined
-    flat
-  >
-    <v-card-subtitle
-      class="ma-0 pa-0 station-subtitle"
-    >{{ station.name }}</v-card-subtitle>
-
-    <v-progress-circular
-      :indeterminate="isLoading"
-      v-show="isLoading"
-      size="64"
-      width="7"
-      color="primary"
-      class="station-loading"
-    />
-
-    <div
-      class="preview-svg-container"
-      v-show="!isLoading"
-      :id="stationId"
-    >
-      <svg />
-    </div>
-  </v-card>
+  <v-window id="station-details-window">
+    <h3>Station {{ selectedStationDetail.name }}</h3>
+    <v-container>
+    <v-row class="mt-3" justify="center">
+      <v-col md="3">
+        <v-text-field
+          class="time-field"
+          v-model="localtime"
+          label="Local time"
+          outlined
+          readonly
+        >
+          Text
+        </v-text-field>
+      </v-col>
+      <v-col md="3">
+        <v-text-field
+          class="time-field"
+          v-model="utctime"
+          label="UTC time"
+          outlined
+          readonly
+        >
+          Text
+        </v-text-field>
+      </v-col>
+    </v-row>
+    </v-container>
+    <svg class="mt-7" />
+  </v-window>
 </template>
 
 <script lang="ts">
@@ -36,49 +39,55 @@ import {
   API_GETSTATIONSIMDATA_URL,
   FORM_ENCODE_CONFIG
 } from '../store/constants'
-import LoadingOverlay from './LoadingOverlay.vue'
 import axios from 'axios'
 import querystring from 'querystring'
 import * as d3 from 'd3'
 
 @Component({
-  components: {
-    LoadingOverlay
-  }
+  components: {}
 })
 export default class StationPreview extends Vue {
-  @Prop({ type: Object, required: true }) station!: Station
+  private localtime: string = ''
+  private utctime: string = ''
   private margin: any = { top: 5, left: 35, bottom: 9, right: 10 }
-  private width: number = 153
-  private height: number = 104
-  private marginHoursBefore: number = 1
-  private marginHoursAhead: number = 2
+  private width: number = 600
+  private height: number = 400
+  private marginHoursBefore: number = 3
+  private marginHoursAhead: number = 3
   private isLoading: boolean = true
   private data: any[] = []
   private simdata: any[] = []
   private svgNode: any = null
+  private timer: number = null
+
+  get selectedStationDetail(): Station {
+    return this.$store.getters.selectedStationDetail
+  }
 
   async mounted() {
-      await this.updateData()
+    await this.updateData()
+    this.updateDateTime()
+    this.timer = setInterval(this.updateDateTime, 1000)
   }
 
-  get activeClasses() {
-    const hoveredMap = this.$store.getters.stationHoveredMap
-    const classes = 'rounded-0 station-card'
-
-    if (hoveredMap == this.station.id) {
-      return classes + ' station-hovered'
-    }
-
-    return classes
+  public updateDateTime() {
+    const cur = new Date()
+    this.localtime = cur.getFullYear().toString() + '/'
+      + (cur.getMonth() + 1).toString().padStart(2, '0') + '/'
+      + cur.getDate().toString().padStart(2, '0') + ' · '
+      + cur.getHours().toString().padStart(2, '0') + ':'
+      + cur.getMinutes().toString().padStart(2, '0') + ':'
+      + cur.getSeconds().toString().padStart(2, '0')
+    this.utctime = cur.getUTCFullYear().toString() + '/'
+      + (cur.getUTCMonth() + 1).toString().padStart(2, '0') + '/'
+      + cur.getUTCDate().toString().padStart(2, '0') + ' · '
+      + cur.getUTCHours().toString().padStart(2, '0') + ':'
+      + cur.getUTCMinutes().toString().padStart(2, '0') + ':'
+      + cur.getUTCSeconds().toString().padStart(2, '0')
   }
 
-  get stationId(): string {
-    if (this.station) {
-      return 'station-' + this.station.id
-    }
-
-    return 'station'
+  beforeDestroy() {
+    clearInterval(this.timer)
   }
 
   get stationTimestamp(): Date {
@@ -108,7 +117,7 @@ export default class StationPreview extends Vue {
         API_GETSTATIONSIMDATA_URL,
         querystring.stringify({
           evid: selectedEvent.compId,
-          station: this.station.name,
+          station: this.selectedStationDetail.name,
           end: endts.toISOString()
         }),
         FORM_ENCODE_CONFIG
@@ -131,7 +140,7 @@ export default class StationPreview extends Vue {
     var { data } = await axios.post(
       API_GETSTATIONDATA_URL,
       querystring.stringify({
-        station: this.station.name,
+        station: this.selectedStationDetail.name,
         start: lasthours.toISOString(),
         end: endts.toISOString(),
         inst: 'slm'
@@ -173,7 +182,7 @@ export default class StationPreview extends Vue {
 
   @Watch('data')
   public onDataChange(newValue: any[]) {
-    const selection = d3.select('#' + this.stationId)
+    const selection = d3.select('#station-details-window')
     selection.select('svg').selectAll('*').remove()
 
     var maxY = { value: 0 }
@@ -279,53 +288,11 @@ export default class StationPreview extends Vue {
         .attr('d', line)
     }
   }
-
-  public handleClick() {
-    this.$store.commit('SET_SELECTED_STATION_DETAIL', this.station)
-  }
 }
 </script>
 
 <style>
-.station-no-data {
+#station-details-window {
   text-align: center;
-}
-
-.preview-svg-container {
-  height: 100%;
-  line-height: 100px;
-}
-
-.station-subtitle {
-  text-align: center;
-}
-
-.station-card {
-  height: 140px;
-}
-
-.station-card:hover,
-.station-card.station-hovered {
-  background-color: rgb(230, 224, 224);
-  cursor: pointer;
-}
-
-.station-card.v-card--link:focus::before {
-  opacity: 0;
-}
-
-.station-loading {
-  top: -15px;
-  left: 65px;
-}
-
-.grid line {
-  stroke: lightgrey;
-  stroke-opacity: 0.7;
-  shape-rendering: crispEdges;
-}
-
-.grid .domain {
-  display: none;
 }
 </style>

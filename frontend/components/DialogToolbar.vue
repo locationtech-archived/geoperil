@@ -4,7 +4,7 @@
     height="50px"
     dense
   >
-    <v-toolbar-title>GeoPeril - Settings</v-toolbar-title>
+    <v-toolbar-title>GeoPeril - {{ title }}</v-toolbar-title>
     <v-spacer></v-spacer>
     <v-tooltip bottom>
       <template v-slot:activator="{ on, attrs }">
@@ -13,7 +13,7 @@
           v-bind="attrs"
           v-on="on"
           class="mr-9"
-          @click.native="close"
+          @click.native="closeAction"
         >
           <v-icon>mdi-close</v-icon>
         </v-btn>
@@ -24,12 +24,11 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component } from 'nuxt-property-decorator'
+import { Vue, Component, Prop } from 'nuxt-property-decorator'
 
 @Component({})
-export default class SettingsDialog extends Vue {
-  public close() {
-    this.$store.commit('SET_SHOWSETTINGSDIALOG', false)
-  }
+export default class DialogToolbar extends Vue {
+  @Prop({ type: String, required: true }) title!: string
+  @Prop({ type: Function, required: true }) closeAction!: Function
 }
 </script>
