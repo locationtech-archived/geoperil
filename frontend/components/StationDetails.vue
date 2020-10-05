@@ -3,7 +3,7 @@
     <h3>Station {{ selectedStationDetail.name }}</h3>
     <v-container>
     <v-row class="mt-3" justify="center">
-      <v-col md="3">
+      <v-col sm="4" md="4" lg="3">
         <v-text-field
           class="time-field"
           v-model="localtime"
@@ -14,7 +14,7 @@
           Text
         </v-text-field>
       </v-col>
-      <v-col md="3">
+      <v-col sm="4" md="4" lg="3">
         <v-text-field
           class="time-field"
           v-model="utctime"
