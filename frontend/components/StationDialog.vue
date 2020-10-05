@@ -4,6 +4,7 @@
     :transition="false"
     fullscreen
     hide-overlay
+    persistent
   >
     <DialogToolbar
       :close-action="closeDialog"
