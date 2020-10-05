@@ -1,31 +1,29 @@
 <template>
   <v-window id="station-details-window">
-    <h3>Station {{ selectedStationDetail.name }}</h3>
-    <v-container>
-    <v-row class="mt-3" justify="center">
-      <v-col sm="4" md="4" lg="3">
-        <v-text-field
-          class="time-field"
-          v-model="localtime"
-          label="Local time"
-          outlined
-          readonly
-        >
-          Text
-        </v-text-field>
-      </v-col>
-      <v-col sm="4" md="4" lg="3">
-        <v-text-field
-          class="time-field"
-          v-model="utctime"
-          label="UTC time"
-          outlined
-          readonly
-        >
-          Text
-        </v-text-field>
-      </v-col>
-    </v-row>
+    <h3>Station: {{ selectedStationDetail.slmcode }} - Sensor: {{ selectedStationDetail.sensor }}</h3>
+    <v-container class="pa-0">
+      <v-row class="mt-3" justify="center">
+        <v-col sm="4" md="4" lg="3">
+          <v-text-field
+            class="time-field"
+            v-model="localtime"
+            label="Local time"
+            hide-details
+            outlined
+            readonly
+          />
+        </v-col>
+        <v-col sm="4" md="4" lg="3">
+          <v-text-field
+            class="time-field"
+            v-model="utctime"
+            label="UTC time"
+            hide-details
+            outlined
+            readonly
+          />
+        </v-col>
+      </v-row>
     </v-container>
     <svg class="mt-7" />
   </v-window>
