@@ -249,7 +249,7 @@ export default class StationPreview extends Vue {
       .call(
         d3.axisBottom(scaleX)
           .ticks(d3.timeHour.every(1))
-          .tickFormat(d3.timeFormat('%H:%M') as any)
+          .tickFormat(d3.utcFormat('%H:%M') as any)
       ).attr('transform', this.translate(0, axisheight))
 
     svg.append('g')
