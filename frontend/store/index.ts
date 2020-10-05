@@ -308,6 +308,7 @@ function addEntryToArr(
   push: boolean = true
 ) {
   const evObj = apiToEvent(entry)
+  Object.freeze(evObj)
 
   if (push) {
     evArr.push(evObj)
@@ -316,6 +317,7 @@ function addEntryToArr(
   }
 
   const geojsonObj = apiToGeojson(entry)
+  Object.freeze(geojsonObj)
 
   if (push) {
     geojsonArr.push(geojsonObj)
@@ -376,23 +378,24 @@ export const actions: ActionTree<RootState, RootState> = {
     var stationArr: Station[] = []
     for (let i = 0; i < data.stations.length; i++) {
       const sta = data.stations[i]
-      stationArr.push(
-        {
-          id: sta._id,
-          name: sta.name,
-          country: sta.country,
-          countryname: sta.countryname,
-          lon: sta.lon,
-          lat: sta.lat,
-          location: sta.Location,
-          slmcode: sta.slmcode,
-          units: sta.units,
-          sensor: sta.sensor,
-          type: sta.slmcode,
-          inst: sta.inst,
-          offset: sta.offset,
-        } as Station
-      )
+      const staObj: Station = {
+        id: sta._id,
+        name: sta.name,
+        country: sta.country,
+        countryname: sta.countryname,
+        lon: sta.lon,
+        lat: sta.lat,
+        location: sta.Location,
+        slmcode: sta.slmcode,
+        units: sta.units,
+        sensor: sta.sensor,
+        type: sta.slmcode,
+        inst: sta.inst,
+        offset: sta.offset,
+      } as Station
+
+      Object.freeze(staObj)
+      stationArr.push(staObj)
     }
 
     commit('SET_ALLSTATIONS', stationArr)
