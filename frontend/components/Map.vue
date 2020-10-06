@@ -9,64 +9,56 @@
     id="geoperil-map"
   >
     <vl-interaction-select
-      :features.sync="selectedStation"
-      :layers="['stationsId']"
+      :features.sync="selectedFeatures"
+      :layers="['arrivaltimesId', 'wavejetsId', 'stationsId']"
       :hitTolerance="5"
     >
-      <vl-style-func :factory="selectedStationStyleFunc" />
+      <vl-style-func v-if="selectedStation" :factory="selectedStationStyleFunc" />
     </vl-interaction-select>
 
-    <vl-interaction-select
-      :features="selectedFeature"
-      :layers="['arrivaltimesId', 'wavejetsId']"
-      :hitTolerance="5"
+    <vl-overlay
+      v-for="feature in selectedFeatures" :key="feature.id" :id="feature.id + '-popup'"
+      :position="pointOnSurface(feature.geometry)"
+      :auto-pan="true"
+      :auto-pan-animation="{ duration: 300 }"
     >
-      <template slot-scope="select">
-        <vl-overlay
-          v-for="feature in select.features" :key="feature.id" :id="feature.id"
-          :position="pointOnSurface(feature.geometry)"
-          :auto-pan="true"
-          :auto-pan-animation="{ duration: 300 }"
+      <template slot-scope="popup">
+        <v-card
+          v-if="featureHasProperty(feature, 'time')"
+          class="pa-0"
         >
-          <template slot-scope="popup">
-            <v-card
-              v-if="featureHasProperty(feature, 'time')"
-              class="pa-0"
+          <v-card-text class="pa-0 pl-2">
+            <span class="mt-2">Arrival time: {{ feature.properties['time'] }} min</span>
+            <v-btn
+              class="pa-0 pl-1 pr-2"
+              min-width="0"
+              height="16px"
+              @click="selectedFeatures = []"
+              text
             >
-              <v-card-text class="pa-0 pl-2">
-                <span class="mt-2">Arrival time: {{ feature.properties['time'] }} min</span>
-                <v-btn
-                  class="pa-0 pl-1 pr-2"
-                  min-width="0"
-                  height="16px"
-                  @click="selectedFeature = []"
-                  text
-                >
-                  <v-icon color="#154f8a" size="16">mdi-close</v-icon>
-                </v-btn>
-              </v-card-text>
-            </v-card>
-            <v-card
-              v-if="featureHasProperty(feature, 'wavemin')"
-              class="pa-0"
+              <v-icon color="#154f8a" size="16">mdi-close</v-icon>
+            </v-btn>
+          </v-card-text>
+        </v-card>
+        <v-card
+          v-if="featureHasProperty(feature, 'wavemin')"
+          class="pa-0"
+        >
+          <v-card-text class="pa-0 pl-2">
+            <span>Wave heights greater than {{ feature.properties['wavemin'] }} m</span>
+            <v-btn
+              class="pa-0 pl-1 pr-2"
+              min-width="0"
+              height="16px"
+              @click="selectedFeatures = []"
+              text
             >
-              <v-card-text class="pa-0 pl-2">
-                <span>Wave heights greater than {{ feature.properties['wavemin'] }} m</span>
-                <v-btn
-                  class="pa-0 pl-1 pr-2"
-                  min-width="0"
-                  height="16px"
-                  @click="selectedFeature = []"
-                  text
-                >
-                  <v-icon color="#154f8a" size="16">mdi-close</v-icon>
-                </v-btn>
-              </v-card-text>
-            </v-card>
-          </template>
-        </vl-overlay>
+              <v-icon color="#154f8a" size="16">mdi-close</v-icon>
+            </v-btn>
+          </v-card-text>
+        </v-card>
       </template>
-    </vl-interaction-select>
+    </vl-overlay>
 
     <vl-view
       ref="view"
@@ -101,13 +93,13 @@
 
     <vl-layer-vector
       render-mode="image"
-      :visible="'identifier' in hovered"
+      :visible="'identifier' in hoveredEvent"
       :z-index="6"
     >
       <vl-source-vector>
         <vl-feature>
           <vl-geom-point
-            :coordinates="[ hovered.lon, hovered.lat ]"
+            :coordinates="[ hoveredEvent.lon, hoveredEvent.lat ]"
           />
           <vl-style-box>
             <vl-style-circle :radius="12">
@@ -120,7 +112,7 @@
 
     <vl-layer-vector
       render-mode="image"
-      :visible="'id' in hoveredStation && (selectedStation.length == 0 || hoveredStation.id != selectedStation[0].id)"
+      :visible="'id' in hoveredStation && (!selectedStation || hoveredStation.id != selectedStation.id)"
       :z-index="6"
     >
       <vl-source-vector>
@@ -203,8 +195,7 @@ export default class Map extends Vue {
   private minZoom: Number = 2
   private center: Number[] = [0, 0]
   private rotation: Number = 0
-  private selectedFeature: any[] = []
-  private selectedStation: any[] = []
+  private selectedFeatures: any[] = []
   private stationsRendered: boolean = false
 
   public onRendercomplete() {
@@ -212,7 +203,7 @@ export default class Map extends Vue {
       return
     }
 
-    this.updateStations(this.$store.getters.selectedStations)
+    this.updateStations(this.userStations)
     this.stationsRendered = true
   }
 
@@ -252,7 +243,44 @@ export default class Map extends Vue {
     return []
   }
 
-  get selectedStations(): Station[] {
+  @Watch('selectedFeatures')
+  public onSelectedFeaturesChange (newValue: Feature[], oldValue: Feature[]) {
+    if (newValue === oldValue) {
+      return
+    }
+
+    const ref: any = this.$refs.sourceStations
+    const all: Station[] = this.$store.getters.allStations
+
+    if (!ref || !all || all.length == 0) {
+      return
+    }
+
+    const filtered: Feature[] = newValue.filter(
+      (feature: Feature) => {
+        return ref.featureIds.includes((feature as any).id)
+      }
+    )
+
+    if (filtered.length == 1) {
+      const filteredStation: Station[] = all.filter(
+        (station: Station) => station.id == (filtered[0] as any).id
+      )
+
+      if (filtered.length == 1) {
+        this.$store.commit('SET_SELECTED_STATION_MAP', filteredStation[0])
+        return
+      }
+    }
+
+    this.$store.commit('SET_SELECTED_STATION_MAP', null)
+  }
+
+  get selectedStation(): Station[] {
+    return this.$store.getters.selectedStationMap
+  }
+
+  get userStations(): Station[] {
     return this.$store.getters.selectedStations
   }
 
@@ -294,8 +322,8 @@ export default class Map extends Vue {
     source.addFeatures(features)
   }
 
-  @Watch('selectedStations')
-  public onSelectedStationsChange(newValue: Station[]) {
+  @Watch('userStations')
+  public onUserStationsChange(newValue: Station[]) {
     this.updateStations(newValue)
   }
 
@@ -319,32 +347,6 @@ export default class Map extends Vue {
     return findPointOnSurface(g)
   }
 
-  @Watch('selectedStation')
-  public onSelectedFeatureChange(newValue: any, oldValue: any) {
-    if (newValue == oldValue) {
-      return
-    }
-
-    if (!newValue || newValue.length != 1) {
-      this.$store.commit('SET_SELECTED_STATION_MAP', null)
-      return
-    }
-
-    const all = this.$store.getters.allStations
-
-    if (!all || all.length == 0) {
-      return
-    }
-
-    const filtered = all.filter(station => station.id == newValue[0].id)
-
-    if (filtered.length == 1) {
-      this.$store.commit('SET_SELECTED_STATION_MAP', filtered[0])
-    } else {
-      this.$store.commit('SET_SELECTED_STATION_MAP', null)
-    }
-  }
-
   @Watch('resultArrivaltimes')
   public onArrivaltimesChange(newValue: Array<any> | null) {
     this.$nextTick(function () {
@@ -358,7 +360,7 @@ export default class Map extends Vue {
 
     source.clear()
     sourceWave.clear()
-    this.selectedFeature = []
+    this.selectedFeatures = []
 
     if (!newValue || newValue.length == 0) {
       return
@@ -412,7 +414,7 @@ export default class Map extends Vue {
 
   @Watch('selectedTab')
   public onSelectedTabChange(newValue: any) {
-    this.selectedFeature = []
+    this.selectedFeatures = []
   }
 
   @Watch('selected')
@@ -429,7 +431,7 @@ export default class Map extends Vue {
     })
   }
 
-  get hovered(): Event {
+  get hoveredEvent(): Event {
     // return dummy object so we don't need to use v-if
     return this.$store.getters.hoveredEvent || { lat: 0, lon: 0}
   }
@@ -462,18 +464,6 @@ export default class Map extends Vue {
     return this.$store.getters.recentEvents
   }
 
-  public isHovered(item: Event, hover: Event | null): boolean {
-    if (!hover) {
-      return false
-    }
-
-    if (item.identifier == hover.identifier) {
-      return true
-    }
-
-    return false
-  }
-
   public pointsStyleFunc(): any {
     return (feature: any) => {
       const mag = feature.get('mag')
@@ -486,7 +476,7 @@ export default class Map extends Vue {
       else if (depth>50 && depth<=100) depthFill = 'rgb(255,255,0)' // yellow
       else if (depth>100 && depth<=250) depthFill = 'rgb(0,255,0)' // green
       else if (depth>250 && depth<=500) depthFill = 'rgb(0,0,255)' // blue
-      else if (depth>500 && depth<=800) depthFill = 'rgb(127,0,255)'; // violet
+      else if (depth>500 && depth<=800) depthFill = 'rgb(127,0,255)' // violet
 
       let baseStyle = new Style({
         image: new Circle({
