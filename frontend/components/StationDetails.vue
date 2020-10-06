@@ -25,7 +25,7 @@
         </v-col>
       </v-row>
     </v-container>
-    <svg class="mt-7" />
+    <svg id="station-details" class="mt-7" />
   </v-window>
 </template>
 
@@ -41,22 +41,43 @@ import axios from 'axios'
 import querystring from 'querystring'
 import * as d3 from 'd3'
 
+if (!Object.getOwnPropertyNames(d3).includes('event')) {
+  // avoid redefining
+  Object.defineProperty(d3, 'event', {
+    get: function() { return event }
+  })
+}
+
 @Component({
   components: {}
 })
-export default class StationPreview extends Vue {
+export default class StationDetails extends Vue {
   private localtime: string = ''
   private utctime: string = ''
   private margin: any = { top: 5, left: 35, bottom: 9, right: 10 }
   private width: number = 600
   private height: number = 400
   private marginHoursBefore: number = 3
-  private marginHoursAhead: number = 3
+  private marginHoursAhead: number = 5
   private isLoading: boolean = true
   private data: any[] = []
   private simdata: any[] = []
-  private svgNode: any = null
-  private timer: number = null
+  private timer: any = null
+  private lineDefinition: any = null
+  private lineData: any = null
+  private lineSim: any = null
+  private scaleX: any = null
+  private scaleXReference: any = null
+  private scaleYReference: any = null
+  private scaleY: any = null
+  private d3GridAxisX: any = null
+  private d3GridAxisY: any = null
+  private gGridAxisX: any = null
+  private gGridAxisY: any = null
+  private d3AxisX: any = null
+  private d3AxisY: any = null
+  private gaxisX: any = null
+  private gaxisY: any = null
 
   get selectedStationDetail(): Station {
     return this.$store.getters.selectedStationDetail
@@ -212,9 +233,57 @@ export default class StationPreview extends Vue {
       .append('g')
       .attr('transform', this.translate(this.margin.left, this.margin.top))
 
+    var zoom = d3.zoom()
+      .scaleExtent([1, 2])
+      .translateExtent([[0, 0], [this.width, this.height]])
+      .on(
+        'zoom',
+        (event: any, d) => {
+          if (this.lineData && event && event.transform) {
+            d3.select('#station-details-window')
+              .select('.dataview')
+              .attr("transform", event.transform)
+
+            d3.select('#station-details-window')
+              .select('.simview')
+              .attr("transform", event.transform)
+
+            if (this.gaxisX && this.d3AxisX && this.scaleXReference) {
+              this.scaleX = event.transform.rescaleX(this.scaleXReference)
+              this.gaxisX.call(
+                this.d3AxisX.scale(this.scaleX)
+              )
+              this.gGridAxisX.call(
+                this.d3GridAxisX.scale(this.scaleX)
+              )
+            }
+
+            if (this.gaxisY && this.d3AxisY && this.scaleYReference) {
+              this.scaleY = event.transform.rescaleY(this.scaleYReference)
+              this.gaxisY.call(
+                this.d3AxisY.scale(this.scaleY)
+              )
+              this.gGridAxisY.call(
+                this.d3GridAxisY.scale(this.scaleY)
+              )
+            }
+
+            if (this.lineDefinition) {
+              if (this.lineData) {
+                this.lineData.attr('d', this.lineDefinition)
+              }
+
+              if (this.lineSim) {
+                this.lineSim.attr('d', this.lineDefinition)
+              }
+            }
+          }
+        }
+      )
+
     const axisheight = this.height - this.margin.top - this.margin.bottom
 
-    const scaleX = d3.scaleTime()
+    this.scaleX = d3.scaleTime()
       .domain([
         d3.timeHour.offset(this.stationTimestamp, -this.marginHoursBefore),
         d3.timeHour.offset(this.stationTimestamp, this.marginHoursAhead)
@@ -222,69 +291,91 @@ export default class StationPreview extends Vue {
       .range([0, this.width - this.margin.right])
       .clamp(true)
 
-    const scaleY = d3.scaleLinear()
-      .domain([maxY.value, minY.value])
+    this.scaleXReference = this.scaleX.copy()
+
+    this.scaleY = d3.scaleLinear()
+      .domain([maxY.value + 0.5, minY.value - 0.5])
       .range([0, axisheight])
       .nice()
 
-    const line = d3.line()
+    this.scaleYReference = this.scaleY.copy()
+
+    this.lineDefinition = d3.line()
       .defined((d: any) => !isNaN(d.value))
-      .x((d: any) => scaleX(d.date) as any)
-      .y((d: any) => scaleY(d.value) as any)
+      .x((d: any) => this.scaleXReference(d.date) as any)
+      .y((d: any) => this.scaleYReference(d.value) as any)
 
     // gridlines
-    svg.append('g')
+    this.d3GridAxisX = d3.axisBottom(this.scaleX)
+      .ticks(d3.timeMinute.every(30))
+      .tickSize(-this.height + this.margin.bottom + this.margin.top)
+      .tickFormat('' as any)
+
+    this.gGridAxisX = svg.append('g')
       .attr('class', 'grid')
       .attr('transform', this.translate(0, axisheight))
-      .call(d3.axisBottom(scaleX)
-          .ticks(d3.timeMinute.every(30))
-          .tickSize(-this.height + this.margin.bottom + this.margin.top)
-          .tickFormat('' as any)
-      )
+      .call(this.d3GridAxisX)
 
-    svg.append('g')
+    this.d3GridAxisY = d3.axisLeft(this.scaleY)
+      .ticks(5)
+      .tickSize(-this.width + this.margin.right)
+      .tickFormat('' as any)
+
+    this.gGridAxisY = svg.append('g')
       .attr('class', 'grid')
-      .call(d3.axisLeft(scaleY)
-          .ticks(5)
-          .tickSize(-this.width + this.margin.right)
-          .tickFormat('' as any)
-      )
+      .call(this.d3GridAxisY)
 
     // axes
-    svg.append('g')
-      .attr('class', 'x-axis')
-      .call(
-        d3.axisBottom(scaleX)
-          .ticks(d3.timeHour.every(1))
-          .tickFormat(d3.utcFormat('%H:%M') as any)
-      ).attr('transform', this.translate(0, axisheight))
+    this.d3AxisX = d3.axisBottom(this.scaleX)
+      .ticks(d3.timeHour.every(1))
+      .tickFormat(d3.utcFormat('%H:%M') as any)
 
-    svg.append('g')
+    this.gaxisX = svg.append('g')
+      .attr('class', 'x-axis')
+      .call(this.d3AxisX).attr('transform', this.translate(0, axisheight))
+
+    this.d3AxisY = d3.axisLeft(this.scaleY)
+      .ticks(5)
+      .tickFormat(d3.format('.2f') as any)
+
+    this.gaxisY = svg.append('g')
       .attr('class', 'y-axis')
-      .call(d3.axisLeft(scaleY).ticks(5).tickFormat(d3.format('.2f')))
+      .call(this.d3AxisY)
 
     // the lines
     if (this.data && this.data.length > 0) {
-      svg.append('path')
+      const container = svg.append('g').attr('class', 'dataview')
+      this.lineData = container.append('path')
         .datum(this.data)
         .attr('fill', 'none')
         .attr('stroke', 'steelblue')
         .attr('stroke-width', 1.5)
         .attr('stroke-linejoin', 'round')
         .attr('stroke-linecap', 'round')
-        .attr('d', line)
+        .attr('d', this.lineDefinition)
     }
 
     if (this.simdata && this.simdata.length > 0) {
-      svg.append('path')
+      const container = svg.append('g').attr('class', 'simview')
+      this.lineSim = container.append('path')
         .datum(this.simdata)
         .attr('fill', 'none')
         .attr('stroke', 'red')
         .attr('stroke-width', 1.5)
         .attr('stroke-linejoin', 'round')
         .attr('stroke-linecap', 'round')
-        .attr('d', line)
+        .attr('d', this.lineDefinition)
     }
+
+    const initialTransform = d3.zoomIdentity.translate(
+      (this.margin.left + this.margin.right) / 2,
+      (this.margin.top + this.margin.bottom) / 2
+    ).scale(1)
+
+    selection.select('svg')
+      .call(zoom as any)
+      .call(zoom.transform as any, initialTransform)
+      .on('dblclick.zoom', null)
   }
 }
 </script>
@@ -292,5 +383,9 @@ export default class StationPreview extends Vue {
 <style>
 #station-details-window {
   text-align: center;
+}
+
+svg#station-details {
+  cursor: grab;
 }
 </style>

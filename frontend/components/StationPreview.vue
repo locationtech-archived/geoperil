@@ -56,7 +56,6 @@ export default class StationPreview extends Vue {
   private isLoading: boolean = true
   private data: any[] = []
   private simdata: any[] = []
-  private svgNode: any = null
 
   async mounted() {
       await this.updateData()
