@@ -5,8 +5,7 @@ export default {
   ** Nuxt rendering mode
   ** See https://nuxtjs.org/api/configuration-mode
   */
-  mode: 'spa',
-  //mode: 'universal',
+  ssr: false,
   //devtools: true,
   /*
   ** Headers of the page

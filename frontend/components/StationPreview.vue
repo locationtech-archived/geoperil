@@ -222,8 +222,8 @@ export default class StationPreview extends Vue {
 
     const line = d3.line()
       .defined((d: any) => !isNaN(d.value))
-      .x((d: any) => scaleX(d.date))
-      .y((d: any) => scaleY(d.value))
+      .x((d: any) => scaleX(d.date) as any)
+      .y((d: any) => scaleY(d.value) as any)
 
     // gridlines
     svg.append('g')

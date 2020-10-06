@@ -21,7 +21,7 @@
     "nuxt": "^2.13.0",
     "nuxt-property-decorator": "^2.7.2",
     "ol": "5.3.3",
-    "vuelayers": "^0.11.26"
+    "vuelayers": "^0.11.28"
   },
   "devDependencies": {
     "@nuxt/typescript-build": "^1.0.3",
