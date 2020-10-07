@@ -71,7 +71,7 @@ export default class StationPreview extends Vue {
   private margin: any = { top: 5, left: 35, bottom: 9, right: 10 }
   private width: number = 153
   private height: number = 104
-  private marginHoursBefore: number = 1
+  private marginHoursBefore: number = 2
   private marginHoursAhead: number = 2
   private isLoading: boolean = true
   private data: any[] = []

@@ -32,8 +32,8 @@ export default {
   ** https://nuxtjs.org/guide/plugins
   */
   plugins: [
-    { src: '~/plugins/resume-session.js', ssr: false },
-    { src: '@/plugins/vueLayers.js', ssr: false }
+    { src: '@/plugins/resume-session.js', ssr: false },
+    { src: '@/plugins/vueLayers.js', ssr: false },
   ],
   /*
   ** Nuxt.js dev-modules

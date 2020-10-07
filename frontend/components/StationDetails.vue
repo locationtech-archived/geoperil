@@ -2,30 +2,75 @@
   <v-window id="station-details-window">
     <h3>Station: {{ selectedStationDetail.slmcode }} - Sensor: {{ selectedStationDetail.sensor }}</h3>
     <v-container class="pa-0">
-      <v-row class="mt-3" justify="center">
-        <v-col sm="4" md="4" lg="3">
-          <v-text-field
-            class="time-field"
-            v-model="localtime"
-            label="Local time"
-            hide-details
-            outlined
-            readonly
-          />
-        </v-col>
-        <v-col sm="4" md="4" lg="3">
-          <v-text-field
-            class="time-field"
-            v-model="utctime"
-            label="UTC time"
-            hide-details
-            outlined
-            readonly
-          />
+      <CurrentTimeDisplay />
+      <v-row class="mb-3" justify="center">
+          <svg id="station-details" class="mt-2" />
+      </v-row>
+      <v-row justify="center">
+        <v-col sm="8" md="8" lg="6">
+          <v-expansion-panels v-model="panel">
+            <v-expansion-panel>
+              <v-expansion-panel-header>Pick values</v-expansion-panel-header>
+              <v-expansion-panel-content>
+                <v-row>
+                  <v-col class="pa-0 pr-2 pb-2">
+                    <DenseTextField
+                      :value="pickedX1Formatted"
+                      label="First picked time"
+                    />
+                  </v-col>
+                  <v-col class="pa-0 pl-2 pb-2">
+                    <DenseTextField
+                      :value="pickedX2Formatted"
+                      label="Second picked time"
+                    />
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col class="pa-0 pb-2">
+                    <DenseTextField
+                      :value="pickedTimeDifferenceFormatted"
+                      label="Picked time difference"
+                    />
+                  </v-col>
+                  <v-col cols="1" class="pa-0 multiply-col">
+                    <span>x</span>
+                  </v-col>
+                  <v-col class="pa-0 pb-2">
+                    <v-select
+                      :items="[1, 2, 4]"
+                      v-model="period"
+                      label="Period"
+                      class="ma-0"
+                      hide-details
+                      outlined
+                      dense
+                    />
+                  </v-col>
+                  <v-col cols="1" class="pa-0 multiply-col">
+                    <span>=</span>
+                  </v-col>
+                  <v-col class="pa-0 pb-2">
+                    <DenseTextField
+                      :value="periodTimeDifferenceFormatted"
+                      label="Time difference"
+                    />
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col class="pa-0">
+                    <DenseTextField
+                      :value="pickedYFormatted"
+                      label="Picked amplitude"
+                    />
+                  </v-col>
+                </v-row>
+              </v-expansion-panel-content>
+            </v-expansion-panel>
+          </v-expansion-panels>
         </v-col>
       </v-row>
     </v-container>
-    <svg id="station-details" class="mt-7" />
   </v-window>
 </template>
 
@@ -37,6 +82,9 @@ import {
   API_GETSTATIONSIMDATA_URL,
   FORM_ENCODE_CONFIG
 } from '../store/constants'
+import CurrentTimeDisplay from './CurrentTimeDisplay.vue'
+import DenseTextField from './DenseTextField.vue'
+import { toUtcTimeStr } from '../plugins/geoperil-utils'
 import axios from 'axios'
 import querystring from 'querystring'
 import * as d3 from 'd3'
@@ -49,20 +97,29 @@ if (!Object.getOwnPropertyNames(d3).includes('event')) {
 }
 
 @Component({
-  components: {}
+  components: {
+    CurrentTimeDisplay,
+    DenseTextField,
+  }
 })
 export default class StationDetails extends Vue {
-  private localtime: string = ''
-  private utctime: string = ''
-  private margin: any = { top: 5, left: 35, bottom: 9, right: 10 }
+  private margin: any = { top: 10, left: 47, bottom: 8, right: 11 }
   private width: number = 600
   private height: number = 400
+  private axisheight: number = 0
   private marginHoursBefore: number = 3
   private marginHoursAhead: number = 5
   private isLoading: boolean = true
+  private panel: any = null
+  private pickedX1: Date | null = null
+  private pickedX2: Date | null = null
+  private pickedY: number | null = null
+  private pickedTimeDifference: Date | null = null
+  private period: number = 1
+  private periodTimeDifference: number | null = null
   private data: any[] = []
   private simdata: any[] = []
-  private timer: any = null
+  private svg: any = null
   private lineDefinition: any = null
   private lineData: any = null
   private lineSim: any = null
@@ -78,39 +135,82 @@ export default class StationDetails extends Vue {
   private d3AxisY: any = null
   private gaxisX: any = null
   private gaxisY: any = null
+  private sliderX1: any = null
+  private sliderX2: any = null
+  private sliderY: any = null
 
   get selectedStationDetail(): Station {
     return this.$store.getters.selectedStationDetail
   }
 
+  created() {
+    this.axisheight = this.height - this.margin.top - this.margin.bottom
+  }
+
   async mounted() {
     await this.updateData()
-    this.updateDateTime()
-    this.timer = setInterval(this.updateDateTime, 1000)
   }
 
-  public updateDateTime() {
-    const cur = new Date()
-    this.localtime = cur.getFullYear().toString() + '/'
-      + (cur.getMonth() + 1).toString().padStart(2, '0') + '/'
-      + cur.getDate().toString().padStart(2, '0') + ' · '
-      + cur.getHours().toString().padStart(2, '0') + ':'
-      + cur.getMinutes().toString().padStart(2, '0') + ':'
-      + cur.getSeconds().toString().padStart(2, '0')
-    this.utctime = cur.getUTCFullYear().toString() + '/'
-      + (cur.getUTCMonth() + 1).toString().padStart(2, '0') + '/'
-      + cur.getUTCDate().toString().padStart(2, '0') + ' · '
-      + cur.getUTCHours().toString().padStart(2, '0') + ':'
-      + cur.getUTCMinutes().toString().padStart(2, '0') + ':'
-      + cur.getUTCSeconds().toString().padStart(2, '0')
-  }
-
-  beforeDestroy() {
-    clearInterval(this.timer)
+  @Watch('showSliders')
+  public onShowSlidersChange(newValue: boolean) {
+    d3.select('#station-details-window')
+      .selectAll('.slider')
+      .attr('display', newValue ? 'inline' : 'none')
+    this.updatePickedValues()
   }
 
   get stationTimestamp(): Date {
     return this.$store.getters.stationTimestamp
+  }
+
+  get showSliders(): boolean {
+    return this.panel == 0
+  }
+
+  get pickedX1Formatted(): string {
+    if (this.pickedX1) {
+      return toUtcTimeStr(this.pickedX1, false, false) + ' UTC'
+    }
+
+    return ''
+  }
+
+  get pickedX2Formatted(): string {
+    if (this.pickedX2) {
+      return toUtcTimeStr(this.pickedX2, false, false) + ' UTC'
+    }
+
+    return ''
+  }
+
+  get pickedYFormatted(): string {
+    if (this.pickedY) {
+      return this.pickedY.toFixed(2) + ' Meters'
+    }
+
+    return ''
+  }
+
+  get pickedTimeDifferenceFormatted(): string {
+    if (this.pickedTimeDifference) {
+      const seconds = this.pickedTimeDifference.valueOf() / 1000
+      return (seconds / 60).toFixed(2) + ' Minutes'
+    }
+
+    return ''
+  }
+
+  get periodTimeDifferenceFormatted(): string {
+    if (this.periodTimeDifference) {
+      return this.periodTimeDifference.toFixed(2) + ' Minutes'
+    }
+
+    return ''
+  }
+
+  @Watch('period')
+  public onPeriodChange(newValue: any) {
+    this.updateTimeDifference()
   }
 
   @Watch('stationTimestamp')
@@ -199,11 +299,133 @@ export default class StationDetails extends Vue {
     return 'translate(' + x + ',' + y + ')'
   }
 
-  @Watch('data')
-  public onDataChange(newValue: any[]) {
-    const selection = d3.select('#station-details-window')
-    selection.select('svg').selectAll('*').remove()
+  private updateLines() {
+    if (this.lineDefinition) {
+      if (this.lineData) {
+        this.lineData.attr('d', this.lineDefinition)
+      }
 
+      if (this.lineSim) {
+        this.lineSim.attr('d', this.lineDefinition)
+      }
+    }
+  }
+
+  private getTransformValues(transform: string) {
+    const reg = new RegExp('translate\\((.*),(.*)\\)')
+
+    if (!transform || transform.length == 0 || !reg.test(transform)) {
+      return [null, null]
+    }
+
+    const regXY = new RegExp('(\\d+),(\\d+)')
+    const matches = regXY.exec(transform)
+
+    if (!matches || matches.length != 3) {
+      return [null, null]
+    }
+
+    return [matches[1], matches[2]]
+  }
+
+  private updateTimeDifference() {
+    if (this.pickedX1 && this.pickedX2) {
+      // https://stackoverflow.com/a/14980125/2249798
+      this.pickedTimeDifference = new Date(+(this.pickedX2) - +(this.pickedX1))
+    } else {
+      this.pickedTimeDifference = new Date(0)
+    }
+
+    const seconds = this.pickedTimeDifference.valueOf() / 1000
+    this.periodTimeDifference = (seconds / 60) * this.period
+  }
+
+  private updatePickedValues() {
+    this.pickedX1 = null
+    this.pickedX2 = null
+    this.pickedY = null
+
+    if (
+      !this.showSliders || !this.sliderX1 || !this.sliderX2 || !this.sliderY
+    ) {
+      return
+    }
+
+    const transX1 = this.sliderX1.attr('transform')
+    const transX2 = this.sliderX2.attr('transform')
+    const transY = this.sliderY.attr('transform')
+
+    if (transX1) {
+      const x = this.getTransformValues(transX1)[0]
+      if (x != null) {
+        this.pickedX1 = this.scaleX.invert(x)
+      }
+    }
+
+    if (transX2) {
+      const x = this.getTransformValues(transX2)[0]
+      if (x != null) {
+        this.pickedX2 = this.scaleX.invert(x)
+      }
+    }
+
+    if (transY) {
+      const y = this.getTransformValues(transY)[1]
+      if (y != null) {
+        this.pickedY = this.scaleY.invert(y)
+      }
+    }
+
+    if (
+      this.pickedX1 && this.pickedX2
+      && this.pickedX1.valueOf() > this.pickedX2.valueOf()
+    ) {
+      const swap = this.pickedX2
+      this.pickedX2 = this.pickedX1
+      this.pickedX1 = swap
+    }
+
+    this.updateTimeDifference()
+  }
+
+  private zoom(event: any, d: any) {
+    if (!event || !event.transform) {
+      return
+    }
+
+    d3.select('#station-details-window')
+      .select('.dataview')
+      .attr("transform", event.transform)
+
+    d3.select('#station-details-window')
+      .select('.simview')
+      .attr("transform", event.transform)
+
+    if (this.gaxisX && this.d3AxisX && this.scaleXReference) {
+      this.scaleX = event.transform.rescaleX(this.scaleXReference)
+      this.gaxisX.call(
+        this.d3AxisX.scale(this.scaleX)
+      )
+      this.gGridAxisX.call(
+        this.d3GridAxisX.scale(this.scaleX)
+      )
+    }
+
+    if (this.gaxisY && this.d3AxisY && this.scaleYReference) {
+      this.scaleY = event.transform.rescaleY(this.scaleYReference)
+      this.gaxisY.call(
+        this.d3AxisY.scale(this.scaleY)
+      )
+      this.gGridAxisY.call(
+        this.d3GridAxisY.scale(this.scaleY)
+      )
+    }
+
+    this.updateLines()
+    this.updatePickedValues()
+  }
+
+  private findMinMaxY(): any {
     var maxY = { value: 0 }
     var minY = { value: 0 }
 
@@ -227,61 +449,13 @@ export default class StationDetails extends Vue {
       minY.value = Math.min(minY.value, simMinY.value)
     }
 
-    const svg = selection.select('svg')
-      .attr('width', this.width + this.margin.left + this.margin.right)
-      .attr('height', this.height + this.margin.top + this.margin.bottom)
-      .append('g')
-      .attr('transform', this.translate(this.margin.left, this.margin.top))
+    return { miny: minY.value, maxy: maxY.value }
+  }
 
-    var zoom = d3.zoom()
-      .scaleExtent([1, 2])
-      .translateExtent([[0, 0], [this.width, this.height]])
-      .on(
-        'zoom',
-        (event: any, d) => {
-          if (this.lineData && event && event.transform) {
-            d3.select('#station-details-window')
-              .select('.dataview')
-              .attr("transform", event.transform)
-
-            d3.select('#station-details-window')
-              .select('.simview')
-              .attr("transform", event.transform)
-
-            if (this.gaxisX && this.d3AxisX && this.scaleXReference) {
-              this.scaleX = event.transform.rescaleX(this.scaleXReference)
-              this.gaxisX.call(
-                this.d3AxisX.scale(this.scaleX)
-              )
-              this.gGridAxisX.call(
-                this.d3GridAxisX.scale(this.scaleX)
-              )
-            }
-
-            if (this.gaxisY && this.d3AxisY && this.scaleYReference) {
-              this.scaleY = event.transform.rescaleY(this.scaleYReference)
-              this.gaxisY.call(
-                this.d3AxisY.scale(this.scaleY)
-              )
-              this.gGridAxisY.call(
-                this.d3GridAxisY.scale(this.scaleY)
-              )
-            }
-
-            if (this.lineDefinition) {
-              if (this.lineData) {
-                this.lineData.attr('d', this.lineDefinition)
-              }
-
-              if (this.lineSim) {
-                this.lineSim.attr('d', this.lineDefinition)
-              }
-            }
-          }
-        }
-      )
-
-    const axisheight = this.height - this.margin.top - this.margin.bottom
+  public addScales() {
+    const minmax = this.findMinMaxY()
+    const minY = minmax.miny
+    const maxY = minmax.maxy
 
     this.scaleX = d3.scaleTime()
       .domain([
@@ -294,26 +468,22 @@ export default class StationDetails extends Vue {
     this.scaleXReference = this.scaleX.copy()
 
     this.scaleY = d3.scaleLinear()
-      .domain([maxY.value + 0.5, minY.value - 0.5])
-      .range([0, axisheight])
+      .domain([maxY + 0.5, minY - 0.5])
+      .range([0, this.axisheight])
       .nice()
 
     this.scaleYReference = this.scaleY.copy()
+  }
 
-    this.lineDefinition = d3.line()
-      .defined((d: any) => !isNaN(d.value))
-      .x((d: any) => this.scaleXReference(d.date) as any)
-      .y((d: any) => this.scaleYReference(d.value) as any)
-
-    // gridlines
+  public addGridlines() {
     this.d3GridAxisX = d3.axisBottom(this.scaleX)
       .ticks(d3.timeMinute.every(30))
       .tickSize(-this.height + this.margin.bottom + this.margin.top)
       .tickFormat('' as any)
 
-    this.gGridAxisX = svg.append('g')
+    this.gGridAxisX = this.svg.append('g')
       .attr('class', 'grid')
-      .attr('transform', this.translate(0, axisheight))
+      .attr('transform', this.translate(0, this.axisheight))
       .call(this.d3GridAxisX)
 
     this.d3GridAxisY = d3.axisLeft(this.scaleY)
@@ -321,30 +491,103 @@ export default class StationDetails extends Vue {
       .tickSize(-this.width + this.margin.right)
       .tickFormat('' as any)
 
-    this.gGridAxisY = svg.append('g')
+    this.gGridAxisY = this.svg.append('g')
       .attr('class', 'grid')
       .call(this.d3GridAxisY)
+  }
 
-    // axes
+  public addAxes() {
     this.d3AxisX = d3.axisBottom(this.scaleX)
       .ticks(d3.timeHour.every(1))
       .tickFormat(d3.utcFormat('%H:%M') as any)
 
-    this.gaxisX = svg.append('g')
+    this.gaxisX = this.svg.append('g')
       .attr('class', 'x-axis')
-      .call(this.d3AxisX).attr('transform', this.translate(0, axisheight))
+      .call(this.d3AxisX).attr('transform', this.translate(0, this.axisheight))
 
     this.d3AxisY = d3.axisLeft(this.scaleY)
       .ticks(5)
       .tickFormat(d3.format('.2f') as any)
 
-    this.gaxisY = svg.append('g')
+    this.gaxisY = this.svg.append('g')
       .attr('class', 'y-axis')
       .call(this.d3AxisY)
+  }
 
-    // the lines
+  public dragX1(event: any, d: any) {
+    var x = Math.min(Math.max(event.x, 0), this.width)
+    d3.select('.sliderx1').attr('transform', this.translate(x, 0))
+    this.updatePickedValues()
+  }
+
+  public dragX2(event: any, d: any) {
+    var x = Math.min(Math.max(event.x, 0), this.width)
+    d3.select('.sliderx2').attr('transform', this.translate(x, 0))
+    this.updatePickedValues()
+  }
+
+  public dragY(event: any, d: any) {
+    var y = Math.min(Math.max(event.y, 0), this.height)
+    d3.select('.slidery').attr('transform', this.translate(-40, y))
+    this.updatePickedValues()
+  }
+
+  public addSliders() {
+    const triangle = d3.symbol()
+      .type(d3.symbolTriangle)
+      .size(100)
+
+    this.sliderX1 = this.svg.append('g')
+      .attr('class', 'slider sliderx1')
+      .attr('display', 'none')
+      .attr('transform', this.translate(0, 0))
+      .call(d3.drag().on('drag', this.dragX1))
+
+    this.sliderX1.append('line')
+      .attr('x2', 0)
+      .attr('y2', this.height)
+
+    this.sliderX1.append('path')
+      .attr('d', triangle)
+      .attr('transform', this.translate(0, this.height))
+
+    this.sliderX2 = this.svg.append('g')
+      .attr('class', 'slider sliderx2')
+      .attr('display', 'none')
+      .attr('transform', this.translate(this.width, 0))
+      .call(d3.drag().on('drag', this.dragX2))
+
+    this.sliderX2.append('line')
+      .attr('x2', 0)
+      .attr('y2', this.height)
+
+    this.sliderX2.append('path')
+      .attr('d', triangle)
+      .attr('transform', this.translate(0, this.height))
+
+    this.sliderY = this.svg.append('g')
+      .attr('class', 'slider slidery')
+      .attr('display', 'none')
+      .attr('transform', this.translate(-40, this.height / 2))
+      .call(d3.drag().on('drag', this.dragY))
+
+    this.sliderY.append('line')
+      .attr('x2', this.width + 40)
+      .attr('y2', 0)
+
+    this.sliderY.append('path')
+      .attr('d', triangle)
+      .attr('transform', this.translate(0, 0) + ' rotate(90)')
+  }
+
+  public addLines() {
+    this.lineDefinition = d3.line()
+      .defined((d: any) => !isNaN(d.value))
+      .x((d: any) => this.scaleXReference(d.date) as any)
+      .y((d: any) => this.scaleYReference(d.value) as any)
+
     if (this.data && this.data.length > 0) {
-      const container = svg.append('g').attr('class', 'dataview')
+      const container = this.svg.append('g').attr('class', 'dataview')
       this.lineData = container.append('path')
         .datum(this.data)
         .attr('fill', 'none')
@@ -356,7 +599,7 @@ export default class StationDetails extends Vue {
     }
 
     if (this.simdata && this.simdata.length > 0) {
-      const container = svg.append('g').attr('class', 'simview')
+      const container = this.svg.append('g').attr('class', 'simview')
       this.lineSim = container.append('path')
         .datum(this.simdata)
         .attr('fill', 'none')
@@ -366,6 +609,29 @@ export default class StationDetails extends Vue {
         .attr('stroke-linecap', 'round')
         .attr('d', this.lineDefinition)
     }
+  }
+
+  @Watch('data')
+  public onDataChange(newValue: any[]) {
+    const selection = d3.select('#station-details-window')
+    selection.select('svg').selectAll('*').remove()
+
+    this.svg = selection.select('svg')
+      .attr('width', this.width + this.margin.left + this.margin.right)
+      .attr('height', this.height + this.margin.top + this.margin.bottom)
+      .append('g')
+      .attr('transform', this.translate(this.margin.left, this.margin.top))
+
+    var zoom = d3.zoom()
+      .scaleExtent([1, 2])
+      .translateExtent([[0, 0], [this.width, this.height]])
+      .on('zoom', this.zoom)
+
+    this.addScales()
+    this.addGridlines()
+    this.addAxes()
+    this.addSliders()
+    this.addLines()
 
     const initialTransform = d3.zoomIdentity.translate(
       (this.margin.left + this.margin.right) / 2,
@@ -386,6 +652,32 @@ export default class StationDetails extends Vue {
 }
 
 svg#station-details {
-  cursor: grab;
+  cursor: pointer;
+}
+
+.slider path {
+  cursor: move;
+  stroke: none;
+  fill: black;
+}
+
+.slider path:hover {
+  stroke: black;
+  fill: black;
+}
+
+.slider line {
+  fill: none;
+  stroke: black;
+  stroke-width: 2px;
+}
+
+.multiply-col {
+  max-height: 40px;
+  max-width: 20px;
+}
+
+.multiply-col span {
+  line-height: 40px;
 }
 </style>
