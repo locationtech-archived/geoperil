@@ -39,7 +39,27 @@ import {
 import LoadingOverlay from './LoadingOverlay.vue'
 import axios from 'axios'
 import querystring from 'querystring'
-import * as d3 from 'd3'
+
+import { select } from 'd3-selection'
+import { format } from 'd3-format'
+import { scaleTime, scaleLinear } from 'd3-scale'
+import { timeHour, timeMinute } from 'd3-time'
+import { utcFormat } from 'd3-time-format'
+import { axisLeft, axisBottom } from 'd3-axis'
+import { line } from 'd3-shape'
+
+const d3 = {
+  select,
+  format,
+  scaleTime,
+  scaleLinear,
+  timeHour,
+  timeMinute,
+  utcFormat,
+  axisLeft,
+  axisBottom,
+  line,
+}
 
 @Component({
   components: {
