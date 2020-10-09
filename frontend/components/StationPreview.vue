@@ -76,9 +76,43 @@ export default class StationPreview extends Vue {
   private isLoading: boolean = true
   private data: any[] = []
   private simdata: any[] = []
+  private updater: number | null = null
+
+  /** Number of milliseconds to wait until next data update request */
+  private updateInterval: number = 60 * 1000
+
+  /** Adding random additional milliseconds until next request will be made */
+  private randomInterval: number = 10 * 1000
+
+  /** Number of minutes the station sends data
+   * TODO: get it from the station object dynamically */
+  private stationRate: number = 10 * 60
 
   async mounted() {
-      await this.updateData()
+    this.startUpdater()
+    await this.updateData()
+  }
+
+  public startUpdater() {
+    this.stopUpdater()
+
+    if (this.updater == null) {
+      this.updater = setInterval(
+        this.updateData,
+        this.updateInterval + Math.random() * this.randomInterval
+      )
+    }
+  }
+
+  public stopUpdater() {
+    if (this.updater != null) {
+      clearInterval(this.updater)
+      this.updater = null
+    }
+  }
+
+  beforeDestroy() {
+    this.stopUpdater()
   }
 
   get activeClasses() {
@@ -106,6 +140,7 @@ export default class StationPreview extends Vue {
 
   @Watch('stationTimestamp')
   public onTimestampChange(newValue: Date | null) {
+    this.startUpdater()
     this.updateData()
   }
 
@@ -121,6 +156,7 @@ export default class StationPreview extends Vue {
     const lasthours = new Date(ts)
     lasthours.setHours(lasthours.getHours() - this.marginHoursBefore)
     endts.setHours(endts.getHours() + this.marginHoursAhead)
+    const endtsSeconds = endts.valueOf() / 1000
 
     if (selectedEvent) {
       var { data } = await axios.post(
@@ -137,6 +173,8 @@ export default class StationPreview extends Vue {
         data && 'status' in data && data.status == 'success'
         && 'data' in data && data.data instanceof Array
       ) {
+        this.simdata = []
+
         for (let i = 0; i < data.data.length; i++) {
           const cur = data.data[i]
           this.simdata.push({
@@ -160,8 +198,10 @@ export default class StationPreview extends Vue {
 
     if (
       data && 'status' in data && data.status == 'success'
-      && 'data' in data && data.data instanceof Array
+      && 'last' in data && 'data' in data && data.data instanceof Array
     ) {
+      this.data = []
+
       for (let i = 0; i < data.data.length; i++) {
         const cur = data.data[i]
         this.data.push({
@@ -169,13 +209,16 @@ export default class StationPreview extends Vue {
           value: Number.parseFloat(cur[1])
         })
       }
+
+      if (Math.abs(data.last - endtsSeconds) <= this.stationRate) {
+        // we got all the data in the specified interval
+        this.stopUpdater()
+      }
     }
   }
 
   public async updateData() {
     this.isLoading = true
-    this.data = []
-    this.simdata = []
 
     try {
       await this.fetchData()

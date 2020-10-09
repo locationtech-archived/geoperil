@@ -138,6 +138,14 @@ export default class StationDetails extends Vue {
   private sliderX1: any = null
   private sliderX2: any = null
   private sliderY: any = null
+  private updater: number | null = null
+
+  /** Number of milliseconds to wait until next data update request */
+  private updateInterval: number = 30 * 1000
+
+  /** Number of minutes the station sends data
+   * TODO: get it from the station object dynamically */
+  private stationRate: number = 10 * 60
 
   get selectedStationDetail(): Station {
     return this.$store.getters.selectedStationDetail
@@ -148,14 +156,32 @@ export default class StationDetails extends Vue {
   }
 
   async mounted() {
+    this.startUpdater()
     await this.updateData()
+  }
+
+  public startUpdater() {
+    this.stopUpdater()
+
+    if (this.updater == null) {
+      this.updater = setInterval(this.updateData, this.updateInterval)
+    }
+  }
+
+  public stopUpdater() {
+    if (this.updater != null) {
+      clearInterval(this.updater)
+      this.updater = null
+    }
+  }
+
+  beforeDestroy() {
+    this.stopUpdater()
   }
 
   @Watch('showSliders')
   public onShowSlidersChange(newValue: boolean) {
-    d3.select('#station-details-window')
-      .selectAll('.slider')
-      .attr('display', newValue ? 'inline' : 'none')
+    this.updateSliderVisible()
     this.updatePickedValues()
   }
 
@@ -215,6 +241,7 @@ export default class StationDetails extends Vue {
 
   @Watch('stationTimestamp')
   public onTimestampChange(newValue: Date | null) {
+    this.startUpdater()
     this.updateData()
   }
 
@@ -230,6 +257,7 @@ export default class StationDetails extends Vue {
     const lasthours = new Date(ts)
     lasthours.setHours(lasthours.getHours() - this.marginHoursBefore)
     endts.setHours(endts.getHours() + this.marginHoursAhead)
+    const endtsSeconds = endts.valueOf() / 1000
 
     if (selectedEvent) {
       var { data } = await axios.post(
@@ -246,6 +274,8 @@ export default class StationDetails extends Vue {
         data && 'status' in data && data.status == 'success'
         && 'data' in data && data.data instanceof Array
       ) {
+        this.simdata = []
+
         for (let i = 0; i < data.data.length; i++) {
           const cur = data.data[i]
           this.simdata.push({
@@ -269,8 +299,10 @@ export default class StationDetails extends Vue {
 
     if (
       data && 'status' in data && data.status == 'success'
-      && 'data' in data && data.data instanceof Array
+      && 'last' in data && 'data' in data && data.data instanceof Array
     ) {
+      this.data = []
+
       for (let i = 0; i < data.data.length; i++) {
         const cur = data.data[i]
         this.data.push({
@@ -278,13 +310,16 @@ export default class StationDetails extends Vue {
           value: Number.parseFloat(cur[1])
         })
       }
+
+      if (Math.abs(data.last - endtsSeconds) <= this.stationRate) {
+        // we got all the data in the specified interval
+        this.stopUpdater()
+      }
     }
   }
 
   public async updateData() {
     this.isLoading = true
-    this.data = []
-    this.simdata = []
 
     try {
       await this.fetchData()
@@ -297,6 +332,12 @@ export default class StationDetails extends Vue {
 
   private translate(x: number, y: number): string {
     return 'translate(' + x + ',' + y + ')'
+  }
+
+  private updateSliderVisible() {
+    d3.select('#station-details-window')
+      .selectAll('.slider')
+      .attr('display', this.showSliders ? 'inline' : 'none')
   }
 
   private updateLines() {
@@ -612,36 +653,54 @@ export default class StationDetails extends Vue {
   }
 
   @Watch('data')
-  public onDataChange(newValue: any[]) {
-    const selection = d3.select('#station-details-window')
-    selection.select('svg').selectAll('*').remove()
+  public onDataChange(newValue: any[] | null, oldValue: any[] | null) {
+    const alreadyDrawn = (
+      d3.select('#station-details-window').selectAll('.dataview').size() != 0
+    )
 
-    this.svg = selection.select('svg')
-      .attr('width', this.width + this.margin.left + this.margin.right)
-      .attr('height', this.height + this.margin.top + this.margin.bottom)
-      .append('g')
-      .attr('transform', this.translate(this.margin.left, this.margin.top))
+    if (!alreadyDrawn) {
+      // diagram will be drawn the first time
+      const selection = d3.select('#station-details-window')
+      selection.select('svg').selectAll('*').remove()
 
-    var zoom = d3.zoom()
-      .scaleExtent([1, 2])
-      .translateExtent([[0, 0], [this.width, this.height]])
-      .on('zoom', this.zoom)
+      this.svg = selection.select('svg')
+        .attr('width', this.width + this.margin.left + this.margin.right)
+        .attr('height', this.height + this.margin.top + this.margin.bottom)
+        .append('g')
+        .attr('transform', this.translate(this.margin.left, this.margin.top))
 
-    this.addScales()
-    this.addGridlines()
-    this.addAxes()
-    this.addSliders()
-    this.addLines()
+      var zoom = d3.zoom()
+        .scaleExtent([1, 2])
+        .translateExtent([[0, 0], [this.width, this.height]])
+        .on('zoom', this.zoom)
 
-    const initialTransform = d3.zoomIdentity.translate(
-      (this.margin.left + this.margin.right) / 2,
-      (this.margin.top + this.margin.bottom) / 2
-    ).scale(1)
+      this.addScales()
+      this.addGridlines()
+      this.addAxes()
+      this.addSliders()
+      this.addLines()
 
-    selection.select('svg')
-      .call(zoom as any)
-      .call(zoom.transform as any, initialTransform)
-      .on('dblclick.zoom', null)
+      const initialTransform = d3.zoomIdentity.translate(
+        (this.margin.left + this.margin.right) / 2,
+        (this.margin.top + this.margin.bottom) / 2
+      ).scale(1)
+
+      selection.select('svg')
+        .call(zoom as any)
+        .call(zoom.transform as any, initialTransform)
+        .on('dblclick.zoom', null)
+    } else {
+      // there was a data update
+      if (this.data && this.data.length > 0 && this.lineData) {
+        this.lineData.datum(this.data)
+      }
+
+      if (this.simdata && this.simdata.length > 0 && this.lineSim) {
+        this.lineSim.datum(this.simdata)
+      }
+
+      this.updateLines()
+    }
   }
 }
 </script>
