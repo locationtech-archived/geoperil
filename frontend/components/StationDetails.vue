@@ -141,7 +141,7 @@ export default class StationDetails extends Vue {
   private sliderX1: any = null
   private sliderX2: any = null
   private sliderY: any = null
-  private updater: number | null = null
+  private updater: any = null
 
   /** Number of milliseconds to wait until next data update request */
   private updateInterval: number = 30 * 1000
@@ -294,8 +294,7 @@ export default class StationDetails extends Vue {
       querystring.stringify({
         station: this.selectedStationDetail.name,
         start: lasthours.toISOString(),
-        end: endts.toISOString(),
-        inst: 'slm'
+        end: endts.toISOString()
       }),
       FORM_ENCODE_CONFIG
     )

@@ -104,6 +104,7 @@ export default class Geoperil extends Vue {
     await this.$store.dispatch('registerUpdater')
     await this.$store.dispatch('fetchEvents')
     await this.$store.dispatch('fetchStations')
+    await this.$store.dispatch('fetchAllInstitutions')
     this.isLoading = false
 
     if (this.$store.getters.selectedStations.length == 0) {

@@ -9,6 +9,7 @@ export interface RootState {
     selectedEvent: Event | null,
     composeEvent: Event | null,
     user: User | null,
+    allInstitutions: string[] | null,
     lastUpdate: string | null,
     selectedTab: Number,
     mapIsLoading: Boolean,

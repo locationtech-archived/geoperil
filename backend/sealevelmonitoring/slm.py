@@ -37,8 +37,8 @@ import requests
 
 IOCSLMSRV = "http://www.ioc-sealevelmonitoring.org/service.php"
 FEEDURL = "http://localhost/feedersrv"
-INST = "slm"
-SECRET = "cbec15fe1aa14073a50abe35460c1431"
+INST = "gfz"
+SECRET = "cc5e19a258524cb4b70dc9c0441df65c"
 MAXRANGE = 7 * 24 * 3600    # 1 week
 TIMEOUT = 1800
 MAXRUNTIME = 1800
@@ -47,8 +47,10 @@ PROCESSES = 4
 
 def feeddata(station):
     pstation = {"query": "data", "code": station["slmcode"]}
+
     if "sensor" in station:
         pstation["includesensors[]"] = station["sensor"]
+
     params = {
         "apiver": "2",
         "inst": INST,
@@ -58,12 +60,15 @@ def feeddata(station):
         "json": json.dumps({}),
     }
     now = time.time()
+
     sfeed = requests.post(
         FEEDURL + "/feedsealevel",
         data=params,
         timeout=TIMEOUT
     ).json()
+
     lastts = sfeed.get("lastts", None)
+
     if lastts is None or now-lastts > MAXRANGE:
         pstation["timestart"] = (
             datetime.datetime.utcfromtimestamp(now - MAXRANGE)
@@ -84,10 +89,12 @@ def feeddata(station):
                 pstation["timestart"]
             )
         )
+
     try:
         data = []
         sdata = requests.get(IOCSLMSRV, params=pstation, timeout=TIMEOUT)
         sdata = json.loads(sdata.text)
+
         for item in sdata:
             dtime = datetime.datetime.strptime(
                 item["stime"].strip(),
@@ -96,6 +103,7 @@ def feeddata(station):
             tst = calendar.timegm(dtime.utctimetuple())
             val = item["slevel"]
             data.append({"timestamp": tst, "value": str(val)})
+
         if len(data) > 0:
             print(
                 "Inserting %d data values for %s..." % (
@@ -117,6 +125,7 @@ def feeddata(station):
                 data=params,
                 timeout=TIMEOUT
             )
+
             if (resp.ok):
                 print("%s: " % station["name"], resp.json())
             else:
@@ -125,24 +134,34 @@ def feeddata(station):
             print("%s: No values to insert." % station["name"])
     except Exception as ex:
         print("Error %s: " % station["name"], ex)
+
     sys.stdout.flush()
     sys.stderr.flush()
 
 
 def feedmetadata(station):
     print("Updating station %s metadata..." % station["name"])
+
     params = {
         "apiver": "1",
         "inst": INST,
         "secret": SECRET,
         "station": json.dumps(station),
     }
+
     sfeed = requests.post(
         FEEDURL + "/feedstation",
         data=params,
         timeout=TIMEOUT
     ).json()
-    return sfeed.get("status") == "success"
+
+    status = sfeed.get("status")
+
+    if status != "success":
+        print('Invalid response: ' + str(sfeed))
+        return False
+
+    return True
 
 
 def feedall(station):
@@ -168,8 +187,10 @@ def main():
         params={"query": "stationlist"},
         timeout=TIMEOUT
     ).json()
+
     for slist in stationlist:
         stationname = slist["Code"]
+
         if "sensor" in slist and slist["sensor"] is not None:
             stationname += "_" + slist["sensor"]
         else:
@@ -184,6 +205,7 @@ def main():
         station["slmcode"] = slist["Code"]
         station["lon"] = float(slist["Lon"])
         station["lat"] = float(slist["Lat"])
+
         for key in [
                 'Location',
                 'units',
@@ -197,21 +219,27 @@ def main():
             val = slist.get(key, None)
             if val is not None:
                 station[key] = val
+
         procq.put(Process(target=feedall, args=[station]))
 
     processes = {}
+
     while len(processes) != 0 or (not procq.empty()):
         now = int(time.time())
+
         for proctime, proc in list(processes.items()):
             if now - proctime > MAXRUNTIME:
                 print("Terminating Process.")
                 proc.terminate()
+
             if not proc.is_alive():
                 del processes[proctime]
+
         if (not procq.empty()) and len(processes) < PROCESSES:
             proc = procq.get()
             proc.start()
             processes[now] = proc
+
         time.sleep(.1)
 
     print("Done.")

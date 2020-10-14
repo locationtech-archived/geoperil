@@ -16,6 +16,7 @@ import {
   API_SAVEUSERSTATIONS_URL,
   FORM_ENCODE_CONFIG,
   UPDATE_INTERVAL_MSEC,
+  API_INSTLIST_URL,
 } from './constants'
 
 export const state = (): RootState => ({
@@ -27,6 +28,7 @@ export const state = (): RootState => ({
   selectedEvent: null,
   composeEvent: null,
   user: null,
+  allInstitutions: null,
   lastUpdate: null,
   selectedTab: 0,
   mapIsLoading: false,
@@ -49,6 +51,7 @@ export const getters: GetterTree<RootState, RootState> = {
   selectedEvent: (state: RootState) => state.selectedEvent,
   composeEvent: (state: RootState) => state.composeEvent,
   user: (state: RootState) => state.user,
+  allInstitutions: (state: RootState) => state.allInstitutions,
   lastUpdate: (state: RootState) => state.lastUpdate,
   selectedTab: (state: RootState) => state.selectedTab,
   mapIsLoading: (state: RootState) => state.mapIsLoading,
@@ -76,7 +79,8 @@ export const getters: GetterTree<RootState, RootState> = {
   },
   selectedStations: (state: RootState) => {
     if (
-      !state.allStations || !state.user || state.user.countries.length == 0
+      !state.allStations || !state.user || !state.user.countries
+      || state.user.countries.length == 0
     ) {
       return []
     }
@@ -95,6 +99,15 @@ export const getters: GetterTree<RootState, RootState> = {
   stationHoveredMap: (state: RootState) => state.stationHoveredMap,
   selectedStationMap: (state: RootState) => state.selectedStationMap,
   selectedStationDetail: (state: RootState) => state.selectedStationDetail,
+  isAdmin: (state: RootState) => {
+    const user: User | null = state.user
+
+    if (!user || !user.permissions) {
+      return false
+    }
+
+    return 'admin' in user.permissions && user.permissions.admin === true
+  },
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -133,6 +146,9 @@ export const mutations: MutationTree<RootState> = {
   SET_USER: (state: RootState, setuser: User | null) => (
     state.user = setuser
   ),
+  SET_ALLINSTITUTIONS: (state: RootState, instArr: string[] | null) => (
+    state.allInstitutions = instArr
+  ),
   SET_LAST_UPDATE: (state: RootState, ts: string) => (
     state.lastUpdate = ts
   ),
@@ -156,7 +172,9 @@ export const mutations: MutationTree<RootState> = {
   ),
   SET_USERSTATIONS: (state: RootState, selected: string[]) => {
     if (state.user) {
-      state.user.countries = selected
+      // notify components about the change
+      // see https://vuejs.org/v2/guide/reactivity.html#For-Objects
+      state.user = Object.assign({}, state.user, {countries: selected})
     }
   },
   ADD_EVENTS: (state: RootState, events: any[]) => {
@@ -500,7 +518,8 @@ export const actions: ActionTree<RootState, RootState> = {
         {
           username: data.user.username,
           inst: data.user.inst,
-          countries: data.user.countries
+          countries: data.user.countries,
+          permissions: data.user.permissions,
         } as User
       )
     } else {
@@ -520,6 +539,29 @@ export const actions: ActionTree<RootState, RootState> = {
       commit('SET_USER', null)
     } else {
       throw new Error('Logout was not succesfull')
+    }
+  },
+
+  async fetchAllInstitutions({ commit }: any) {
+    if (!this.getters.isAdmin) {
+      return
+    }
+
+    try {
+      const { data } = await axios.post(
+        API_INSTLIST_URL,
+        querystring.stringify({}),
+        FORM_ENCODE_CONFIG
+      )
+      if ('status' in data
+        && 'institutions' in data
+        && data.status == 'success') {
+        commit('SET_ALLINSTITUTIONS', data.institutions)
+      } else {
+        throw new Error('Invalid response while getting institutions')
+      }
+    } catch (error) {
+      throw error
     }
   },
 

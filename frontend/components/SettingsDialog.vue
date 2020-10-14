@@ -17,6 +17,7 @@
     >
       <v-tab class="no-text-transform">General</v-tab>
       <v-tab class="no-text-transform">Stations</v-tab>
+      <v-tab v-if="isAdmin" class="no-text-transform">Users</v-tab>
 
       <v-tabs-items
         class="fill-height-tabs"
@@ -38,6 +39,10 @@
             <TabItem>
               <StationSettings />
             </TabItem>
+
+            <TabItem v-if="isAdmin">
+              <UserManagement />
+            </TabItem>
           </v-col>
         </v-row>
       </v-tabs-items>
@@ -51,18 +56,25 @@ import DialogToolbar from './DialogToolbar.vue'
 import TabItem from './TabItem.vue'
 import UserSettings from './UserSettings.vue'
 import StationSettings from './StationSettings.vue'
+import UserManagement from './UserManagement.vue'
+import { User } from '../types/index'
 
 @Component({
   components: {
     TabItem,
     DialogToolbar,
     UserSettings,
-    StationSettings
+    StationSettings,
+    UserManagement,
   }
 })
 export default class SettingsDialog extends Vue {
   private dialog = true
   private tab = null
+
+  get isAdmin(): boolean {
+    return this.$store.getters.isAdmin
+  }
 
   public closeDialog() {
     this.$store.commit('SET_SHOWSETTINGSDIALOG', false)

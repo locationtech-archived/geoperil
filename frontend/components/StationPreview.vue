@@ -76,7 +76,7 @@ export default class StationPreview extends Vue {
   private isLoading: boolean = true
   private data: any[] = []
   private simdata: any[] = []
-  private updater: number | null = null
+  private updater: any = null
 
   /** Number of milliseconds to wait until next data update request */
   private updateInterval: number = 60 * 1000
@@ -190,8 +190,7 @@ export default class StationPreview extends Vue {
       querystring.stringify({
         station: this.station.name,
         start: lasthours.toISOString(),
-        end: endts.toISOString(),
-        inst: 'slm'
+        end: endts.toISOString()
       }),
       FORM_ENCODE_CONFIG
     )

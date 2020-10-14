@@ -16,6 +16,7 @@ export interface User {
   username: string,
   inst: Institution,
   countries: string[],
+  permissions: any,
 }
 
 export interface ComputeRequest {

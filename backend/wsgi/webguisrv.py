@@ -133,75 +133,87 @@ class WebGuiSrv(BaseSrv):
     @cherrypy.tools.allow(methods=['POST'])
     def register(self, username, password, inst=None):
         user = self.getUser()
-        if user is not None and user["permissions"].get("admin", False):
-            username = str(username)
-            password = str(password)
-            if inst is not None:
-                inst = str(inst)
-            if self._db["users"].find_one({"username": username}) is None:
-                salt, pwhash = createsaltpwhash(password)
-                newuser = {
-                    "username": username,
-                    "password": b64encode(
-                        hashlib.new("sha256", bytes(password, "utf-8"))
-                        .digest()
-                    ).decode("ascii"),
-                    "pwsalt": salt,
-                    "pwhash": pwhash,
-                    "session": None,
-                    "inst": inst,
-                    "permissions": {
-                        # can change permission, create users, change users
-                        "admin": False,
-                        # can send internal messages
-                        "intmsg": False,
-                        # can send fax messages
-                        "fax": False,
-                        # can send mails
-                        "mail": False,
-                        # can send sms messages
-                        "sms": False,
-                        # can send messages to ftp/gts
-                        "ftp": False,
-                        # can create share links
-                        "share": False,
-                        # can compute simulations
-                        "comp": False,
-                        # can manage their institution
-                        "manage": False,
-                        # can view charts with sealevel data
-                        "chart": False,
-                        # can use timeline
-                        "timeline": False
-                    },
-                    "properties": {
-                        "InterfaxUsername": "",
-                        "InterfaxPassword": "",
 
-                        "TwilioSID": "",
-                        "TwilioToken": "",
-                        "TwilioFrom": "",
+        if user is None or not user["permissions"].get("admin", False):
+            return jsdeny()
 
-                        "FtpHost": "",
-                        "FtpPort": 21,
-                        "FtpPath": "",
-                        "FtpUser": "anonymous",
-                        "FtpPassword": "anonymous",
-                    },
-                }
-                if inst is not None and \
-                        self._db["institutions"] \
-                        .find_one({"name": inst}) is None:
-                    self._db["institutions"].insert({
-                        "name": inst, "secret": None
-                    })
-                self._db["users"].insert(newuser)
-                newuser.pop("password")
-                newuser.pop("pwsalt")
-                newuser.pop("pwhash")
-                return jssuccess(user=newuser)
+        username = str(username)
+        password = str(password)
+
+        instId = None
+
+        if inst is not None:
+            find = self._db["institutions"].find_one({"name": str(inst)})
+            if find is not None:
+                instId = find.get("_id")
+
+        if self._db["users"].find_one({"username": username}) is not None:
             return jsfail(errors=["User already exists."])
-        return jsdeny()
+
+        salt, pwhash = createsaltpwhash(password)
+        newuser = {
+            "username": username,
+            "password": b64encode(
+                hashlib.new("sha256", bytes(password, "utf-8"))
+                .digest()
+            ).decode("ascii"),
+            "pwsalt": salt,
+            "pwhash": pwhash,
+            "session": None,
+            "inst": instId,
+            "permissions": {
+                # can change permission, create users, change users
+                "admin": False,
+                # can send internal messages
+                "intmsg": False,
+                # can send fax messages
+                "fax": False,
+                # can send mails
+                "mail": False,
+                # can send sms messages
+                "sms": False,
+                # can send messages to ftp/gts
+                "ftp": False,
+                # can create share links
+                "share": False,
+                # can compute simulations
+                "comp": False,
+                # can manage their institution
+                "manage": False,
+                # can view charts with sealevel data
+                "chart": False,
+                # can use timeline
+                "timeline": False
+            },
+            "properties": {
+                "InterfaxUsername": "",
+                "InterfaxPassword": "",
+
+                "TwilioSID": "",
+                "TwilioToken": "",
+                "TwilioFrom": "",
+
+                "FtpHost": "",
+                "FtpPort": 21,
+                "FtpPath": "",
+                "FtpUser": "anonymous",
+                "FtpPassword": "anonymous",
+            },
+        }
+
+        if inst is not None and \
+                self._db["institutions"] \
+                .find_one({"name": inst}) is None:
+            self._db["institutions"].insert({
+                "name": inst, "secret": None
+            })
+
+        self._db["users"].insert(newuser)
+        newuser.pop("password")
+        newuser.pop("pwsalt")
+        newuser.pop("pwhash")
+
+        return jssuccess(user=newuser)
 
     @cherrypy.expose
     def instlist(self):
@@ -1723,6 +1735,13 @@ class WebGuiSrv(BaseSrv):
             instid = self._db["institutions"].find_one({"name": inst})["_id"]
             query.append({"user": instid})
 
+        if len(query) == 0:
+            # nothing to query
+            return {
+                "events": [],
+                "maxtime": None
+            }
+
         events = list(
             self._db["eqs"].find(
                 {
@@ -1762,7 +1781,7 @@ class WebGuiSrv(BaseSrv):
         if user is None:
             return jsdeny()
 
-        if inst is None and 'inst' in user:
+        if inst is None and 'inst' in user and user["inst"] is not None:
             inst = self._db["institutions"].find_one({
                 "_id": user["inst"]
             }).get("name")
@@ -1972,12 +1991,15 @@ class WebGuiSrv(BaseSrv):
     # the client - sensible information need to be removed
     def _get_user_obj(self, user):
         user["inst"] = self._db["institutions"].find_one({"_id": user["inst"]})
-        user.pop("_id", None)
-        user["inst"].pop("_id", None)
-        user["inst"].pop("secret", None)
-        user["inst"].pop("apikey", None)
+
+        if (user.get("inst")):
+            user["inst"].pop("_id", None)
+            user["inst"].pop("secret", None)
+            user["inst"].pop("apikey", None)
+
         # TODO: better include wanted fields explicitly instead of removing
         # irrelevant ones
+        user.pop("_id", None)
         user.pop("password", None)
         user.pop("pwhash", None)
         user.pop("pwsalt", None)
@@ -2376,25 +2398,32 @@ class WebGuiSrv(BaseSrv):
         if user is None or user.get("username") is None:
             return jsdeny()
 
+        inst = None
+
+        if inst is None and 'inst' in user and user["inst"] is not None:
+            inst = self._db["institutions"].find_one({
+                "_id": user["inst"]
+            }).get("name")
+
         userevents = self._get_events(user.get("username"), None, ts, 200)
-        geofonevents = self._get_events(None, "gfz", ts, 200)
+        instevents = self._get_events(None, inst, ts, 200)
 
         maxtime = None
         maxtimeuser = userevents.get("maxtime")
-        maxtimegeofon = geofonevents.get("maxtime")
+        maxtimeinst = instevents.get("maxtime")
 
         if maxtimeuser is None:
-            maxtime = maxtimegeofon
-        elif maxtimegeofon is None:
+            maxtime = maxtimeinst
+        elif maxtimeinst is None:
             maxtime = maxtimeuser
         else:
             maxtime = max(
                 datetime.strptime(maxtimeuser, self.DATE_PATTERN),
-                datetime.strptime(maxtimegeofon, self.DATE_PATTERN),
+                datetime.strptime(maxtimeinst, self.DATE_PATTERN),
             ).strftime(self.DATE_PATTERN)
 
         return jssuccess(
-            events=geofonevents.get("events"),
+            events=instevents.get("events"),
             userevents=userevents.get("events"),
             maxtime=maxtime
         )
