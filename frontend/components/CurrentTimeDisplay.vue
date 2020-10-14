@@ -1,12 +1,12 @@
 <template>
   <v-row class="mt-3" justify="center">
-    <v-col sm="4" md="4" lg="3">
+    <v-col sm="6" md="4" lg="3">
       <DenseTextField
         :value="localtime"
         label="Local time"
       />
     </v-col>
-    <v-col sm="4" md="4" lg="3">
+    <v-col sm="6" md="4" lg="3">
       <DenseTextField
         :value="utctime"
         label="UTC time"

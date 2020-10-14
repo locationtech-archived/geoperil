@@ -1,77 +1,79 @@
 <template>
-  <v-window id="station-details-window">
-    <h3>Station: {{ selectedStationDetail.slmcode }} - Sensor: {{ selectedStationDetail.sensor }}</h3>
-    <v-container class="pa-0">
-      <CurrentTimeDisplay />
-      <v-row class="mb-3" justify="center">
-          <svg id="station-details" class="mt-2" />
-      </v-row>
-      <v-row justify="center">
-        <v-col sm="8" md="8" lg="6">
-          <v-expansion-panels v-model="panel">
-            <v-expansion-panel>
-              <v-expansion-panel-header>Pick values</v-expansion-panel-header>
-              <v-expansion-panel-content>
-                <v-row>
-                  <v-col class="pa-0 pr-2 pb-2">
-                    <DenseTextField
-                      :value="pickedX1Formatted"
-                      label="First picked time"
-                    />
-                  </v-col>
-                  <v-col class="pa-0 pl-2 pb-2">
-                    <DenseTextField
-                      :value="pickedX2Formatted"
-                      label="Second picked time"
-                    />
-                  </v-col>
-                </v-row>
-                <v-row>
-                  <v-col class="pa-0 pb-2">
-                    <DenseTextField
-                      :value="pickedTimeDifferenceFormatted"
-                      label="Picked time difference"
-                    />
-                  </v-col>
-                  <v-col cols="1" class="pa-0 multiply-col">
-                    <span>x</span>
-                  </v-col>
-                  <v-col class="pa-0 pb-2">
-                    <v-select
-                      :items="[1, 2, 4]"
-                      v-model="period"
-                      label="Period"
-                      class="ma-0"
-                      hide-details
-                      outlined
-                      dense
-                    />
-                  </v-col>
-                  <v-col cols="1" class="pa-0 multiply-col">
-                    <span>=</span>
-                  </v-col>
-                  <v-col class="pa-0 pb-2">
-                    <DenseTextField
-                      :value="periodTimeDifferenceFormatted"
-                      label="Time difference"
-                    />
-                  </v-col>
-                </v-row>
-                <v-row>
-                  <v-col class="pa-0">
-                    <DenseTextField
-                      :value="pickedYFormatted"
-                      label="Picked amplitude"
-                    />
-                  </v-col>
-                </v-row>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
-          </v-expansion-panels>
-        </v-col>
-      </v-row>
-    </v-container>
-  </v-window>
+  <v-col
+    id="station-details-dialog"
+    sm="10" md="10" lg="8"
+    class="fill-height pa-1 pr-5"
+  >
+    <h3 class="mt-3">Station: {{ selectedStationDetail.slmcode }} - Sensor: {{ selectedStationDetail.sensor }}</h3>
+    <CurrentTimeDisplay />
+    <v-row class="mb-3" justify="center">
+        <svg id="station-details" />
+    </v-row>
+    <v-row justify="center">
+      <v-col sm="12" md="9" lg="8">
+        <v-expansion-panels v-model="panel">
+          <v-expansion-panel>
+            <v-expansion-panel-header>Pick values</v-expansion-panel-header>
+            <v-expansion-panel-content>
+              <v-row>
+                <v-col class="pa-0 pr-2 pb-2">
+                  <DenseTextField
+                    :value="pickedX1Formatted"
+                    label="First picked time"
+                  />
+                </v-col>
+                <v-col class="pa-0 pl-2 pb-2">
+                  <DenseTextField
+                    :value="pickedX2Formatted"
+                    label="Second picked time"
+                  />
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col class="pa-0 pb-2">
+                  <DenseTextField
+                    :value="pickedTimeDifferenceFormatted"
+                    label="Picked time difference"
+                  />
+                </v-col>
+                <v-col cols="1" class="pa-0 multiply-col">
+                  <span>x</span>
+                </v-col>
+                <v-col class="pa-0 pb-2">
+                  <v-select
+                    :items="[1, 2, 4]"
+                    v-model="period"
+                    label="Period"
+                    class="ma-0"
+                    hide-details
+                    outlined
+                    dense
+                  />
+                </v-col>
+                <v-col cols="1" class="pa-0 multiply-col">
+                  <span>=</span>
+                </v-col>
+                <v-col class="pa-0 pb-2">
+                  <DenseTextField
+                    :value="periodTimeDifferenceFormatted"
+                    label="Time difference"
+                  />
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col class="pa-0">
+                  <DenseTextField
+                    :value="pickedYFormatted"
+                    label="Picked amplitude"
+                  />
+                </v-col>
+              </v-row>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+        </v-expansion-panels>
+      </v-col>
+    </v-row>
+  </v-col>
 </template>
 
 <script lang="ts">
@@ -103,7 +105,8 @@ if (!Object.getOwnPropertyNames(d3).includes('event')) {
   }
 })
 export default class StationDetails extends Vue {
-  private margin: any = { top: 10, left: 47, bottom: 8, right: 11 }
+  private containerId = '#station-details-dialog'
+  private margin: any = { top: 5, left: 47, bottom: 8, right: 11 }
   private width: number = 600
   private height: number = 400
   private axisheight: number = 0
@@ -335,7 +338,7 @@ export default class StationDetails extends Vue {
   }
 
   private updateSliderVisible() {
-    d3.select('#station-details-window')
+    d3.select(this.containerId)
       .selectAll('.slider')
       .attr('display', this.showSliders ? 'inline' : 'none')
   }
@@ -441,11 +444,11 @@ export default class StationDetails extends Vue {
       return
     }
 
-    d3.select('#station-details-window')
+    d3.select(this.containerId)
       .select('.dataview')
       .attr("transform", event.transform)
 
-    d3.select('#station-details-window')
+    d3.select(this.containerId)
       .select('.simview')
       .attr("transform", event.transform)
 
@@ -662,12 +665,12 @@ export default class StationDetails extends Vue {
   @Watch('data')
   public onDataChange(newValue: any[] | null, oldValue: any[] | null) {
     const alreadyDrawn = (
-      d3.select('#station-details-window').selectAll('.dataview').size() != 0
+      d3.select(this.containerId).selectAll('.dataview').size() != 0
     )
 
     if (!alreadyDrawn) {
       // diagram will be drawn the first time
-      const selection = d3.select('#station-details-window')
+      const selection = d3.select(this.containerId)
       selection.select('svg').selectAll('*').remove()
 
       this.svg = selection.select('svg')
@@ -713,8 +716,9 @@ export default class StationDetails extends Vue {
 </script>
 
 <style>
-#station-details-window {
+#station-details-dialog {
   text-align: center;
+  overflow-y: auto;
 }
 
 svg#station-details {
@@ -735,7 +739,7 @@ svg#station-details {
 .slider line {
   fill: none;
   stroke: black;
-  stroke-width: 2px;
+  stroke-width: 1px;
 }
 
 .multiply-col {

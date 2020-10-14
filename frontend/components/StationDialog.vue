@@ -15,11 +15,7 @@
       class="fill-height ma-0 pa-0"
       justify="center"
     >
-      <v-col
-        class="fill-height"
-      >
-        <StationDetails />
-      </v-col>
+      <StationDetails />
     </v-row>
   </v-dialog>
 </template>
