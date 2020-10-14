@@ -359,14 +359,21 @@ export default class StationDetails extends Vue {
       return [null, null]
     }
 
-    const regXY = new RegExp('(\\d+),(\\d+)')
+    const regXY = new RegExp('translate\\((.*)\\)')
     const matches = regXY.exec(transform)
 
-    if (!matches || matches.length != 3) {
+    // matches[0] contains full match
+    if (!matches || matches.length != 2) {
       return [null, null]
     }
 
-    return [matches[1], matches[2]]
+    const splitted = matches[1].split(',')
+
+    if (!splitted || splitted.length != 2) {
+      return [null, null]
+    }
+
+    return splitted
   }
 
   private updateTimeDifference() {
