@@ -61,14 +61,7 @@
             class="ma-0"
           >
             <ActionButton
-              icon="mdi-cloud-download"
-              helpText="Download report"
-            />
-            <ActionButton
-              icon="mdi-information-outline"
-              helpText="Inspect event"
-            />
-            <ActionButton
+              v-if="isSupported('compute')"
               icon="mdi-reload"
               helpText="Modify and reprocess"
               @click="handleCompose"
@@ -76,10 +69,6 @@
             <ActionButton
               icon="mdi-telegram"
               helpText="Send message"
-            />
-            <ActionButton
-              icon="mdi-share"
-              helpText="Share map"
             />
             <ActionButton
               icon="mdi-sort-ascending"
@@ -113,6 +102,10 @@ export default class EventItem extends Vue {
   @Prop({ required: true }) data!: Event
 
   private hover: boolean = false
+
+  public isSupported(plugin: string) {
+    return plugin in this.$store.getters.supportedPlugins
+  }
 
   get calctimeInSec(): string {
     if (this.data.calctime) {

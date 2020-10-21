@@ -1,4 +1,3 @@
-import LoginForm from '../components/LoginForm.vue';
 <template>
   <v-app>
     <AppBar />
@@ -15,6 +14,7 @@ import LoginForm from '../components/LoginForm.vue';
         </Geoperil>
         <SettingsDialog v-if="isLoggedIn && showSettings" />
         <StationDialog v-if="isLoggedIn && showStationDialog" />
+        <PluginsDialogs />
       </v-container>
     </v-main>
   </v-app>
@@ -22,11 +22,12 @@ import LoginForm from '../components/LoginForm.vue';
 
 <script lang="ts">
 import LoginForm from '../components/LoginForm.vue'
-import AppBar from '../components/AppBar.vue';
+import AppBar from '../components/AppBar.vue'
 import Geoperil from '../components/Geoperil.vue'
 import { Vue, Component } from 'nuxt-property-decorator'
 import SettingsDialog from '../components/SettingsDialog.vue'
 import StationDialog from '../components/StationDialog.vue'
+import PluginsDialogs from '../components/PluginsDialogs.vue'
 
 @Component({
   components: {
@@ -35,9 +36,14 @@ import StationDialog from '../components/StationDialog.vue'
     LoginForm,
     SettingsDialog,
     StationDialog,
+    PluginsDialogs,
   }
 })
 export default class Index extends Vue {
+  mounted() {
+    this.$store.dispatch('getSupportedPlugins')
+  }
+
   get isLoggedIn() {
     return !!this.$store.getters.user
   }

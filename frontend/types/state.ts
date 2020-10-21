@@ -1,6 +1,7 @@
 import { User, Event, Station } from "~/types"
 
 export interface RootState {
+    supportedPlugins: any,
     recentEvents: Event[],
     recentEventsGeojson: any[],
     userEvents: Event[],

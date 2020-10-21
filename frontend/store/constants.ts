@@ -1,7 +1,7 @@
 // add trailing slash to URL if not present
-// 'as string' needed for TS since it could be undefined, but should not
 export const WEBGUISRV_BASE_URL = process.env.webguisrvUrl
-  + ((process.env.webguisrvUrl as string).endsWith('/') ? '' : '/')
+  + (process.env.webguisrvUrl!.endsWith('/') ? '' : '/')
+export const API_PLUGINS_URL = WEBGUISRV_BASE_URL + 'supported_plugins'
 export const API_SIGNIN_URL = WEBGUISRV_BASE_URL + 'signin'
 export const API_SESSION_URL = WEBGUISRV_BASE_URL + 'session'
 export const API_SIGNOUT_URL = WEBGUISRV_BASE_URL + 'signout'

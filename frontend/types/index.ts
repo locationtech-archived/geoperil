@@ -1,4 +1,5 @@
 export * from './state'
+export * from './plugins-state'
 
 export interface UserApi {
   key: string,

@@ -68,6 +68,13 @@ class WebGuiSrv(BaseSrv):
     DATE_PATTERN = r"%Y-%m-%dT%H:%M:%S.%fZ"
 
     @cherrypy.expose
+    def supported_plugins(self):
+        supported = {
+            'compute': True,
+        }
+        return jssuccess(plugins=supported)
+
+    @cherrypy.expose
     def session(self):
         user = self.getUser()
         if user is not None:

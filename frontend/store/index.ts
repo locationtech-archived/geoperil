@@ -1,8 +1,21 @@
 import { GetterTree, ActionTree, MutationTree } from 'vuex'
-import { RootState, Event, User, Station, ComputeRequest } from "~/types"
+import {
+  RootState,
+  Event,
+  User,
+  Station,
+  ComputeRequest,
+} from '~/types'
+import {
+  pluginsState,
+  pluginsGetters,
+  pluginsMutations,
+  pluginsActions,
+} from '~/store/plugins-store'
 import axios from 'axios'
 import querystring from 'querystring'
 import {
+  API_PLUGINS_URL,
   API_SIGNIN_URL,
   API_SESSION_URL,
   API_SIGNOUT_URL,
@@ -20,6 +33,7 @@ import {
 } from './constants'
 
 export const state = (): RootState => ({
+  supportedPlugins: {},
   recentEvents: [],
   recentEventsGeojson: [],
   userEvents: [],
@@ -42,9 +56,11 @@ export const state = (): RootState => ({
   selectedStationDetail: null,
   pickedPeriods: {},
   pickedAmplitudes: {},
+  ...pluginsState
 })
 
 export const getters: GetterTree<RootState, RootState> = {
+  supportedPlugins: (state: RootState) => state.supportedPlugins,
   recentEvents: (state: RootState) => state.recentEvents,
   recentEventsGeojson: (state: RootState) => state.recentEventsGeojson,
   userEvents: (state: RootState) => state.userEvents,
@@ -112,9 +128,13 @@ export const getters: GetterTree<RootState, RootState> = {
   },
   pickedPeriodsByStation: (state: RootState) => state.pickedPeriods,
   pickedAmplitudesByStation: (state: RootState) => state.pickedAmplitudes,
+  ...pluginsGetters
 }
 
 export const mutations: MutationTree<RootState> = {
+  SET_SUPPORTED_PLUGINS: (state: RootState, plugins: any) => (
+    state.supportedPlugins = plugins
+  ),
   SET_EVENTS: (state: RootState, events: Event[]) => (
     state.recentEvents = events
   ),
@@ -288,6 +308,7 @@ export const mutations: MutationTree<RootState> = {
   CLEAR_PICKED_AMPLITUDES: (state: RootState) => (
     state.pickedAmplitudes = {}
   ),
+  ...pluginsMutations
 }
 
 function apiToEvent(entry: any): Event {
@@ -373,11 +394,17 @@ function addEntryToArr(
 }
 
 export const actions: ActionTree<RootState, RootState> = {
-  // nuxtServerInit is called by Nuxt.js before server-rendering every page
-  nuxtServerInit({ commit }: any, { req }: any) {
-    if (req.session && req.session.user) {
-      commit('SET_USER', req.session.user)
+  async getSupportedPlugins({ commit }: any) {
+    const { data } = await axios.post(API_PLUGINS_URL)
+
+    if (
+      !('status' in data) || data.status != 'success'
+      || !('plugins' in data)
+    ) {
+      throw new Error('Invalid response from endpoint')
     }
+
+    commit('SET_SUPPORTED_PLUGINS', data.plugins)
   },
 
   async fetchEvents({ commit }: any) {
@@ -761,4 +788,6 @@ export const actions: ActionTree<RootState, RootState> = {
       throw new Error('Changing the password was not successful')
     }
   },
+
+  ...pluginsActions
 }
