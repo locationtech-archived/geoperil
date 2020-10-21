@@ -182,6 +182,11 @@ export default class StationDetails extends Vue {
     this.stopUpdater()
   }
 
+  public convertToMinutes(milliseconds: number): number {
+    const seconds = milliseconds / 1000
+    return seconds / 60
+  }
+
   @Watch('showSliders')
   public onShowSlidersChange(newValue: boolean) {
     this.updateSliderVisible()
@@ -214,7 +219,8 @@ export default class StationDetails extends Vue {
 
   get pickedYFormatted(): string {
     if (this.pickedY) {
-      return this.pickedY.toFixed(2) + ' Meters'
+      const pickedMeters = this.pickedY.toFixed(2)
+      return pickedMeters + ' Meters'
     }
 
     return ''
@@ -222,8 +228,10 @@ export default class StationDetails extends Vue {
 
   get pickedTimeDifferenceFormatted(): string {
     if (this.pickedTimeDifference) {
-      const seconds = this.pickedTimeDifference.valueOf() / 1000
-      return (seconds / 60).toFixed(2) + ' Minutes'
+      const minutes = this.convertToMinutes(
+        this.pickedTimeDifference.valueOf()
+      )
+      return minutes.toFixed(2) + ' Minutes'
     }
 
     return ''
@@ -379,6 +387,12 @@ export default class StationDetails extends Vue {
   }
 
   private updateTimeDifference() {
+    const oldValue = (
+      this.periodTimeDifference == null
+      ? null
+      : this.periodTimeDifference.toFixed(2)
+    )
+
     if (this.pickedX1 && this.pickedX2) {
       // https://stackoverflow.com/a/14980125/2249798
       this.pickedTimeDifference = new Date(+(this.pickedX2) - +(this.pickedX1))
@@ -386,11 +400,24 @@ export default class StationDetails extends Vue {
       this.pickedTimeDifference = new Date(0)
     }
 
-    const seconds = this.pickedTimeDifference.valueOf() / 1000
-    this.periodTimeDifference = (seconds / 60) * this.period
+    const minutes = this.convertToMinutes(this.pickedTimeDifference.valueOf())
+    this.periodTimeDifference = minutes * this.period
+    const newValue = this.periodTimeDifference.toFixed(2)
+
+    if (oldValue != newValue) {
+      this.$store.commit(
+        'SET_PICKED_PERIOD_FOR_STATION',
+        {
+          station: this.selectedStationDetail.id,
+          period: newValue,
+        }
+      )
+    }
   }
 
   private updatePickedValues() {
+    const oldPickedY = (this.pickedY == null ? null : this.pickedY.toFixed(2))
+
     this.pickedX1 = null
     this.pickedX2 = null
     this.pickedY = null
@@ -407,6 +434,7 @@ export default class StationDetails extends Vue {
 
     if (transX1) {
       const x = this.getTransformValues(transX1)[0]
+
       if (x != null) {
         this.pickedX1 = this.scaleX.invert(x)
       }
@@ -414,6 +442,7 @@ export default class StationDetails extends Vue {
 
     if (transX2) {
       const x = this.getTransformValues(transX2)[0]
+
       if (x != null) {
         this.pickedX2 = this.scaleX.invert(x)
       }
@@ -421,8 +450,20 @@ export default class StationDetails extends Vue {
 
     if (transY) {
       const y = this.getTransformValues(transY)[1]
+
       if (y != null) {
         this.pickedY = this.scaleY.invert(y)
+        const newValue = this.pickedY!.toFixed(2)
+
+        if (oldPickedY != newValue) {
+          this.$store.commit(
+            'SET_PICKED_AMPLITUDE_FOR_STATION',
+            {
+              station: this.selectedStationDetail.id,
+              amplitude: newValue,
+            }
+          )
+        }
       }
     }
 

@@ -21,4 +21,6 @@ export interface RootState {
     stationHoveredMap: string | null,
     selectedStationMap: Station | null,
     selectedStationDetail: Station | null,
+    pickedPeriods: any,
+    pickedAmplitudes: any,
 }
