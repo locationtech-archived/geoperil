@@ -25,19 +25,20 @@ services:
     volumes:
       - 'mongo-data-volume:/data/db'
 
-  mongo-data:
-    image: geoperil-mongodb-data
+  mongo-initial-data:
+    image: geoperil-mongo-initial-data
     build:
-      context: ../backend/mongodb-data
+      context: ../backend/mongo-initial-data
       dockerfile: Dockerfile
-    container_name: geoperil-mongodb-data
+    container_name: geoperil-mongo-initial-data
     depends_on:
       - mongo
     links:
       - mongo
-    volumes:
-      - ../backend/mongodb-data/example-data:/tmp/example-data
-    command: ["/tmp/scripts/wait-for-mongodb.sh", "/tmp/scripts/import-example-data.sh"]
+    command: [
+      "/tmp/scripts/wait-for-mongodb.sh",
+      "/tmp/scripts/import-initial-data.sh"
+    ]
     environment:
       - MONGO_HOST=mongo
       - MONGO_DB=geoperil

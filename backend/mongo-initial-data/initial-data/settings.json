@@ -52,26 +52,5 @@
         "wpsurl": "http://geoperil-easywave-worker-0:5000/wps",
         "wpsprocess": "easywavecpu",
         "type": "worker"
-    },
-    {
-        "_id": { "$oid": "aaaaaaaaaaaaaaaaaaaaaaaa" },
-        "type": "msg_template",
-        "provider": "PROVIDER",
-        "prolog": "%s %s %s",
-        "summary": "SUMMARY",
-        "advise": "ADVISE",
-        "params": "%s %s %s %s %s %s %s %s",
-        "measurements": "%s",
-        "eval_watch_first": "",
-        "eval_advisory_first": "",
-        "eval_info_first": "",
-        "eval_watch_mid": "",
-        "eval_advisory_mid": "",
-        "eval_watch_end": "",
-        "eval_advisory_end": "",
-        "tfps": "%s",
-        "supplement": "",
-        "final": "",
-        "epilog": "%s"
     }
 ]
