@@ -11,7 +11,9 @@
       cols="2"
     >
       <v-icon>mdi-map-marker</v-icon>
-      <p class="item-mag">{{ data.mag }}</p>
+      <p class="item-mag">
+        {{ data.mag }}
+      </p>
     </v-col>
     <v-col
       class="ma-0 pa-0"
@@ -33,16 +35,38 @@
                 @click="selectEvent"
               >{{ data.region }}</a>
             </div>
-            <div class="item-metadata">{{ data.date }} &middot; {{ data.time }} &middot; {{ data.compId }}</div>
-            <div class="item-metadata">Lat {{ data.lat }}° &middot; Lon {{ data.lon }}° &middot; Depth {{ data.depth }} km</div>
-            <div class="item-metadata" v-if="data.dip && data.strike && data.rake">Dip {{ data.dip }}° &middot; Strike {{ data.strike }}° &middot; Rake {{ data.rake }}°</div>
-            <div class="item-metadata" v-if="data.progress > 0">{{ algorithmName }} &middot; Resolution {{ data.gridres }}° <br> Duration {{ data.duration }} min <template v-if="data.progress == 100">&middot; Runtime {{ calctimeInSec }} sec</template></div>
-            <div v-if="data.progress == null" class="item-potential">{{ eventInfoText }}</div>
-            <div v-if="data.progress > 0 && data.progress < 100" class="item-potential">Simulation in progress</div>
-            <div v-if="data.progress == 100" class="item-potential">Simulation processed</div>
-            <div v-if="data.progress == -1" class="sim-error">Simulation failed</div>
-            <div v-if="data.progress == -2" class="item-potential">Simulation processed: No tsunami potential</div>
-            <div v-if="data.progress == 0" class="item-potential">Simulation is being prepared</div>
+            <div class="item-metadata">
+              {{ data.date }} &middot; {{ data.time }} &middot; {{ data.compId }}
+            </div>
+            <div class="item-metadata">
+              Lat {{ data.lat }}° &middot; Lon {{ data.lon }}° &middot; Depth {{ data.depth }} km
+            </div>
+            <div v-if="data.dip && data.strike && data.rake" class="item-metadata">
+              Dip {{ data.dip }}° &middot; Strike {{ data.strike }}° &middot; Rake {{ data.rake }}°
+            </div>
+            <div v-if="data.progress > 0" class="item-metadata">
+              {{ algorithmName }} &middot; Resolution {{ data.gridres }}° <br> Duration {{ data.duration }} min <template v-if="data.progress == 100">
+                &middot; Runtime {{ calctimeInSec }} sec
+              </template>
+            </div>
+            <div v-if="data.progress == null" class="item-potential">
+              {{ eventInfoText }}
+            </div>
+            <div v-if="data.progress > 0 && data.progress < 100" class="item-potential">
+              Simulation in progress
+            </div>
+            <div v-if="data.progress == 100" class="item-potential">
+              Simulation processed
+            </div>
+            <div v-if="data.progress == -1" class="sim-error">
+              Simulation failed
+            </div>
+            <div v-if="data.progress == -2" class="item-potential">
+              Simulation processed: No tsunami potential
+            </div>
+            <div v-if="data.progress == 0" class="item-potential">
+              Simulation is being prepared
+            </div>
             <v-progress-linear
               v-if="data.progress > 0 && data.progress < 100"
               color="light-blue"
@@ -50,7 +74,7 @@
               class="item-progress-bar"
               :value="data.progress"
               striped
-            ></v-progress-linear>
+            />
           </v-list-item-content>
         </v-list-item>
 
@@ -63,16 +87,16 @@
             <ActionButton
               v-if="isSupported('compute')"
               icon="mdi-reload"
-              helpText="Modify and reprocess"
+              help-text="Modify and reprocess"
               @click="handleCompose"
             />
             <ActionButton
               icon="mdi-telegram"
-              helpText="Send message"
+              help-text="Send message"
             />
             <ActionButton
               icon="mdi-sort-ascending"
-              helpText="Show timeline"
+              help-text="Show timeline"
             />
           </v-row>
         </v-card-actions>
@@ -83,58 +107,58 @@
       align-self="center"
       cols="2"
     >
-      <img v-if="'bbUrl' in data" :src="data.bbUrl" />
+      <img v-if="'bbUrl' in data" :src="data.bbUrl">
     </v-col>
   </v-list-item>
 </template>
 
 <script lang="ts">
 import { Vue, Component, Prop } from 'nuxt-property-decorator'
-import { Event } from "~/types"
 import ActionButton from './ActionButton.vue'
+import { Event } from '~/types'
 
 @Component({
   components: {
     ActionButton,
-  }
+  },
 })
 export default class EventItem extends Vue {
   @Prop({ required: true }) data!: Event
 
   private hover: boolean = false
 
-  public isSupported(plugin: string) {
+  public isSupported (plugin: string) {
     return plugin in this.$store.getters.supportedPlugins
   }
 
-  get calctimeInSec(): string {
+  get calctimeInSec (): string {
     if (this.data.calctime) {
       return (this.data.calctime / 1000).toFixed(1)
     }
     return ''
   }
 
-  get algorithmName(): string {
-    if (this.data.algo == 'easywave') {
+  get algorithmName (): string {
+    if (this.data.algo === 'easywave') {
       return 'easyWave'
     }
 
-    if (this.data.algo == 'hysea') {
+    if (this.data.algo === 'hysea') {
       return 'HySea'
     }
 
     return 'unknown'
   }
 
-  get eventInfoText(): string {
+  get eventInfoText (): string {
     const data: Event = this.data
 
     if (!data.seaArea) {
       return 'Inland, no simulation processed'
     }
 
-    if (!(data.lat && data.lon && data.mag && data.depth
-      && data.dip && data.rake && data.strike)) {
+    if (!(data.lat && data.lon && data.mag && data.depth &&
+      data.dip && data.rake && data.strike)) {
       return 'Missing parameters'
     }
 
@@ -143,15 +167,15 @@ export default class EventItem extends Vue {
     return 'No tsunami potential'
   }
 
-  get isSelected(): boolean {
+  get isSelected (): boolean {
     const sel = this.$store.getters.selectedEvent
     if (!sel) {
       return false
     }
-    return sel.identifier == this.data.identifier
+    return sel.identifier === this.data.identifier
   }
 
-  public hoverEnd() {
+  public hoverEnd () {
     if (!this.hover) {
       return
     }
@@ -160,7 +184,7 @@ export default class EventItem extends Vue {
     this.$store.commit('SET_HOVERED', null)
   }
 
-  public hoverEvent() {
+  public hoverEvent () {
     if (this.hover) {
       return
     }
@@ -168,12 +192,12 @@ export default class EventItem extends Vue {
     this.$store.commit('SET_HOVERED', this.data)
   }
 
-  public selectEvent() {
+  public selectEvent () {
     this.$store.commit('SET_SELECTED_EVENT', this.data)
     this.$store.dispatch('fetchResults')
   }
 
-  public handleCompose() {
+  public handleCompose () {
     this.$store.commit('SET_COMPOSE', this.data)
     this.$emit('change-to-compose-tab')
   }

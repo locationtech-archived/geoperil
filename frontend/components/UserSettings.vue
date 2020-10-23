@@ -1,13 +1,13 @@
 <template>
   <v-form
-    class="pa-3"
     id="usersettings-form"
     ref="form"
     v-model="valid"
+    class="pa-3"
   >
     <v-text-field
-      v-model="username"
       ref="refUsername"
+      v-model="username"
       label="Username"
       readonly
       disabled
@@ -16,42 +16,42 @@
     <h4>Change your password:</h4>
 
     <v-text-field
-      type="password"
       v-model="currentpass"
+      type="password"
       :rules="validCurrentpass"
       label="Current password"
-      @change="successMsg = null"
       required
+      @change="successMsg = null"
     />
 
     <v-text-field
-      type="password"
       v-model="newpass"
+      type="password"
       :rules="validNewpass"
       label="New password"
-      @change="successMsg = null"
       required
+      @change="successMsg = null"
     />
 
     <v-text-field
-      type="password"
       v-model="confirmpass"
+      type="password"
       label="Confirm password"
       :rules="validConfirmpass"
-      @change="successMsg = null"
       required
+      @change="successMsg = null"
     />
 
     <v-alert
-      type="error"
       v-if="!!errorMsg"
+      type="error"
     >
       {{ errorMsg }}
     </v-alert>
 
     <v-alert
-      type="success"
       v-if="!!successMsg"
+      type="success"
     >
       {{ successMsg }}
     </v-alert>
@@ -79,9 +79,9 @@ export default class UserSettings extends Vue {
   private valid: boolean = true
   private errorMsg: string | null = null
   private successMsg: string | null = null
-  private currentpass: string = ""
-  private newpass: string = ""
-  private confirmpass: string = ""
+  private currentpass: string = ''
+  private newpass: string = ''
+  private confirmpass: string = ''
 
   private validCurrentpass: Function[] = [
     (v: any) => !!v || 'Current password is required',
@@ -95,23 +95,23 @@ export default class UserSettings extends Vue {
     (v: any) => !!v || 'Repeat the new password for confirmation',
   ]
 
-  get username() {
+  get username () {
     const user: User = this.$store.getters.user
     return user.username
   }
 
-  get isValid(): boolean {
+  get isValid (): boolean {
     this.errorMsg = null
 
     if (
-      !this.currentpass || this.currentpass.length == 0
-      || !this.newpass || this.newpass.length == 0
-      || !this.confirmpass || this.confirmpass.length == 0
+      !this.currentpass || this.currentpass.length === 0 ||
+      !this.newpass || this.newpass.length === 0 ||
+      !this.confirmpass || this.confirmpass.length === 0
     ) {
       return false
     }
 
-    if (this.confirmpass != this.newpass) {
+    if (this.confirmpass !== this.newpass) {
       this.errorMsg = 'Passwords are not the same'
       return false
     }
@@ -119,7 +119,7 @@ export default class UserSettings extends Vue {
     return true
   }
 
-  public async send() {
+  public async send () {
     this.errorMsg = null
     this.successMsg = null
 
@@ -130,7 +130,7 @@ export default class UserSettings extends Vue {
         'changePassword',
         {
           curpwd: this.currentpass,
-          newpwd: this.newpass
+          newpwd: this.newpass,
         }
       )
     } catch (e) {

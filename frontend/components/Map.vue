@@ -1,28 +1,30 @@
 <template>
   <vl-map
+    id="geoperil-map"
+    ref="map"
     :load-tiles-while-animating="true"
     :load-tiles-while-interacting="true"
+    data-projection="EPSG:4326"
     @rendercomplete="onRendercomplete"
     @pointermove="onMapPointerMove"
-    ref="map"
-    data-projection="EPSG:4326"
-    id="geoperil-map"
   >
     <vl-interaction-select
       :features.sync="selectedFeatures"
       :layers="['arrivaltimesId', 'wavejetsId', 'stationsId']"
-      :hitTolerance="5"
+      :hit-tolerance="5"
     >
       <vl-style-func v-if="selectedStation" :factory="selectedStationStyleFunc" />
     </vl-interaction-select>
 
     <vl-overlay
-      v-for="feature in selectedFeatures" :key="feature.id" :id="feature.id + '-popup'"
+      v-for="feature in selectedFeatures"
+      :id="feature.id + '-popup'"
+      :key="feature.id"
       :position="pointOnSurface(feature.geometry)"
       :auto-pan="true"
       :auto-pan-animation="{ duration: 300 }"
     >
-      <template slot-scope="popup">
+      <template>
         <v-card
           v-if="featureHasProperty(feature, 'time')"
           class="pa-0"
@@ -33,10 +35,12 @@
               class="pa-0 pl-1 pr-2"
               min-width="0"
               height="16px"
-              @click="selectedFeatures = []"
               text
+              @click="selectedFeatures = []"
             >
-              <v-icon color="#154f8a" size="16">mdi-close</v-icon>
+              <v-icon color="#154f8a" size="16">
+                mdi-close
+              </v-icon>
             </v-btn>
           </v-card-text>
         </v-card>
@@ -50,10 +54,12 @@
               class="pa-0 pl-1 pr-2"
               min-width="0"
               height="16px"
-              @click="selectedFeatures = []"
               text
+              @click="selectedFeatures = []"
             >
-              <v-icon color="#154f8a" size="16">mdi-close</v-icon>
+              <v-icon color="#154f8a" size="16">
+                mdi-close
+              </v-icon>
             </v-btn>
           </v-card-text>
         </v-card>
@@ -66,8 +72,8 @@
       :min-zoom="minZoom"
       :max-zoom="maxZoom"
       :center.sync="center"
-      :rotation.sync="rotation">
-    </vl-view>
+      :rotation.sync="rotation"
+    />
 
     <vl-layer-tile id="osm" :z-index="1">
       <vl-source-osm />
@@ -103,7 +109,7 @@
           />
           <vl-style-box>
             <vl-style-circle :radius="12">
-              <vl-style-stroke :width="3" color="#4271A7"></vl-style-stroke>
+              <vl-style-stroke :width="3" color="#4271A7" />
             </vl-style-circle>
           </vl-style-box>
         </vl-feature>
@@ -137,7 +143,7 @@
           />
           <vl-style-box>
             <vl-style-circle :radius="12">
-              <vl-style-stroke :width="3" color="red"></vl-style-stroke>
+              <vl-style-stroke :width="3" color="red" />
             </vl-style-circle>
           </vl-style-box>
         </vl-feature>
@@ -160,7 +166,7 @@
     >
       <vl-source-vector ref="sourceArrivaltimes" />
       <vl-style-box>
-        <vl-style-stroke color="#4271A7"></vl-style-stroke>
+        <vl-style-stroke color="#4271A7" />
       </vl-style-box>
     </vl-layer-vector>
 
@@ -177,15 +183,14 @@
 
 <script lang="ts">
 import { Vue, Component, Watch, Prop } from 'nuxt-property-decorator'
-import { Event, User, Station } from '~/types'
 import { findPointOnSurface } from 'vuelayers/lib/ol-ext'
 import { Style, Circle, Fill, Stroke, RegularShape } from 'ol/style.js'
-import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import Feature from 'ol/Feature'
 import LineString from 'ol/geom/LineString'
 import MultiPolygon from 'ol/geom/MultiPolygon'
 import Point from 'ol/geom/Point'
+import { Event, Station } from '~/types'
 
 @Component
 export default class Map extends Vue {
@@ -198,7 +203,7 @@ export default class Map extends Vue {
   private selectedFeatures: any[] = []
   private stationsRendered: boolean = false
 
-  public onRendercomplete() {
+  public onRendercomplete () {
     if (this.stationsRendered) {
       return
     }
@@ -207,27 +212,27 @@ export default class Map extends Vue {
     this.stationsRendered = true
   }
 
-  get selectedTab(): Number {
+  get selectedTab (): Number {
     return this.$store.getters.selectedTab
   }
 
-  get points(): any[] {
+  get points (): any[] {
     return this.$store.getters.recentEventsGeojson
   }
 
-  get pointsUser(): any[] {
+  get pointsUser (): any[] {
     return this.$store.getters.userEventsGeojson
   }
 
-  get mapIsLoading(): Boolean {
+  get mapIsLoading (): Boolean {
     return this.$store.getters.mapIsLoading
   }
 
-  get selected(): Event {
-    return this.$store.getters.selectedEvent || { lat: 0, lon: 0}
+  get selected (): Event {
+    return this.$store.getters.selectedEvent || { lat: 0, lon: 0 }
   }
 
-  get resultWavejets(): Array<any> {
+  get resultWavejets (): Array<any> {
     const res = this.$store.getters.resultWavejets
     if (res && 'features' in res) {
       return res.features
@@ -235,7 +240,7 @@ export default class Map extends Vue {
     return []
   }
 
-  get resultArrivaltimes(): Array<any> {
+  get resultArrivaltimes (): Array<any> {
     const res = this.$store.getters.resultArrivaltimes
     if (res && 'features' in res) {
       return res.features
@@ -252,7 +257,7 @@ export default class Map extends Vue {
     const ref: any = this.$refs.sourceStations
     const all: Station[] = this.$store.getters.allStations
 
-    if (!ref || !all || all.length == 0) {
+    if (!ref || !all || all.length === 0) {
       return
     }
 
@@ -262,12 +267,12 @@ export default class Map extends Vue {
       }
     )
 
-    if (filtered.length == 1) {
+    if (filtered.length === 1) {
       const filteredStation: Station[] = all.filter(
-        (station: Station) => station.id == (filtered[0] as any).id
+        (station: Station) => station.id === (filtered[0] as any).id
       )
 
-      if (filtered.length == 1) {
+      if (filtered.length === 1) {
         this.$store.commit('SET_SELECTED_STATION_MAP', filteredStation[0])
         return
       }
@@ -276,15 +281,15 @@ export default class Map extends Vue {
     this.$store.commit('SET_SELECTED_STATION_MAP', null)
   }
 
-  get selectedStation(): Station[] {
+  get selectedStation (): Station[] {
     return this.$store.getters.selectedStationMap
   }
 
-  get userStations(): Station[] {
+  get userStations (): Station[] {
     return this.$store.getters.selectedStations
   }
 
-  public updateStations(newValue: Station[]) {
+  public updateStations (newValue: Station[]) {
     const sourceRef: any = this.$refs.sourceStations
     const source: VectorSource = sourceRef.$source
 
@@ -294,12 +299,12 @@ export default class Map extends Vue {
 
     source.clear()
 
-    if (!newValue || newValue.length == 0) {
+    if (!newValue || newValue.length === 0) {
       return
     }
 
     const features: Feature[] = newValue.map((f: Station) => {
-      const point = new Point([ f.lon, f.lat ])
+      const point = new Point([f.lon, f.lat])
       point.transform('EPSG:4326', 'EPSG:3857')
 
       const newFeature = new Feature({
@@ -315,7 +320,7 @@ export default class Map extends Vue {
       }
 
       newFeature.setProperties({
-        station: f.name
+        station: f.name,
       })
       return newFeature
     })
@@ -323,32 +328,32 @@ export default class Map extends Vue {
   }
 
   @Watch('userStations')
-  public onUserStationsChange(newValue: Station[]) {
+  public onUserStationsChange (newValue: Station[]) {
     this.updateStations(newValue)
   }
 
   @Watch('sizeChanged')
-  public onSizeChanged(newValue: number) {
+  public onSizeChanged () {
     const map: any = this.$refs.map
     if (map) {
       map.updateSize()
     }
   }
 
-  public featureHasProperty(feature: any, prop: string) {
-    return feature
-      && 'properties' in feature
-      && feature.properties
-      && prop in feature.properties
-      && feature.properties[prop]
+  public featureHasProperty (feature: any, prop: string) {
+    return feature &&
+      'properties' in feature &&
+      feature.properties &&
+      prop in feature.properties &&
+      feature.properties[prop]
   }
 
-  public pointOnSurface(g: any) {
+  public pointOnSurface (g: any) {
     return findPointOnSurface(g)
   }
 
   @Watch('resultArrivaltimes')
-  public onArrivaltimesChange(newValue: Array<any> | null) {
+  public onArrivaltimesChange (newValue: Array<any> | null) {
     this.$nextTick(function () {
       this.$store.commit('SET_MAP_IS_LOADING', false)
     })
@@ -362,11 +367,11 @@ export default class Map extends Vue {
     sourceWave.clear()
     this.selectedFeatures = []
 
-    if (!newValue || newValue.length == 0) {
+    if (!newValue || newValue.length === 0) {
       return
     }
 
-    const features: Feature[] = newValue.map(f => {
+    const features: Feature[] = newValue.map((f) => {
       const line = new LineString(f.geometry.coordinates)
       line.transform('EPSG:4326', 'EPSG:3857')
 
@@ -375,7 +380,7 @@ export default class Map extends Vue {
       })
 
       if ('ID' in f.properties) {
-        newFeature.setId(f.properties['ID'])
+        newFeature.setId(f.properties.ID)
       } else {
         // random number
         newFeature.setId(Math.floor(Math.random() * 999999))
@@ -392,7 +397,7 @@ export default class Map extends Vue {
       return
     }
 
-    const featuresWave: Feature[] = wavejets.map(f => {
+    const featuresWave: Feature[] = wavejets.map((f) => {
       const poly = new MultiPolygon(f.geometry.coordinates)
       poly.transform('EPSG:4326', 'EPSG:3857')
       const newFeature = new Feature({
@@ -400,7 +405,7 @@ export default class Map extends Vue {
       })
 
       if ('ID' in f.properties) {
-        newFeature.setId(f.properties['ID'])
+        newFeature.setId(f.properties.ID)
       } else {
         // random number
         newFeature.setId(Math.floor(Math.random() * 999999))
@@ -413,12 +418,12 @@ export default class Map extends Vue {
   }
 
   @Watch('selectedTab')
-  public onSelectedTabChange(newValue: any) {
+  public onSelectedTabChange () {
     this.selectedFeatures = []
   }
 
   @Watch('selected')
-  public onSelectChange(newValue: Event | null) {
+  public onSelectChange (newValue: Event | null) {
     if (!newValue || !('identifier' in newValue)) {
       return
     }
@@ -427,21 +432,21 @@ export default class Map extends Vue {
 
     view.animate({
       zoom: 6,
-      center: [ newValue.lon, newValue.lat ]
+      center: [newValue.lon, newValue.lat],
     })
   }
 
-  get hoveredEvent(): Event {
+  get hoveredEvent (): Event {
     // return dummy object so we don't need to use v-if
-    return this.$store.getters.hoveredEvent || { lat: 0, lon: 0}
+    return this.$store.getters.hoveredEvent || { lat: 0, lon: 0 }
   }
 
-  get hoveredStation() {
+  get hoveredStation () {
     // return dummy object so we don't need to use v-if
     const all: Station[] = this.$store.getters.allStations
-    const dummy = { lat: 0, lon: 0}
+    const dummy = { lat: 0, lon: 0 }
 
-    if (!all || all.length == 0) {
+    if (!all || all.length === 0) {
       return dummy
     }
 
@@ -451,38 +456,45 @@ export default class Map extends Vue {
       return dummy
     }
 
-    const filtered = all.filter(station => station.id == hov)
+    const filtered = all.filter(station => station.id === hov)
 
-    if (filtered.length == 1) {
+    if (filtered.length === 1) {
       return filtered[0]
     }
 
     return dummy
   }
 
-  get recentEvents(): Event[] {
+  get recentEvents (): Event[] {
     return this.$store.getters.recentEvents
   }
 
-  public pointsStyleFunc(): any {
+  public pointsStyleFunc (): any {
     return (feature: any) => {
       const mag = feature.get('mag')
       const depth = feature.get('depth')
-      let radius = mag
+      const radius = mag
       let depthFill = 'rgb(0,0,0)'
 
-      if (depth>=0 && depth<=20) depthFill = 'rgb(255,0,0)' // red
-      else if (depth>20 && depth<=50) depthFill = 'rgb(255,127,0)' // orange
-      else if (depth>50 && depth<=100) depthFill = 'rgb(255,255,0)' // yellow
-      else if (depth>100 && depth<=250) depthFill = 'rgb(0,255,0)' // green
-      else if (depth>250 && depth<=500) depthFill = 'rgb(0,0,255)' // blue
-      else if (depth>500 && depth<=800) depthFill = 'rgb(127,0,255)' // violet
+      if (depth >= 0 && depth <= 20) {
+        depthFill = 'rgb(255,0,0)' // red
+      } else if (depth > 20 && depth <= 50) {
+        depthFill = 'rgb(255,127,0)' // orange
+      } else if (depth > 50 && depth <= 100) {
+        depthFill = 'rgb(255,255,0)' // yellow
+      } else if (depth > 100 && depth <= 250) {
+        depthFill = 'rgb(0,255,0)' // green
+      } else if (depth > 250 && depth <= 500) {
+        depthFill = 'rgb(0,0,255)' // blue
+      } else if (depth > 500 && depth <= 800) {
+        depthFill = 'rgb(127,0,255)' // violet
+      }
 
-      let baseStyle = new Style({
+      const baseStyle = new Style({
         image: new Circle({
-          radius: radius,
+          radius,
           stroke: new Stroke({
-            color: '#4271A7'
+            color: '#4271A7',
           }),
           fill: new Fill({
             color: depthFill,
@@ -495,47 +507,47 @@ export default class Map extends Vue {
     }
   }
 
-  public wavejetsStyleFunc(): any {
+  public wavejetsStyleFunc (): any {
     return (feature: any) => {
       const wavemin = feature.get('wavemin')
-      const wavemax = feature.get('wavemax')
-      var color = 'rgb(0,0,0)'
+      let color = 'rgb(0,0,0)'
 
-      if (wavemin == 0) {
+      if (wavemin === 0) {
         // skip first interval
         return []
-      } else if (wavemin == 0.05) {
+      } else if (wavemin === 0.05) {
         color = '#2d9f33'
-      } else if (wavemin == 0.3) {
+      } else if (wavemin === 0.3) {
         color = '#fdfd01'
-      } else if (wavemin == 0.5) {
+      } else if (wavemin === 0.5) {
         color = '#ff6100'
-      } else if (wavemin == 1.0) {
+      } else if (wavemin === 1.0) {
         color = '#f50000'
-      } else if (wavemin == 2.0) {
+      } else if (wavemin === 2.0) {
         color = '#ad0000'
-      } else if (wavemin == 5.0) {
+      } else if (wavemin === 5.0) {
         color = '#fe00fa'
-      } else if (wavemin == 10.0) {
+      } else if (wavemin === 10.0) {
         color = '#5c005c'
       } else {
         return []
       }
 
-      let style = new Style({
+      const style = new Style({
         fill: new Fill({
-          color: color,
+          color,
         }),
       })
-      return [ style ]
+      return [style]
     }
   }
 
-  public stationsStyleFunc(): any {
+  public stationsStyleFunc (): any {
     // TODO: set colors based on computation results
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return (feature: any) => {
-      let style = new Style({
+      const style = new Style({
         image: new RegularShape({
           points: 3,
           radius: 6,
@@ -548,15 +560,16 @@ export default class Map extends Vue {
         } as any),
       })
 
-      return [ style ]
+      return [style]
     }
   }
 
-  public stationHoveredStyleFunc(): any {
+  public stationHoveredStyleFunc (): any {
     // TODO: set colors based on computation results
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return (feature: any) => {
-      let style = new Style({
+      const style = new Style({
         image: new RegularShape({
           points: 3,
           radius: 12,
@@ -570,15 +583,16 @@ export default class Map extends Vue {
         } as any),
       })
 
-      return [ style ]
+      return [style]
     }
   }
 
-  public selectedStationStyleFunc(): any {
+  public selectedStationStyleFunc (): any {
     // TODO: set colors based on computation results
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return (feature: any) => {
-      let style = new Style({
+      const style = new Style({
         image: new RegularShape({
           points: 3,
           radius: 6,
@@ -592,13 +606,13 @@ export default class Map extends Vue {
         } as any),
       })
 
-      return [ style ]
+      return [style]
     }
   }
 
-  public onMapPointerMove({ pixel }: {pixel: number[]}) {
+  public onMapPointerMove ({ pixel }: {pixel: number[]}) {
     const map: any = this.$refs.map
-    let hit: Feature = map.forEachFeatureAtPixel(pixel, (f: Feature) => f)
+    const hit: Feature = map.forEachFeatureAtPixel(pixel, (f: Feature) => f)
 
     if (!hit) {
       this.$store.commit('SET_STATION_HOVERED_MAP', null)

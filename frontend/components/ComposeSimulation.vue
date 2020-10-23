@@ -1,13 +1,13 @@
 <template>
   <v-form
-    class="pa-3"
     id="compose-form"
     ref="form"
     v-model="valid"
+    class="pa-3"
   >
     <v-text-field
-      v-model="name"
       ref="refName"
+      v-model="name"
       label="Name"
       :rules="[v => !!v || 'Name is required']"
       required
@@ -36,8 +36,8 @@
     />
 
     <v-text-field
-      :disabled="!!slip || !!len || !!width"
       v-model="mag"
+      :disabled="!!slip || !!len || !!width"
       label="Magnitude"
       :rules="validMag"
       suffix="Mw"
@@ -45,22 +45,22 @@
     />
 
     <v-text-field
-      :disabled="!!mag"
       v-model="slip"
+      :disabled="!!mag"
       label="Slip"
       suffix="m"
     />
 
     <v-text-field
-      :disabled="!!mag"
       v-model="len"
+      :disabled="!!mag"
       label="Length"
       suffix="km"
     />
 
     <v-text-field
-      :disabled="!!mag"
       v-model="width"
+      :disabled="!!mag"
       label="Width"
       suffix="km"
     />
@@ -111,7 +111,7 @@
       :rules="validAlgorithm"
       label="Algorithm"
       required
-    ></v-select>
+    />
 
     <v-select
       v-model="selResolution"
@@ -120,11 +120,11 @@
       label="Grid resolution"
       suffix="°"
       required
-    ></v-select>
+    />
 
     <v-alert
-      type="error"
       v-if="!!errorMsg"
+      type="error"
     >
       {{ errorMsg }}
     </v-alert>
@@ -175,12 +175,14 @@ export default class ComposeSimulation extends Vue {
   private algorithms: string[] = [
     'EasyWave',
   ]
+
   private selResolution: number = 120
   private resolutions: number[] = [
     120,
     60,
-    30
+    30,
   ]
+
   private valid: boolean = true
   private errorMsg: string | null = null
 
@@ -230,10 +232,10 @@ export default class ComposeSimulation extends Vue {
     (v: any) => !!v || 'Resolution is required',
   ]
 
-  get isValid(): boolean {
+  get isValid (): boolean {
     if (
-      (!this.mag || this.mag.toString() == '')
-      && (!this.slip || this.slip.toString() == '')
+      (!this.mag || this.mag.toString() === '') &&
+      (!this.slip || this.slip.toString() === '')
     ) {
       return false
     }
@@ -249,7 +251,7 @@ export default class ComposeSimulation extends Vue {
     return true
   }
 
-  public async send() {
+  public async send () {
     this.errorMsg = null
     const f: any = this.$refs.form
 
@@ -258,22 +260,22 @@ export default class ComposeSimulation extends Vue {
         'sendCompute',
         {
           event: {
-              region: this.name,
-              datetime: this.datetime,
-              lat: this.lat,
-              lon: this.lon,
-              mag: this.mag,
-              depth: this.depth,
-              dip: this.dip,
-              strike: this.strike,
-              rake: this.rake,
-              slip: this.slip,
-              len: this.len,
-              width: this.width,
+            region: this.name,
+            datetime: this.datetime,
+            lat: this.lat,
+            lon: this.lon,
+            mag: this.mag,
+            depth: this.depth,
+            dip: this.dip,
+            strike: this.strike,
+            rake: this.rake,
+            slip: this.slip,
+            len: this.len,
+            width: this.width,
           } as Event,
           duration: this.duration,
           algorithm: this.selAlgorithm,
-          gridres: this.selResolution
+          gridres: this.selResolution,
         } as ComputeRequest
       )
     } catch (e) {
@@ -285,7 +287,7 @@ export default class ComposeSimulation extends Vue {
     this.$emit('change-to-mylist-tab')
   }
 
-  public initFromCompose(): void {
+  public initFromCompose (): void {
     const ev = this.composeEvent
 
     if (!ev) {
@@ -310,23 +312,23 @@ export default class ComposeSimulation extends Vue {
     this.$store.commit('SET_COMPOSE', null)
   }
 
-  public reset(): void {
+  public reset (): void {
     const f: any = this.$refs.form
     f.reset()
   }
 
-  mounted() {
+  mounted () {
     this.initFromCompose()
     const f: any = this.$refs.form
     f.validate()
   }
 
   @Watch('composeEvent')
-  public onComposeChange(newValue: Event | null) {
+  public onComposeChange () {
     this.initFromCompose()
   }
 
-  get composeEvent(): Event | null {
+  get composeEvent (): Event | null {
     return this.$store.getters.composeEvent
   }
 }

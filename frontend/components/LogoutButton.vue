@@ -21,7 +21,7 @@ import { Vue, Component } from 'nuxt-property-decorator'
 
 @Component
 export default class LogoutButton extends Vue {
-  public async logout() {
+  public async logout () {
     try {
       await this.$store.dispatch('logout')
     } catch (e) {

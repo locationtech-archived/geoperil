@@ -1,6 +1,6 @@
 <template>
   <!-- Add your plugin contents here as dialogs -->
-  <i></i>
+  <i />
 </template>
 
 <script lang="ts">

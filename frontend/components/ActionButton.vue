@@ -1,17 +1,17 @@
 <template>
   <v-tooltip
     v-model="show"
-    open-delay=500
+    open-delay="500"
     right
   >
     <template v-slot:activator="{ on }">
       <div v-on="on">
         <v-btn
-          v-on="on"
           class="pl-1 pr-1"
           min-width="0"
-          @click="handleClick"
           text
+          v-on="on"
+          @click="handleClick"
         >
           <v-icon
             color="#154f8a"
@@ -36,7 +36,7 @@ export default class ActionButton extends Vue {
 
   private show: boolean = false
 
-  public handleClick(): void {
+  public handleClick (): void {
     this.$emit('click')
   }
 }

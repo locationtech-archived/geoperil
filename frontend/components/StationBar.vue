@@ -9,9 +9,9 @@
           <em>No stations selected.</em>
         </v-slide-item>
         <v-slide-item
-          class="station-item"
           v-for="station in selectedStations"
           :key="station.id"
+          class="station-item"
         >
           <StationPreview :station="station" />
         </v-slide-item>
@@ -27,37 +27,37 @@ import StationPreview from './StationPreview.vue'
 
 @Component({
   components: {
-    StationPreview
-  }
+    StationPreview,
+  },
 })
 export default class StationBar extends Vue {
   private previewWidth = 200
 
-  get selectedStationMap(): Station | null {
+  get selectedStationMap (): Station | null {
     return this.$store.getters.selectedStationMap
   }
 
-  get stationHoveredMap(): string | null {
+  get stationHoveredMap (): string | null {
     return this.$store.getters.stationHoveredMap
   }
 
-  get selectedStations(): Station[] {
+  get selectedStations (): Station[] {
     return this.$store.getters.selectedStations
   }
 
   @Watch('selectedStationMap')
-  public onStationSelectMapChange(newvalue: Station | null) {
+  public onStationSelectMapChange (newvalue: Station | null) {
     const slide: any = this.$refs.slide
 
     if (!slide || !newvalue || !('id' in newvalue)) {
       return
     }
 
-    var i
+    let i
 
     for (i = 0; i < this.selectedStations.length; i++) {
       const cur = this.selectedStations[i]
-      if (cur.id == newvalue.id) {
+      if (cur.id === newvalue.id) {
         break
       }
     }
@@ -66,7 +66,7 @@ export default class StationBar extends Vue {
   }
 
   @Watch('stationHoveredMap')
-  public onStationHoveredMapChange(newvalue: string | null) {
+  public onStationHoveredMapChange (newvalue: string | null) {
     const slide: any = this.$refs.slide
     const selectedOnMap = this.$store.getters.selectedStationMap
 
@@ -74,11 +74,11 @@ export default class StationBar extends Vue {
       return
     }
 
-    var i
+    let i
 
     for (i = 0; i < this.selectedStations.length; i++) {
       const cur = this.selectedStations[i]
-      if (cur.id == newvalue) {
+      if (cur.id === newvalue) {
         break
       }
     }

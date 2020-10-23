@@ -21,7 +21,7 @@ import { Vue, Component } from 'nuxt-property-decorator'
 
 @Component
 export default class SettingsButton extends Vue {
-  public showSettings() {
+  public showSettings () {
     this.$store.commit('SET_SHOWSETTINGSDIALOG', true)
   }
 }

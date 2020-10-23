@@ -11,23 +11,23 @@
       <LeftMenu />
     </v-col>
     <v-col
-      class="fill-height"
       id="map-col"
+      class="fill-height"
       cols="9"
     >
-      <LoadingOverlay :isLoading="mapIsLoading" />
+      <LoadingOverlay :is-loading="mapIsLoading" />
       <v-row
         id="maprow"
         :class="[ showStations ? 'show-stations-height' : 'fill-height' ]"
         no-gutters
       >
-        <Map :size-changed="sizeChanged"/>
+        <Map :size-changed="sizeChanged" />
         <v-btn
           id="toggle-stations-btn"
           class="ma-0 pa-0"
           :elevation="1"
-          @click="toggleShowStations"
           small
+          @click="toggleShowStations"
         >
           <v-icon>{{ toggleButtonIcon }}</v-icon>
         </v-btn>
@@ -39,75 +39,75 @@
 
 <script lang="ts">
 import { Vue, Component, Watch } from 'nuxt-property-decorator'
+import { Station } from '../types'
 import Map from './Map.vue'
 import LeftMenu from './LeftMenu.vue'
 import LoadingOverlay from './LoadingOverlay.vue'
 import StationBar from './StationBar.vue'
-import { Station } from '../types'
 
 @Component({
   components: {
     LoadingOverlay,
     LeftMenu,
     Map,
-    StationBar
-  }
+    StationBar,
+  },
 })
 export default class Geoperil extends Vue {
   private isLoading: boolean = true
   private showStations: boolean = true
   private sizeChanged: number = 0
 
-  get toggleButtonIcon(): string {
+  get toggleButtonIcon (): string {
     return this.showStations
       ? 'mdi-chevron-double-down'
       : 'mdi-chevron-double-up'
   }
 
-  get mapIsLoading(): boolean {
+  get mapIsLoading (): boolean {
     return this.$store.getters.mapIsLoading
   }
 
-  public toggleShowStations(): void {
+  public toggleShowStations (): void {
     this.showStations = !this.showStations
   }
 
   @Watch('showStations')
-  public onShowStationsChange() {
+  public onShowStationsChange () {
     this.sizeChanged = this.sizeChanged + 1
   }
 
-  get selectedStations(): Station[] {
+  get selectedStations (): Station[] {
     return this.$store.getters.selectedStations
   }
 
   @Watch('selectedStations')
-  public onSelectedStationsChange(newValue: Station[], oldValue: Station[]) {
-    if (oldValue == newValue) {
+  public onSelectedStationsChange (newValue: Station[], oldValue: Station[]) {
+    if (oldValue === newValue) {
       return
     }
 
     if (
-      (!oldValue || oldValue.length == 0)
-      && newValue
-      && newValue.length > 0
+      (!oldValue || oldValue.length === 0) &&
+      newValue &&
+      newValue.length > 0
     ) {
       this.showStations = true
     }
 
-    if (!newValue || newValue.length == 0) {
+    if (!newValue || newValue.length === 0) {
       this.showStations = false
     }
   }
 
-  async mounted() {
+  async mounted () {
     await this.$store.dispatch('registerUpdater')
     await this.$store.dispatch('fetchEvents')
     await this.$store.dispatch('fetchStations')
     await this.$store.dispatch('fetchAllInstitutions')
     this.isLoading = false
 
-    if (this.$store.getters.selectedStations.length == 0) {
+    if (this.$store.getters.selectedStations.length === 0) {
       this.showStations = false
     }
   }

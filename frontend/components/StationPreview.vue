@@ -1,17 +1,19 @@
 <template>
   <v-card
     :class="activeClasses"
-    @click="handleClick"
     outlined
     flat
+    @click="handleClick"
   >
     <v-card-subtitle
       class="ma-0 pa-0 station-subtitle"
-    >{{ station.name }}</v-card-subtitle>
+    >
+      {{ station.name }}
+    </v-card-subtitle>
 
     <v-progress-circular
-      :indeterminate="isLoading"
       v-show="isLoading"
+      :indeterminate="isLoading"
       size="64"
       width="7"
       color="primary"
@@ -19,9 +21,9 @@
     />
 
     <div
-      class="preview-svg-container"
       v-show="!isLoading"
       :id="stationId"
+      class="preview-svg-container"
     >
       <svg />
     </div>
@@ -29,16 +31,9 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component, Prop, Watch } from 'nuxt-property-decorator'
-import { Station, Event } from '../types'
-import {
-  API_GETSTATIONDATA_URL,
-  API_GETSTATIONSIMDATA_URL,
-  FORM_ENCODE_CONFIG
-} from '../store/constants'
-import LoadingOverlay from './LoadingOverlay.vue'
-import axios from 'axios'
 import querystring from 'querystring'
+import axios from 'axios'
+import { Vue, Component, Prop, Watch } from 'nuxt-property-decorator'
 
 import { select } from 'd3-selection'
 import { format } from 'd3-format'
@@ -47,6 +42,13 @@ import { timeHour, timeMinute } from 'd3-time'
 import { utcFormat } from 'd3-time-format'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line } from 'd3-shape'
+import {
+  API_GETSTATIONDATA_URL,
+  API_GETSTATIONSIMDATA_URL,
+  FORM_ENCODE_CONFIG,
+} from '../store/constants'
+import { Station, Event } from '../types'
+import LoadingOverlay from './LoadingOverlay.vue'
 
 const d3 = {
   select,
@@ -63,8 +65,8 @@ const d3 = {
 
 @Component({
   components: {
-    LoadingOverlay
-  }
+    LoadingOverlay,
+  },
 })
 export default class StationPreview extends Vue {
   @Prop({ type: Object, required: true }) station!: Station
@@ -88,12 +90,12 @@ export default class StationPreview extends Vue {
    * TODO: get it from the station object dynamically */
   private stationRate: number = 10 * 60
 
-  async mounted() {
+  async mounted () {
     this.startUpdater()
     await this.updateData()
   }
 
-  public startUpdater() {
+  public startUpdater () {
     this.stopUpdater()
 
     if (this.updater == null) {
@@ -104,29 +106,29 @@ export default class StationPreview extends Vue {
     }
   }
 
-  public stopUpdater() {
+  public stopUpdater () {
     if (this.updater != null) {
       clearInterval(this.updater)
       this.updater = null
     }
   }
 
-  beforeDestroy() {
+  beforeDestroy () {
     this.stopUpdater()
   }
 
-  get activeClasses() {
+  get activeClasses () {
     const hoveredMap = this.$store.getters.stationHoveredMap
     const classes = 'rounded-0 station-card'
 
-    if (hoveredMap == this.station.id) {
+    if (hoveredMap === this.station.id) {
       return classes + ' station-hovered'
     }
 
     return classes
   }
 
-  get stationId(): string {
+  get stationId (): string {
     if (this.station) {
       return 'station-' + this.station.id
     }
@@ -134,17 +136,17 @@ export default class StationPreview extends Vue {
     return 'station'
   }
 
-  get stationTimestamp(): Date {
+  get stationTimestamp (): Date {
     return this.$store.getters.stationTimestamp
   }
 
   @Watch('stationTimestamp')
-  public onTimestampChange(newValue: Date | null) {
+  public onTimestampChange () {
     this.startUpdater()
     this.updateData()
   }
 
-  public async fetchData() {
+  public async fetchData () {
     const ts = this.stationTimestamp
 
     if (!ts) {
@@ -159,19 +161,19 @@ export default class StationPreview extends Vue {
     const endtsSeconds = endts.valueOf() / 1000
 
     if (selectedEvent) {
-      var { data } = await axios.post(
+      const { data } = await axios.post(
         API_GETSTATIONSIMDATA_URL,
         querystring.stringify({
           evid: selectedEvent.compId,
           station: this.station.name,
-          end: endts.toISOString()
+          end: endts.toISOString(),
         }),
         FORM_ENCODE_CONFIG
       )
 
       if (
-        data && 'status' in data && data.status == 'success'
-        && 'data' in data && data.data instanceof Array
+        data && 'status' in data && data.status === 'success' &&
+        'data' in data && Array.isArray(data.data)
       ) {
         this.simdata = []
 
@@ -179,25 +181,25 @@ export default class StationPreview extends Vue {
           const cur = data.data[i]
           this.simdata.push({
             date: new Date(cur[0]),
-            value: Number.parseFloat(cur[1])
+            value: Number.parseFloat(cur[1]),
           })
         }
       }
     }
 
-    var { data } = await axios.post(
+    const { data } = await axios.post(
       API_GETSTATIONDATA_URL,
       querystring.stringify({
         station: this.station.name,
         start: lasthours.toISOString(),
-        end: endts.toISOString()
+        end: endts.toISOString(),
       }),
       FORM_ENCODE_CONFIG
     )
 
     if (
-      data && 'status' in data && data.status == 'success'
-      && 'last' in data && 'data' in data && data.data instanceof Array
+      data && 'status' in data && data.status === 'success' &&
+      'last' in data && 'data' in data && Array.isArray(data.data)
     ) {
       this.data = []
 
@@ -205,7 +207,7 @@ export default class StationPreview extends Vue {
         const cur = data.data[i]
         this.data.push({
           date: new Date(cur[0]),
-          value: Number.parseFloat(cur[1])
+          value: Number.parseFloat(cur[1]),
         })
       }
 
@@ -216,7 +218,7 @@ export default class StationPreview extends Vue {
     }
   }
 
-  public async updateData() {
+  public async updateData () {
     this.isLoading = true
 
     try {
@@ -228,17 +230,17 @@ export default class StationPreview extends Vue {
     this.isLoading = false
   }
 
-  private translate(x: number, y: number): string {
+  private translate (x: number, y: number): string {
     return 'translate(' + x + ',' + y + ')'
   }
 
   @Watch('data')
-  public onDataChange(newValue: any[]) {
+  public onDataChange () {
     const selection = d3.select('#' + this.stationId)
     selection.select('svg').selectAll('*').remove()
 
-    var maxY = { value: 0 }
-    var minY = { value: 0 }
+    let maxY = { value: 0 }
+    let minY = { value: 0 }
 
     if (this.data && this.data.length > 0) {
       maxY = this.data.reduce((a: any, b: any) => {
@@ -271,7 +273,7 @@ export default class StationPreview extends Vue {
     const scaleX = d3.scaleTime()
       .domain([
         d3.timeHour.offset(this.stationTimestamp, -this.marginHoursBefore),
-        d3.timeHour.offset(this.stationTimestamp, this.marginHoursAhead)
+        d3.timeHour.offset(this.stationTimestamp, this.marginHoursAhead),
       ])
       .range([0, this.width - this.margin.right])
       .clamp(true)
@@ -291,17 +293,17 @@ export default class StationPreview extends Vue {
       .attr('class', 'grid')
       .attr('transform', this.translate(0, axisheight))
       .call(d3.axisBottom(scaleX)
-          .ticks(d3.timeMinute.every(30))
-          .tickSize(-this.height + this.margin.bottom + this.margin.top)
-          .tickFormat('' as any)
+        .ticks(d3.timeMinute.every(30))
+        .tickSize(-this.height + this.margin.bottom + this.margin.top)
+        .tickFormat('' as any)
       )
 
     svg.append('g')
       .attr('class', 'grid')
       .call(d3.axisLeft(scaleY)
-          .ticks(5)
-          .tickSize(-this.width + this.margin.right)
-          .tickFormat('' as any)
+        .ticks(5)
+        .tickSize(-this.width + this.margin.right)
+        .tickFormat('' as any)
       )
 
     // axes
@@ -341,7 +343,7 @@ export default class StationPreview extends Vue {
     }
   }
 
-  public handleClick() {
+  public handleClick () {
     this.$store.commit('SET_SELECTED_STATION_DETAIL', this.station)
   }
 }

@@ -1,21 +1,23 @@
 <template>
   <v-container>
-    <h4 class="mb-2">Select your countries of interest ({{ countSelected }} selected):</h4>
+    <h4 class="mb-2">
+      Select your countries of interest ({{ countSelected }} selected):
+    </h4>
     <v-row
-      justify="start"
       id="stationselect-row"
+      justify="start"
     >
       <v-col
-        cols="3"
-        class="pa-0"
         v-for="(count, country) in stationCountByCountry"
         :key="country"
+        cols="3"
+        class="pa-0"
       >
         <v-checkbox
+          v-model="selected"
           class="ma-0 countryswitch"
           :label="getLabel(country, count)"
           :value="country"
-          v-model="selected"
           dense
           @click.native="boxClick"
         />
@@ -23,17 +25,17 @@
     </v-row>
 
     <v-alert
+      v-if="!!errorMsg"
       type="error"
       class="mt-3 mb-0"
-      v-if="!!errorMsg"
     >
       {{ errorMsg }}
     </v-alert>
 
     <v-alert
+      v-if="!!successMsg"
       type="success"
       class="mt-3 mb-0"
-      v-if="!!successMsg"
     >
       {{ successMsg }}
     </v-alert>
@@ -53,7 +55,7 @@
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import { User, Station } from '../types/index'
+import { User } from '../types/index'
 
 @Component({})
 export default class StationSettings extends Vue {
@@ -62,43 +64,43 @@ export default class StationSettings extends Vue {
   private successMsg: string | null = null
   private selected: string[] = []
 
-  private getLabel(country: string, count: number) {
-    return country + " (" + count + ")"
+  private getLabel (country: string, count: number) {
+    return country + ' (' + count + ')'
   }
 
-  private boxClick() {
+  private boxClick () {
     this.errorMsg = null
     this.successMsg = null
   }
 
-  mounted() {
+  mounted () {
     const user: User = this.$store.getters.user
-    if (!user.countries || user.countries.length == 0) {
+    if (!user.countries || user.countries.length === 0) {
       return
     }
-    user.countries.forEach((country) => this.selected.push(country))
+    user.countries.forEach(country => this.selected.push(country))
   }
 
-  get stationCountByCountry() {
+  get stationCountByCountry () {
     const all: any = this.$store.getters.stationCountByCountry
 
-    if (!all || all.length == 0) {
+    if (!all || all.length === 0) {
       return {}
     }
 
-    var keys: string[] = Object.keys(all)
-    var sortedkeys = keys.sort()
-    var sorted: any = {}
+    const keys: string[] = Object.keys(all)
+    const sortedkeys = keys.sort()
+    const sorted: any = {}
 
-    sortedkeys.forEach((value) => sorted[value] = all[value])
+    sortedkeys.forEach((value) => { sorted[value] = all[value] })
 
     return sorted
   }
 
-  get countSelected() {
+  get countSelected () {
     const byCountry = this.stationCountByCountry
     const keys: string[] = Object.keys(byCountry)
-    var sum = 0
+    let sum = 0
 
     keys.forEach((value) => {
       if (this.selected.includes(value)) {
@@ -109,11 +111,9 @@ export default class StationSettings extends Vue {
     return sum
   }
 
-  public async send() {
+  public async send () {
     this.errorMsg = null
     this.successMsg = null
-
-    const f: any = this.$refs.form
 
     try {
       await this.$store.dispatch('saveuserstations', this.selected)

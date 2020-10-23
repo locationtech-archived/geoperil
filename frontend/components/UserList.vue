@@ -11,27 +11,26 @@
       :key="index"
       :data="item"
       @change-to-compose-tab="handleChangeComposeTab"
-    >
-    </EventItem>
+    />
   </v-list>
 </template>
 
 <script lang="ts">
-import { Vue, Component, Watch } from 'nuxt-property-decorator'
-import EventItem from './EventItem.vue'
+import { Vue, Component } from 'nuxt-property-decorator'
 import { Event } from '../types'
+import EventItem from './EventItem.vue'
 
 @Component({
   components: {
-    EventItem
-  }
+    EventItem,
+  },
 })
 export default class UserList extends Vue {
-  get userEvents(): Event[] {
+  get userEvents (): Event[] {
     return this.$store.getters.userEvents
   }
 
-  public handleChangeComposeTab(): void {
+  public handleChangeComposeTab (): void {
     this.$emit('change-to-compose-tab')
   }
 }

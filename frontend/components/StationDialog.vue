@@ -21,21 +21,20 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component, Prop } from 'nuxt-property-decorator'
+import { Vue, Component } from 'nuxt-property-decorator'
 import DialogToolbar from './DialogToolbar.vue'
 import StationDetails from './StationDetails.vue'
-import { Station } from '../types'
 
 @Component({
   components: {
     DialogToolbar,
     StationDetails,
-  }
+  },
 })
 export default class StationDialog extends Vue {
   private dialog = true
 
-  public closeDialog() {
+  public closeDialog () {
     this.$store.commit('SET_SELECTED_STATION_DETAIL', null)
   }
 }

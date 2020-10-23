@@ -11,18 +11,24 @@
       title="Settings"
     />
     <v-tabs
-      v-model="tab"
       id="settings-tabs"
+      v-model="tab"
       centered
     >
-      <v-tab class="no-text-transform">General</v-tab>
-      <v-tab class="no-text-transform">Stations</v-tab>
-      <v-tab v-if="isAdmin" class="no-text-transform">Users</v-tab>
+      <v-tab class="no-text-transform">
+        General
+      </v-tab>
+      <v-tab class="no-text-transform">
+        Stations
+      </v-tab>
+      <v-tab v-if="isAdmin" class="no-text-transform">
+        Users
+      </v-tab>
 
       <v-tabs-items
-        class="fill-height-tabs"
         id="settings-tab-items"
         v-model="tab"
+        class="fill-height-tabs"
       >
         <v-row
           class="fill-height ma-0 pa-0"
@@ -57,7 +63,6 @@ import TabItem from './TabItem.vue'
 import UserSettings from './UserSettings.vue'
 import StationSettings from './StationSettings.vue'
 import UserManagement from './UserManagement.vue'
-import { User } from '../types/index'
 
 @Component({
   components: {
@@ -66,17 +71,17 @@ import { User } from '../types/index'
     UserSettings,
     StationSettings,
     UserManagement,
-  }
+  },
 })
 export default class SettingsDialog extends Vue {
   private dialog = true
   private tab = null
 
-  get isAdmin(): boolean {
+  get isAdmin (): boolean {
     return this.$store.getters.isAdmin
   }
 
-  public closeDialog() {
+  public closeDialog () {
     this.$store.commit('SET_SHOWSETTINGSDIALOG', false)
   }
 }

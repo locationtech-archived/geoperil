@@ -5,14 +5,14 @@
     dense
   >
     <v-toolbar-title>GeoPeril - {{ title }}</v-toolbar-title>
-    <v-spacer></v-spacer>
+    <v-spacer />
     <v-tooltip bottom>
       <template v-slot:activator="{ on, attrs }">
         <v-btn
           icon
           v-bind="attrs"
-          v-on="on"
           class="mr-9"
+          v-on="on"
           @click.native="closeAction"
         >
           <v-icon>mdi-close</v-icon>

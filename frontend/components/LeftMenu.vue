@@ -5,14 +5,20 @@
     class="fill-height"
     grow
   >
-    <v-tab class="no-text-transform" @click="changeTab(0)">Recent</v-tab>
-    <v-tab class="no-text-transform" @click="changeTab(1)">My List</v-tab>
-    <v-tab class="no-text-transform" @click="changeTab(2)">Compose</v-tab>
+    <v-tab class="no-text-transform" @click="changeTab(0)">
+      Recent
+    </v-tab>
+    <v-tab class="no-text-transform" @click="changeTab(1)">
+      My List
+    </v-tab>
+    <v-tab class="no-text-transform" @click="changeTab(2)">
+      Compose
+    </v-tab>
 
     <v-tabs-items
+      v-model="tab"
       class="fill-height-tabs"
       :show-arrows="$vuetify.breakpoint.sm"
-      v-model="tab"
     >
       <TabItem>
         <RecentList
@@ -48,13 +54,13 @@ import ComposeSimulation from './ComposeSimulation.vue'
     RecentList,
     UserList,
     ComposeSimulation,
-  }
+  },
 })
 export default class LeftMenu extends Vue {
   private tab: any = null
 
-  public changeTab(which: number) {
-    if (which == this.tab) {
+  public changeTab (which: number) {
+    if (which === this.tab) {
       // nothing to do
       return
     }
@@ -65,7 +71,7 @@ export default class LeftMenu extends Vue {
     this.$store.commit('SET_RESULT_ARRIVALTIMES', null)
   }
 
-  get composeEvent(): Event | null {
+  get composeEvent (): Event | null {
     return this.$store.getters.composeEvent
   }
 }

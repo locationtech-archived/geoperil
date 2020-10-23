@@ -5,16 +5,16 @@
     </v-expansion-panel-header>
     <v-expansion-panel-content>
       <v-form
-        v-model="valid"
         ref="form"
+        v-model="valid"
       >
         <v-text-field
-          v-model="addUsername"
           ref="refUsername"
+          v-model="addUsername"
           label="Username"
           :rules="validNewUsername"
-          @change="successMsg = null"
           required
+          @change="successMsg = null"
         />
 
         <v-select
@@ -26,29 +26,29 @@
         />
 
         <v-text-field
-          v-model="initialPassword"
           ref="refInitialPassword"
+          v-model="initialPassword"
           label="Initial password for first login"
           class="initial-pwd-textfield"
           append-outer-icon="mdi-reload"
           :rules="validInitialPassword"
-          @click:append-outer="generateInitialPassword"
-          @change="successMsg = null"
           clearable
           required
+          @click:append-outer="generateInitialPassword"
+          @change="successMsg = null"
         />
       </v-form>
 
       <v-alert
-        type="error"
         v-if="!!errorMsg"
+        type="error"
       >
         {{ errorMsg }}
       </v-alert>
 
       <v-alert
-        type="success"
         v-if="!!successMsg"
+        type="success"
       >
         {{ successMsg }}
       </v-alert>
@@ -63,17 +63,17 @@
             Create user
           </v-btn>
         </v-col>
-    </v-row>
+      </v-row>
     </v-expansion-panel-content>
   </v-expansion-panel>
 </template>
 
 <script lang="ts">
-import { Vue, Component } from 'nuxt-property-decorator'
-import { User, Institution } from '../types/index'
-import axios from 'axios'
-import { API_REGISTERUSER_URL, FORM_ENCODE_CONFIG } from '../store/constants'
 import querystring from 'querystring'
+import { Vue, Component } from 'nuxt-property-decorator'
+import axios from 'axios'
+import { Institution } from '../types/index'
+import { API_REGISTERUSER_URL, FORM_ENCODE_CONFIG } from '../store/constants'
 
 @Component({})
 export default class AddUser extends Vue {
@@ -96,42 +96,43 @@ export default class AddUser extends Vue {
     (v: any) => !!v || 'Institution is required',
   ]
 
-  mounted() {
+  mounted () {
     this.generateInitialPassword()
   }
 
-  public generateInitialPassword() {
+  public generateInitialPassword () {
     this.initialPassword = Math.random().toString(36).slice(-8)
   }
 
-  get isValid(): boolean {
+  get isValid (): boolean {
     this.errorMsg = null
 
     if (
-      !this.addUsername || this.addUsername.length == 0
-      || !this.initialPassword || this.initialPassword.length == 0
-      || !this.selectedInstitution
+      !this.addUsername || this.addUsername.length === 0 ||
+      !this.initialPassword || this.initialPassword.length === 0 ||
+      !this.selectedInstitution
     ) {
       return false
     }
 
-    if (false) {
-      // check if valid characters in username
-      this.errorMsg = 'Passwords are not the same'
+    const re = /[A-Za-z.@]+/
+
+    if (!re.test(this.addUsername)) {
+      this.errorMsg = 'Invalid username'
       return false
     }
 
     return true
   }
 
-  get selectInstitutionsArr() {
+  get selectInstitutionsArr () {
     const all: Institution[] = this.$store.getters.allInstitutions
 
-    if (!all || all.length == 0) {
+    if (!all || all.length === 0) {
       return []
     }
 
-    var arr = []
+    const arr = []
 
     for (let i = 0; i < all.length; i++) {
       arr.push(all[i].name)
@@ -140,13 +141,13 @@ export default class AddUser extends Vue {
     return arr
   }
 
-  async send() {
+  async send () {
     const f: any = this.$refs.form
     this.successMsg = null
     this.errorMsg = null
 
     try {
-      var { data } = await axios.post(
+      const { data } = await axios.post(
         API_REGISTERUSER_URL,
         querystring.stringify({
           username: this.addUsername,
@@ -155,27 +156,26 @@ export default class AddUser extends Vue {
         }),
         FORM_ENCODE_CONFIG
       )
+
+      if (
+        'status' in data && data.status === 'success' &&
+        'user' in data && 'username' in data.user &&
+        data.user.username === this.addUsername
+      ) {
+        this.successMsg = 'A user with username \'' + this.addUsername +
+          '\' was created. ' +
+          'The user has the following initial password: ' + this.initialPassword
+
+        this.addUsername = null
+        this.initialPassword = null
+        this.selectedInstitution = null
+        f.resetValidation()
+      } else {
+        this.errorMsg = 'User could not be created. ' +
+          (('errors' in data) ? data.errors.toString() : '')
+      }
     } catch (e) {
       this.errorMsg = e.message
-      return
-    }
-
-    if (
-      'status' in data && data.status == "success"
-      && 'user' in data && 'username' in data.user
-      && data.user.username == this.addUsername
-    ) {
-      this.successMsg = 'A user with username \'' + this.addUsername
-        + '\' was created. '
-        + 'The user has the following initial password: ' + this.initialPassword
-
-      this.addUsername = null
-      this.initialPassword = null
-      this.selectedInstitution = null
-      f.resetValidation()
-    } else {
-      this.errorMsg = 'User could not be created. '
-        + (('errors' in data) ? data.errors.toString() : '')
     }
   }
 }

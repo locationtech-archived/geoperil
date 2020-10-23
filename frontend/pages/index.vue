@@ -8,10 +8,8 @@
         align-center
         fluid
       >
-        <LoginForm v-if="!isLoggedIn">
-        </LoginForm>
-        <Geoperil v-else>
-        </Geoperil>
+        <LoginForm v-if="!isLoggedIn" />
+        <Geoperil v-else />
         <SettingsDialog v-if="isLoggedIn && showSettings" />
         <StationDialog v-if="isLoggedIn && showStationDialog" />
         <PluginsDialogs />
@@ -21,10 +19,10 @@
 </template>
 
 <script lang="ts">
+import { Vue, Component } from 'nuxt-property-decorator'
 import LoginForm from '../components/LoginForm.vue'
 import AppBar from '../components/AppBar.vue'
 import Geoperil from '../components/Geoperil.vue'
-import { Vue, Component } from 'nuxt-property-decorator'
 import SettingsDialog from '../components/SettingsDialog.vue'
 import StationDialog from '../components/StationDialog.vue'
 import PluginsDialogs from '../components/PluginsDialogs.vue'
@@ -37,22 +35,22 @@ import PluginsDialogs from '../components/PluginsDialogs.vue'
     SettingsDialog,
     StationDialog,
     PluginsDialogs,
-  }
+  },
 })
 export default class Index extends Vue {
-  mounted() {
+  mounted () {
     this.$store.dispatch('getSupportedPlugins')
   }
 
-  get isLoggedIn() {
+  get isLoggedIn () {
     return !!this.$store.getters.user
   }
 
-  get showSettings() {
+  get showSettings () {
     return this.$store.getters.showSettingsDialog
   }
 
-  get showStationDialog() {
+  get showStationDialog () {
     return !!this.$store.getters.selectedStationDetail
   }
 }

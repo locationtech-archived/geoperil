@@ -1,13 +1,17 @@
 <template>
   <v-col
     id="station-details-dialog"
-    sm="10" md="10" lg="8"
+    sm="10"
+    md="10"
+    lg="8"
     class="fill-height pa-1 pr-5"
   >
-    <h3 class="mt-3">Station: {{ selectedStationDetail.slmcode }} - Sensor: {{ selectedStationDetail.sensor }}</h3>
+    <h3 class="mt-3">
+      Station: {{ selectedStationDetail.slmcode }} - Sensor: {{ selectedStationDetail.sensor }}
+    </h3>
     <CurrentTimeDisplay />
     <v-row class="mb-3" justify="center">
-        <svg id="station-details" />
+      <svg id="station-details" />
     </v-row>
     <v-row justify="center">
       <v-col sm="12" md="9" lg="8">
@@ -41,8 +45,8 @@
                 </v-col>
                 <v-col class="pa-0 pb-2">
                   <v-select
-                    :items="[1, 2, 4]"
                     v-model="period"
+                    :items="[1, 2, 4]"
                     label="Period"
                     class="ma-0"
                     hide-details
@@ -77,24 +81,25 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component, Prop, Watch } from 'nuxt-property-decorator'
+import querystring from 'querystring'
+import { Vue, Component, Watch } from 'nuxt-property-decorator'
+import axios from 'axios'
+import * as d3 from 'd3'
 import { Station, Event } from '../types'
 import {
   API_GETSTATIONDATA_URL,
   API_GETSTATIONSIMDATA_URL,
-  FORM_ENCODE_CONFIG
+  FORM_ENCODE_CONFIG,
 } from '../store/constants'
+import { toUtcTimeStr } from '../plugins/geoperil-utils'
 import CurrentTimeDisplay from './CurrentTimeDisplay.vue'
 import DenseTextField from './DenseTextField.vue'
-import { toUtcTimeStr } from '../plugins/geoperil-utils'
-import axios from 'axios'
-import querystring from 'querystring'
-import * as d3 from 'd3'
 
 if (!Object.getOwnPropertyNames(d3).includes('event')) {
   // avoid redefining
+  // eslint-disable-next-line no-import-assign
   Object.defineProperty(d3, 'event', {
-    get: function() { return event }
+    get () { return event },
   })
 }
 
@@ -102,7 +107,7 @@ if (!Object.getOwnPropertyNames(d3).includes('event')) {
   components: {
     CurrentTimeDisplay,
     DenseTextField,
-  }
+  },
 })
 export default class StationDetails extends Vue {
   private containerId = '#station-details-dialog'
@@ -150,20 +155,20 @@ export default class StationDetails extends Vue {
    * TODO: get it from the station object dynamically */
   private stationRate: number = 10 * 60
 
-  get selectedStationDetail(): Station {
+  get selectedStationDetail (): Station {
     return this.$store.getters.selectedStationDetail
   }
 
-  created() {
+  created () {
     this.axisheight = this.height - this.margin.top - this.margin.bottom
   }
 
-  async mounted() {
+  async mounted () {
     this.startUpdater()
     await this.updateData()
   }
 
-  public startUpdater() {
+  public startUpdater () {
     this.stopUpdater()
 
     if (this.updater == null) {
@@ -171,37 +176,37 @@ export default class StationDetails extends Vue {
     }
   }
 
-  public stopUpdater() {
+  public stopUpdater () {
     if (this.updater != null) {
       clearInterval(this.updater)
       this.updater = null
     }
   }
 
-  beforeDestroy() {
+  beforeDestroy () {
     this.stopUpdater()
   }
 
-  public convertToMinutes(milliseconds: number): number {
+  public convertToMinutes (milliseconds: number): number {
     const seconds = milliseconds / 1000
     return seconds / 60
   }
 
   @Watch('showSliders')
-  public onShowSlidersChange(newValue: boolean) {
+  public onShowSlidersChange () {
     this.updateSliderVisible()
     this.updatePickedValues()
   }
 
-  get stationTimestamp(): Date {
+  get stationTimestamp (): Date {
     return this.$store.getters.stationTimestamp
   }
 
-  get showSliders(): boolean {
-    return this.panel == 0
+  get showSliders (): boolean {
+    return this.panel === 0
   }
 
-  get pickedX1Formatted(): string {
+  get pickedX1Formatted (): string {
     if (this.pickedX1) {
       return toUtcTimeStr(this.pickedX1, false, false) + ' UTC'
     }
@@ -209,7 +214,7 @@ export default class StationDetails extends Vue {
     return ''
   }
 
-  get pickedX2Formatted(): string {
+  get pickedX2Formatted (): string {
     if (this.pickedX2) {
       return toUtcTimeStr(this.pickedX2, false, false) + ' UTC'
     }
@@ -217,7 +222,7 @@ export default class StationDetails extends Vue {
     return ''
   }
 
-  get pickedYFormatted(): string {
+  get pickedYFormatted (): string {
     if (this.pickedY) {
       const pickedMeters = this.pickedY.toFixed(2)
       return pickedMeters + ' Meters'
@@ -226,7 +231,7 @@ export default class StationDetails extends Vue {
     return ''
   }
 
-  get pickedTimeDifferenceFormatted(): string {
+  get pickedTimeDifferenceFormatted (): string {
     if (this.pickedTimeDifference) {
       const minutes = this.convertToMinutes(
         this.pickedTimeDifference.valueOf()
@@ -237,7 +242,7 @@ export default class StationDetails extends Vue {
     return ''
   }
 
-  get periodTimeDifferenceFormatted(): string {
+  get periodTimeDifferenceFormatted (): string {
     if (this.periodTimeDifference) {
       return this.periodTimeDifference.toFixed(2) + ' Minutes'
     }
@@ -246,17 +251,17 @@ export default class StationDetails extends Vue {
   }
 
   @Watch('period')
-  public onPeriodChange(newValue: any) {
+  public onPeriodChange () {
     this.updateTimeDifference()
   }
 
   @Watch('stationTimestamp')
-  public onTimestampChange(newValue: Date | null) {
+  public onTimestampChange () {
     this.startUpdater()
     this.updateData()
   }
 
-  public async fetchData() {
+  public async fetchData () {
     const ts = this.stationTimestamp
 
     if (!ts) {
@@ -271,19 +276,19 @@ export default class StationDetails extends Vue {
     const endtsSeconds = endts.valueOf() / 1000
 
     if (selectedEvent) {
-      var { data } = await axios.post(
+      const { data } = await axios.post(
         API_GETSTATIONSIMDATA_URL,
         querystring.stringify({
           evid: selectedEvent.compId,
           station: this.selectedStationDetail.name,
-          end: endts.toISOString()
+          end: endts.toISOString(),
         }),
         FORM_ENCODE_CONFIG
       )
 
       if (
-        data && 'status' in data && data.status == 'success'
-        && 'data' in data && data.data instanceof Array
+        data && 'status' in data && data.status === 'success' &&
+        'data' in data && Array.isArray(data.data)
       ) {
         this.simdata = []
 
@@ -291,25 +296,25 @@ export default class StationDetails extends Vue {
           const cur = data.data[i]
           this.simdata.push({
             date: new Date(cur[0]),
-            value: Number.parseFloat(cur[1])
+            value: Number.parseFloat(cur[1]),
           })
         }
       }
     }
 
-    var { data } = await axios.post(
+    const { data } = await axios.post(
       API_GETSTATIONDATA_URL,
       querystring.stringify({
         station: this.selectedStationDetail.name,
         start: lasthours.toISOString(),
-        end: endts.toISOString()
+        end: endts.toISOString(),
       }),
       FORM_ENCODE_CONFIG
     )
 
     if (
-      data && 'status' in data && data.status == 'success'
-      && 'last' in data && 'data' in data && data.data instanceof Array
+      data && 'status' in data && data.status === 'success' &&
+      'last' in data && 'data' in data && Array.isArray(data.data)
     ) {
       this.data = []
 
@@ -317,7 +322,7 @@ export default class StationDetails extends Vue {
         const cur = data.data[i]
         this.data.push({
           date: new Date(cur[0]),
-          value: Number.parseFloat(cur[1])
+          value: Number.parseFloat(cur[1]),
         })
       }
 
@@ -328,7 +333,7 @@ export default class StationDetails extends Vue {
     }
   }
 
-  public async updateData() {
+  public async updateData () {
     this.isLoading = true
 
     try {
@@ -340,17 +345,17 @@ export default class StationDetails extends Vue {
     this.isLoading = false
   }
 
-  private translate(x: number, y: number): string {
+  private translate (x: number, y: number): string {
     return 'translate(' + x + ',' + y + ')'
   }
 
-  private updateSliderVisible() {
+  private updateSliderVisible () {
     d3.select(this.containerId)
       .selectAll('.slider')
       .attr('display', this.showSliders ? 'inline' : 'none')
   }
 
-  private updateLines() {
+  private updateLines () {
     if (this.lineDefinition) {
       if (this.lineData) {
         this.lineData.attr('d', this.lineDefinition)
@@ -362,10 +367,10 @@ export default class StationDetails extends Vue {
     }
   }
 
-  private getTransformValues(transform: string) {
+  private getTransformValues (transform: string) {
     const reg = new RegExp('translate\\((.*),(.*)\\)')
 
-    if (!transform || transform.length == 0 || !reg.test(transform)) {
+    if (!transform || transform.length === 0 || !reg.test(transform)) {
       return [null, null]
     }
 
@@ -373,24 +378,24 @@ export default class StationDetails extends Vue {
     const matches = regXY.exec(transform)
 
     // matches[0] contains full match
-    if (!matches || matches.length != 2) {
+    if (!matches || matches.length !== 2) {
       return [null, null]
     }
 
     const splitted = matches[1].split(',')
 
-    if (!splitted || splitted.length != 2) {
+    if (!splitted || splitted.length !== 2) {
       return [null, null]
     }
 
     return splitted
   }
 
-  private updateTimeDifference() {
+  private updateTimeDifference () {
     const oldValue = (
       this.periodTimeDifference == null
-      ? null
-      : this.periodTimeDifference.toFixed(2)
+        ? null
+        : this.periodTimeDifference.toFixed(2)
     )
 
     if (this.pickedX1 && this.pickedX2) {
@@ -404,7 +409,7 @@ export default class StationDetails extends Vue {
     this.periodTimeDifference = minutes * this.period
     const newValue = this.periodTimeDifference.toFixed(2)
 
-    if (oldValue != newValue) {
+    if (oldValue !== newValue) {
       this.$store.commit(
         'SET_PICKED_PERIOD_FOR_STATION',
         {
@@ -415,7 +420,7 @@ export default class StationDetails extends Vue {
     }
   }
 
-  private updatePickedValues() {
+  private updatePickedValues () {
     const oldPickedY = (this.pickedY == null ? null : this.pickedY.toFixed(2))
 
     this.pickedX1 = null
@@ -455,7 +460,7 @@ export default class StationDetails extends Vue {
         this.pickedY = this.scaleY.invert(y)
         const newValue = this.pickedY!.toFixed(2)
 
-        if (oldPickedY != newValue) {
+        if (oldPickedY !== newValue) {
           this.$store.commit(
             'SET_PICKED_AMPLITUDE_FOR_STATION',
             {
@@ -468,8 +473,8 @@ export default class StationDetails extends Vue {
     }
 
     if (
-      this.pickedX1 && this.pickedX2
-      && this.pickedX1.valueOf() > this.pickedX2.valueOf()
+      this.pickedX1 && this.pickedX2 &&
+      this.pickedX1.valueOf() > this.pickedX2.valueOf()
     ) {
       const swap = this.pickedX2
       this.pickedX2 = this.pickedX1
@@ -479,18 +484,18 @@ export default class StationDetails extends Vue {
     this.updateTimeDifference()
   }
 
-  private zoom(event: any, d: any) {
+  private zoom (event: any) {
     if (!event || !event.transform) {
       return
     }
 
     d3.select(this.containerId)
       .select('.dataview')
-      .attr("transform", event.transform)
+      .attr('transform', event.transform)
 
     d3.select(this.containerId)
       .select('.simview')
-      .attr("transform", event.transform)
+      .attr('transform', event.transform)
 
     if (this.gaxisX && this.d3AxisX && this.scaleXReference) {
       this.scaleX = event.transform.rescaleX(this.scaleXReference)
@@ -516,9 +521,9 @@ export default class StationDetails extends Vue {
     this.updatePickedValues()
   }
 
-  private findMinMaxY(): any {
-    var maxY = { value: 0 }
-    var minY = { value: 0 }
+  private findMinMaxY (): any {
+    let maxY = { value: 0 }
+    let minY = { value: 0 }
 
     if (this.data && this.data.length > 0) {
       maxY = this.data.reduce((a: any, b: any) => {
@@ -543,7 +548,7 @@ export default class StationDetails extends Vue {
     return { miny: minY.value, maxy: maxY.value }
   }
 
-  public addScales() {
+  public addScales () {
     const minmax = this.findMinMaxY()
     const minY = minmax.miny
     const maxY = minmax.maxy
@@ -551,7 +556,7 @@ export default class StationDetails extends Vue {
     this.scaleX = d3.scaleTime()
       .domain([
         d3.timeHour.offset(this.stationTimestamp, -this.marginHoursBefore),
-        d3.timeHour.offset(this.stationTimestamp, this.marginHoursAhead)
+        d3.timeHour.offset(this.stationTimestamp, this.marginHoursAhead),
       ])
       .range([0, this.width - this.margin.right])
       .clamp(true)
@@ -566,7 +571,7 @@ export default class StationDetails extends Vue {
     this.scaleYReference = this.scaleY.copy()
   }
 
-  public addGridlines() {
+  public addGridlines () {
     this.d3GridAxisX = d3.axisBottom(this.scaleX)
       .ticks(d3.timeMinute.every(30))
       .tickSize(-this.height + this.margin.bottom + this.margin.top)
@@ -587,7 +592,7 @@ export default class StationDetails extends Vue {
       .call(this.d3GridAxisY)
   }
 
-  public addAxes() {
+  public addAxes () {
     this.d3AxisX = d3.axisBottom(this.scaleX)
       .ticks(d3.timeHour.every(1))
       .tickFormat(d3.utcFormat('%H:%M') as any)
@@ -605,25 +610,25 @@ export default class StationDetails extends Vue {
       .call(this.d3AxisY)
   }
 
-  public dragX1(event: any, d: any) {
-    var x = Math.min(Math.max(event.x, 0), this.width)
+  public dragX1 (event: any) {
+    const x = Math.min(Math.max(event.x, 0), this.width)
     d3.select('.sliderx1').attr('transform', this.translate(x, 0))
     this.updatePickedValues()
   }
 
-  public dragX2(event: any, d: any) {
-    var x = Math.min(Math.max(event.x, 0), this.width)
+  public dragX2 (event: any) {
+    const x = Math.min(Math.max(event.x, 0), this.width)
     d3.select('.sliderx2').attr('transform', this.translate(x, 0))
     this.updatePickedValues()
   }
 
-  public dragY(event: any, d: any) {
-    var y = Math.min(Math.max(event.y, 0), this.height)
+  public dragY (event: any) {
+    const y = Math.min(Math.max(event.y, 0), this.height)
     d3.select('.slidery').attr('transform', this.translate(-40, y))
     this.updatePickedValues()
   }
 
-  public addSliders() {
+  public addSliders () {
     const triangle = d3.symbol()
       .type(d3.symbolTriangle)
       .size(100)
@@ -671,7 +676,7 @@ export default class StationDetails extends Vue {
       .attr('transform', this.translate(0, 0) + ' rotate(90)')
   }
 
-  public addLines() {
+  public addLines () {
     this.lineDefinition = d3.line()
       .defined((d: any) => !isNaN(d.value))
       .x((d: any) => this.scaleXReference(d.date) as any)
@@ -703,9 +708,9 @@ export default class StationDetails extends Vue {
   }
 
   @Watch('data')
-  public onDataChange(newValue: any[] | null, oldValue: any[] | null) {
+  public onDataChange () {
     const alreadyDrawn = (
-      d3.select(this.containerId).selectAll('.dataview').size() != 0
+      d3.select(this.containerId).selectAll('.dataview').size() !== 0
     )
 
     if (!alreadyDrawn) {
@@ -719,7 +724,7 @@ export default class StationDetails extends Vue {
         .append('g')
         .attr('transform', this.translate(this.margin.left, this.margin.top))
 
-      var zoom = d3.zoom()
+      const zoom = d3.zoom()
         .scaleExtent([1, 2])
         .translateExtent([[0, 0], [this.width, this.height]])
         .on('zoom', this.zoom)

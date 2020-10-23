@@ -6,7 +6,9 @@
       id="login-form-card"
       min-width="400"
     >
-      <v-card-title class="headline">Login</v-card-title>
+      <v-card-title class="headline">
+        Login
+      </v-card-title>
       <v-card-text>
         <v-form
           id="login-form"
@@ -24,8 +26,7 @@
             name="username"
             :rules="nameRules"
             required
-          >
-          </v-text-field>
+          />
 
           <v-text-field
             v-model="formPassword"
@@ -34,8 +35,7 @@
             name="password"
             :rules="passwordRules"
             required
-          >
-          </v-text-field>
+          />
 
           <v-btn
             type="submit"
@@ -58,19 +58,21 @@ export default class LoginForm extends Vue {
   private nameRules: any = [
     (v: any) => !!v || 'Name is required',
   ]
+
   private passwordRules: any = [
     (v: any) => !!v || 'Password is required',
   ]
+
   private valid: boolean = false
   private formError: any = null
   private formUsername: string = ''
   private formPassword: string = ''
 
-  public async login() {
+  public async login () {
     try {
       await this.$store.dispatch('login', {
         username: this.formUsername,
-        password: this.formPassword
+        password: this.formPassword,
       })
       this.formUsername = ''
       this.formPassword = ''
