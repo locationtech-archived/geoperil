@@ -586,7 +586,8 @@ def main():
         item["providername"] = "National Observatory of Athens"
         feedevent(item)
 
-    # TODO: alternative API: https://www.earthquakescanada.nrcan.gc.ca/cache/earthquakes/canada-en.atom
+    # TODO: alternative API:
+    # https://www.earthquakescanada.nrcan.gc.ca/cache/earthquakes/canada-en.atom
     '''
     for item in parsenrc(
             requests.get(

@@ -27,6 +27,7 @@
 
 import os
 import re
+import traceback
 import time
 import datetime
 import urllib
@@ -278,8 +279,9 @@ def main():
         )
         try:
             urllib.request.urlopen(req).read()
-        except:
+        except Exception:
             print('Calling the URL failed: ' + data_insert_url)
+            print(traceback.format_exc())
             raise
 
         time.sleep(0.05)

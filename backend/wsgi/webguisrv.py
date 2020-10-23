@@ -64,6 +64,7 @@ WAVEHEIGHTS_DEFAULT_FILE = "waveheights_default.geojson"
 WAVEHEIGHTS_RAW_FILE = "waveheights.tiff"
 POISWAVEHEIGHTS_FILE = "pois.csv"
 
+
 class WebGuiSrv(BaseSrv):
     DATE_PATTERN = r"%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -1938,7 +1939,6 @@ class WebGuiSrv(BaseSrv):
 
         return jssuccess(user=self._get_user_obj(user))
 
-
     @cherrypy.expose
     def saveusersettings(self, props, inst, notify, api, stations=None):
         user = self.getUser()
@@ -2382,7 +2382,8 @@ class WebGuiSrv(BaseSrv):
 
             return self.start_worker(
                 selected, user, name, lat, lon, depth, dip, strike, rake, comp,
-                mag, slip, length, width, date_time, gridres, algo, None, compId
+                mag, slip, length, width, date_time, gridres, algo, None,
+                compId
             )
 
         # TODO: really needed?
