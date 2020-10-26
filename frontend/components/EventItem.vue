@@ -90,14 +90,7 @@
               help-text="Modify and reprocess"
               @click="handleCompose"
             />
-            <ActionButton
-              icon="mdi-telegram"
-              help-text="Send message"
-            />
-            <ActionButton
-              icon="mdi-sort-ascending"
-              help-text="Show timeline"
-            />
+            <PluginsButtons />
           </v-row>
         </v-card-actions>
       </v-card>
@@ -115,11 +108,13 @@
 <script lang="ts">
 import { Vue, Component, Prop } from 'nuxt-property-decorator'
 import ActionButton from './ActionButton.vue'
+import PluginsButtons from './PluginsButtons.vue'
 import { Event } from '~/types'
 
 @Component({
   components: {
     ActionButton,
+    PluginsButtons,
   },
 })
 export default class EventItem extends Vue {
