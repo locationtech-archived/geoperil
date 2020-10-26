@@ -67,10 +67,10 @@ services:
       - geoperil-data-volume:/geoperil
     depends_on:
       - mongo
-      - geoperil-easywave-worker-0
+      - geoperil-easywave-worker-cpu
     links:
       - mongo
-      - geoperil-easywave-worker-0
+      - geoperil-easywave-worker-cpu
 
   # geoperil-eventfeeder:
   #   build:
@@ -121,16 +121,16 @@ services:
     volumes:
       - grid-data-volume:/data
 
-  geoperil-easywave-worker-0:
+  geoperil-easywave-worker-cpu:
     build:
       context: ../backend/worker/easywaveCPU
       dockerfile: Dockerfile.dev
-    image: geoperil-easywave-worker-0
-    container_name: geoperil-easywave-worker-0
+    image: geoperil-easywave-worker-cpu
+    container_name: geoperil-easywave-worker-cpu
     environment:
       - DEVELOPMENT=1
-      - SERVER_URL=http://geoperil-easywave-worker-0:5000/wps
-      - OUTPUT_URL=http://geoperil-easywave-worker-0:5000/outputs/
+      - SERVER_URL=http://geoperil-easywave-worker-cpu:5000/wps
+      - OUTPUT_URL=http://geoperil-easywave-worker-cpu:5000/outputs/
     ports:
       - 5000:5000 # TODO: remove in production
     volumes:

@@ -49,7 +49,7 @@
         "_id": { "$oid": "999999999999999999999999" },
         "hardware": "CPU",
         "algorithm": "easywave",
-        "wpsurl": "http://geoperil-easywave-worker-0:5000/wps",
+        "wpsurl": "http://geoperil-easywave-worker-cpu:5000/wps",
         "wpsprocess": "easywavecpu",
         "type": "worker"
     }

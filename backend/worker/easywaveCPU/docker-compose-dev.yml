@@ -11,8 +11,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    image: easywave-worker
-    container_name: easywave-worker
+    image: easywave-worker-cpu
+    container_name: easywave-worker-cpu
     environment:
       - DEVELOPMENT=1
       - SERVER_URL=http://localhost:5000/wps
