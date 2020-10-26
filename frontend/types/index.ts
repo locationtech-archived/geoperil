@@ -18,6 +18,7 @@ export interface User {
   inst: Institution,
   countries: string[],
   permissions: any,
+  properties: any,
 }
 
 export interface ComputeRequest {

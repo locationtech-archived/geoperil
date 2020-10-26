@@ -568,15 +568,7 @@ export const actions: ActionTree<RootState, RootState> = {
     if ('status' in data
       && 'user' in data
       && data.status == 'success') {
-      commit(
-        'SET_USER',
-        {
-          username: data.user.username,
-          inst: data.user.inst,
-          countries: data.user.countries,
-          permissions: data.user.permissions,
-        } as User
-      )
+      commit('SET_USER', data.user)
     } else {
       commit('SET_USER', null)
     }
