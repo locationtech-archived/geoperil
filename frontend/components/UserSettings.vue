@@ -6,7 +6,6 @@
     class="pa-3"
   >
     <v-text-field
-      ref="refUsername"
       v-model="username"
       label="Username"
       readonly

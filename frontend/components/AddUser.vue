@@ -9,7 +9,6 @@
         v-model="valid"
       >
         <v-text-field
-          ref="refUsername"
           v-model="addUsername"
           label="Username"
           :rules="validNewUsername"
@@ -26,7 +25,6 @@
         />
 
         <v-text-field
-          ref="refInitialPassword"
           v-model="initialPassword"
           label="Initial password for first login"
           class="initial-pwd-textfield"

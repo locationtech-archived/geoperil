@@ -6,7 +6,6 @@
     class="pa-3"
   >
     <v-text-field
-      ref="refName"
       v-model="name"
       label="Name"
       :rules="[v => !!v || 'Name is required']"
