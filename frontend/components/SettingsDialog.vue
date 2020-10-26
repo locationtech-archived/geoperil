@@ -24,6 +24,7 @@
       <v-tab v-if="isAdmin" class="no-text-transform">
         Users
       </v-tab>
+      <PluginsSettingsTabs />
 
       <v-tabs-items
         id="settings-tab-items"
@@ -36,7 +37,7 @@
         >
           <v-col
             class="fill-height"
-            cols="6"
+            cols="8"
           >
             <TabItem>
               <UserSettings />
@@ -49,6 +50,8 @@
             <TabItem v-if="isAdmin">
               <UserManagement />
             </TabItem>
+
+            <PluginsSettingsTabsContent />
           </v-col>
         </v-row>
       </v-tabs-items>
@@ -63,6 +66,8 @@ import TabItem from './TabItem.vue'
 import UserSettings from './UserSettings.vue'
 import StationSettings from './StationSettings.vue'
 import UserManagement from './UserManagement.vue'
+import PluginsSettingsTabs from './PluginsSettingsTabs.vue'
+import PluginsSettingsTabsContent from './PluginsSettingsTabsContent.vue'
 
 @Component({
   components: {
@@ -71,6 +76,8 @@ import UserManagement from './UserManagement.vue'
     UserSettings,
     StationSettings,
     UserManagement,
+    PluginsSettingsTabs,
+    PluginsSettingsTabsContent,
   },
 })
 export default class SettingsDialog extends Vue {
