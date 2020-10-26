@@ -1,0 +1,12 @@
+FROM node:10.21-buster
+
+WORKDIR /opt/geoperil-frontend
+
+RUN apt-get update && \
+    apt-get install -y yarn
+
+COPY . .
+
+EXPOSE 3000
+
+CMD [ "start.sh" ]
