@@ -7,6 +7,8 @@ RUN apt-get update && \
 
 COPY . .
 
+RUN yarn install
+
 EXPOSE 3000
 
-CMD [ "start.sh" ]
+CMD [ "/bin/bash", "/opt/geoperil-frontend/start.sh" ]

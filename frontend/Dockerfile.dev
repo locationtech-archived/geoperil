@@ -7,8 +7,8 @@ VOLUME [ "/opt/geoperil-frontend" ]
 RUN apt-get update && \
     apt-get install -y yarn
 
-COPY start-dev.sh /start-dev.sh
+COPY start-dev.sh .
 
 EXPOSE 3000
 
-CMD [ "/start-dev.sh" ]
+CMD [ "/bin/bash", "/opt/geoperil-frontend/start-dev.sh" ]
