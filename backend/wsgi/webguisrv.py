@@ -1942,57 +1942,69 @@ class WebGuiSrv(BaseSrv):
     @cherrypy.expose
     def saveusersettings(self, props, inst, notify, api, stations=None):
         user = self.getUser()
-        if user is not None:
-            try:
-                # inititalize sub object if not present
-                user["properties"] = user.get("properties", {})
-                # update object with given attributes
-                user["properties"].update(json.loads(props))
-                # analogous for notifications
-                user["notify"] = user.get("notify", {})
-                user["notify"].update(json.loads(notify))
-                inst = json.loads(inst)
-                api = json.loads(api)
-                # override stations
-                if stations is not None:
-                    user["countries"] = json.loads(stations)
-            except ValueError:
-                return jsfail(error="Invalid JSON input.")
+        if user is None:
+            return jsdeny()
 
-            if user["permissions"].get("manage", False):
-                # load JSON input and remove attributes that are not allowed
-                # to change
-                inst.pop("_id", None)
-                inst.pop("name", None)
-                self._db["institutions"].update(
-                    {"_id": user["inst"]},
-                    {"$set": inst}
-                )
+        try:
+            # inititalize sub object if not present
+            user["properties"] = user.get("properties", {})
+            # update object with given attributes
+            user["properties"].update(json.loads(props))
+            # analogous for notifications
+            user["notify"] = user.get("notify", {})
+            user["notify"].update(json.loads(notify))
+            inst = json.loads(inst)
+            api = json.loads(api)
+            # override stations
+            if stations is not None:
+                user["countries"] = json.loads(stations)
+        except ValueError:
+            return jsfail(error="Invalid JSON input.")
 
-            # make sure that given API-key is valid
-            if user["permissions"].get("api", False) and api["key"] != "":
-                if re.compile("^[0-9a-f]{32}$").match(api["key"]) is None:
-                    return jsfail(error="Invalid API-key given.")
-                if self._db["users"].find_one({
-                        "api.key": api["key"],
-                        "username": {"$ne": user["username"]}
-                }) is not None:
-                    return jsfail(error="Invalid API-key given.")
-                if self._db["institutions"].find_one({
-                        "api.key": api["key"]
-                }) is not None:
-                    return jsfail(error="Invalid API-key given.")
-                user["api"] = api
+        permissions = user.get("permissions")
 
-            # update user entry - we need to remove the "_id" attribute to
-            # make pymongo happy
-            user.pop("_id", None)
-            self._db["users"].update(
-                {"username": user["username"]},
-                {"$set": user}
+        if (
+            permissions is not None and permissions.get("manage", False)
+            and bool(inst)
+        ):
+            # load JSON input and remove attributes that are not allowed
+            # to change
+            inst.pop("_id", None)
+            inst.pop("name", None)
+            # TODO: search for inst object in db and set objectid reference
+            self._db["institutions"].update(
+                {"_id": user["inst"]},
+                {"$set": inst}
             )
-            return jssuccess(user=self._get_user_obj(user))
-        return jsdeny()
+
+        # make sure that given API-key is valid
+        if (
+            permissions is not None
+            and permissions.get("api", False)
+            and bool(api)
+            and api["key"] != ""
+        ):
+            if re.compile("^[0-9a-f]{32}$").match(api["key"]) is None:
+                return jsfail(error="Invalid API-key given.")
+            if self._db["users"].find_one({
+                    "api.key": api["key"],
+                    "username": {"$ne": user["username"]}
+            }) is not None:
+                return jsfail(error="Invalid API-key given.")
+            if self._db["institutions"].find_one({
+                    "api.key": api["key"]
+            }) is not None:
+                return jsfail(error="Invalid API-key given.")
+            user["api"] = api
+
+        # update user entry - we need to remove the "_id" attribute to
+        # make pymongo happy
+        user.pop("_id", None)
+        self._db["users"].update(
+            {"username": user["username"]},
+            {"$set": user}
+        )
+        return jssuccess(user=self._get_user_obj(user))
 
     # this method collects all the user data that should be delivered to
     # the client - sensible information need to be removed
