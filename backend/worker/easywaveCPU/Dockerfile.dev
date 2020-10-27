@@ -37,4 +37,4 @@ VOLUME [ "/srv/wps", "/data" ]
 
 EXPOSE 5000
 
-CMD ["/usr/local/bin/python3.7", "wps.py" ]
+CMD [ "/usr/local/bin/python3.7", "/srv/wps/wps.py" ]
