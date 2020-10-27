@@ -79,7 +79,7 @@ export default class LeftMenu extends Vue {
 
 <style>
 .no-text-transform {
-  text-transform: none;
+  text-transform: none !important;
 }
 
 .fill-height-tabs {
