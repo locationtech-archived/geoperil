@@ -1366,7 +1366,8 @@ class WebGuiSrv(BaseSrv):
 
         try:
             server = wps.WebProcessingService(url, version="1.0.0")
-        except Exception:
+        except Exception as ex:
+            logger.error(ex)
             return jsfail(error="Could not connect to WPS server")
 
         found = False
