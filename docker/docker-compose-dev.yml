@@ -35,10 +35,6 @@ services:
       - mongo
     links:
       - mongo
-    command: [
-      "/tmp/scripts/wait-for-mongodb.sh",
-      "/tmp/scripts/import-initial-data.sh"
-    ]
     environment:
       - MONGO_HOST=mongo
       - MONGO_DB=geoperil

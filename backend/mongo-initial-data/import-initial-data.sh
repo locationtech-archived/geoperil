@@ -14,3 +14,10 @@ for i in users settings institutions; do
         --file /tmp/initial-data/$i.json \
         --jsonArray || true
 done
+
+mongo --eval "db.sealeveldata.createIndex({'timestamp': 1})" "$MONGO_HOST/$MONGO_DB"
+mongo --eval "db.sealeveldata.createIndex({'inst': 1})" "$MONGO_HOST/$MONGO_DB"
+mongo --eval "db.sealeveldata.createIndex({'station': 1})" "$MONGO_HOST/$MONGO_DB"
+mongo --eval "db.simsealeveldata.createIndex({'timestamp': 1})" "$MONGO_HOST/$MONGO_DB"
+mongo --eval "db.eqs.createIndex({'prop.date': 1})" "$MONGO_HOST/$MONGO_DB"
+mongo --eval "db.eqs.createIndex({'timestamp': 1})" "$MONGO_HOST/$MONGO_DB"
