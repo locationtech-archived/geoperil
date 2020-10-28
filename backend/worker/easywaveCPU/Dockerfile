@@ -28,11 +28,12 @@ RUN cd easyWave-$COMMIT_SHA-$COMMIT_SHA/code && \
 # for debugging purposes: get version of easywave
 RUN easywave --help || true
 
-WORKDIR /srv
+COPY wps /srv/wps
 
-COPY . .
+WORKDIR /srv/wps
 
-RUN pip3 install -r wps/requirements.txt
+RUN mv pywps-prod.cfg pywps.cfg && \
+    pip3 install -r requirements.txt
 
 VOLUME [ "/data" ]
 

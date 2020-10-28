@@ -12,6 +12,7 @@ WORKDIR /srv/geoperil/wsgi
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
+COPY entrypoint.sh .
 COPY apache.conf /etc/apache2/conf-enabled/geoperil-wsgi.conf
 COPY config.cfg .
 COPY *.py /srv/geoperil/wsgi/
@@ -20,4 +21,4 @@ EXPOSE 80
 
 VOLUME [ "/geoperil" ]
 
-CMD [ "/usr/sbin/apache2ctl", "-D", "FOREGROUND" ]
+CMD [ "/srv/geoperil/wsgi/entrypoint.sh" ]

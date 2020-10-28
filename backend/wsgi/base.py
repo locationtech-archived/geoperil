@@ -185,12 +185,17 @@ def floatdef(val, default=0.0):
 
 loadconfig("config.cfg")
 
-logging.basicConfig(level=logging.DEBUG)
+if os.environ.get('DEVELOPMENT') is not None:
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    logging.basicConfig(level=logging.WARN)
 
 cherrypy.config.update({
     'environment': 'embedded',
     'tools.sessions.on': False,
 })
+
+cherrypy.log.access_log.propagate = False
 
 if cherrypy.__version__.startswith('3.0') and cherrypy.engine.state == 0:
     cherrypy.engine.start(blocking=False)

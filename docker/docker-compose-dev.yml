@@ -23,7 +23,7 @@ services:
     ports:
       - 27017:27017 # TODO: remove in production
     volumes:
-      - 'mongo-data-volume:/data/db'
+      - mongo-data-volume:/data/db
 
   mongo-initial-data:
     image: geoperil-mongo-initial-data
@@ -56,6 +56,8 @@ services:
     build:
       context: ../backend/wsgi
       dockerfile: Dockerfile.dev
+    environment:
+      - DEVELOPMENT=1
     image: geoperil-wsgi
     container_name: geoperil-wsgi
     volumes:

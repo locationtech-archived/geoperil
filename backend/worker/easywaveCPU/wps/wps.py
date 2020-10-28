@@ -16,14 +16,6 @@ processes = [
     EasyWaveCpu()
 ]
 
-# For the process list on the home page
-process_descriptor = {}
-for process in processes:
-    abstract = process.abstract
-    identifier = process.identifier
-    process_descriptor[identifier] = abstract
-
-# This is, how you start PyWPS instance
 service = Service(processes, ['pywps.cfg'])
 
 

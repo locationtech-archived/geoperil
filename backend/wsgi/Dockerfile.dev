@@ -17,4 +17,4 @@ WORKDIR /srv/geoperil/wsgi
 VOLUME [ "/srv/geoperil/wsgi", "/geoperil" ]
 EXPOSE 80
 
-CMD [ "/srv/geoperil/wsgi/entrypoint-dev.sh" ]
+CMD [ "/srv/geoperil/wsgi/entrypoint.sh" ]
