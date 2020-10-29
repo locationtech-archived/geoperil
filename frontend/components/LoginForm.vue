@@ -3,7 +3,7 @@
     justify="center"
   >
     <v-card
-      id="login-form-card"
+      class="mt-10"
       min-width="400"
     >
       <v-card-title class="headline">
@@ -83,9 +83,3 @@ export default class LoginForm extends Vue {
   }
 }
 </script>
-
-<style>
-#login-form-card {
-  margin-top: 30px;
-}
-</style>

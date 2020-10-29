@@ -6,9 +6,9 @@
   >
     <v-toolbar-title>GeoPeril</v-toolbar-title>
     <v-spacer />
-    <span v-if="$store.state.user" id="username-bar">{{ $store.state.user.username }}</span>
-    <SettingsButton v-if="$store.state.user" />
-    <LogoutButton v-if="$store.state.user" />
+    <span v-if="user" id="username-bar">{{ user.username }}</span>
+    <SettingsButton v-if="user" />
+    <LogoutButton v-if="user" />
   </v-app-bar>
 </template>
 
@@ -24,7 +24,9 @@ import SettingsButton from './SettingsButton.vue'
   },
 })
 export default class AppBar extends Vue {
-
+  get user () {
+    return this.$store.getters.user
+  }
 }
 </script>
 
