@@ -54,8 +54,6 @@ export const state = (): RootState => ({
   stationHoveredMap: null,
   selectedStationMap: null,
   selectedStationDetail: null,
-  pickedPeriods: {},
-  pickedAmplitudes: {},
   ...pluginsState
 })
 
@@ -126,8 +124,6 @@ export const getters: GetterTree<RootState, RootState> = {
 
     return 'admin' in user.permissions && user.permissions.admin === true
   },
-  pickedPeriodsByStation: (state: RootState) => state.pickedPeriods,
-  pickedAmplitudesByStation: (state: RootState) => state.pickedAmplitudes,
   ...pluginsGetters
 }
 
@@ -283,30 +279,6 @@ export const mutations: MutationTree<RootState> = {
   },
   SET_SELECTED_STATION_DETAIL: (state: RootState, selected: Station | null) => (
     state.selectedStationDetail = selected
-  ),
-  SET_PICKED_PERIOD_FOR_STATION: (
-    state: RootState,
-    {
-      stationId,
-      period
-    }
-  ) => {
-    state.pickedPeriods[stationId] = period
-  },
-  CLEAR_PICKED_PERIODS: (state: RootState) => (
-    state.pickedPeriods = {}
-  ),
-  SET_PICKED_AMPLITUDE_FOR_STATION: (
-    state: RootState,
-    {
-      stationId,
-      amplitude
-    }
-  ) => {
-    state.pickedAmplitudes[stationId] = amplitude
-  },
-  CLEAR_PICKED_AMPLITUDES: (state: RootState) => (
-    state.pickedAmplitudes = {}
   ),
   ...pluginsMutations
 }

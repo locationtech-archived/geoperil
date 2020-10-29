@@ -21,3 +21,4 @@ mongo --eval "db.sealeveldata.createIndex({'station': 1})" "$MONGO_HOST/$MONGO_D
 mongo --eval "db.simsealeveldata.createIndex({'timestamp': 1})" "$MONGO_HOST/$MONGO_DB"
 mongo --eval "db.eqs.createIndex({'prop.date': 1})" "$MONGO_HOST/$MONGO_DB"
 mongo --eval "db.eqs.createIndex({'timestamp': 1})" "$MONGO_HOST/$MONGO_DB"
+mongo --eval "db.pickings.createIndex({'userid': 1, 'evtid': 1, 'station': 1})" "$MONGO_HOST/$MONGO_DB"

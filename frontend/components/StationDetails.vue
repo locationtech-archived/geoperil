@@ -13,7 +13,7 @@
     <v-row class="mb-3" justify="center">
       <svg id="station-details" />
     </v-row>
-    <v-row justify="center">
+    <v-row v-if="selectedEvent" justify="center">
       <v-col sm="12" md="9" lg="8">
         <v-expansion-panels v-model="panel">
           <v-expansion-panel>
@@ -65,11 +65,51 @@
                 </v-col>
               </v-row>
               <v-row>
-                <v-col class="pa-0">
+                <v-col class="pa-0 pr-2">
                   <DenseTextField
                     :value="pickedYFormatted"
                     label="Picked amplitude"
                   />
+                </v-col>
+                <v-col class="pa-0 pl-2">
+                  <DenseTextField
+                    :value="pickedArrivalFormatted"
+                    label="Picked time of arrival"
+                  />
+                </v-col>
+              </v-row>
+              <v-row justify="end">
+                <v-col
+                  cols="9"
+                  class="pb-0 pl-0"
+                >
+                  <v-alert
+                    v-if="!!errorMsg"
+                    class="pa-2 mb-0"
+                    type="error"
+                  >
+                    {{ errorMsg }}
+                  </v-alert>
+                  <v-alert
+                    v-if="!!successMsg"
+                    class="pa-2 mb-0"
+                    type="success"
+                  >
+                    {{ successMsg }}
+                  </v-alert>
+                </v-col>
+                <v-col
+                  cols="3"
+                  align="end"
+                  class="pb-0 pr-0"
+                >
+                  <v-btn
+                    type="submit"
+                    color="success"
+                    @click="save"
+                  >
+                    Save
+                  </v-btn>
                 </v-col>
               </v-row>
             </v-expansion-panel-content>
@@ -90,6 +130,8 @@ import {
   API_GETSTATIONDATA_URL,
   API_GETSTATIONSIMDATA_URL,
   FORM_ENCODE_CONFIG,
+  API_SAVEPICKING_URL,
+  API_LOADPICKING_URL,
 } from '../store/constants'
 import { toUtcTimeStr } from '../plugins/geoperil-utils'
 import CurrentTimeDisplay from './CurrentTimeDisplay.vue'
@@ -119,8 +161,10 @@ export default class StationDetails extends Vue {
   private marginHoursAhead: number = 5
   private isLoading: boolean = true
   private panel: any = null
+  private pickedLoaded: boolean = false
   private pickedX1: Date | null = null
   private pickedX2: Date | null = null
+  private pickedArrival: Date | null = null
   private pickedY: number | null = null
   private pickedTimeDifference: Date | null = null
   private period: number = 1
@@ -145,8 +189,11 @@ export default class StationDetails extends Vue {
   private gaxisY: any = null
   private sliderX1: any = null
   private sliderX2: any = null
+  private sliderArrival: any = null
   private sliderY: any = null
   private updater: any = null
+  private errorMsg: string | null = null
+  private successMsg: string | null = null
 
   /** Number of milliseconds to wait until next data update request */
   private updateInterval: number = 30 * 1000
@@ -157,6 +204,10 @@ export default class StationDetails extends Vue {
 
   get selectedStationDetail (): Station {
     return this.$store.getters.selectedStationDetail
+  }
+
+  get selectedEvent (): Event {
+    return this.$store.getters.selectedEvent
   }
 
   created () {
@@ -193,7 +244,11 @@ export default class StationDetails extends Vue {
   }
 
   @Watch('showSliders')
-  public onShowSlidersChange () {
+  public async onShowSlidersChange () {
+    if (!this.pickedLoaded) {
+      await this.loadPickedValues()
+      this.pickedLoaded = true
+    }
     this.updateSliderVisible()
     this.updatePickedValues()
   }
@@ -217,6 +272,14 @@ export default class StationDetails extends Vue {
   get pickedX2Formatted (): string {
     if (this.pickedX2) {
       return toUtcTimeStr(this.pickedX2, false, false) + ' UTC'
+    }
+
+    return ''
+  }
+
+  get pickedArrivalFormatted (): string {
+    if (this.pickedArrival) {
+      return toUtcTimeStr(this.pickedArrival, false, false) + ' UTC'
     }
 
     return ''
@@ -392,12 +455,6 @@ export default class StationDetails extends Vue {
   }
 
   private updateTimeDifference () {
-    const oldValue = (
-      this.periodTimeDifference == null
-        ? null
-        : this.periodTimeDifference.toFixed(2)
-    )
-
     if (this.pickedX1 && this.pickedX2) {
       // https://stackoverflow.com/a/14980125/2249798
       this.pickedTimeDifference = new Date(+(this.pickedX2) - +(this.pickedX1))
@@ -407,34 +464,26 @@ export default class StationDetails extends Vue {
 
     const minutes = this.convertToMinutes(this.pickedTimeDifference.valueOf())
     this.periodTimeDifference = minutes * this.period
-    const newValue = this.periodTimeDifference.toFixed(2)
-
-    if (oldValue !== newValue) {
-      this.$store.commit(
-        'SET_PICKED_PERIOD_FOR_STATION',
-        {
-          station: this.selectedStationDetail.id,
-          period: newValue,
-        }
-      )
-    }
   }
 
   private updatePickedValues () {
-    const oldPickedY = (this.pickedY == null ? null : this.pickedY.toFixed(2))
-
     this.pickedX1 = null
     this.pickedX2 = null
+    this.pickedArrival = null
     this.pickedY = null
+    this.errorMsg = null
+    this.successMsg = null
 
     if (
-      !this.showSliders || !this.sliderX1 || !this.sliderX2 || !this.sliderY
+      !this.showSliders || !this.sliderX1 || !this.sliderX2 ||
+      !this.sliderY || !this.sliderArrival
     ) {
       return
     }
 
     const transX1 = this.sliderX1.attr('transform')
     const transX2 = this.sliderX2.attr('transform')
+    const transArrival = this.sliderArrival.attr('transform')
     const transY = this.sliderY.attr('transform')
 
     if (transX1) {
@@ -453,22 +502,19 @@ export default class StationDetails extends Vue {
       }
     }
 
+    if (transArrival) {
+      const x = this.getTransformValues(transArrival)[0]
+
+      if (x != null) {
+        this.pickedArrival = this.scaleX.invert(x)
+      }
+    }
+
     if (transY) {
       const y = this.getTransformValues(transY)[1]
 
       if (y != null) {
         this.pickedY = this.scaleY.invert(y)
-        const newValue = this.pickedY!.toFixed(2)
-
-        if (oldPickedY !== newValue) {
-          this.$store.commit(
-            'SET_PICKED_AMPLITUDE_FOR_STATION',
-            {
-              station: this.selectedStationDetail.id,
-              amplitude: newValue,
-            }
-          )
-        }
       }
     }
 
@@ -622,6 +668,12 @@ export default class StationDetails extends Vue {
     this.updatePickedValues()
   }
 
+  public dragArrival (event: any) {
+    const x = Math.min(Math.max(event.x, 0), this.width)
+    d3.select('.sliderarrival').attr('transform', this.translate(x, 0))
+    this.updatePickedValues()
+  }
+
   public dragY (event: any) {
     const y = Math.min(Math.max(event.y, 0), this.height)
     d3.select('.slidery').attr('transform', this.translate(-40, y))
@@ -658,6 +710,20 @@ export default class StationDetails extends Vue {
       .attr('y2', this.height)
 
     this.sliderX2.append('path')
+      .attr('d', triangle)
+      .attr('transform', this.translate(0, this.height))
+
+    this.sliderArrival = this.svg.append('g')
+      .attr('class', 'slider sliderarrival')
+      .attr('display', 'none')
+      .attr('transform', this.translate(this.width / 2, 0))
+      .call(d3.drag().on('drag', this.dragArrival))
+
+    this.sliderArrival.append('line')
+      .attr('x2', 0)
+      .attr('y2', this.height)
+
+    this.sliderArrival.append('path')
       .attr('d', triangle)
       .attr('transform', this.translate(0, this.height))
 
@@ -757,6 +823,65 @@ export default class StationDetails extends Vue {
       this.updateLines()
     }
   }
+
+  public async loadPickedValues () {
+    const { data } = await axios.post(
+      API_LOADPICKING_URL,
+      querystring.stringify({
+        evtid: this.selectedEvent.compId,
+        station: this.selectedStationDetail.name,
+      }),
+      FORM_ENCODE_CONFIG
+    )
+
+    if ('status' in data && data.status === 'success' && 'data' in data) {
+      const saved = data.data
+      const x1 = this.scaleX(new Date(saved.time1))
+      d3.select('.sliderx1').attr('transform', this.translate(x1, 0))
+
+      const x2 = this.scaleX(new Date(saved.time2))
+      d3.select('.sliderx2').attr('transform', this.translate(x2, 0))
+
+      const arrival = this.scaleX(new Date(saved.arrival))
+      d3.select('.sliderarrival').attr('transform', this.translate(arrival, 0))
+
+      const y = this.scaleY(saved.amplitude)
+      d3.select('.slidery').attr('transform', this.translate(-40, y))
+    }
+  }
+
+  public async save () {
+    this.successMsg = null
+    this.errorMsg = null
+
+    try {
+      const { data } = await axios.post(
+        API_SAVEPICKING_URL,
+        querystring.stringify({
+          evtid: this.selectedEvent.compId,
+          station: this.selectedStationDetail.name,
+          data: JSON.stringify({
+            time1: this.pickedX1,
+            time2: this.pickedX2,
+            period: this.periodTimeDifference,
+            amplitude: this.pickedY,
+            arrival: this.pickedArrival,
+          }),
+        }),
+        FORM_ENCODE_CONFIG
+      )
+
+      if (
+        'status' in data && data.status === 'success'
+      ) {
+        this.successMsg = 'Picked values saved successfully'
+      } else {
+        this.errorMsg = 'Saving the picked values was not successful'
+      }
+    } catch (e) {
+      this.errorMsg = e.message
+    }
+  }
 }
 </script>
 
@@ -776,6 +901,15 @@ svg#station-details {
   fill: black;
 }
 
+.sliderarrival path {
+  fill: #c60000 !important;
+}
+
+.sliderarrival path:hover {
+  stroke: #c60000 !important;
+  fill: #c60000 !important;
+}
+
 .slider path:hover {
   stroke: black;
   fill: black;
@@ -785,6 +919,10 @@ svg#station-details {
   fill: none;
   stroke: black;
   stroke-width: 1px;
+}
+
+.sliderarrival line {
+  stroke: #c60000 !important;
 }
 
 .multiply-col {

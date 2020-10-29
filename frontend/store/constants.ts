@@ -18,6 +18,8 @@ export const API_GETSTATIONDATA_URL = WEBGUISRV_BASE_URL + 'getdata'
 export const API_GETSTATIONSIMDATA_URL = WEBGUISRV_BASE_URL + 'getsimdata'
 export const API_REGISTERUSER_URL = WEBGUISRV_BASE_URL + 'register'
 export const API_INSTLIST_URL = WEBGUISRV_BASE_URL + 'instlist'
+export const API_SAVEPICKING_URL = WEBGUISRV_BASE_URL + 'save_picking'
+export const API_LOADPICKING_URL = WEBGUISRV_BASE_URL + 'load_picking'
 export const FORM_ENCODE_CONFIG = {
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
