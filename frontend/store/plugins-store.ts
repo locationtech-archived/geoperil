@@ -20,7 +20,8 @@ export const pluginsMutations: MutationTree<PluginsState> = {
 }
 
 export const pluginsActions: ActionTree<PluginsState, PluginsState> = {
-  exampleAction({ commit }: any) {
-    // do something
+  async initPlugins({ commit }: any) {
+    // initialize your plugins store here
+    commit('SET_PLUGINVAR', 'init')
   },
 }
