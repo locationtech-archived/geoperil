@@ -10,13 +10,9 @@
       :close-action="closeDialog"
       title="Sealevel Data"
     />
-    <v-row
-      id="station-dialog-row"
-      class="fill-height ma-0 pa-0"
-      justify="center"
-    >
+    <DialogRow>
       <StationDetails />
-    </v-row>
+    </DialogRow>
   </v-dialog>
 </template>
 
@@ -24,11 +20,13 @@
 import { Vue, Component } from 'nuxt-property-decorator'
 import DialogToolbar from './DialogToolbar.vue'
 import StationDetails from './StationDetails.vue'
+import DialogRow from './DialogRow.vue'
 
 @Component({
   components: {
     DialogToolbar,
     StationDetails,
+    DialogRow,
   },
 })
 export default class StationDialog extends Vue {
@@ -39,10 +37,3 @@ export default class StationDialog extends Vue {
   }
 }
 </script>
-
-<style>
-#station-dialog-row {
-  height: calc(100vh - 50px);
-  background-color: white;
-}
-</style>
