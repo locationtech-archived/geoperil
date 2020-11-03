@@ -12,7 +12,8 @@
 </template>
 
 <script lang="ts">
-import { Vue, Component } from 'nuxt-property-decorator'
+import { Vue, Component, Prop } from 'nuxt-property-decorator'
+import { Event } from '../types/index'
 import ActionButton from './ActionButton.vue'
 
 @Component({
@@ -21,6 +22,7 @@ import ActionButton from './ActionButton.vue'
   },
 })
 export default class PluginsButtons extends Vue {
+  @Prop({ required: true }) event!: Event
 }
 </script>
 

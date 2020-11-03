@@ -90,7 +90,7 @@
               help-text="Modify and reprocess"
               @click="handleCompose"
             />
-            <PluginsButtons />
+            <PluginsButtons :event="data" />
           </v-row>
         </v-card-actions>
       </v-card>
