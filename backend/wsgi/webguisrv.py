@@ -1352,7 +1352,7 @@ class WebGuiSrv(BaseSrv):
 
     def start_worker(
         self, worker, user, name, lat, lon, depth, dip, strike, rake, dur, mag,
-        slip, length, width, date: datetime, gridres, algo, pois,
+        slip, length, width, date: datetime, gridres, algo, pois, root=None,
         existingId=None
     ):
         url = worker.get("wpsurl")
@@ -1360,9 +1360,6 @@ class WebGuiSrv(BaseSrv):
 
         if url is None or process is None:
             return jsfail(error="Missing configuration for worker")
-
-        # TODO: start WPS request with owslib and monitor the execution in a
-        # separate thread
 
         try:
             server = wps.WebProcessingService(url, version="1.0.0")
@@ -1445,9 +1442,9 @@ class WebGuiSrv(BaseSrv):
                     "rake": rake,
                     "comp": dur,
                     "gridres": gridres,
-                    "algo": algo
+                    "algo": algo,
+                    "root": root
                 }
-                # TODO: root ?
                 # TODO: parent ?
             })
 
@@ -1496,6 +1493,7 @@ class WebGuiSrv(BaseSrv):
         algo = params.get("algo")
         gridres = params.get("gridres")
         pois = params.get("pois")
+        root = params.get("root")
 
         user = self.getUser()
 
@@ -1570,7 +1568,7 @@ class WebGuiSrv(BaseSrv):
 
         return self.start_worker(
             selected, user, name, lat, lon, depth, dip, strike, rake, dur, mag,
-            slip, length, width, dateconv, gridres, algo, pois
+            slip, length, width, dateconv, gridres, algo, pois, root
         )
 
     # this method is called by the tomcat-server if the computation
@@ -2395,7 +2393,7 @@ class WebGuiSrv(BaseSrv):
 
             return self.start_worker(
                 selected, user, name, lat, lon, depth, dip, strike, rake, comp,
-                mag, slip, length, width, date_time, gridres, algo, None,
+                mag, slip, length, width, date_time, gridres, algo, None, None,
                 compId
             )
 

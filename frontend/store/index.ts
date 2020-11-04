@@ -301,6 +301,7 @@ function apiToEvent(entry: any): Event {
   return {
     compId: entry._id,
     identifier: entry.id,
+    root: props.root,
     region: props.region,
     datetime: new Date(Date.UTC(year, month, day, hour, min, sec)),
     date: date,
@@ -591,6 +592,7 @@ export const actions: ActionTree<RootState, RootState> = {
     if (!!event.mag) {
       requestBody = {
         name: event.region,
+        root: event.root,
         lat: event.lat,
         lon: event.lon,
         depth: event.depth,
@@ -608,6 +610,7 @@ export const actions: ActionTree<RootState, RootState> = {
     } else {
       requestBody = {
         name: event.region,
+        root: event.root,
         lat: event.lat,
         lon: event.lon,
         depth: event.depth,

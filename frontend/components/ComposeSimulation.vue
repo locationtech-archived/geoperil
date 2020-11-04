@@ -13,6 +13,12 @@
     />
 
     <v-text-field
+      v-model="rootEvent"
+      label="Root Event"
+      disabled
+    />
+
+    <v-text-field
       v-model="date"
       label="Date"
       disabled
@@ -157,6 +163,7 @@ import { Event, ComputeRequest } from '../types'
 @Component({})
 export default class ComposeSimulation extends Vue {
   private name: string = ''
+  private rootEvent: string = ''
   private date: string = ''
   private datetime: Date | null = new Date()
   private lat: number | null = null
@@ -260,6 +267,7 @@ export default class ComposeSimulation extends Vue {
         {
           event: {
             region: this.name,
+            root: this.rootEvent,
             datetime: this.datetime,
             lat: this.lat,
             lon: this.lon,
@@ -291,6 +299,12 @@ export default class ComposeSimulation extends Vue {
 
     if (!ev) {
       return
+    }
+
+    if (ev.root) {
+      this.rootEvent = ev.root
+    } else {
+      this.rootEvent = ev.compId
     }
 
     this.name = ev.region

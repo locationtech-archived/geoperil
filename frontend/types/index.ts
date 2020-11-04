@@ -34,6 +34,7 @@ export interface Event {
   date: string,
   time: string,
   compId: string,
+  root: string,
   identifier: string,
   lat: number,
   lon: number,
