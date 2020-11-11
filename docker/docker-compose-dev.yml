@@ -2,7 +2,6 @@ version: '3.7'
 
 services:
   nginx:
-    # and tomcat endpoint to localhost:8080/srv
     image: geoperil-nginx
     build:
       context: ../backend/nginx
@@ -11,9 +10,8 @@ services:
     depends_on:
       - geoperil-frontend
       - geoperil-wsgi
-    links:
-      - geoperil-frontend
-      - geoperil-wsgi
+    networks:
+      - apis
     ports:
       - 8080:8080
 
@@ -24,6 +22,8 @@ services:
       - 27017:27017 # TODO: remove in production
     volumes:
       - mongo-data-volume:/data/db
+    networks:
+      - mongo
 
   mongo-initial-data:
     image: geoperil-mongo-initial-data
@@ -33,7 +33,7 @@ services:
     container_name: geoperil-mongo-initial-data
     depends_on:
       - mongo
-    links:
+    networks:
       - mongo
     environment:
       - MONGO_HOST=mongo
@@ -48,6 +48,8 @@ services:
     container_name: geoperil-frontend
     volumes:
       - ../frontend:/opt/geoperil-frontend
+    networks:
+      - apis
     environment:
       HOST: 0.0.0.0
       WEBGUISRV_URL: http://localhost:8080/webguisrv/
@@ -66,9 +68,10 @@ services:
     depends_on:
       - mongo
       - geoperil-easywave-worker-cpu
-    links:
+    networks:
+      - apis
       - mongo
-      - geoperil-easywave-worker-cpu
+      - worker
 
   # geoperil-eventfeeder:
   #   build:
@@ -77,11 +80,11 @@ services:
   #   image: geoperil-eventfeeder
   #   container_name: geoperil-eventfeeder
   #   depends_on:
-  #     - geoperil-wsgi
-  #   links:
-  #     - geoperil-wsgi
+  #     - nginx
+  #   networks:
+  #     - apis
   #   environment:
-  #     - FEEDERSRV_URL=http://geoperil-wsgi/feedersrv/feedhazardevent
+  #     - FEEDERSRV_URL=http://nginx:8080/feedersrv/feedhazardevent
 
   geoperil-db-manager:
     build:
@@ -92,9 +95,9 @@ services:
     depends_on:
       - mongo
       - nginx
-    links:
+    networks:
       - mongo
-      - nginx
+      - apis
     environment:
       - MONGO_CONNECTION=mongodb://mongo:27017
       - DATA_INSERT_URL=http://nginx:8080/webguisrv/data_insert
@@ -107,8 +110,8 @@ services:
     container_name: geoperil-slm
     depends_on:
       - nginx
-    links:
-      - nginx
+    networks:
+      - apis
     environment:
       - FEEDERSRV_URL=http://nginx:8080/feedersrv
       - DEVELOPMENT=1
@@ -134,6 +137,8 @@ services:
     volumes:
       - ../backend/worker/easywaveCPU/wps:/srv/wps
       - grid-data-volume:/data
+    networks:
+      - worker
     depends_on:
       - global-grid-datasets
 
@@ -141,3 +146,8 @@ volumes:
   mongo-data-volume:
   grid-data-volume:
   geoperil-data-volume:
+
+networks:
+  worker:
+  apis:
+  mongo:
