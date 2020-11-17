@@ -69,22 +69,24 @@ COPY ./scripts/getShape.py /tmp/geoperil/localdir
 COPY ./scripts/getFlood.py /tmp/geoperil/localdir
 COPY ./scripts/getEWH.py /tmp/geoperil/localdir
 
-COPY ./conf/ssh/id_rsa /var/lib/tomcat8/.ssh
-COPY ./conf/ssh/id_rsa.pub /var/lib/tomcat8/.ssh
 COPY ./conf/ssh/generate-known-hosts.sh /var/lib/tomcat8
 
 WORKDIR /root/GeoHazardServices
 
-RUN chown -Rv tomcat8:tomcat8 /var/lib/tomcat8/.ssh && \
-    chmod 600 /var/lib/tomcat8/.ssh/id_rsa && \
-    chmod 644 /var/lib/tomcat8/.ssh/id_rsa.pub && \
-    sed -i -e 's@localhost@mongo@' src/main/resources/config.properties && \
+RUN sed -i -e 's@localhost@mongo@' src/main/resources/config.properties && \
     mvn clean package && \
     cp /root/GeoHazardServices/target/*.war /var/lib/tomcat8/webapps/geohazardservices.war
 
 # workaround with "|| true" for bug https://github.com/moby/moby/issues/6800
 # need sleep because of waiting for log files to be initially created
-CMD service php7.2-fpm start && \
+CMD test -f /var/lib/tomcat8/.ssh/id_rsa || \
+        ssh-keygen -t rsa -b 4096 -C "tomcat8@localhost" \
+        -f /var/lib/tomcat8/.ssh/id_rsa -N "" && \
+    chown -Rv tomcat8:tomcat8 /var/lib/tomcat8/.ssh && \
+    chmod 600 /var/lib/tomcat8/.ssh/id_rsa && \
+    chmod 644 /var/lib/tomcat8/.ssh/id_rsa.pub && \
+    echo "Public key: $(cat /var/lib/tomcat8/.ssh/id_rsa.pub)" && \
+    service php7.2-fpm start && \
     service apache2 start && \
     service tomcat8 start || true && \
     sleep 3 && \
