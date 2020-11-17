@@ -37,7 +37,7 @@ class Products:
         self._products.extend([
             {
                 "file": "maxWaveHeights.grd",
-                "shortdesc": "Wave jets - SSH (.grd file)",
+                "shortdesc": "Wave heights (grd)",
                 "desc": "Binary SurferGrid with maximum waveheights",
                 "show": ["evt", "evtset", "help"],
                 "type": "raw",
@@ -46,7 +46,7 @@ class Products:
             },
             {
                 "file": "travelTimes.grd",
-                "shortdesc": "Travel times - ETA (.grd file)",
+                "shortdesc": "Travel times (grd)",
                 "desc": "Binary SurferGrid with estimated arrival times",
                 "show": ["evt", "help"],
                 "type": "raw",
@@ -55,8 +55,9 @@ class Products:
             },
             {
                 "file": "cfzs.gmt",
-                "shortdesc": "Coastal Forecast Zones - CFZ (.gmt file)",
-                "desc": "Coastal Forecast Zones as Polygons in GMT format",
+                "shortdesc": "Coastal forecast zones (gmt)",
+                "desc": "Coastal forecast zones (CFZ) as polygons in GMT " +
+                        "format",
                 "show": ["evt", "help"],
                 "type": "raw",
                 "serve": "plain",
@@ -64,8 +65,8 @@ class Products:
             },
             {
                 "file": "tfps.csv",
-                "shortdesc": "Tsunami Forecast Points - TFP (.csv file)",
-                "desc": "Tsunami Forecast Points as csv file",
+                "shortdesc": "Tsunami forecast points (csv)",
+                "desc": "Tsunami forecast points (TFP) as csv file",
                 "show": ["evt", "help"],
                 "type": "raw",
                 "serve": "plain",
@@ -73,7 +74,7 @@ class Products:
             },
             {
                 "file": "eq.csv",
-                "shortdesc": "Earthquake parameters (.csv file)",
+                "shortdesc": "Earthquake parameters (csv)",
                 "desc": "Earthquake parameters as csv file",
                 "show": ["evt", "help"],
                 "type": "raw",
@@ -82,82 +83,8 @@ class Products:
             },
             {
                 "file": "wavejets_traveltimes_hq.png",
-                "shortdesc": "Wave jets and travel times (.png file 600dpi)",
-                "desc": "Image with WaveJets and TravelTimes (600dpi)",
-                "show": ["evt", "help"],
-                "type": "png",
-                "serve": "png",
-                "params": {},
-            },
-            {
-                "file": "wavejets_traveltimes_web.png",
-                "shortdesc": "Wave jets and travel times (.png file 300dpi)",
-                "desc": "Image with WaveJets and TravelTimes (300dpi)",
-                "show": ["evt", "help"],
-                "type": "png",
-                "serve": "png",
-                "params": {},
-            },
-            {
-                "file": "wavejets_traveltimes_hq.pdf",
-                "shortdesc": "Wave jets and travel times (.pdf file 600dpi)",
-                "desc": "PDF with WaveJets and TravelTimes (600dpi)",
-                "show": ["evt", "help"],
-                "type": "pdf",
-                "serve": "octet_stream",
-                "params": {},
-            },
-            {
-                "file": "wavejets_traveltimes_web.pdf",
-                "shortdesc": "Wave jets and travel times (.pdf file 300dpi)",
-                "desc": "PDF with WaveJets and TravelTimes (300dpi)",
-                "show": ["evt", "help"],
-                "type": "pdf",
-                "serve": "octet_stream",
-                "params": {},
-            },
-            {
-                "file": "cfzs_tfps_hq.png",
-                "shortdesc": "CFZs and TFPs (.png file 600dpi)",
-                "desc": "Image with Coastal Forecast Zones and Tsunami " +
-                        "Forecast Points (600dpi)",
-                "show": ["evt", "help"],
-                "type": "png",
-                "serve": "png",
-                "params": {},
-            },
-            {
-                "file": "cfzs_tfps_web.png",
-                "shortdesc": "CFZs and TFPs (.png file 300dpi)",
-                "desc": "Image with Coastal Forecast Zones and Tsunami " +
-                        "Forecast Points (300dpi)",
-                "show": ["evt", "help"],
-                "type": "png",
-                "serve": "png",
-                "params": {},
-            },
-            {
-                "file": "cfzs_tfps_hq.pdf",
-                "shortdesc": "CFZs and TFPs (.pdf file 600dpi)",
-                "desc": "PDF with WaveJets and TravelTimes (600dpi)",
-                "show": ["evt", "help"],
-                "type": "pdf",
-                "serve": "octet_stream",
-                "params": {},
-            },
-            {
-                "file": "cfzs_tfps_web.pdf",
-                "shortdesc": "CFZs and TFPs (.pdf file 300dpi)",
-                "desc": "PDF with WaveJets and TravelTimes (300dpi)",
-                "show": ["evt", "help"],
-                "type": "pdf",
-                "serve": "octet_stream",
-                "params": {},
-            },
-            {
-                "file": "cities_population_hq.png",
-                "shortdesc": "Cities and population (.png file 600dpi)",
-                "desc": "Image with major cities and world population " +
+                "shortdesc": "Wave heights & travel times HQ (png)",
+                "desc": "Image with wave heights and estimated travel times " +
                         "(600dpi)",
                 "show": ["evt", "help"],
                 "type": "png",
@@ -165,9 +92,9 @@ class Products:
                 "params": {},
             },
             {
-                "file": "cities_population_web.png",
-                "shortdesc": "Cities and population (.png file 300dpi)",
-                "desc": "Image with major cities and world population " +
+                "file": "wavejets_traveltimes_web.png",
+                "shortdesc": "Wave heights & travel times (png)",
+                "desc": "Image with wave heights and estimated travel times " +
                         "(300dpi)",
                 "show": ["evt", "help"],
                 "type": "png",
@@ -175,9 +102,87 @@ class Products:
                 "params": {},
             },
             {
+                "file": "wavejets_traveltimes_hq.pdf",
+                "shortdesc": "Wave heights & travel times HQ (pdf)",
+                "desc": "PDF with wave heights and estimated travel times " +
+                        "(600dpi)",
+                "show": ["evt", "help"],
+                "type": "pdf",
+                "serve": "octet_stream",
+                "params": {},
+            },
+            {
+                "file": "wavejets_traveltimes_web.pdf",
+                "shortdesc": "Wave heights & travel times (pdf)",
+                "desc": "PDF with wave heights and estimated travel times " +
+                        "(300dpi)",
+                "show": ["evt", "help"],
+                "type": "pdf",
+                "serve": "octet_stream",
+                "params": {},
+            },
+            {
+                "file": "cfzs_tfps_hq.png",
+                "shortdesc": "Forcast zones & points HQ (png)",
+                "desc": "Image with coastal forecast zones (CFZ) and tsunami " +
+                        "forecast points (TFP) (600dpi)",
+                "show": ["evt", "help"],
+                "type": "png",
+                "serve": "png",
+                "params": {},
+            },
+            {
+                "file": "cfzs_tfps_web.png",
+                "shortdesc": "Forcast zones & points (png)",
+                "desc": "Image with coastal forecast zones (CFZ) and tsunami " +
+                        "forecast points (TFP) (300dpi)",
+                "show": ["evt", "help"],
+                "type": "png",
+                "serve": "png",
+                "params": {},
+            },
+            {
+                "file": "cfzs_tfps_hq.pdf",
+                "shortdesc": "Forcast zones & points HQ (pdf)",
+                "desc": "PDF with coastal forecast zones (CFZ) and tsunami " +
+                        "forecast points (TFP) (600dpi)",
+                "show": ["evt", "help"],
+                "type": "pdf",
+                "serve": "octet_stream",
+                "params": {},
+            },
+            {
+                "file": "cfzs_tfps_web.pdf",
+                "shortdesc": "Forcast zones & points (pdf)",
+                "desc": "PDF with coastal forecast zones (CFZ) and " +
+                        "tsunami forecast points (TFP) (300dpi)",
+                "show": ["evt", "help"],
+                "type": "pdf",
+                "serve": "octet_stream",
+                "params": {},
+            },
+            {
+                "file": "cities_population_hq.png",
+                "shortdesc": "Cities & population HQ (png)",
+                "desc": "Image with major cities and world population (600dpi)",
+                "show": ["evt", "help"],
+                "type": "png",
+                "serve": "png",
+                "params": {},
+            },
+            {
+                "file": "cities_population_web.png",
+                "shortdesc": "Cities & population (png)",
+                "desc": "Image with major cities and world population (300dpi)",
+                "show": ["evt", "help"],
+                "type": "png",
+                "serve": "png",
+                "params": {},
+            },
+            {
                 "file": "cities_population_hq.pdf",
-                "shortdesc": "Cities and population (.pdf file 600dpi)",
-                "desc": "PDF with WaveJets and TravelTimes (600dpi)",
+                "shortdesc": "Cities & population HQ (pdf)",
+                "desc": "PDF with major cities and world population (600dpi)",
                 "show": ["evt", "help"],
                 "type": "pdf",
                 "serve": "octet_stream",
@@ -185,8 +190,8 @@ class Products:
             },
             {
                 "file": "cities_population_web.pdf",
-                "shortdesc": "Cities and population (.pdf file 300dpi)",
-                "desc": "PDF with WaveJets and TravelTimes (300dpi)",
+                "shortdesc": "Cities & population (pdf)",
+                "desc": "PDF with major cities and world population (300dpi)",
                 "show": ["evt", "help"],
                 "type": "pdf",
                 "serve": "octet_stream",
@@ -194,7 +199,7 @@ class Products:
             },
             {
                 "file": "custom.png",
-                "shortdesc": "Custom map (.png file)",
+                "shortdesc": "Custom map (.png)",
                 "desc": "Custom map generated according to given parameters",
                 "show": ["help"],
                 "type": "png",
@@ -203,7 +208,7 @@ class Products:
             },
             {
                 "file": "tl.csv",
-                "shortdesc": "Timeline at latitude and longitude (.csv file)",
+                "shortdesc": "Waveform timeline @ lat, lon (csv)",
                 "desc": "Waveform at the point specified by the mandatory " +
                         "parameter 'lon' and 'lat'.<br>\n" +
                         "Optional parameter 'minint' can be given to " +
