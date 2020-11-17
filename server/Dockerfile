@@ -24,7 +24,8 @@ RUN apt-get update && \
     libpangocairo-1.0-0 \
     libgdk-pixbuf2.0-0 \
     libffi-dev \
-    shared-mime-info
+    shared-mime-info && \
+    rm -rf /var/lib/{apt,dpkg,cache,log}/*
 
 COPY requirements.txt requirements.txt
 
@@ -75,7 +76,8 @@ WORKDIR /root/GeoHazardServices
 
 RUN sed -i -e 's@localhost@mongo@' src/main/resources/config.properties && \
     mvn clean package && \
-    cp /root/GeoHazardServices/target/*.war /var/lib/tomcat8/webapps/geohazardservices.war
+    cp /root/GeoHazardServices/target/*.war /var/lib/tomcat8/webapps/geohazardservices.war && \
+    mvn clean
 
 # workaround with "|| true" for bug https://github.com/moby/moby/issues/6800
 # need sleep because of waiting for log files to be initially created
