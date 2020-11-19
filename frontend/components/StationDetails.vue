@@ -847,6 +847,8 @@ export default class StationDetails extends Vue {
 
       const y = this.scaleY(saved.amplitude)
       d3.select('.slidery').attr('transform', this.translate(-40, y))
+
+      this.period = saved.multiplier
     }
   }
 
@@ -864,6 +866,7 @@ export default class StationDetails extends Vue {
             time1: this.pickedX1,
             time2: this.pickedX2,
             period: this.periodTimeDifference,
+            multiplier: this.period,
             amplitude: this.pickedY,
             arrival: this.pickedArrival,
           }),
