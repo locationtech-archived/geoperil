@@ -317,6 +317,9 @@ export default class ComposeSimulation extends Vue {
     this.dip = ev.dip
     this.strike = ev.strike
     this.rake = ev.rake
+    this.slip = ev.slip
+    this.len = ev.len
+    this.width = ev.width
     this.duration = 180
     this.selAlgorithm = 'EasyWave'
     this.selResolution = 120
