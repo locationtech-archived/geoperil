@@ -44,6 +44,9 @@
             <div v-if="data.dip && data.strike && data.rake" class="item-metadata">
               Dip {{ data.dip }}° &middot; Strike {{ data.strike }}° &middot; Rake {{ data.rake }}°
             </div>
+            <div v-if="data.slip && data.len && data.width" class="item-metadata">
+              Slip {{ data.slip }}° &middot; Length {{ data.len }}° &middot; Width {{ data.width }}°
+            </div>
             <div v-if="data.progress > 0" class="item-metadata">
               {{ algorithmName }} &middot; Resolution {{ data.gridres }}° <br> Duration {{ data.duration }} min <template v-if="data.progress == 100">
                 &middot; Runtime {{ calctimeInSec }} sec
