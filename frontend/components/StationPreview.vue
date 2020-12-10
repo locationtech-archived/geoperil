@@ -142,6 +142,8 @@ export default class StationPreview extends Vue {
 
   @Watch('stationTimestamp')
   public onTimestampChange () {
+    this.data = []
+    this.simdata = []
     this.startUpdater()
     this.updateData()
   }
