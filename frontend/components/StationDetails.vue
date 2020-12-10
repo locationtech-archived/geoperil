@@ -172,6 +172,7 @@ export default class StationDetails extends Vue {
   private data: any[] = []
   private simdata: any[] = []
   private svg: any = null
+  private svgLoaded: boolean = false
   private lineDefinition: any = null
   private lineData: any = null
   private lineSim: any = null
@@ -775,11 +776,7 @@ export default class StationDetails extends Vue {
 
   @Watch('data')
   public onDataChange () {
-    const alreadyDrawn = (
-      d3.select(this.containerId).selectAll('.dataview').size() !== 0
-    )
-
-    if (!alreadyDrawn) {
+    if (!this.svgLoaded) {
       // diagram will be drawn the first time
       const selection = d3.select(this.containerId)
       selection.select('svg').selectAll('*').remove()
@@ -810,6 +807,8 @@ export default class StationDetails extends Vue {
         .call(zoom as any)
         .call(zoom.transform as any, initialTransform)
         .on('dblclick.zoom', null)
+
+      this.svgLoaded = true
     } else {
       // there was a data update
       if (this.data && this.data.length > 0 && this.lineData) {
