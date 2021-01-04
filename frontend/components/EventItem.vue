@@ -11,7 +11,7 @@
       cols="2"
     >
       <v-icon>mdi-map-marker</v-icon>
-      <p class="item-mag">
+      <p :class="magClass">
         {{ data.mag }}
       </p>
     </v-col>
@@ -173,6 +173,18 @@ export default class EventItem extends Vue {
     return sel.identifier === this.data.identifier
   }
 
+  get magClass (): string {
+    const data: Event = this.data
+    const defaultClass = 'item-mag'
+    const redClass = 'mag-red'
+
+    if (data.mag && data.mag > 5.5) {
+      return defaultClass + ' ' + redClass
+    }
+
+    return defaultClass
+  }
+
   public hoverEnd () {
     if (!this.hover) {
       return
@@ -233,6 +245,10 @@ export default class EventItem extends Vue {
 
 p.item-mag {
   font-weight: bold;
+}
+
+.mag-red {
+  color: #c60000;
 }
 
 .item-metadata {
