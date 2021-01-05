@@ -1,7 +1,7 @@
 FROM python:3.7-buster
 
 ARG COMMIT_SHA=439766dce11d795eead531151319bf7e332d8582
-ARG DOWNLOAD_URL=https://gitext.gfz-potsdam.de/api/v4/projects/263/repository/archive.tar.gz?sha=$COMMIT_SHA
+ARG DOWNLOAD_URL=https://git.gfz-potsdam.de/api/v4/projects/263/repository/archive.tar.gz?sha=$COMMIT_SHA
 
 WORKDIR /root
 
