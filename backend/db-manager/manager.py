@@ -27,31 +27,6 @@
 #   Matthias Rüster (GFZ)
 #   Hannes Fuchs (GFZ)
 
-'''
-   GeoPeril - A platform for the computation and web-mapping of hazard specific
-   geospatial data, as well as for serving functionality to handle, share, and
-   communicate threat specific information in a collaborative environment.
-
-   Copyright (C) 2013 GFZ German Research Centre for Geosciences
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-     http://apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the Licence is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the Licence for the specific language governing permissions and
-   limitations under the Licence.
-
-   Contributors:
-   Johannes Spazier (GFZ) - initial implementation
-   Sven Reissland (GFZ) - initial implementation
-   Martin Hammitzsch (GFZ) - initial implementation
-'''
-
 import os
 import re
 import traceback
@@ -88,16 +63,13 @@ def is_point_inside_polygon(testpt, areas, names):
 # this is now still left in the manager to unburden the Tomcat server
 # however we could move this into the server as well
 def get_type(dbm, inst, entry, areas, names):
-
-    ret = dbm['eqs'].find({"id": entry["id"]})
+    ret = dbm["eqs"].find({"id": entry["id"]})
 
     if ret.count() == 0:
 
         # no entry with same id found --> new entry
         iho_region = is_point_inside_polygon(
-            LatLon(entry["lat"], entry["lon"]),
-            areas,
-            names
+            LatLon(entry["lat"], entry["lon"]), areas, names
         )
         if iho_region is not None:
             entry["sea_area"] = iho_region
@@ -125,33 +97,28 @@ def get_type(dbm, inst, entry, areas, names):
     if "rake" in entry:
         query["prop.rake"] = entry["rake"]
 
-    query.update({
-        "id": entry['id'],
-        "user": inst["_id"]
-    })
+    query.update({"id": entry["id"], "user": inst["_id"]})
 
     # check if IHO region was set already in one of the related entries
     # returned in ret
     for rel in ret:
-
-        if rel["prop"]["latitude"] == entry["lat"] and \
-           rel["prop"]["longitude"] == entry["lon"]:
-
+        if (
+            rel["prop"]["latitude"] == entry["lat"]
+            and rel["prop"]["longitude"] == entry["lon"]
+        ):
             if "sea_area" in rel["prop"] and rel["prop"]["sea_area"]:
                 entry["sea_area"] = rel["prop"]["sea_area"]
                 break
 
     # check for update
-    ret = dbm['eqs'].find(query)
+    ret = dbm["eqs"].find(query)
 
     if ret.count() == 0:
 
         # no matching entry for all properties found --> update
         if "sea_area" not in entry:
             iho_region = is_point_inside_polygon(
-                LatLon(entry["lat"], entry["lon"]),
-                areas,
-                names
+                LatLon(entry["lat"], entry["lon"]), areas, names
             )
             if iho_region is not None:
                 entry["sea_area"] = iho_region
@@ -179,7 +146,7 @@ Best Double Couple:.*?
 
     response = urllib.request.urlopen(urlprefix + "mt.txt")
     data = response.read()
-    txt = data.decode('utf-8')
+    txt = data.decode("utf-8")
 
     prop = re.findall(pattern, txt)
 
@@ -204,23 +171,21 @@ def init_world_seas_lookup(regions_file):
     json_regions = gpd.read_file(regions_file)
 
     for index, row in json_regions.iterrows():
-        names.append(row['PRIMARY_NA'])
-        areas.append(row['geometry'])
+        names.append(row["PRIMARY_NA"])
+        areas.append(row["geometry"])
 
     return areas, names
 
 
 def main():
-    mongo_connection = os.environ['MONGO_CONNECTION']
-    data_insert_url = os.environ['DATA_INSERT_URL']
-    geofon_alerts_url = os.environ['GEOFON_ALERTS_URL']
-    geofon_output = os.environ['GEOFON_OUTPUT']
+    mongo_connection = os.environ["MONGO_CONNECTION"]
+    data_insert_url = os.environ["DATA_INSERT_URL"]
+    geofon_alerts_url = os.environ["GEOFON_ALERTS_URL"]
+    geofon_output = os.environ["GEOFON_OUTPUT"]
 
     start_time = time.time()
 
-    areas, names = init_world_seas_lookup(
-        "World_water_body_limits_polygons.geojson"
-    )
+    areas, names = init_world_seas_lookup("World_water_body_limits_polygons.geojson")
 
     cnt_total = 0
     cnt_insert = 0
@@ -230,12 +195,10 @@ def main():
     cnt_known = 0
 
     client = MongoClient(
-        mongo_connection,
-        socketTimeoutMS=10000,
-        connectTimeoutMS=10000
+        mongo_connection, socketTimeoutMS=10000, connectTimeoutMS=10000
     )
-    dbm = client['geoperil']
-    inst = dbm['institutions'].find({"name": "gfz"})[0]
+    dbm = client["geoperil"]
+    inst = dbm["institutions"].find({"name": "gfz"})[0]
     elist = []
     events = gpd.read_file(geofon_output)
 
@@ -245,39 +208,33 @@ def main():
         entry = {
             "inst": inst["name"],
             "secret": inst["secret"],
-            "id": event['id'],
+            "id": event["id"],
         }
 
         # gpd.read_file() returns crap, try first with ms, fallback without
         try:
-            date = datetime.datetime.strptime(
-                event['time'],
-                "%Y-%m-%dT%H:%M:%S.%f"
-            )
+            date = datetime.datetime.strptime(event["time"], "%Y-%m-%dT%H:%M:%S.%f")
         except ValueError:
             try:
-                date = datetime.datetime.strptime(
-                    event['time'],
-                    "%Y-%m-%dT%H:%M:%S"
-                )
+                date = datetime.datetime.strptime(event["time"], "%Y-%m-%dT%H:%M:%S")
             except ValueError as error:
-                print("Failed to convert date: ", event['time'], error, flush=True)
+                print("Failed to convert date: ", event["time"], error, flush=True)
 
         # ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
         # ignore the ms, b/c dataframes messed up
-        entry["date"] = date.strftime("%Y-%m-%dT%H:%M:%S") + '.000Z'
-        entry["name"] = event['place']
-        entry["lat"] = float(event['geometry'].y)
-        entry["lon"] = float(event['geometry'].x)
-        entry["mag"] = float(event['mag'])
-        entry["depth"] = float(event['geometry'].z)
+        entry["date"] = date.strftime("%Y-%m-%dT%H:%M:%S") + ".000Z"
+        entry["name"] = event["place"]
+        entry["lat"] = float(event["geometry"].y)
+        entry["lon"] = float(event["geometry"].x)
+        entry["mag"] = float(event["mag"])
+        entry["depth"] = float(event["geometry"].z)
 
         # get moment tensor if available
-        if event['hasMT'] == 'yes':
-            ret = read_mt(geofon_alerts_url, entry, date.year, event['id'])
+        if event["hasMT"] == "yes":
+            ret = read_mt(geofon_alerts_url, entry, date.year, event["id"])
 
             if ret != 0:
-                print('Error: ', entry["id"])
+                print("Error: ", entry["id"])
                 cnt_error += 1
                 continue
 
@@ -311,25 +268,22 @@ def main():
             cnt_sim += 1
             entry.update({"comp": 180, "gridres": 120})
 
-        data = urllib.parse.urlencode(entry).encode('ascii')
-        req = urllib.request.Request(
-            data_insert_url,
-            data
-        )
+        data = urllib.parse.urlencode(entry).encode("ascii")
+        req = urllib.request.Request(data_insert_url, data)
         try:
             urllib.request.urlopen(req).read()
         except Exception:
-            print('Calling the URL failed: ' + data_insert_url)
+            print("Calling the URL failed: " + data_insert_url)
             print(traceback.format_exc())
             raise
 
         time.sleep(0.05)
 
-    print('\nTotal: %u' % cnt_total)
-    print('Inserted: %u' % cnt_insert)
-    print('Updated: %u' % cnt_update)
-    print('Errors: %u' % cnt_error)
-    print('Simulated: %u' % cnt_sim)
+    print("\nTotal: %u" % cnt_total)
+    print("Inserted: %u" % cnt_insert)
+    print("Updated: %u" % cnt_update)
+    print("Errors: %u" % cnt_error)
+    print("Simulated: %u" % cnt_sim)
 
     end_time = time.time()
 
