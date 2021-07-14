@@ -185,7 +185,9 @@ def main():
 
     start_time = time.time()
 
-    areas, names = init_world_seas_lookup("World_water_body_limits_polygons.geojson")
+    areas, names = init_world_seas_lookup(
+        "World_water_body_limits_polygons.geojson"
+    )
 
     cnt_total = 0
     cnt_insert = 0
@@ -213,12 +215,21 @@ def main():
 
         # gpd.read_file() returns crap, try first with ms, fallback without
         try:
-            date = datetime.datetime.strptime(event["time"], "%Y-%m-%dT%H:%M:%S.%f")
+            date = datetime.datetime.strptime(
+                event["time"], "%Y-%m-%dT%H:%M:%S.%f"
+            )
         except ValueError:
             try:
-                date = datetime.datetime.strptime(event["time"], "%Y-%m-%dT%H:%M:%S")
+                date = datetime.datetime.strptime(
+                    event["time"], "%Y-%m-%dT%H:%M:%S"
+                )
             except ValueError as error:
-                print("Failed to convert date: ", event["time"], error, flush=True)
+                print(
+                    "Failed to convert date: ",
+                    event["time"],
+                    error,
+                    flush=True
+                )
 
         # ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
         # ignore the ms, b/c dataframes messed up
