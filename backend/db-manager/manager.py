@@ -33,7 +33,6 @@ import traceback
 import time
 import datetime
 import urllib
-import json
 import geopandas as gpd
 
 from shapely.geometry import Point
