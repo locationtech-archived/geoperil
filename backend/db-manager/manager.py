@@ -248,12 +248,24 @@ def main():
             "id": event['id'],
         }
 
-        date = datetime.datetime.strptime(
-            event['time'],
-            "%Y-%m-%dT%H:%M:%S"
-        )
+        # gpd.read_file() returns crap, try first with ms, fallback without
+        try:
+            date = datetime.datetime.strptime(
+                event['time'],
+                "%Y-%m-%dT%H:%M:%S.%f"
+            )
+        except ValueError:
+            try:
+                date = datetime.datetime.strptime(
+                    event['time'],
+                    "%Y-%m-%dT%H:%M:%S"
+                )
+            except ValueError as error:
+                print("Failed to convert date: ", event['time'], error, flush=True)
+
         # ISO time format YYYY-MM-DDTHH:MM:SS.mmmZ
-        entry["date"] = date.isoformat() + '.000Z'
+        # ignore the ms, b/c dataframes messed up
+        entry["date"] = date.strftime("%Y-%m-%dT%H:%M:%S") + '.000Z'
         entry["name"] = event['place']
         entry["lat"] = float(event['geometry'].y)
         entry["lon"] = float(event['geometry'].x)
