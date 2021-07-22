@@ -58,3 +58,25 @@ This work is licensed under the following license(s):
 Please see the individual files for more accurate information.
 
 > **Hint:** We provided the copyright and license information in accordance to the [REUSE Specification 3.0](https://reuse.software/spec/).
+
+## FAQ
+
+### apt error: not signed on build
+
+The following error may appear:
+
+```bash
+W: GPG error: http://security.debian.org/debian-security buster/updates InRelease: At least one invalid signature was encountered.
+E: The repository 'http://security.debian.org/debian-security buster/updates InRelease' is not signed.
+W: GPG error: http://deb.debian.org/debian buster InRelease: At least one invalid signature was encountered.
+E: The repository 'http://deb.debian.org/debian buster InRelease' is not signed.
+W: GPG error: http://deb.debian.org/debian buster-updates InRelease: At least one invalid signature was encountered.
+E: The repository 'http://deb.debian.org/debian buster-updates InRelease' is not signed.
+ERROR: Service '...' failed to build : ... 
+```
+
+This could happen if you have an older base image cached. To solve this remove
+the local images with: `docker image prune -a`
+
+**NOTE:** This deletes all images on your machine. Save any image you can not
+download from a registry!
