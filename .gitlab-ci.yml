@@ -7,7 +7,7 @@ sqa:
     name: "git.gfz-potsdam.de:5000/id2/software/services/fair/software-quality-assurance/software-quality-assurance:latest"
     entrypoint: [""]
   script:
-    - sqa --repository_dir "$CI_PROJECT_DIR" run
+    - sqa --repository_dir "$CI_PROJECT_DIR" run || true
   artifacts:
     paths:
       - QUALITY.md
