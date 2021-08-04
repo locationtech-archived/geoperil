@@ -5,7 +5,10 @@
 
 * [Meta Data](#meta-data)
 * [Completed Services](#completed-services)
-    * [Apply License](#apply-license)
+    * [List Authors](#list-authors)
+    * [List Used Languages](#list-used-languages)
+    * [List Used Licenses](#list-used-licenses)
+    * [Reuse Lint](#reuse-lint)
 
 ## Meta Data
 
@@ -13,16 +16,108 @@
 
 **Software Location:** [git](git.gfz-potsdam.de/id2/geoperil/GeoPeril)
 
-**Last Commit:** b4d7a7b8fe5791011963b035205195ea02606108
+**Last Commit:** b7dadfec6ff043559f1fb8c0eb340ffe76e6b1c2
 
-**Report Time:** 03/08/2021 13:07:45 UTC
+**Report Time:** 04/08/2021 07:09:04 UTC
 
 **Report Version:** 0.7.1
 
 ## Completed Services
 
-### Apply License
+### List Authors
 
-> **Description: Adds license headers to files, downloads license texts and adds a license entry to the README**
+> **Description: Lists all people that committed to this config.**
 
-**Successfully applied the licenses**
+* [Matthias Ruester](mailto:matthias.ruester@gfz-potsdam.de)
+
+### List Used Languages
+
+> **Description: Detects used programming languages with [linguist](https://github.com/github/linguist)**
+
+|Language|Percentage|
+|---|---|
+|Python|54.38|
+|Vue|29.14|
+|TypeScript|7.72|
+|Shell|3.44|
+|JavaScript|2.39|
+|Dockerfile|2.18|
+|HTML|0.27|
+|SCSS|0.26|
+|Jinja|0.23|
+
+### List Used Licenses
+
+> **Description: Generates a list of dependencies and their license.**
+
+#### found licenses
+
+|license|libraries|
+|---|---|
+|Apache 2.0|Python / requests / 2.22.0 <br> Python / requests / 2.24.0|
+|Apache License, Version 2.0|Python / pymongo / 3.2|
+|Apache Software License|Python / importlib-metadata / 2.0.0|
+|BSD|Python / cherrypy / 3.8.2 <br> Python / geopandas / 0.8.1 <br> Python / itsdangerous / 1.1.0 <br> Python / lxml / 4.6.1 <br> Python / numpy / 1.19.2 <br> Python / owslib / 0.20.0 <br> Python / pandas / 1.1.2 <br> Python / shapely / 1.7.1|
+|BSD-2-Clause|Node / ol / 5.3.3|
+|BSD-3-Clause|Python / click / 7.1.2 <br> Python / flask / 1.1.2 <br> Python / jinja2 / 2.11.2 <br> Python / markupsafe / 1.1.1 <br> Python / werkzeug / 1.0.1|
+|BSD-like|Python / idna / 2.10|
+|Dual License|Python / python-dateutil / 2.8.1|
+|LGPL|Python / chardet / 3.0.4|
+|LGPLv3|Python / flufl.enum / 4.1.1|
+|MIT|Python / attrs / 20.2.0 <br> Python / jsonschema / user config <br> Python / pyproj / 2.6.1.post1 <br> Python / pyrsistent / 0.17.3 <br> Python / pytz / 2020.1 <br> Python / pywps / 4.2.6 <br> Python / pyyaml / 5.3.1 <br> Python / six / 1.15.0 <br> Python / sqlalchemy / 1.3.20 <br> Python / urllib3 / 1.25.11 <br> Python / zipp / user config|
+|MIT License|Python / pathlib / 1.0.1|
+|MPL-2.0|Python / certifi / 2020.6.20|
+|Python-2.0|Python / atexit / base lib <br> Python / base64 / base lib <br> Python / binascii / base lib <br> Python / calendar / base lib <br> Python / configparser / base lib <br> Python / copy / base lib <br> Python / datetime / base lib <br> Python / email / base lib <br> Python / ftplib / base lib <br> Python / glob / base lib <br> Python / hashlib / base lib <br> Python / inspect / base lib <br> Python / io / base lib <br> Python / json / base lib <br> Python / logging / base lib <br> Python / math / base lib <br> Python / multiprocessing / base lib <br> Python / os / base lib <br> Python / queue / base lib <br> Python / random / base lib <br> Python / re / base lib <br> Python / smtplib / base lib <br> Python / struct / base lib <br> Python / subprocess / base lib <br> Python / sys / base lib <br> Python / textwrap / base lib <br> Python / threading / base lib <br> Python / time / base lib <br> Python / traceback / base lib <br> Python / urllib / base lib <br> Python / uuid / base lib <br> Python / xml / base lib|
+
+#### errors
+
+##### Node
+
+**@nuxt/typescript-runtime**
+* versions "['^0.4.10']" where never resolved
+
+**@nuxtjs/axios**
+* versions "['^5.11.0']" where never resolved
+
+**@types/d3**
+* versions "['^5.7.2']" where never resolved
+
+**@types/ol**
+* versions "['^5.3.1']" where never resolved
+
+**d3**
+* versions "['^6.1.1']" where never resolved
+
+**nuxt**
+* versions "['^2.13.0']" where never resolved
+
+**nuxt-property-decorator**
+* versions "['^2.7.2']" where never resolved
+
+**vuelayers**
+* versions "['^0.11.28']" where never resolved
+
+
+### Reuse Lint
+
+> **Description: Prints the result of the [reuse](https://reuse.software/spec/) linter.**
+
+#### MISSING COPYRIGHT AND LICENSING INFORMATION
+
+The following files have no copyright and licensing information:
+* /repo/backend/db-manager/World_water_body_limits_polygons.geojson.gz
+
+
+#### SUMMARY
+
+* Bad licenses:
+* Deprecated licenses:
+* Licenses without file extension:
+* Missing licenses:
+* Unused licenses:
+* Used licenses: Apache-2.0
+* Read errors: 0
+* Files with copyright information: 141 / 142
+* Files with license information: 141 / 142
+
+Unfortunately, your project is not compliant with version 3.0 of the REUSE Specification :-(
