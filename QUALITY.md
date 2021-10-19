@@ -14,11 +14,11 @@
 
 **Software Name:** GeoPeril
 
-**Software Location:** [git](git.gfz-potsdam.de/id2/geoperil/GeoPeril)
+**Software Location:** [git](https://github.com/locationtech/geoperil)
 
-**Last Commit:** b7dadfec6ff043559f1fb8c0eb340ffe76e6b1c2
+**Last Commit:** d4ea1efedff4430d373069319809e3356a720334
 
-**Report Time:** 04/08/2021 07:09:04 UTC
+**Report Time:** 19/10/2021 14:25:51 UTC
 
 **Report Version:** 0.7.1
 
@@ -28,7 +28,13 @@
 
 > **Description: Lists all people that committed to this config.**
 
+* [Hannes Fuchs](mailto:hannes.fuchs@gfz-potsdam.de)
+* [Johannes Spazier](mailto:johannes.spazier@gfz-potsdam.de)
+* [Martin Hammitzsch](mailto:martin.hammitzsch@gfz-potsdam.de)
 * [Matthias Ruester](mailto:matthias.ruester@gfz-potsdam.de)
+* [Sebastian Jüngling](mailto:sebastian.juengling@gfz-potsdam.de)
+* [Sven Reißland](mailto:sven.reissland@gfz-potsdam.de)
+* [seth0r](mailto:github@seth0r.net)
 
 ### List Used Languages
 
@@ -102,12 +108,6 @@
 
 > **Description: Prints the result of the [reuse](https://reuse.software/spec/) linter.**
 
-#### MISSING COPYRIGHT AND LICENSING INFORMATION
-
-The following files have no copyright and licensing information:
-* /repo/backend/db-manager/World_water_body_limits_polygons.geojson.gz
-
-
 #### SUMMARY
 
 * Bad licenses:
@@ -115,9 +115,9 @@ The following files have no copyright and licensing information:
 * Licenses without file extension:
 * Missing licenses:
 * Unused licenses:
-* Used licenses: Apache-2.0
+* Used licenses: Apache-2.0, CC0-1.0
 * Read errors: 0
-* Files with copyright information: 141 / 142
-* Files with license information: 141 / 142
+* Files with copyright information: 142 / 142
+* Files with license information: 142 / 142
 
-Unfortunately, your project is not compliant with version 3.0 of the REUSE Specification :-(
+Congratulations! Your project is compliant with version 3.0 of the REUSE Specification :-)
