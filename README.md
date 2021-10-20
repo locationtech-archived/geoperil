@@ -30,6 +30,16 @@ Contributors:
 
 # GeoPeril
 
+This project is a prototype implementation of an early warning system for
+tsunamis, including:
+
+* harvesting of earthquake events from catalogs or APIs
+* automatic execution of simulations for events with given thresholds
+* remote execution of simulations with EasyWave as the simulation processing backend
+* queuing of simulation processes with support for multiple remote processing servers
+* individual accounts with different permission levels
+* modifying earthquake parameters or creating fictional earthquakes to simulate a scenario
+
 ## Development environment
 
 To start up a development environment use the `docker-compose-dev.yml` file:
@@ -40,6 +50,8 @@ docker-compose -f docker-compose-dev.yml up --build
 ```
 
 You can then visit `http://localhost:8080` to see the frontend.
+Default login credentials for an administrative account are `admin`/`admin` and
+for a less privileged user `test`/`test`.
 
 Changes for the source code of the frontend component are then hot reloaded and
 will be rebuild on the fly.
