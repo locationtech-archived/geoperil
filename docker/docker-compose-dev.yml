@@ -144,7 +144,7 @@ services:
       - DEVELOPMENT=1
 
   global-grid-datasets:
-    image: git.gfz-potsdam.de:5000/geoperil/global-grid-datasets:20210106
+    image: git.gfz-potsdam.de:5000/id2/geoperil/global-grid-datasets:20210106
     container_name: geoperil-grids
     volumes:
       - grid-data-volume:/data
