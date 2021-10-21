@@ -37,7 +37,7 @@ Contributors:
       class="fill-height"
       cols="3"
     >
-      <LeftMenu />
+      <TabMenu />
     </v-col>
     <v-col
       id="map-col"
@@ -68,16 +68,16 @@ Contributors:
 
 <script lang="ts">
 import { Vue, Component, Watch } from 'nuxt-property-decorator'
-import { Station } from '../types'
-import Map from './Map.vue'
-import LeftMenu from './LeftMenu.vue'
-import LoadingOverlay from './LoadingOverlay.vue'
-import StationBar from './StationBar.vue'
+import { Station } from '~/types'
+import Map from '~/components/Map/Map.vue'
+import TabMenu from '~/components/TabMenu/TabMenu.vue'
+import LoadingOverlay from '~/components/Utils/LoadingOverlay.vue'
+import StationBar from '~/components/Stations/StationBar.vue'
 
 @Component({
   components: {
     LoadingOverlay,
-    LeftMenu,
+    TabMenu,
     Map,
     StationBar,
   },

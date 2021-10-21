@@ -100,7 +100,7 @@ Contributors:
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import { User } from '../types/index'
+import { User } from '~/types'
 
 @Component({})
 export default class UserSettings extends Vue {

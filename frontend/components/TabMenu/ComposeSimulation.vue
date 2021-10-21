@@ -187,7 +187,7 @@ Contributors:
 
 <script lang="ts">
 import { Vue, Component, Watch } from 'nuxt-property-decorator'
-import { Event, ComputeRequest } from '../types'
+import { Event, ComputeRequest } from '~/types'
 
 @Component({})
 export default class ComposeSimulation extends Vue {

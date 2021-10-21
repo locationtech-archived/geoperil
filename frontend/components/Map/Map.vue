@@ -219,7 +219,10 @@ import Feature from 'ol/Feature'
 import LineString from 'ol/geom/LineString'
 import MultiPolygon from 'ol/geom/MultiPolygon'
 import Point from 'ol/geom/Point'
-import { Event, Station } from '~/types'
+import {
+  Event,
+  Station,
+} from '~/types'
 
 @Component
 export default class Map extends Vue {

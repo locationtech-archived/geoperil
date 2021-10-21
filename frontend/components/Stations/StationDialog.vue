@@ -28,46 +28,41 @@ Contributors:
 -->
 
 <template>
-  <v-list
-    id="recent-list"
-    class="ma-0 pa-0"
+  <v-dialog
+    v-model="dialog"
+    :transition="false"
+    fullscreen
+    hide-overlay
+    persistent
   >
-    <v-list-item v-if="!recentEvents || recentEvents.length == 0">
-      <em>There are no recent events.</em>
-    </v-list-item>
-    <EventItem
-      v-for="(item, index) in recentEvents"
-      :key="index"
-      :data="item"
-      @change-to-compose-tab="handleChangeComposeTab"
+    <DialogToolbar
+      :close-action="closeDialog"
+      title="Sealevel Data"
     />
-  </v-list>
+    <DialogRow>
+      <StationDetails />
+    </DialogRow>
+  </v-dialog>
 </template>
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import { Event } from '../types'
-import EventItem from './EventItem.vue'
+import DialogToolbar from '~/components/Utils/DialogToolbar.vue'
+import StationDetails from '~/components/Stations/StationDetails.vue'
+import DialogRow from '~/components/Utils/DialogRow.vue'
 
 @Component({
   components: {
-    EventItem,
+    DialogToolbar,
+    StationDetails,
+    DialogRow,
   },
 })
-export default class RecentList extends Vue {
-  get recentEvents (): Event[] {
-    return this.$store.getters.recentEvents
-  }
+export default class StationDialog extends Vue {
+  private dialog = true
 
-  public handleChangeComposeTab (): void {
-    this.$emit('change-to-compose-tab')
+  public closeDialog () {
+    this.$store.commit('SET_SELECTED_STATION_DETAIL', null)
   }
 }
 </script>
-
-<style>
-#recent-list {
-  height: 100%;
-  overflow-y: auto;
-}
-</style>

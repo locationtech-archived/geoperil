@@ -90,13 +90,13 @@ Contributors:
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import DialogToolbar from './DialogToolbar.vue'
-import TabItem from './TabItem.vue'
-import UserSettings from './UserSettings.vue'
-import StationSettings from './StationSettings.vue'
-import UserManagement from './UserManagement.vue'
-import PluginsSettingsTabs from './PluginsSettingsTabs.vue'
-import PluginsSettingsTabsContent from './PluginsSettingsTabsContent.vue'
+import DialogToolbar from '~/components/Utils/DialogToolbar.vue'
+import TabItem from '~/components/Utils/TabItem.vue'
+import UserSettings from '~/components/Settings/UserSettings.vue'
+import StationSettings from '~/components/Settings/StationSettings.vue'
+import UserManagement from '~/components/Settings/UserManagement.vue'
+import PluginsSettingsTabs from '~/components/Settings/PluginsSettingsTabs.vue'
+import PluginsSettingsTabsContent from '~/components/Settings/PluginsSettingsTabsContent.vue'
 
 @Component({
   components: {

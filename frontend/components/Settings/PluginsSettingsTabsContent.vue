@@ -28,46 +28,28 @@ Contributors:
 -->
 
 <template>
-  <v-list
-    id="user-list"
-    class="ma-0 pa-0"
-  >
-    <v-list-item v-if="!userEvents || userEvents.length == 0">
-      <em>There are no items in your list.</em>
-    </v-list-item>
-    <EventItem
-      v-for="(item, index) in userEvents"
-      :key="index"
-      :data="item"
-      @change-to-compose-tab="handleChangeComposeTab"
-    />
-  </v-list>
+  <!--
+    Add your tab contents for plugins here
+    Note: this has to correspond with the tabs defined in PluginsSettingsTabs
+  -->
+  <div>
+    <!--
+    <TabItem>
+      <YourSettingsContentHere />
+    </TabItem>
+    -->
+  </div>
 </template>
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import { Event } from '../types'
-import EventItem from './EventItem.vue'
+import TabItem from '~/components/Utils/TabItem.vue'
 
 @Component({
   components: {
-    EventItem,
+    TabItem,
   },
 })
-export default class UserList extends Vue {
-  get userEvents (): Event[] {
-    return this.$store.getters.userEvents
-  }
-
-  public handleChangeComposeTab (): void {
-    this.$emit('change-to-compose-tab')
-  }
+export default class PluginsSettingsTabsContent extends Vue {
 }
 </script>
-
-<style>
-#user-list {
-  height: 100%;
-  overflow-y: auto;
-}
-</style>

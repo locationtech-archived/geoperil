@@ -49,12 +49,12 @@ Contributors:
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import LoginForm from '../components/LoginForm.vue'
-import AppBar from '../components/AppBar.vue'
-import Geoperil from '../components/Geoperil.vue'
-import SettingsDialog from '../components/SettingsDialog.vue'
-import StationDialog from '../components/StationDialog.vue'
-import PluginsDialogs from '../components/PluginsDialogs.vue'
+import LoginForm from '~/components/App/LoginForm.vue'
+import AppBar from '~/components/App/AppBar.vue'
+import Geoperil from '~/components/App/Geoperil.vue'
+import SettingsDialog from '~/components/Settings/SettingsDialog.vue'
+import StationDialog from '~/components/Stations/StationDialog.vue'
+import PluginsDialogs from '~/components/TabMenu/PluginsDialogs.vue'
 
 @Component({
   components: {

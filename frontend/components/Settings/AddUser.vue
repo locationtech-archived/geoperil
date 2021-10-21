@@ -99,8 +99,8 @@ Contributors:
 import querystring from 'querystring'
 import { Vue, Component } from 'nuxt-property-decorator'
 import axios from 'axios'
-import { Institution } from '../types/index'
-import { API_REGISTERUSER_URL, FORM_ENCODE_CONFIG } from '../store/constants'
+import { Institution } from '~/types'
+import { API_REGISTERUSER_URL, FORM_ENCODE_CONFIG } from '~/store/constants'
 
 @Component({})
 export default class AddUser extends Vue {

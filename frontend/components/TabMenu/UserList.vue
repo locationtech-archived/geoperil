@@ -28,41 +28,46 @@ Contributors:
 -->
 
 <template>
-  <v-dialog
-    v-model="dialog"
-    :transition="false"
-    fullscreen
-    hide-overlay
-    persistent
+  <v-list
+    id="user-list"
+    class="ma-0 pa-0"
   >
-    <DialogToolbar
-      :close-action="closeDialog"
-      title="Sealevel Data"
+    <v-list-item v-if="!userEvents || userEvents.length == 0">
+      <em>There are no items in your list.</em>
+    </v-list-item>
+    <EventItem
+      v-for="(item, index) in userEvents"
+      :key="index"
+      :data="item"
+      @change-to-compose-tab="handleChangeComposeTab"
     />
-    <DialogRow>
-      <StationDetails />
-    </DialogRow>
-  </v-dialog>
+  </v-list>
 </template>
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import DialogToolbar from './DialogToolbar.vue'
-import StationDetails from './StationDetails.vue'
-import DialogRow from './DialogRow.vue'
+import EventItem from './EventItem.vue'
+import { Event } from '~/types'
 
 @Component({
   components: {
-    DialogToolbar,
-    StationDetails,
-    DialogRow,
+    EventItem,
   },
 })
-export default class StationDialog extends Vue {
-  private dialog = true
+export default class UserList extends Vue {
+  get userEvents (): Event[] {
+    return this.$store.getters.userEvents
+  }
 
-  public closeDialog () {
-    this.$store.commit('SET_SELECTED_STATION_DETAIL', null)
+  public handleChangeComposeTab (): void {
+    this.$emit('change-to-compose-tab')
   }
 }
 </script>
+
+<style>
+#user-list {
+  height: 100%;
+  overflow-y: auto;
+}
+</style>

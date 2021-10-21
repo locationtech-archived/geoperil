@@ -51,8 +51,8 @@ Contributors:
 
 <script lang="ts">
 import { Vue, Component, Watch } from 'nuxt-property-decorator'
-import { Station } from '../types'
 import StationPreview from './StationPreview.vue'
+import { Station } from '~/types'
 
 @Component({
   components: {

@@ -72,10 +72,10 @@ Contributors:
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import TabItem from './TabItem.vue'
 import RecentList from './RecentList.vue'
 import UserList from './UserList.vue'
 import ComposeSimulation from './ComposeSimulation.vue'
+import TabItem from '~/components/Utils/TabItem.vue'
 
 @Component({
   components: {
@@ -85,7 +85,7 @@ import ComposeSimulation from './ComposeSimulation.vue'
     ComposeSimulation,
   },
 })
-export default class LeftMenu extends Vue {
+export default class TabMenu extends Vue {
   private tab: any = null
 
   public changeTab (which: number) {

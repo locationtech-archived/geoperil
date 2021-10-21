@@ -25,22 +25,9 @@
 //   Matthias Rüster (GFZ)
 //   Hannes Fuchs (GFZ)
 
-import { GetterTree, ActionTree, MutationTree } from 'vuex'
-import {
-  RootState,
-  Event,
-  User,
-  Station,
-  ComputeRequest,
-} from '~/types'
-import {
-  pluginsState,
-  pluginsGetters,
-  pluginsMutations,
-  pluginsActions,
-} from '~/store/plugins-store'
-import axios from 'axios'
 import querystring from 'querystring'
+import { GetterTree, ActionTree, MutationTree } from 'vuex'
+import axios from 'axios'
 import {
   API_PLUGINS_URL,
   API_SIGNIN_URL,
@@ -58,6 +45,19 @@ import {
   UPDATE_INTERVAL_MSEC,
   API_INSTLIST_URL,
 } from './constants'
+import {
+  RootState,
+  Event,
+  User,
+  Station,
+  ComputeRequest,
+} from '~/types'
+import {
+  pluginsState,
+  pluginsGetters,
+  pluginsMutations,
+  pluginsActions,
+} from '~/store/plugins-store'
 
 export const state = (): RootState => ({
   supportedPlugins: {},

@@ -75,9 +75,9 @@ import {
   API_GETSTATIONDATA_URL,
   API_GETSTATIONSIMDATA_URL,
   FORM_ENCODE_CONFIG,
-} from '../store/constants'
-import { Station, Event } from '../types'
-import LoadingOverlay from './LoadingOverlay.vue'
+} from '~/store/constants'
+import { Station, Event } from '~/types'
+import LoadingOverlay from '~/components/Utils/LoadingOverlay.vue'
 
 const d3 = {
   select,

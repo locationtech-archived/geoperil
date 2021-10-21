@@ -154,17 +154,17 @@ import querystring from 'querystring'
 import { Vue, Component, Watch } from 'nuxt-property-decorator'
 import axios from 'axios'
 import * as d3 from 'd3'
-import { Station, Event } from '../types'
+import { Station, Event } from '~/types'
 import {
   API_GETSTATIONDATA_URL,
   API_GETSTATIONSIMDATA_URL,
   FORM_ENCODE_CONFIG,
   API_SAVEPICKING_URL,
   API_LOADPICKING_URL,
-} from '../store/constants'
-import { toUtcTimeStr } from '../plugins/geoperil-utils'
-import CurrentTimeDisplay from './CurrentTimeDisplay.vue'
-import DenseTextField from './DenseTextField.vue'
+} from '~/store/constants'
+import { toUtcTimeStr } from '~/plugins/geoperil-utils'
+import CurrentTimeDisplay from '~/components/Utils/CurrentTimeDisplay.vue'
+import DenseTextField from '~/components/Utils/DenseTextField.vue'
 
 if (!Object.getOwnPropertyNames(d3).includes('event')) {
   // avoid redefining

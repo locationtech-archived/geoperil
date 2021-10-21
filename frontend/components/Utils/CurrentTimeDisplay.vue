@@ -46,8 +46,8 @@ Contributors:
 
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
-import { toUtcTimeStr } from '../plugins/geoperil-utils'
 import DenseTextField from './DenseTextField.vue'
+import { toUtcTimeStr } from '~/plugins/geoperil-utils'
 
 @Component({
   components: {

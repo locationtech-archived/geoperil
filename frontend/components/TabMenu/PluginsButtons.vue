@@ -28,28 +28,35 @@ Contributors:
 -->
 
 <template>
-  <!--
-    Add your tab contents for plugins here
-    Note: this has to correspond with the tabs defined in PluginsSettingsTabs
-  -->
-  <div>
+  <div class="plugins-buttons-container">
+    <!-- Add your plugin buttons here -->
     <!--
-    <TabItem>
-      <YourSettingsContentHere />
-    </TabItem>
+    <ActionButton
+      icon="mdi-information-outline"
+      help-text="Helper text"
+      @click="handleAction"
+    />
     -->
   </div>
 </template>
 
 <script lang="ts">
-import { Vue, Component } from 'nuxt-property-decorator'
-import TabItem from './TabItem.vue'
+import { Vue, Component, Prop } from 'nuxt-property-decorator'
+import ActionButton from './ActionButton.vue'
+import { Event } from '~/types'
 
 @Component({
   components: {
-    TabItem,
+    ActionButton,
   },
 })
-export default class PluginsSettingsTabsContent extends Vue {
+export default class PluginsButtons extends Vue {
+  @Prop({ required: true }) event!: Event
 }
 </script>
+
+<style>
+.plugins-buttons-container {
+  display: flex;
+}
+</style>
