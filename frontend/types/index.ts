@@ -37,6 +37,7 @@ export interface Institution {
   name: string,
   api: UserApi,
   descr: string,
+  // eslint-disable-next-line camelcase
   msg_name: string,
 }
 

@@ -26,8 +26,8 @@
 //   Hannes Fuchs (GFZ)
 
 // add trailing slash to URL if not present
-export const WEBGUISRV_BASE_URL = process.env.webguisrvUrl
-  + (process.env.webguisrvUrl!.endsWith('/') ? '' : '/')
+export const WEBGUISRV_BASE_URL = process.env.webguisrvUrl +
+  (process.env.webguisrvUrl!.endsWith('/') ? '' : '/')
 export const API_PLUGINS_URL = WEBGUISRV_BASE_URL + 'supported_plugins'
 export const API_SIGNIN_URL = WEBGUISRV_BASE_URL + 'signin'
 export const API_SESSION_URL = WEBGUISRV_BASE_URL + 'session'
@@ -49,7 +49,7 @@ export const API_SAVEPICKING_URL = WEBGUISRV_BASE_URL + 'save_picking'
 export const API_LOADPICKING_URL = WEBGUISRV_BASE_URL + 'load_picking'
 export const FORM_ENCODE_CONFIG = {
   headers: {
-    'Content-Type': 'application/x-www-form-urlencoded'
-  }
+    'Content-Type': 'application/x-www-form-urlencoded',
+  },
 }
 export const UPDATE_INTERVAL_MSEC = 5000

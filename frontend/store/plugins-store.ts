@@ -28,7 +28,7 @@
 // add your actions and mutations for the plugins store here
 
 import { GetterTree, ActionTree, MutationTree } from 'vuex'
-import { PluginsState } from "~/types"
+import { PluginsState } from '~/types'
 
 // do not use a function for this variable since it will be merged into the
 // other vuex store object which is already contained within a function
@@ -47,8 +47,8 @@ export const pluginsMutations: MutationTree<PluginsState> = {
 }
 
 export const pluginsActions: ActionTree<PluginsState, PluginsState> = {
-  async initPlugins({ commit }: any) {
+  async initPlugins ({ commit }: any) {
     // initialize your plugins store here
-    commit('SET_PLUGINVAR', 'init')
+    await commit('SET_PLUGINVAR', 'init')
   },
 }

@@ -25,7 +25,7 @@
 //   Matthias Rüster (GFZ)
 //   Hannes Fuchs (GFZ)
 
-import { User, Event, Station } from "~/types"
+import { User, Event, Station } from '~/types'
 
 export interface RootState {
     supportedPlugins: any,

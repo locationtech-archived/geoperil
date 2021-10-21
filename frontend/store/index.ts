@@ -81,7 +81,7 @@ export const state = (): RootState => ({
   stationHoveredMap: null,
   selectedStationMap: null,
   selectedStationDetail: null,
-  ...pluginsState
+  ...pluginsState,
 })
 
 export const getters: GetterTree<RootState, RootState> = {
@@ -103,7 +103,7 @@ export const getters: GetterTree<RootState, RootState> = {
   showSettingsDialog: (state: RootState) => state.showSettingsDialog,
   allStations: (state: RootState) => state.allStations,
   stationCountByCountry: (state: RootState) => {
-    var bycountry: any = {}
+    const bycountry: any = {}
 
     if (!state.allStations) {
       return bycountry
@@ -122,13 +122,13 @@ export const getters: GetterTree<RootState, RootState> = {
   },
   selectedStations: (state: RootState) => {
     if (
-      !state.allStations || !state.user || !state.user.countries
-      || state.user.countries.length == 0
+      !state.allStations || !state.user || !state.user.countries ||
+      state.user.countries.length === 0
     ) {
       return []
     }
 
-    var filtered: Station[] = []
+    const filtered: Station[] = []
 
     state.allStations.forEach((f: Station) => {
       if (state.user!.countries.includes(f.country)) {
@@ -151,7 +151,7 @@ export const getters: GetterTree<RootState, RootState> = {
 
     return 'admin' in user.permissions && user.permissions.admin === true
   },
-  ...pluginsGetters
+  ...pluginsGetters,
 }
 
 export const mutations: MutationTree<RootState> = {
@@ -221,7 +221,7 @@ export const mutations: MutationTree<RootState> = {
     if (state.user) {
       // notify components about the change
       // see https://vuejs.org/v2/guide/reactivity.html#For-Objects
-      state.user = Object.assign({}, state.user, {countries: selected})
+      state.user = Object.assign({}, state.user, { countries: selected })
     }
   },
   ADD_EVENTS: (state: RootState, events: any[]) => {
@@ -231,7 +231,7 @@ export const mutations: MutationTree<RootState> = {
       let foundindex = null
 
       for (let j = 0; j < state.recentEvents.length; j++) {
-        if (revevents[i].id == state.recentEvents[j].identifier) {
+        if (revevents[i].id === state.recentEvents[j].identifier) {
           foundindex = j
           break
         }
@@ -264,7 +264,7 @@ export const mutations: MutationTree<RootState> = {
       let foundindex = null
 
       for (let j = 0; j < state.userEvents.length; j++) {
-        if (revevents[i].id == state.userEvents[j].identifier) {
+        if (revevents[i].id === state.userEvents[j].identifier) {
           foundindex = j
           break
         }
@@ -307,10 +307,10 @@ export const mutations: MutationTree<RootState> = {
   SET_SELECTED_STATION_DETAIL: (state: RootState, selected: Station | null) => (
     state.selectedStationDetail = selected
   ),
-  ...pluginsMutations
+  ...pluginsMutations,
 }
 
-function apiToEvent(entry: any): Event {
+function apiToEvent (entry: any): Event {
   const props = entry.prop
   const datetime = new Date(props.date) // this has the local timezone
   const year = datetime.getFullYear()
@@ -319,11 +319,11 @@ function apiToEvent(entry: any): Event {
   const hour = datetime.getHours()
   const min = datetime.getMinutes()
   const sec = datetime.getSeconds()
-  const date = year + '/'
-    + (month + 1).toString().padStart(2, '0') + '/'
-    + day.toString().padStart(2, '0')
-  const time = hour.toString().padStart(2, '0') + ':'
-    + min.toString().padStart(2, '0') + ' UTC'
+  const date = year + '/' +
+    (month + 1).toString().padStart(2, '0') + '/' +
+    day.toString().padStart(2, '0')
+  const time = hour.toString().padStart(2, '0') + ':' +
+    min.toString().padStart(2, '0') + ' UTC'
 
   return {
     compId: entry._id,
@@ -331,14 +331,14 @@ function apiToEvent(entry: any): Event {
     root: props.root,
     region: props.region,
     datetime: new Date(Date.UTC(year, month, day, hour, min, sec)),
-    date: date,
-    time: time,
+    date,
+    time,
     lat: props.latitude,
     lon: props.longitude,
     mag: props.magnitude,
     depth: props.depth,
     slip: props.slip,
-    len: props['length'],
+    len: props.length,
     width: props.width,
     dip: props.dip,
     rake: props.rake,
@@ -349,26 +349,26 @@ function apiToEvent(entry: any): Event {
     calctime: entry.calctime,
     gridres: props.gridres,
     algo: props.algo,
-    duration: props.comp
+    duration: props.comp,
   } as Event
 }
 
-function apiToGeojson(entry: any): any {
+function apiToGeojson (entry: any): any {
   const props = entry.prop
   return {
-    type: "Feature",
+    type: 'Feature',
     geometry: {
-      type: "Point",
-      coordinates: [ props.longitude, props.latitude ]
+      type: 'Point',
+      coordinates: [props.longitude, props.latitude],
     },
     properties: {
       mag: props.magnitude,
-      depth: props.depth
-    }
+      depth: props.depth,
+    },
   }
 }
 
-function addEntryToArr(
+function addEntryToArr (
   entry: any,
   evArr: Event[],
   geojsonArr: any[],
@@ -394,12 +394,12 @@ function addEntryToArr(
 }
 
 export const actions: ActionTree<RootState, RootState> = {
-  async getSupportedPlugins({ commit }: any) {
+  async getSupportedPlugins ({ commit }: any) {
     const { data } = await axios.post(API_PLUGINS_URL)
 
     if (
-      !('status' in data) || data.status != 'success'
-      || !('plugins' in data)
+      !('status' in data) || data.status !== 'success' ||
+      !('plugins' in data)
     ) {
       throw new Error('Invalid response from endpoint')
     }
@@ -407,18 +407,18 @@ export const actions: ActionTree<RootState, RootState> = {
     commit('SET_SUPPORTED_PLUGINS', data.plugins)
   },
 
-  async fetchEvents({ commit }: any) {
-    var evArr: Event[] = []
-    var evUserArr: Event[] = []
-    var evGeojsonArr: any[] = []
-    var evUserGeojsonArr: any[] = []
+  async fetchEvents ({ commit }: any) {
+    const evArr: Event[] = []
+    const evUserArr: Event[] = []
+    const evGeojsonArr: any[] = []
+    const evUserGeojsonArr: any[] = []
 
     const { data } = await axios.post(API_FETCH_URL)
 
     if (
-      !('events' in data)
-      || !('userevents' in data)
-      || !('maxtime' in data)
+      !('events' in data) ||
+      !('userevents' in data) ||
+      !('maxtime' in data)
     ) {
       throw new Error('Invalid response from endpoint')
     }
@@ -438,17 +438,17 @@ export const actions: ActionTree<RootState, RootState> = {
     commit('SET_LAST_UPDATE', data.maxtime)
   },
 
-  async fetchStations({ commit }: any) {
+  async fetchStations ({ commit }: any) {
     const { data } = await axios.post(API_STATIONLIST_URL)
 
     if (
-      !('status' in data) || data.status != 'success'
-      || !('stations' in data)
+      !('status' in data) || data.status !== 'success' ||
+      !('stations' in data)
     ) {
       throw new Error('Invalid response from endpoint')
     }
 
-    var stationArr: Station[] = []
+    const stationArr: Station[] = []
     for (let i = 0; i < data.stations.length; i++) {
       const sta = data.stations[i]
       const staObj: Station = {
@@ -474,17 +474,17 @@ export const actions: ActionTree<RootState, RootState> = {
     commit('SET_ALLSTATIONS', stationArr)
   },
 
-  async registerUpdater({ commit }: any) {
+  registerUpdater ({ commit }: any) {
     const updateCall = async () => {
-      var extraMsec = 0
-      var lastts = this.getters.lastUpdate
+      let extraMsec = 0
+      let lastts = this.getters.lastUpdate
 
       if (!lastts) {
         lastts = (new Date(0)).toISOString()
       }
 
       const requestBody = {
-        ts: lastts
+        ts: lastts,
       }
 
       try {
@@ -494,7 +494,7 @@ export const actions: ActionTree<RootState, RootState> = {
           FORM_ENCODE_CONFIG
         )
 
-        if ('status' in data && data.status == 'denied') {
+        if ('status' in data && data.status === 'denied') {
           // check if session is still valid
           this.dispatch('session')
           return
@@ -535,10 +535,10 @@ export const actions: ActionTree<RootState, RootState> = {
     setTimeout(updateCall, UPDATE_INTERVAL_MSEC)
   },
 
-  async login({ commit }: any, { username, password }: any) {
+  async login ({ commit }: any, { username, password }: any) {
     const requestBody = {
-      username: username,
-      password: password
+      username,
+      password,
     }
 
     try {
@@ -547,9 +547,9 @@ export const actions: ActionTree<RootState, RootState> = {
         querystring.stringify(requestBody),
         FORM_ENCODE_CONFIG
       )
-      if ('status' in data
-        && 'user' in data
-        && data.status == 'success') {
+      if ('status' in data &&
+        'user' in data &&
+        data.status === 'success') {
         commit('SET_USER', data.user)
       } else {
         throw new Error('Invalid credentials')
@@ -562,19 +562,19 @@ export const actions: ActionTree<RootState, RootState> = {
     }
   },
 
-  async session({ commit }: any) {
+  async session ({ commit }: any) {
     const { data } = await axios.post(API_SESSION_URL)
 
-    if ('status' in data
-      && 'user' in data
-      && data.status == 'success') {
+    if ('status' in data &&
+      'user' in data &&
+      data.status === 'success') {
       commit('SET_USER', data.user)
     } else {
       commit('SET_USER', null)
     }
   },
 
-  async logout({ commit }: any) {
+  async logout ({ commit }: any) {
     const user = this.getters.user
 
     if (!('username' in user) || !user.username) {
@@ -582,41 +582,34 @@ export const actions: ActionTree<RootState, RootState> = {
     }
 
     const { data } = await axios.post(API_SIGNOUT_URL)
-    if ('status' in data && data.status == 'success') {
+    if ('status' in data && data.status === 'success') {
       commit('SET_USER', null)
     } else {
       throw new Error('Logout was not succesfull')
     }
   },
 
-  async fetchAllInstitutions({ commit }: any) {
+  async fetchAllInstitutions ({ commit }: any) {
     if (!this.getters.isAdmin) {
       return
     }
 
-    try {
-      const { data } = await axios.post(
-        API_INSTLIST_URL,
-        querystring.stringify({}),
-        FORM_ENCODE_CONFIG
-      )
-      if ('status' in data
-        && 'institutions' in data
-        && data.status == 'success') {
-        commit('SET_ALLINSTITUTIONS', data.institutions)
-      } else {
-        throw new Error('Invalid response while getting institutions')
-      }
-    } catch (error) {
-      throw error
+    const { data } = await axios.post(API_INSTLIST_URL)
+    if ('status' in data &&
+      'institutions' in data &&
+      data.status === 'success') {
+      commit('SET_ALLINSTITUTIONS', data.institutions)
+    } else {
+      throw new Error('Invalid response while getting institutions')
     }
   },
 
-  async sendCompute({ commit }: any, compute: ComputeRequest) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async sendCompute ({ commit }: any, compute: ComputeRequest) {
     const event = compute.event
     let requestBody: any = {}
 
-    if (!!event.mag) {
+    if (event.mag) {
       requestBody = {
         name: event.region,
         root: event.root,
@@ -632,7 +625,7 @@ export const actions: ActionTree<RootState, RootState> = {
         // parent
         date: event.datetime.toISOString(),
         algo: compute.algorithm.toLowerCase(),
-        gridres: compute.gridres
+        gridres: compute.gridres,
       }
     } else {
       requestBody = {
@@ -652,20 +645,20 @@ export const actions: ActionTree<RootState, RootState> = {
         // parent
         date: event.datetime.toISOString(),
         algo: compute.algorithm.toLowerCase(),
-        gridres: compute.gridres
+        gridres: compute.gridres,
       }
     }
 
     const stations: Station[] = this.getters.selectedStations
     if (stations && stations.length > 0) {
-      var pois = []
+      const pois = []
 
       for (let i = 0; i < stations.length; i++) {
         const cur = stations[i]
         pois.push({
           name: cur.name,
           lat: cur.lat,
-          lon: cur.lon
+          lon: cur.lon,
         })
       }
 
@@ -678,7 +671,7 @@ export const actions: ActionTree<RootState, RootState> = {
       FORM_ENCODE_CONFIG
     )
 
-    if (!data || !('status' in data && data.status == 'success')) {
+    if (!data || !('status' in data && data.status === 'success')) {
       throw new Error('Sending the computation request was not successful')
     }
 
@@ -686,24 +679,24 @@ export const actions: ActionTree<RootState, RootState> = {
     // commit('SET_NEXT_SELECTED', --> new ID)
   },
 
-  async fetchResults({ commit }: any) {
+  async fetchResults ({ commit }: any) {
     const selected: Event = this.getters.selectedEvent
 
-    if (selected && selected.progress == 100) {
+    if (selected && selected.progress === 100) {
       commit('SET_MAP_IS_LOADING', true)
 
       const arrResp = await axios.post(
         API_GETISOS_URL,
-        querystring.stringify({evid: selected.compId}),
+        querystring.stringify({ evid: selected.compId }),
         FORM_ENCODE_CONFIG
       )
 
       const arrivaldata = arrResp.data
 
       if (
-        !arrivaldata
-        || !('status' in arrivaldata && arrivaldata.status == 'success')
-        || !('isos' in arrivaldata)
+        !arrivaldata ||
+        !('status' in arrivaldata && arrivaldata.status === 'success') ||
+        !('isos' in arrivaldata)
       ) {
         commit('SET_MAP_IS_LOADING', false)
         throw new Error('Getting the arrival times was not successful')
@@ -711,16 +704,16 @@ export const actions: ActionTree<RootState, RootState> = {
 
       const waveResp = await axios.post(
         API_GETJETS_URL,
-        querystring.stringify({evid: selected.compId}),
+        querystring.stringify({ evid: selected.compId }),
         FORM_ENCODE_CONFIG
       )
 
       const wavedata = waveResp.data
 
       if (
-        !wavedata
-        || !('status' in wavedata && wavedata.status == 'success')
-        || !('jets' in wavedata)
+        !wavedata ||
+        !('status' in wavedata && wavedata.status === 'success') ||
+        !('jets' in wavedata)
       ) {
         commit('SET_MAP_IS_LOADING', false)
         throw new Error('Getting the wavejets was not successful')
@@ -736,25 +729,25 @@ export const actions: ActionTree<RootState, RootState> = {
     }
   },
 
-  async saveuserstations( { commit }: any, selected: string[]) {
+  async saveuserstations ({ commit }: any, selected: string[]) {
     const all: any = this.getters.stationCountByCountry
 
-    if (!all || all.length == 0) {
+    if (!all || all.length === 0) {
       throw new Error('Internal error: Could not get stations')
     }
 
     const resp = await axios.post(
       API_SAVEUSERSTATIONS_URL,
-      querystring.stringify({'stations': selected}),
+      querystring.stringify({ stations: selected }),
       FORM_ENCODE_CONFIG
     )
 
     const respdata = resp.data
 
     if (
-      !respdata
-      || !('status' in respdata && respdata.status == 'success')
-      || !('user' in respdata) || !('countries' in respdata.user)
+      !respdata ||
+      !('status' in respdata && respdata.status === 'success') ||
+      !('user' in respdata) || !('countries' in respdata.user)
     ) {
       throw new Error('Saving the stations was not successful')
     }
@@ -762,7 +755,8 @@ export const actions: ActionTree<RootState, RootState> = {
     commit('SET_USERSTATIONS', respdata.user.countries)
   },
 
-  async changePassword({ commit }: any, changeRequest: any) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async changePassword ({ commit }: any, changeRequest: any) {
     if (!('curpwd' in changeRequest && 'newpwd' in changeRequest)) {
       console.error('Internal error: Invalid call of changePassword')
     }
@@ -776,12 +770,12 @@ export const actions: ActionTree<RootState, RootState> = {
     const respdata = resp.data
 
     if (
-      !respdata
-      || !('status' in respdata && respdata.status == 'success')
+      !respdata ||
+      !('status' in respdata && respdata.status === 'success')
     ) {
       throw new Error('Changing the password was not successful')
     }
   },
 
-  ...pluginsActions
+  ...pluginsActions,
 }
