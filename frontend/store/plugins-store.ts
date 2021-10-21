@@ -1,4 +1,4 @@
-// Geoperil - A platform for the computation and web-mapping of hazard specific
+// GeoPeril - A platform for the computation and web-mapping of hazard specific
 // geospatial data, as well as for serving functionality to handle, share, and
 // communicate threat specific information in a collaborative environment.
 //
