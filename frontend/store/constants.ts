@@ -52,4 +52,4 @@ export const FORM_ENCODE_CONFIG = {
     'Content-Type': 'application/x-www-form-urlencoded'
   }
 }
-export const UPDATE_INTERVAL_MSEC = 1000
+export const UPDATE_INTERVAL_MSEC = 5000
