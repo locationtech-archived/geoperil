@@ -41,6 +41,8 @@ Contributors:
         <Geoperil v-else />
         <SettingsDialog v-if="isLoggedIn && showSettings" />
         <StationDialog v-if="isLoggedIn && showStationDialog" />
+        <DownloadProductDialog v-if="showDownloadProductDialog" />
+        <CustomMapDialog v-if="showCustomMapDialog" />
         <PluginsDialogs />
       </v-container>
     </v-main>
@@ -54,6 +56,8 @@ import AppBar from '~/components/App/AppBar.vue'
 import Geoperil from '~/components/App/Geoperil.vue'
 import SettingsDialog from '~/components/Settings/SettingsDialog.vue'
 import StationDialog from '~/components/Stations/StationDialog.vue'
+import DownloadProductDialog from '~/components/TabMenu/DownloadProductDialog.vue'
+import CustomMapDialog from '~/components/TabMenu/CustomMapDialog.vue'
 import PluginsDialogs from '~/components/TabMenu/PluginsDialogs.vue'
 
 @Component({
@@ -63,6 +67,8 @@ import PluginsDialogs from '~/components/TabMenu/PluginsDialogs.vue'
     LoginForm,
     SettingsDialog,
     StationDialog,
+    DownloadProductDialog,
+    CustomMapDialog,
     PluginsDialogs,
   },
 })
@@ -82,10 +88,22 @@ export default class Index extends Vue {
   get showStationDialog () {
     return !!this.$store.getters.selectedStationDetail
   }
+
+  get showDownloadProductDialog (): boolean {
+    return this.$store.getters.showDownloadProductDialog
+  }
+
+  get showCustomMapDialog (): boolean {
+    return this.$store.getters.showCustomMapDialog
+  }
 }
 </script>
 
 <style>
+html {
+  overflow-y: auto;
+}
+
 #main-container {
   height: calc(100vh - 50px);
 }

@@ -37,6 +37,28 @@
         "username": "test",
         "password": "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
         "inst": { "$oid": "444444444444444444444444" },
-        "countries": [ ]
+        "countries": [ ],
+        "permissions": {
+            "api": false,
+            "population": false,
+            "comp": true,
+            "chart": false,
+            "fax": true,
+            "new_report": false,
+            "evtset": false,
+            "admin": false,
+            "notify": false,
+            "flood": false,
+            "hysea": true,
+            "sms": true,
+            "intmsg": false,
+            "share": false,
+            "report": false,
+            "manage": false,
+            "ftp": true,
+            "timeline": true,
+            "data": false,
+            "mail": true
+        }
     }
 ]

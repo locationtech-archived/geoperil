@@ -36,7 +36,7 @@ Contributors:
     class="fill-height pa-1 pr-5"
   >
     <h3 class="mt-3">
-      Station: {{ selectedStationDetail.slmcode }} - Sensor: {{ selectedStationDetail.sensor }}
+      Station: {{ stationName }} - Sensor: {{ selectedStationDetail.sensor }}
     </h3>
     <CurrentTimeDisplay />
     <v-row class="mb-3" justify="center">
@@ -44,6 +44,13 @@ Contributors:
     </v-row>
     <v-row v-if="selectedEvent" justify="center">
       <v-col sm="12" md="9" lg="8">
+        <v-checkbox
+          v-if="simdata && simdata.length > 0"
+          v-model="showSimData"
+          class="mt-0 pt-0"
+          label="Show simulated data"
+          dense
+        />
         <v-expansion-panels v-model="panel">
           <v-expansion-panel>
             <v-expansion-panel-header>Pick values</v-expansion-panel-header>
@@ -186,8 +193,8 @@ export default class StationDetails extends Vue {
   private width: number = 600
   private height: number = 400
   private axisheight: number = 0
-  private marginHoursBefore: number = 3
-  private marginHoursAhead: number = 5
+  private marginHoursBefore: number = 2
+  private marginHoursAhead: number = 8
   private isLoading: boolean = true
   private panel: any = null
   private pickedLoaded: boolean = false
@@ -224,6 +231,7 @@ export default class StationDetails extends Vue {
   private updater: any = null
   private errorMsg: string | null = null
   private successMsg: string | null = null
+  private showSimData: boolean = true
 
   /** Number of milliseconds to wait until next data update request */
   private updateInterval: number = 30 * 1000
@@ -271,6 +279,21 @@ export default class StationDetails extends Vue {
   public convertToMinutes (milliseconds: number): number {
     const seconds = milliseconds / 1000
     return seconds / 60
+  }
+
+  @Watch('showSimData')
+  public onShowSimDataChange () {
+    if (!this.svg) {
+      return
+    }
+
+    const line = this.svg.select('g.simview')
+
+    if (!line || line.empty()) {
+      return
+    }
+
+    line.attr('display', this.showSimData ? 'inline' : 'none')
   }
 
   @Watch('showSliders')
@@ -341,6 +364,14 @@ export default class StationDetails extends Vue {
     }
 
     return ''
+  }
+
+  get stationName (): string {
+    if (this.selectedStationDetail.location) {
+      return this.selectedStationDetail.location
+    }
+
+    return this.selectedStationDetail.name
   }
 
   @Watch('period')
@@ -598,16 +629,18 @@ export default class StationDetails extends Vue {
   }
 
   private findMinMaxY (): any {
-    let maxY = { value: 0 }
-    let minY = { value: 0 }
+    let maxy = 0
+    let miny = 0
 
     if (this.data && this.data.length > 0) {
-      maxY = this.data.reduce((a: any, b: any) => {
+      const dataMaxY = this.data.reduce((a: any, b: any) => {
         return a.value > b.value ? a : b
       })
-      minY = this.data.reduce((a: any, b: any) => {
+      const dataMinY = this.data.reduce((a: any, b: any) => {
         return a.value < b.value ? a : b
       })
+      maxy = dataMaxY.value
+      miny = dataMinY.value
     }
 
     if (this.simdata && this.simdata.length > 0) {
@@ -617,11 +650,11 @@ export default class StationDetails extends Vue {
       const simMinY = this.simdata.reduce((a: any, b: any) => {
         return a.value < b.value ? a : b
       })
-      maxY.value = Math.max(maxY.value, simMaxY.value)
-      minY.value = Math.min(minY.value, simMinY.value)
+      maxy = Math.max(maxy, simMaxY.value)
+      miny = Math.min(miny, simMinY.value)
     }
 
-    return { miny: minY.value, maxy: maxY.value }
+    return { miny, maxy }
   }
 
   public addScales () {
@@ -635,7 +668,6 @@ export default class StationDetails extends Vue {
         d3.timeHour.offset(this.stationTimestamp, this.marginHoursAhead),
       ])
       .range([0, this.width - this.margin.right])
-      .clamp(true)
 
     this.scaleXReference = this.scaleX.copy()
 

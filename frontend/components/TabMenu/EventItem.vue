@@ -56,7 +56,7 @@ Contributors:
           class="ma-0 pa-0"
         >
           <v-list-item-content
-            class="pb-0 pt-1"
+            class="pb-0 pt-1 pl-1"
           >
             <div class="item-headline">
               <a
@@ -77,7 +77,7 @@ Contributors:
               Slip {{ data.slip }} m &middot; Length {{ data.len }} km &middot; Width {{ data.width }} km
             </div>
             <div v-if="data.progress > 0" class="item-metadata">
-              {{ algorithmName }} &middot; Resolution {{ data.gridres }}° <br> Duration {{ data.duration }} min <template v-if="data.progress == 100">
+              {{ algorithmName }} &middot; Resolution {{ data.gridres }}“ <br> Duration {{ data.duration }} min <template v-if="data.progress == 100">
                 &middot; Runtime {{ calctimeInSec }} sec
               </template>
             </div>
@@ -118,9 +118,15 @@ Contributors:
           >
             <ActionButton
               v-if="isSupported('compute')"
-              icon="mdi-reload"
-              help-text="Modify and reprocess"
+              icon="mdi-waves"
+              :help-text="actionBtnText"
               @click="handleCompose"
+            />
+            <ActionButton
+              v-if="data.progress == 100"
+              icon="mdi-download"
+              help-text="Download data products"
+              @click="clickDownloadProduct"
             />
             <PluginsButtons :event="data" />
           </v-row>
@@ -132,7 +138,13 @@ Contributors:
       align-self="center"
       cols="2"
     >
-      <img v-if="'bbUrl' in data" :src="data.bbUrl">
+      <v-img
+        v-if="'bbUrl' in data"
+        class="bbimg"
+        height="32"
+        :src="data.bbUrl"
+        contain
+      />
     </v-col>
   </v-list-item>
 </template>
@@ -150,12 +162,21 @@ import { Event } from '~/types'
   },
 })
 export default class EventItem extends Vue {
-  @Prop({ required: true }) data!: Event
+  @Prop({ type: Event, required: true }) data!: Event
+  @Prop({ type: Boolean, default: false }) reprocess!: boolean
 
   private hover: boolean = false
 
   public isSupported (plugin: string) {
     return plugin in this.$store.getters.supportedPlugins
+  }
+
+  get actionBtnText (): string {
+    if (this.reprocess) {
+      return 'Modify and reprocess'
+    }
+
+    return 'Modify and compute'
   }
 
   get calctimeInSec (): string {
@@ -240,6 +261,11 @@ export default class EventItem extends Vue {
     this.$store.commit('SET_COMPOSE', this.data)
     this.$emit('change-to-compose-tab')
   }
+
+  public clickDownloadProduct () {
+    this.$store.commit('SET_DATADOWNLOAD_EVENT', this.data)
+    this.$store.commit('SET_SHOW_DOWNLOAD_PRODUCT_DIALOG', true)
+  }
 }
 </script>
 
@@ -315,5 +341,9 @@ p.item-mag {
 
 .eventitem-list-item:hover div {
   background-color: rgb(195, 211, 225);
+}
+
+.bbimg .v-image__image {
+  z-index: 1 !important;
 }
 </style>

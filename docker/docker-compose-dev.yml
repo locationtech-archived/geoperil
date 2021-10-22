@@ -80,6 +80,7 @@ services:
     environment:
       HOST: 0.0.0.0
       WEBGUISRV_URL: http://localhost:8080/webguisrv/
+      DATASRV_URL: http://localhost:8080/datasrv/
 
   geoperil-wsgi:
     build:
@@ -99,6 +100,21 @@ services:
       - apis
       - mongo
       - worker
+
+  geoperil-gmt:
+    build:
+      context: ../backend/GMT
+      dockerfile: Dockerfile.dev
+    environment:
+      - DEVELOPMENT=1
+    image: geoperil-gmt
+    container_name: geoperil-gmt
+    volumes:
+      - ../backend/GMT:/srv/geoperil/gmt
+      - geoperil-data-volume:/geoperil
+      - basemaps-data-volume:/data
+    networks:
+      - apis
 
   # geoperil-eventfeeder:
   #   build:
@@ -143,8 +159,14 @@ services:
       - FEEDERSRV_URL=http://nginx:8080/feedersrv
       - DEVELOPMENT=1
 
+  global-basemaps:
+    image: git.gfz-potsdam.de:5000/id2/geoperil/global-grid-datasets:srtm15-basemaps-20210924
+    container_name: geoperil-basemaps
+    volumes:
+      - basemaps-data-volume:/data
+
   global-grid-datasets:
-    image: git.gfz-potsdam.de:5000/id2/geoperil/global-grid-datasets:20210106
+    image: git.gfz-potsdam.de:5000/id2/geoperil/global-grid-datasets:srtm15-20210924
     container_name: geoperil-grids
     volumes:
       - grid-data-volume:/data
@@ -173,6 +195,7 @@ volumes:
   mongo-data-volume:
   grid-data-volume:
   geoperil-data-volume:
+  basemaps-data-volume:
 
 networks:
   worker:

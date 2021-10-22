@@ -28,7 +28,7 @@ Contributors:
 -->
 
 <template>
-  <v-row class="mt-3" justify="center">
+  <v-row :class="rowclass" justify="center">
     <v-col sm="6" md="4" lg="3">
       <DenseTextField
         :value="localtime"
@@ -45,7 +45,7 @@ Contributors:
 </template>
 
 <script lang="ts">
-import { Vue, Component } from 'nuxt-property-decorator'
+import { Vue, Component, Prop } from 'nuxt-property-decorator'
 import DenseTextField from './DenseTextField.vue'
 import { toUtcTimeStr } from '~/plugins/geoperil-utils'
 
@@ -55,6 +55,8 @@ import { toUtcTimeStr } from '~/plugins/geoperil-utils'
   },
 })
 export default class CurrentTimeDisplay extends Vue {
+  @Prop({ type: String, required: false, default: 'mt-3' }) rowclass!: string
+
   private localtime: string = ''
   private utctime: string = ''
   private timer: any = null

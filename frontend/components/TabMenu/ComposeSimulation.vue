@@ -149,10 +149,11 @@ Contributors:
 
     <v-select
       v-model="selResolution"
+      class="resolutioninput"
       :items="resolutions"
       :rules="validResolution"
       label="Grid resolution"
-      suffix="°"
+      suffix="“"
       required
     />
 
@@ -213,9 +214,9 @@ export default class ComposeSimulation extends Vue {
 
   private selResolution: number = 120
   private resolutions: number[] = [
+    240,
     120,
     60,
-    30,
   ]
 
   private valid: boolean = true
@@ -383,5 +384,9 @@ export default class ComposeSimulation extends Vue {
 #compose-form {
   height: 100%;
   overflow-y: auto;
+}
+
+.resolutioninput .v-text-field__suffix {
+  font-family: Arial, Helvetica, sans-serif !important;
 }
 </style>

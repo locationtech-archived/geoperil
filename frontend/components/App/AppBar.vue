@@ -29,7 +29,7 @@ Contributors:
 
 <template>
   <v-app-bar
-    height="50px"
+    :height="height"
     fixed
     app
   >
@@ -53,6 +53,14 @@ import SettingsButton from './SettingsButton.vue'
   },
 })
 export default class AppBar extends Vue {
+  get height () {
+    if (!this.user) {
+      return '100px'
+    }
+
+    return '50px'
+  }
+
   get user () {
     return this.$store.getters.user
   }

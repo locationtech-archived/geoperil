@@ -59,13 +59,10 @@ def is_point_inside_polygon(testpt, areas, names):
     return None
 
 
-# this is now still left in the manager to unburden the Tomcat server
-# however we could move this into the server as well
 def get_type(dbm, inst, entry, areas, names):
     ret = dbm["eqs"].find({"id": entry["id"]})
 
     if ret.count() == 0:
-
         # no entry with same id found --> new entry
         iho_region = is_point_inside_polygon(
             LatLon(entry["lat"], entry["lon"]), areas, names
@@ -113,7 +110,6 @@ def get_type(dbm, inst, entry, areas, names):
     ret = dbm["eqs"].find(query)
 
     if ret.count() == 0:
-
         # no matching entry for all properties found --> update
         if "sea_area" not in entry:
             iho_region = is_point_inside_polygon(

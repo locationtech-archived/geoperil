@@ -38,6 +38,7 @@ import copy
 import logging
 import requests
 import cherrypy
+from cherrypy.lib.static import serve_file
 from basesrv import BaseSrv
 from base import jsfail, jsdeny, jssuccess, startapp
 

@@ -42,6 +42,7 @@ comment in file:
   - '.*\.js$'
   - '.*\.ts$'
   - '.*\.xml$'
+  - '.*\.csv$'
   - '.*\.gitignore$'
   - '.*\.gitmodules$'
   - '.*Dockerfile$'

@@ -29,7 +29,7 @@ version: '3.7'
 
 services:
   easywave-worker-global-grid-datasets:
-    image: git.gfz-potsdam.de:5000/geoperil/global-grid-datasets:20200526
+    image: git.gfz-potsdam.de:5000/id2/geoperil/global-grid-datasets:20210323
     container_name: easywave-worker-global-grid-datasets
     volumes:
       - easywave-worker-grid-data-volume:/data

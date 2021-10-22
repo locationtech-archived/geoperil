@@ -41,3 +41,7 @@ export function toUtcTimeStr (
       datetime.getUTCMinutes().toString().padStart(2, '0') +
       (withSeconds ? seconds : '')
 }
+
+export function replaceNewlines (a: string): string {
+  return a.replace(/\n/g, ' ')
+}

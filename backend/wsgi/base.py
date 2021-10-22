@@ -56,6 +56,18 @@ class JSONEncoder(json.JSONEncoder):
 
 
 def startapp(app):
+    # do not display server and version information
+    # https://stackoverflow.com/a/55209796/2249798
+    # https://stackoverflow.com/a/54947461/2249798
+    cherrypy.__version__ = ""
+    cherrypy.config.update({"response.headers.server": ""})
+    cherrypy._cperror._HTTPErrorTemplate = \
+        cherrypy._cperror._HTTPErrorTemplate.replace(
+            "Powered by <a href=\"http://www.cherrypy.org\">"
+            + "CherryPy %(version)s</a>\n",
+            "%(version)s"
+        )
+
     if config["mongodb"].getboolean('replicaset'):
         print(
             "Connecting to MongoDB ReplicaSet: %s" % config["mongodb"]["url"]

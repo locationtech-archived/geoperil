@@ -76,11 +76,13 @@ class EasyWaveCpu(Process):
     ewOutputTime = 'eWave.2D.time'
     ewOutputSshmax = 'eWave.2D.sshmax'
     ewOutputPois = 'eWave.poi.ssh'
+    ewOutputPoisSummary = 'eWave.poi.summary'
     geotiffTime = 'arrivaltimes.tiff'
     geotiffSshmax = 'waveheights.tiff'
     geojsonTime = 'arrivaltimes.geojson'
     geojsonSshmax = 'waveheights.geojson'
     csvPois = 'pois.csv'
+    csvPoisSummary = 'pois.summary.csv'
     errorFile = 'error.msg'
     compExtraTime = 10
 
@@ -147,6 +149,12 @@ class EasyWaveCpu(Process):
             ComplexOutput(
                 'poisWaveheights',
                 'Wave heights for POIs as CSV data',
+                as_reference=True,
+                supported_formats=[FORMATS.TEXT]
+            ),
+            ComplexOutput(
+                'poisSummary',
+                'ETA and EWH for POIs as CSV data',
                 as_reference=True,
                 supported_formats=[FORMATS.TEXT]
             )
@@ -451,6 +459,21 @@ class EasyWaveCpu(Process):
         response.outputs['poisWaveheights'].data_format = FORMATS.TEXT
         response.outputs['poisWaveheights'].file = poispath
 
+    def createPoisSummary(self, response: WPSResponse):
+        abspath = os.path.join(self.workdir, self.ewOutputPoisSummary)
+
+        if not os.path.exists(abspath):
+            LOGGER.error('summary for POIs is missing')
+            raise ProcessError(self.internalErrorMsg)
+
+        summarypath = os.path.join(self.workdir, self.csvPoisSummary)
+
+        csvdata = pandas.read_csv(abspath, delim_whitespace=True)
+        csvdata.to_csv(summarypath, index=False)
+
+        response.outputs['poisSummary'].data_format = FORMATS.TEXT
+        response.outputs['poisSummary'].file = summarypath
+
     def _handler(self, request: WPSRequest, response: WPSResponse):
         self.lat = request.inputs['lat'][0].data
         self.lon = request.inputs['lon'][0].data
@@ -484,12 +507,12 @@ class EasyWaveCpu(Process):
                 + '(and slip requires length and width)'
             )
 
-        if self.gridres == 30:
-            self.gridfile = '/data/grid_30.grd'
-        elif self.gridres == 60:
+        if self.gridres == 60:
             self.gridfile = '/data/grid_60.grd'
         elif self.gridres == 120:
             self.gridfile = '/data/grid_120.grd'
+        elif self.gridres == 240:
+            self.gridfile = '/data/grid_240.grd'
         else:
             raise ProcessError('invalid grid resolution')
 
@@ -518,6 +541,7 @@ class EasyWaveCpu(Process):
 
         if self.pois is not None:
             self.createPoisResults(response)
+            self.createPoisSummary(response)
 
         self.createIsolines(response)
         response.update_status(self.statusMsg, 90.0)

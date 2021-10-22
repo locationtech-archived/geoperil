@@ -31,6 +31,7 @@ Contributors:
   <v-container>
     <v-expansion-panels popout>
       <AddUser />
+      <ChangeUser />
     </v-expansion-panels>
   </v-container>
 </template>
@@ -38,10 +39,12 @@ Contributors:
 <script lang="ts">
 import { Vue, Component } from 'nuxt-property-decorator'
 import AddUser from './AddUser.vue'
+import ChangeUser from './ChangeUser.vue'
 
 @Component({
   components: {
     AddUser,
+    ChangeUser,
   },
 })
 export default class UserManagement extends Vue {

@@ -37,7 +37,7 @@ Contributors:
     <v-card-subtitle
       class="ma-0 pa-0 station-subtitle"
     >
-      {{ station.name }}
+      {{ fixedLengthStationName }}
     </v-card-subtitle>
 
     <v-progress-circular
@@ -146,6 +146,14 @@ export default class StationPreview extends Vue {
     this.stopUpdater()
   }
 
+  get fixedLengthStationName () {
+    if (this.stationName.length > 25) {
+      return this.stationName.substring(0, 22) + '...'
+    }
+
+    return this.stationName
+  }
+
   get activeClasses () {
     const hoveredMap = this.$store.getters.stationHoveredMap
     const classes = 'rounded-0 station-card'
@@ -167,6 +175,14 @@ export default class StationPreview extends Vue {
 
   get stationTimestamp (): Date {
     return this.$store.getters.stationTimestamp
+  }
+
+  get stationName (): string {
+    if (this.station.location) {
+      return this.station.location
+    }
+
+    return this.station.name
   }
 
   @Watch('stationTimestamp')
@@ -270,16 +286,18 @@ export default class StationPreview extends Vue {
     const selection = d3.select('#' + this.stationId)
     selection.select('svg').selectAll('*').remove()
 
-    let maxY = { value: 0 }
-    let minY = { value: 0 }
+    let maxY = 0
+    let minY = 0
 
     if (this.data && this.data.length > 0) {
-      maxY = this.data.reduce((a: any, b: any) => {
+      const dataMaxY = this.data.reduce((a: any, b: any) => {
         return a.value > b.value ? a : b
       })
-      minY = this.data.reduce((a: any, b: any) => {
+      const dataMinY = this.data.reduce((a: any, b: any) => {
         return a.value < b.value ? a : b
       })
+      maxY = dataMaxY.value
+      minY = dataMinY.value
     }
 
     if (this.simdata && this.simdata.length > 0) {
@@ -289,8 +307,14 @@ export default class StationPreview extends Vue {
       const simMinY = this.simdata.reduce((a: any, b: any) => {
         return a.value < b.value ? a : b
       })
-      maxY.value = Math.max(maxY.value, simMaxY.value)
-      minY.value = Math.min(minY.value, simMinY.value)
+      maxY = Math.max(maxY, simMaxY.value)
+      minY = Math.min(minY, simMinY.value)
+    }
+
+    // ensure that there is at least a range of 1 to avoid bad diagrams
+    if (maxY - minY < 1) {
+      maxY += 0.5
+      minY -= 0.5
     }
 
     const svg = selection.select('svg')
@@ -309,10 +333,21 @@ export default class StationPreview extends Vue {
       .range([0, this.width - this.margin.right])
       .clamp(true)
 
-    const scaleY = d3.scaleLinear()
-      .domain([maxY.value, minY.value])
-      .range([0, axisheight])
-      .nice()
+    let scaleY: any
+
+    if (this.station.sensor === 'exercise') {
+      // use fixed y scale for exercises and do not use nice()
+      maxY = 1.5
+      minY = -1.5
+      scaleY = d3.scaleLinear()
+        .domain([maxY, minY])
+        .range([0, axisheight])
+    } else {
+      scaleY = d3.scaleLinear()
+        .domain([maxY, minY])
+        .range([0, axisheight])
+        .nice()
+    }
 
     const line = d3.line()
       .defined((d: any) => !isNaN(d.value))
@@ -348,7 +383,7 @@ export default class StationPreview extends Vue {
 
     svg.append('g')
       .attr('class', 'y-axis')
-      .call(d3.axisLeft(scaleY).ticks(5).tickFormat(d3.format('.2f')))
+      .call(d3.axisLeft(scaleY).ticks(5).tickFormat(d3.format('.2f') as any))
 
     // the lines
     if (this.data && this.data.length > 0) {

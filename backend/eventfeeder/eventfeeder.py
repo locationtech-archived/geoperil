@@ -34,7 +34,7 @@ import re
 import json
 import sys
 from xml.etree.ElementTree import fromstring
-import xml.etree.ElementTree as ElementTree
+# import xml.etree.ElementTree as ElementTree
 import requests
 
 REGEXALNUM = r'([0-9\.]+)([A-Za-z]+)'
@@ -475,9 +475,9 @@ def feedevent(event):
     resp = requests.post(url, data=params, timeout=60)
 
     if not (
-        resp.status_code == requests.codes.ok
-        and 'status' in resp.json()
-        and resp.json()["status"] == "success"
+            resp.status_code == requests.codes.ok
+            and 'status' in resp.json()
+            and resp.json()["status"] == "success"
     ):
         print("Got no valid response with params:", str(params))
         print("Response was:", resp.status_code, resp.content)
@@ -545,16 +545,14 @@ def main():
         feedevent(item)
 
     # TODO: alternative API at https://api.geonet.org.nz/quake?MMI=3
-    '''
-    for item in parsegns(
-            requests.get("http://www.geonet.org.nz/quakes/services/all.rss")
-            .content
-    ):
-        item["provider"] = "gns"
-        item["providerurl"] = "http://www.geonet.org.nz"
-        item["providername"] = "GeoNet"
-        feedevent(item)
-    '''
+    # for item in parsegns(
+    #         requests.get("http://www.geonet.org.nz/quakes/services/all.rss")
+    #         .content
+    # ):
+    #     item["provider"] = "gns"
+    #     item["providerurl"] = "http://www.geonet.org.nz"
+    #     item["providername"] = "GeoNet"
+    #     feedevent(item)
 
     for item in parseipma(
             requests.get("http://www.ipma.pt/resources.www/rss/sism_geral.xml")
@@ -590,18 +588,16 @@ def main():
 
     # TODO: alternative API:
     # https://www.earthquakescanada.nrcan.gc.ca/cache/earthquakes/canada-en.atom
-    '''
-    for item in parsenrc(
-            requests.get(
-                "http://www.earthquakescanada.nrcan.gc.ca/" +
-                "index-eng.php?tpl_region=canada&tpl_output=rss"
-            ).content
-    ):
-        item["provider"] = "nrc"
-        item["providerurl"] = "http://www.earthquakescanada.nrcan.gc.ca"
-        item["providername"] = "Natural Resources Canada"
-        feedevent(item)
-    '''
+    # for item in parsenrc(
+    #         requests.get(
+    #             "http://www.earthquakescanada.nrcan.gc.ca/" +
+    #             "index-eng.php?tpl_region=canada&tpl_output=rss"
+    #         ).content
+    # ):
+    #     item["provider"] = "nrc"
+    #     item["providerurl"] = "http://www.earthquakescanada.nrcan.gc.ca"
+    #     item["providername"] = "Natural Resources Canada"
+    #     feedevent(item)
 
     for item in parsequakeml(
             requests.get(

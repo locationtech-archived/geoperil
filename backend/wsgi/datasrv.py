@@ -34,9 +34,12 @@ import datetime
 import glob
 import requests
 from bson.objectid import ObjectId
+from urllib.parse import urlparse
 import cherrypy
 from cherrypy.lib.static import serve_file as cherrypy_serve_file
 from cherrypy._cperror import HTTPError, HTTPRedirect
+import pandas
+import traceback
 from base import config, jssuccess, startapp
 from basesrv import BaseSrv
 from data_products import Products
@@ -79,7 +82,10 @@ class DataSrv(BaseSrv, Products):
         ]
         pstr = ""
         for name, desc in desc:
-            name = "/".join(["&lt;%s&gt;" % x for x in name])
+            if type(name) is tuple:
+                name = "/".join(["&lt;%s&gt;" % x for x in name])
+            else:
+                name = "&lt;%s&gt;" % name
             pstr += "<li><b>%s</b> - %s</li>\n" % (name, desc)
         h4str = ""
         for pro in self._products:
@@ -226,31 +232,37 @@ class DataSrv(BaseSrv, Products):
                 product, ",".join(["%s=%s" % x for x in kwargs.items()])
             )
         )
+
+        serve = None
+        fnk = None
+        res = None
         file = os.path.join(
-            config["eventdata"]["eventdatadir"],
-            event["_id"],
+            self.event_resultsdir(event["_id"]),
             product
         )
-        serve = None
+
         for pro in self._products:
             if pro["file"] == product:
                 serve = pro["serve"]
                 break
-        fnk = None
-        res = None
         if serve is not None:
             try:
                 fnk = self.__getattribute__("serve_" + serve)
             except AttributeError:
                 pass
+
         if fnk is None:
             self.set_cookie_with_event(event, "not available")
             raise HTTPError("404 Product not available.")
+
         self.set_cookie_with_event(event, "something wrong")
         res = fnk(event, product, file, **kwargs)
+
         if res is None:
             raise HTTPError("404 Product could not be created.")
+
         self.set_cookie_with_event(event, "success")
+
         return res
 
     def mk_product(self, event, product, **kwargs):
@@ -261,8 +273,7 @@ class DataSrv(BaseSrv, Products):
             )
         )
         file = os.path.join(
-            config["eventdata"]["eventdatadir"],
-            event["_id"],
+            self.event_resultsdir(event["_id"]),
             product
         )
         try:
@@ -280,31 +291,11 @@ class DataSrv(BaseSrv, Products):
         return False
 
     def mk_simulation(self, event, product, file, **kwargs):
-        if product == "eWave.2D.00060.ssh" and "dt" not in kwargs:
-            kwargs["dt"] = 1
         stat = self.event_stat(event["_id"])
-        if stat is None or stat == 100:
-            print("Retriggering simulation %s..." % event["_id"])
-            self.retriggerSim(
-                event["_id"],
-                kwargs["dt"] if "dt" in kwargs else 0
-            )
-        print("Waiting for simulation %s..." % event["_id"])
-        timeout = 1200
-        stat = self.event_stat(event["_id"])
-        if stat is None:
-            print("Simulation failed.")
-            self.set_cookie_with_event(event, "simulation failed")
+
+        if stat is None or stat != 100:
             return False
-        while timeout > 0 and stat < 100:
-            time.sleep(10)
-            timeout -= 10
-            stat = self.event_stat(event["_id"])
-            print("Simulation %s ended." % event["_id"])
-        print("Waiting for file...")
-        while timeout > 0 and not os.path.isfile(file):
-            time.sleep(10)
-            timeout -= 10
+
         if os.path.isfile(file):
             print("File exists.")
             time.sleep(10)
@@ -335,34 +326,39 @@ class DataSrv(BaseSrv, Products):
             {"$inc": {"requests": 1}, "$set": {"last_request": now}}
         )
 
+    def gmturl(self):
+        if "gmtsrvurl" in config["global"]:
+            return config["global"]["gmtsrvurl"]
+
+        url = urlparse(cherrypy.url())
+        return url.scheme + "://" + url.hostname + "/gmtsrv"
+
     def gmt_valid_params(self):
-        return json.loads(
-            subprocess.check_output(
-                [config["GMT"]["report_bin"], "--print_json", "Y"]
-            ).decode("utf-8")
-        )
+        resp = requests.get(self.gmturl() + "/gmt_valid_params")
+        respjson = resp.json()
+
+        if not (
+            resp.status_code == requests.codes.ok
+            and "status" in respjson
+            and respjson["status"] == "success"
+            and "params" in respjson
+        ):
+            return None
+        return respjson["params"]
 
     def exec_gmt(self, **kwargs):
-        valid_args = self.gmt_valid_params()
-        valid_args = [x["Flag2"].lstrip("-") for x in valid_args]
-        args = [config["GMT"]["report_bin"]]
-        for key, val in kwargs.items():
-            if key in valid_args and isinstance(val, str):
-                args.append("--" + key)
-                args.append(val)
-            else:
-                print(
-                    "Removing invalid gmt-argument: --%s %s" % (key, str(val))
-                )
-        print("Executing: %s" % (" ".join(args)))
-        proc = subprocess.Popen(
-            args,
-            cwd=os.path.dirname(config["GMT"]["report_bin"]),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
-        out, _ = proc.communicate()
-        return proc.returncode, out
+        resp = requests.post(self.gmturl() + "/exec_gmt", data=kwargs)
+        respj = resp.json()
+        ret = 1
+        output = ""
+
+        if "returncode" in respj:
+            ret = respj["returncode"]
+
+        if "output" in respj:
+            output = respj["output"]
+
+        return ret, output
 
     def retriggerSim(self, evid, dt_out):
         event = self._db["eqs"].find_one({"_id": evid})
@@ -378,22 +374,27 @@ class DataSrv(BaseSrv, Products):
         if apikey is None:
             return False
         requests.post(
-            self.get_hostname() + "/srv/computeById",
+            self.get_hostname() + "/computeById",
             data={"apikey": apikey, "evtid": evid, "dt_out": dt_out, "raw": 1}
         )
         return True
 
+    def event_resultsdir(self, evid):
+        event = self._db["eqs"].find_one({"_id": evid})
+        if "resultsdir" in event:
+            return event["resultsdir"]
+        return None
+
     def event_stat(self, evid):
         event = self._db["eqs"].find_one({"_id": evid})
-        if "raw_progress" in event:
-            return event["raw_progress"]
+        if "progress" in event:
+            return event["progress"]
         return None
 
     def extractCsvFromGrids(self, evid, csvfile, lat, lon, minint=1):
         files = glob.glob(
             os.path.join(
-                config["eventdata"]["eventdatadir"],
-                evid,
+                self.event_resultsdir(evid),
                 "eWave.2D.*.ssh"
             )
         )
@@ -462,15 +463,49 @@ class DataSrv(BaseSrv, Products):
 
     def export_tfps(self, evtid, minewh=0):
         out = "longitude,latitude,ewh,eta\n"
-        crs = list(self._db["comp"].find({"EventID": evtid, "type": "TFP"}))
-        for tfp_comp in crs:
-            tfp = self._db["tfps"].find_one({"_id": ObjectId(tfp_comp["tfp"])})
-            if tfp is not None and tfp_comp["ewh"] >= minewh:
+
+        evt = self._db["eqs"].find_one({
+            "_id": evtid
+        })
+
+        if "resultsdir" not in evt:
+            logger.error("Could not get results for event")
+            return out
+
+        csvpath = os.path.join(evt["resultsdir"], "pois_summary.csv")
+
+        if not os.path.isfile(csvpath):
+            logger.error("Could not get results file")
+            return out
+
+        try:
+            computed_tfps = pandas.read_csv(csvpath)
+        except Exception as ex:
+            logger.error("Could not read results file")
+            logger.error(traceback.format_exc())
+            return out
+
+        # ID        ETA   EWH
+        # abas_rad  -1.0  0.0
+        # ...
+
+        if computed_tfps.empty:
+            logger.warn("empty TFP list")
+            return out
+
+        if len(computed_tfps.columns) != 3:
+            logger.error("unexpected shape of TFP list")
+            return out
+
+        for index, row in computed_tfps.iterrows():
+            tfp = self._db["tfps"].find_one({"code": row[0]})
+
+            if tfp is not None and row[2] >= minewh:
                 out += "%f,%f,%f,%f\n" % (
-                    tfp["lon_real"],
-                    tfp["lat_real"],
-                    tfp_comp["ewh"],
-                    tfp_comp["eta"]
+                    tfp["lon"],
+                    tfp["lat"],
+                    row[2],
+                    row[1]
                 )
         return out
 

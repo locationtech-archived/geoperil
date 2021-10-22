@@ -25,13 +25,14 @@
 #   Matthias Rüster (GFZ)
 #   Hannes Fuchs (GFZ)
 
-FROM node:10.21-buster
+FROM node:12.20.1-buster
 
 WORKDIR /opt/geoperil-frontend
 
 VOLUME [ "/opt/geoperil-frontend" ]
 
-RUN apt-get update && \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
     apt-get install -y yarn
 
 COPY start-dev.sh .

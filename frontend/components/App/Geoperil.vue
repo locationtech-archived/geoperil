@@ -134,6 +134,8 @@ export default class Geoperil extends Vue {
     await this.$store.dispatch('fetchEvents')
     await this.$store.dispatch('fetchStations')
     await this.$store.dispatch('fetchAllInstitutions')
+    await this.$store.dispatch('initProducts')
+    await this.$store.dispatch('initGmtHelp')
     await this.$store.dispatch('initPlugins')
     this.isLoading = false
 

@@ -27,8 +27,12 @@
 
 FROM python:3.7-buster
 
-RUN apt-get update && \
-    apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        python3-cffi \
+        python3-brotli \
+        libpango1.0-dev \
         apache2 \
         libapache2-mod-wsgi-py3 && \
     mkdir /geoperil && \

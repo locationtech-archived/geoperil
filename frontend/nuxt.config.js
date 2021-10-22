@@ -112,6 +112,7 @@ export default {
   build: {
   },
   env: {
-    webguisrvUrl: process.env.WEBGUISRV_URL || 'http://localhost:8080/geoperil-wsgi/webguisrv/',
+    webguisrvUrl: process.env.WEBGUISRV_URL || 'http://localhost:8080/webguisrv/',
+    datasrvUrl: process.env.DATASRV_URL || 'http://localhost:8080/datasrv/',
   },
 }

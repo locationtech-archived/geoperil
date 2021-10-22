@@ -1,0 +1,37 @@
+# GeoPeril - A platform for the computation and web-mapping of hazard specific
+# geospatial data, as well as for serving functionality to handle, share, and
+# communicate threat specific information in a collaborative environment.
+#
+# Copyright (C) 2021 GFZ German Research Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the Licence is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the Licence for the specific language governing permissions and
+# limitations under the Licence.
+#
+# Contributors:
+#   Johannes Spazier (GFZ)
+#   Sven Reissland (GFZ)
+#   Martin Hammitzsch (GFZ)
+#   Matthias Rüster (GFZ)
+#   Hannes Fuchs (GFZ)
+
+# COLOR_MODEL = RGB
+-1000	255	255	255	5	255	255	255	;0-5
+5	255	215	168	25	255	215	168	;5-25
+25	245	185	81	250	245	185	81	;25-250
+250	207	130	32	500	207	130	32	;250-500
+500	140	65	19	1000	140	65	19	;500-1000
+1000	90	6	0	130000	90	6	0	;> 1000
+F	255	255	255				
+B	10	0	121
+N	128	128	128

@@ -45,6 +45,7 @@ import owslib.wps as wps
 from urllib.request import urlretrieve
 from datetime import datetime
 from datetime import timedelta
+from datetime import timezone
 from pymongo.database import Database
 from uuid import uuid4
 from textwrap import wrap
@@ -65,6 +66,26 @@ ARRIVALTIMES_RAW_FILE = "arrivaltimes.tiff"
 WAVEHEIGHTS_DEFAULT_FILE = "waveheights_default.geojson"
 WAVEHEIGHTS_RAW_FILE = "waveheights.tiff"
 POISWAVEHEIGHTS_FILE = "pois.csv"
+POISSUMMARY_FILE = "pois_summary.csv"
+
+SUPPORTED_USER_PERMISSIONS = [
+    {
+        "id": "comp",
+        "name": "Computations"
+    },
+    {
+        "id": "admin",
+        "name": "Administration"
+    },
+    {
+        "id": "manage",
+        "name": "Manage"
+    },
+    {
+        "id": "api",
+        "name": "API"
+    },
+]
 
 
 class WebGuiSrv(BaseSrv):
@@ -76,6 +97,19 @@ class WebGuiSrv(BaseSrv):
             'compute': True,
         }
         return jssuccess(plugins=supported)
+
+    @cherrypy.expose
+    def supported_user_permissions(self):
+        user = self.getUser()
+
+        if user is None:
+            return jsdeny()
+
+        return jssuccess(
+            permissions=SUPPORTED_USER_PERMISSIONS,
+        )
+
+        return jsfail()
 
     @cherrypy.expose
     def session(self):
@@ -117,7 +151,7 @@ class WebGuiSrv(BaseSrv):
                 cookie = cherrypy.response.cookie
                 cookie['server_cookie'] = sessionid
                 cookie['server_cookie']['path'] = '/'
-                cookie['server_cookie']['max-age'] = 3600
+                cookie['server_cookie']['max-age'] = 90000  # one day
                 cookie['server_cookie']['version'] = 1
                 userObj = self._get_user_obj(user)
                 return jssuccess(user=userObj)
@@ -268,49 +302,71 @@ class WebGuiSrv(BaseSrv):
     @cherrypy.expose
     def userlist(self):
         user = self.getUser()
-        if user is not None and user["permissions"].get("admin", False):
-            users = list(self._db["users"].find())
-            for user in users:
-                user.pop("password", None)
-                user.pop("pwhash", None)
-                user.pop("pwsalt", None)
-            return jssuccess(users=users)
-        return jsdeny()
+        if user is None or not user["permissions"].get("admin", False):
+            return jsdeny()
+
+        users = list(self._db["users"].find())
+        for user in users:
+            instobj = self._db["institutions"].find_one({
+                "_id": user["inst"]
+            })
+            user["inst"] = instobj
+            user.pop("password", None)
+            user.pop("pwhash", None)
+            user.pop("pwsalt", None)
+        return jssuccess(users=users)
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
-    def saveuser(self, userobj):
+    def changeuser(self, username, password, inst, permissions):
+        logging.error(username)
+        logging.error(password)
+        logging.error(inst)
+        logging.error(permissions)
+        perms = json.loads(permissions)
+
+        logging.error(perms)
+
         user = self.getUser()
-        if user is not None and user["permissions"].get("admin", False):
-            userobj = json.loads(userobj)
-            if "_id" in userobj:
-                # all IDs have to be translated into the ObjectId type,
-                # because they are only Strings in JS :(
-                userid = ObjectId(userobj.pop("_id", None))
-                if userobj["inst"] is not None:
-                    userobj["inst"] = ObjectId(userobj["inst"])
-                userobj.pop("pwsalt", None)
-                userobj.pop("pwhash", None)
-                if "password" in userobj:
-                    if len(userobj["password"]) > 3:
-                        userobj["pwsalt"], userobj["pwhash"] = \
-                            createsaltpwhash(userobj["password"])
-                        userobj["password"] = b64encode(
-                            hashlib.new(
-                                "sha256",
-                                bytes(userobj["password"], "utf-8")
-                            ).digest()
-                        ).decode("ascii")
-                    else:
-                        userobj.pop("password", None)
-                self._db["users"].update({"_id": userid}, {"$set": userobj})
-                userobj = self._db["users"].find_one({"_id": userid})
-                userobj.pop("password", None)
-                userobj.pop("pwsalt", None)
-                userobj.pop("pwhash", None)
-                return jssuccess(user=userobj)
+        if user is None or not user["permissions"].get("admin", False):
+            return jsdeny()
+
+        userobj = self._db["users"].find_one({"username": username})
+
+        if userobj is None or "_id" not in userobj:
             return jsfail(errors=["User not found."])
-        return jsdeny()
+
+        instobj = self._db["institutions"].find_one({"name": inst})
+
+        if instobj is None or "_id" not in instobj:
+            return jsfail(errors=["Institution not found."])
+
+        # update institution
+        userobj["inst"] = instobj["_id"]
+
+        # update password if requested
+        if password is not None and len(password) > 0:
+            userobj["pwsalt"], userobj["pwhash"] = createsaltpwhash(password)
+            userobj["password"] = b64encode(
+                hashlib.new(
+                    "sha256",
+                    bytes(password, "utf-8")
+                ).digest()
+            ).decode("ascii")
+
+        # update permissions
+        userobj["permissions"] = perms
+
+        # update mongo object with all new values
+        userid = userobj.pop("_id", None)
+        self._db["users"].update({"_id": userid}, {"$set": userobj})
+
+        # remove sensitive attributes before sending user object
+        userobj.pop("password", None)
+        userobj.pop("pwsalt", None)
+        userobj.pop("pwhash", None)
+
+        return jssuccess(user=userobj)
 
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
@@ -556,7 +612,7 @@ class WebGuiSrv(BaseSrv):
         res = list(self._db["osm_buildings"].find(query).limit(3000))
         if evtid is not None:
             fgrid = os.path.join(
-                config["eventdata"]["eventdatadir"],
+                "NOTSUPPORTED",
                 evtid,
                 "wstmax_gpu.grid"
             )
@@ -665,17 +721,56 @@ class WebGuiSrv(BaseSrv):
             return jssuccess(comp=res)
         return jsdeny()
 
+    def _getalltfps(self):
+        return self._db["tfps"].find()
+
     # for internal use
     def _gettfps(self, evid):
-        crs = list(self._db["comp"].find({"EventID": evid, "type": "TFP"}))
+        evt = self._db["eqs"].find_one({
+            "_id": evid
+        })
+
+        if "resultsdir" not in evt:
+            logger.error("Could not get resultsdir for event")
+            return []
+
+        csvpath = os.path.join(
+            evt["resultsdir"],
+            POISSUMMARY_FILE
+        )
+
+        if not os.path.isfile(csvpath):
+            logger.error("Could not get POIs summary file")
+            return []
+
+        try:
+            alldata = pandas.read_csv(csvpath)
+        except Exception:
+            logger.error("Could not read summary file")
+            logger.error(traceback.format_exc())
+            return []
+
+        alltfps = self._getalltfps()
         res = []
-        for tfp in crs:
-            obj = self._db["tfps"].find_one({"_id": ObjectId(tfp["tfp"])})
-            if obj is None:
-                continue
-            obj["ewh"] = tfp["ewh"]
-            obj["eta"] = tfp["eta"]
-            res.append(obj)
+
+        allrows = alldata.iterrows()
+
+        for tfp in alltfps:
+            name = tfp.get("code")
+            found = None
+
+            for index, row in allrows:
+                if row[0] == name:
+                    found = row
+                    break
+
+            if found is not None:
+                obj = dict(tfp)
+                obj["eta"] = row[1]
+                obj["ewh"] = row[2]
+                obj.pop('_id', None)
+                res.append(obj)
+
         return res
 
     # static division into different TFP levels
@@ -684,7 +779,7 @@ class WebGuiSrv(BaseSrv):
             return None
         if tfp["ewh"] < 0.2:
             return "INFORMATION"
-        if tfp["ewh"] < 0.5:
+        if tfp["ewh"] <= 0.5:
             return "ADVISORY"
         return "WATCH"
 
@@ -953,7 +1048,7 @@ class WebGuiSrv(BaseSrv):
         return {"mail": msg, "sms": sms, "msgnr": msgnr}
 
     def _format_country(self, arr):
-        return arr["country"] + " - " + arr["name"]
+        return arr["countryname"] + "-" + arr["name"]
 
     def _format_country_state(self, arr):
         return arr["COUNTRY"] + (
@@ -1502,6 +1597,8 @@ class WebGuiSrv(BaseSrv):
         if user is None:
             return jsdeny()
 
+        # TODO: check if user is allowed to start computations
+
         # TODO: distribute incoming requests evenly on workers
         # for example with index counter of last used worker in mongo DB
         # TODO: add exclusive worker for automated computation only
@@ -1551,6 +1648,32 @@ class WebGuiSrv(BaseSrv):
             slip = float(slip)
             length = float(length)
             width = float(width)
+
+        # add TFPs to list of POIs to always get results for those coordinates
+        tfps = self._getalltfps()
+
+        if tfps is not None and tfps.count() > 0:
+            if pois is None:
+                pois = []
+            else:
+                pois = json.loads(pois)
+
+            for item in tfps:
+                code = item.get("code")
+                tfplat = item.get("lat")
+                tfplon = item.get("lon")
+
+                if code is None or tfplat is None or tfplon is None:
+                    continue
+
+                pois.append({
+                    "name": code,
+                    "lat": tfplat,
+                    "lon": tfplon
+                })
+
+            # convert back again to JSON string
+            pois = json.dumps(pois)
 
         worker = list(
             self._db["settings"].find({
@@ -2542,6 +2665,7 @@ class WatchExecution(threading.Thread):
             waveheightsRef = None
             waveheightsRawRef = None
             poisWaveheightsRef = None
+            poisSummaryRef = None
 
             for output in self.execution.processOutputs:
                 ident = output.identifier
@@ -2558,6 +2682,8 @@ class WatchExecution(threading.Thread):
                     waveheightsRawRef = output.reference
                 elif ident == 'poisWaveheights':
                     poisWaveheightsRef = output.reference
+                elif ident == 'poisSummary':
+                    poisSummaryRef = output.reference
 
             if (
                 calctime is None
@@ -2581,6 +2707,9 @@ class WatchExecution(threading.Thread):
             poisWaveheightsFile = os.path.join(
                 resultspath, POISWAVEHEIGHTS_FILE
             )
+            poisSummaryFile = os.path.join(
+                resultspath, POISSUMMARY_FILE
+            )
 
             urlretrieve(arrivalRawRef, arrivalRawFile)
             urlretrieve(waveheightsRawRef, waveheightsRawFile)
@@ -2593,6 +2722,9 @@ class WatchExecution(threading.Thread):
 
             if poisWaveheightsRef:
                 urlretrieve(poisWaveheightsRef, poisWaveheightsFile)
+
+            if poisSummaryRef:
+                urlretrieve(poisSummaryRef, poisSummaryFile)
 
         except Exception as ex:
             logger.error(traceback.format_exc())

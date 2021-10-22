@@ -38,48 +38,23 @@ class Products:
     def __init__(self):
         self._products.extend([
             {
-                "file": "maxWaveHeights.grd",
-                "shortdesc": "Wave jets - SSH (.grd file)",
-                "desc": "Binary SurferGrid with maximum waveheights",
+                "file": "waveheights.tiff",
+                "shortdesc": "Wave jets - SSH (.tiff file)",
+                "desc": "TIFF file with maximum waveheights",
                 "show": ["evt", "evtset", "help"],
-                "type": "raw",
+                "type": "tiff",
                 "serve": "octet_stream",
+                "group": "Waveheights and arrival times",
                 "params": {},
             },
             {
-                "file": "travelTimes.grd",
-                "shortdesc": "Travel times - ETA (.grd file)",
-                "desc": "Binary SurferGrid with estimated arrival times",
+                "file": "arrivaltimes.tiff",
+                "shortdesc": "Arrival times - ETA (.tiff file)",
+                "desc": "TIFF file with estimated arrival times",
                 "show": ["evt", "help"],
-                "type": "raw",
+                "type": "tiff",
                 "serve": "octet_stream",
-                "params": {},
-            },
-            {
-                "file": "cfzs.gmt",
-                "shortdesc": "Coastal Forecast Zones - CFZ (.gmt file)",
-                "desc": "Coastal Forecast Zones as Polygons in GMT format",
-                "show": ["evt", "help"],
-                "type": "raw",
-                "serve": "plain",
-                "params": {},
-            },
-            {
-                "file": "tfps.csv",
-                "shortdesc": "Tsunami Forecast Points - TFP (.csv file)",
-                "desc": "Tsunami Forecast Points as csv file",
-                "show": ["evt", "help"],
-                "type": "raw",
-                "serve": "plain",
-                "params": {},
-            },
-            {
-                "file": "eq.csv",
-                "shortdesc": "Earthquake parameters (.csv file)",
-                "desc": "Earthquake parameters as csv file",
-                "show": ["evt", "help"],
-                "type": "raw",
-                "serve": "plain",
+                "group": "Waveheights and arrival times",
                 "params": {},
             },
             {
@@ -89,6 +64,7 @@ class Products:
                 "show": ["evt", "help"],
                 "type": "png",
                 "serve": "png",
+                "group": "Waveheights and arrival times",
                 "params": {},
             },
             {
@@ -98,6 +74,7 @@ class Products:
                 "show": ["evt", "help"],
                 "type": "png",
                 "serve": "png",
+                "group": "Waveheights and arrival times",
                 "params": {},
             },
             {
@@ -107,6 +84,7 @@ class Products:
                 "show": ["evt", "help"],
                 "type": "pdf",
                 "serve": "octet_stream",
+                "group": "Waveheights and arrival times",
                 "params": {},
             },
             {
@@ -116,44 +94,7 @@ class Products:
                 "show": ["evt", "help"],
                 "type": "pdf",
                 "serve": "octet_stream",
-                "params": {},
-            },
-            {
-                "file": "cfzs_tfps_hq.png",
-                "shortdesc": "CFZs and TFPs (.png file 600dpi)",
-                "desc": "Image with Coastal Forecast Zones and Tsunami " +
-                        "Forecast Points (600dpi)",
-                "show": ["evt", "help"],
-                "type": "png",
-                "serve": "png",
-                "params": {},
-            },
-            {
-                "file": "cfzs_tfps_web.png",
-                "shortdesc": "CFZs and TFPs (.png file 300dpi)",
-                "desc": "Image with Coastal Forecast Zones and Tsunami " +
-                        "Forecast Points (300dpi)",
-                "show": ["evt", "help"],
-                "type": "png",
-                "serve": "png",
-                "params": {},
-            },
-            {
-                "file": "cfzs_tfps_hq.pdf",
-                "shortdesc": "CFZs and TFPs (.pdf file 600dpi)",
-                "desc": "PDF with WaveJets and TravelTimes (600dpi)",
-                "show": ["evt", "help"],
-                "type": "pdf",
-                "serve": "octet_stream",
-                "params": {},
-            },
-            {
-                "file": "cfzs_tfps_web.pdf",
-                "shortdesc": "CFZs and TFPs (.pdf file 300dpi)",
-                "desc": "PDF with WaveJets and TravelTimes (300dpi)",
-                "show": ["evt", "help"],
-                "type": "pdf",
-                "serve": "octet_stream",
+                "group": "Waveheights and arrival times",
                 "params": {},
             },
             {
@@ -164,6 +105,7 @@ class Products:
                 "show": ["evt", "help"],
                 "type": "png",
                 "serve": "png",
+                "group": "Cities",
                 "params": {},
             },
             {
@@ -174,6 +116,7 @@ class Products:
                 "show": ["evt", "help"],
                 "type": "png",
                 "serve": "png",
+                "group": "Cities",
                 "params": {},
             },
             {
@@ -183,6 +126,7 @@ class Products:
                 "show": ["evt", "help"],
                 "type": "pdf",
                 "serve": "octet_stream",
+                "group": "Cities",
                 "params": {},
             },
             {
@@ -192,6 +136,81 @@ class Products:
                 "show": ["evt", "help"],
                 "type": "pdf",
                 "serve": "octet_stream",
+                "group": "Cities",
+                "params": {},
+            },
+            {
+                "file": "tfps_hq.png",
+                "shortdesc": "TFPs Alert Level (.png file 600dpi)",
+                "desc": "Image with Tsunami Forecast Points (600dpi)",
+                "show": ["evt", "help"],
+                "type": "png",
+                "serve": "png",
+                "group": "Tsunami Forecast Points",
+                "params": {},
+            },
+            {
+                "file": "tfps_web.png",
+                "shortdesc": "TFPs Alert Level (.png file 300dpi)",
+                "desc": "Image with Tsunami Forecast Points (300dpi)",
+                "show": ["evt", "help"],
+                "type": "png",
+                "serve": "png",
+                "group": "Tsunami Forecast Points",
+                "params": {},
+            },
+            {
+                "file": "tfps_hq.pdf",
+                "shortdesc": "TFPs Alert Level (.pdf file 600dpi)",
+                "desc": "PDF with Tsunami Forecast Points (600dpi)",
+                "show": ["evt", "help"],
+                "type": "pdf",
+                "serve": "octet_stream",
+                "group": "Tsunami Forecast Points",
+                "params": {},
+            },
+            {
+                "file": "tfps_web.pdf",
+                "shortdesc": "TFPs Alert Level (.pdf file 300dpi)",
+                "desc": "PDF with Tsunami Forecast Points (300dpi)",
+                "show": ["evt", "help"],
+                "type": "pdf",
+                "serve": "octet_stream",
+                "group": "Tsunami Forecast Points",
+                "params": {},
+            },
+            {
+                "file": "pois.csv",
+                "shortdesc": "Tsunami Forecast Points (.csv file)",
+                "desc": "Tsunami Forecast Points as CSV file",
+                "show": ["evt", "help"],
+                "type": "csv",
+                "serve": "plain",
+                "group": "Tsunami Forecast Points",
+                "params": {},
+            },
+            {
+                "file": "pois_summary.csv",
+                "shortdesc":
+                    "Maximum waveheights of Tsunami Forecast Points " +
+                    "(.csv file)",
+                "desc":
+                    "Maximum waveheights of Tsunami Forecast Points as " +
+                    "CSV file",
+                "show": ["evt", "help"],
+                "type": "csv",
+                "serve": "plain",
+                "group": "Tsunami Forecast Points",
+                "params": {},
+            },
+            {
+                "file": "eq.csv",
+                "shortdesc": "Earthquake parameters (.csv file)",
+                "desc": "Earthquake parameters as CSV file",
+                "show": ["evt", "help"],
+                "type": "csv",
+                "serve": "plain",
+                "group": "Miscellaneous",
                 "params": {},
             },
             {
@@ -201,33 +220,8 @@ class Products:
                 "show": ["help"],
                 "type": "png",
                 "serve": "custom_png",
+                "group": "Miscellaneous",
                 "params": {"gmt_*": {"desc": "GMT parameters"}},
-            },
-            {
-                "file": "tl.csv",
-                "shortdesc": "Timeline at latitude and longitude (.csv file)",
-                "desc": "Waveform at the point specified by the mandatory " +
-                        "parameter 'lon' and 'lat'.<br>\n" +
-                        "Optional parameter 'minint' can be given to " +
-                        "request a minimum interval between values, default " +
-                        "is 10 minutes.",
-                "show": ["help"],
-                "type": "raw",
-                "serve": "timeline",
-                "params": {
-                    "lon": {
-                        "desc": "longitude",
-                        "mandatory": True,
-                    },
-                    "lat": {
-                        "desc": "latitude",
-                        "mandatory": True,
-                    },
-                    "minint": {
-                        "desc": "minimum interval",
-                        "mandatory": False,
-                    },
-                },
             },
         ])
 
@@ -284,22 +278,21 @@ class Products:
     def mk_eWave_2D_00060_ssh(self, event, product, file, **kwargs):
         return self.mk_simulation(event, product, file, **kwargs)
 
-    def mk_maxWaveHeights_grd(self, event, product, file, **kwargs):
-        if self.mk_product(event, "eWave.2D.sshmax", **kwargs):
+    def mk_waveheights_tiff(self, event, product, file, **kwargs):
+        if self.mk_product(event, "waveheights.tiff", **kwargs):
             inf = os.path.join(
-                config["eventdata"]["eventdatadir"],
-                event["_id"], "eWave.2D.sshmax"
+                event["resultsdir"],
+                "waveheights.tiff"
             )
             os.rename(inf, file)
             return self.rec_create(event, product, file, kwargs)
         return None
 
-    def mk_travelTimes_grd(self, event, product, file, **kwargs):
-        if self.mk_product(event, "eWave.2D.time", **kwargs):
+    def mk_arrivaltimes_tiff(self, event, product, file, **kwargs):
+        if self.mk_product(event, "arrivaltimes.tiff", **kwargs):
             inf = os.path.join(
-                config["eventdata"]["eventdatadir"],
-                event["_id"],
-                "eWave.2D.time"
+                event["resultsdir"],
+                "arrivaltimes.tiff"
             )
             os.rename(inf, file)
             return self.rec_create(event, product, file, kwargs)
@@ -311,10 +304,10 @@ class Products:
     def mk_wavejets_traveltimes_web_pdf(self, event, product, file, **kwargs):
         return self.mk_png_2_pdf(event, product, file, **kwargs)
 
-    def mk_cfzs_tfps_hq_pdf(self, event, product, file, **kwargs):
+    def mk_tfps_hq_pdf(self, event, product, file, **kwargs):
         return self.mk_png_2_pdf(event, product, file, **kwargs)
 
-    def mk_cfzs_tfps_web_pdf(self, event, product, file, **kwargs):
+    def mk_tfps_web_pdf(self, event, product, file, **kwargs):
         return self.mk_png_2_pdf(event, product, file, **kwargs)
 
     def mk_cities_population_hq_pdf(self, event, product, file, **kwargs):
@@ -330,9 +323,10 @@ class Products:
             fout = open(file, "wb")
             fout.write(
                 self.html2pdf(
-                    '<html><body><img style="max-width:100%%; ' +
-                    'max-height:100%%;" src="%s"></body></html>'
-                    % os.path.join(basedir, src)
+                    r'<html><body><img style="max-width:100%; ' +
+                    r'max-height:100%;" src="' +
+                    os.path.join(basedir, src) +
+                    r'"></body></html>'
                 )
             )
             fout.close()
@@ -350,29 +344,26 @@ class Products:
         )
 
     def mk_wavejets_traveltimes_png(self, event, product, file, **kwargs):
-        if self.mk_product(event, "travelTimes.grd", **kwargs) \
-                and self.mk_product(event, "maxWaveHeights.grd", **kwargs) \
+        if self.mk_product(event, "arrivaltimes.tiff", **kwargs) \
+                and self.mk_product(event, "waveheights.tiff", **kwargs) \
                 and self.mk_product(event, "eq.csv", **kwargs):
             gmtargs = {
                 "output": "%s.ps" % file[:-4],
                 "plot_quake": "Y",
                 "quake": os.path.join(
-                    config["eventdata"]["eventdatadir"],
-                    event["_id"],
+                    event["resultsdir"],
                     "eq.csv"
                 ),
                 "plot_wave_height": "Y",
                 "wave_height": os.path.join(
-                    config["eventdata"]["eventdatadir"],
-                    event["_id"],
-                    "maxWaveHeights.grd"
+                    event["resultsdir"],
+                    "waveheights.tiff"
                 ),
                 "wave_height_expression": "0.05",
                 "plot_wave_time": "Y",
                 "wave_time": os.path.join(
-                    config["eventdata"]["eventdatadir"],
-                    event["_id"],
-                    "travelTimes.grd"
+                    event["resultsdir"],
+                    "arrivaltimes.tiff"
                 ),
                 "dpi": str(kwargs["dpi"]) if "dpi" in kwargs else "300",
             }
@@ -380,13 +371,13 @@ class Products:
             return self.rec_create(event, product, file, kwargs)
         return None
 
-    def mk_cfzs_tfps_hq_png(self, event, product, file, **kwargs):
-        return self.mk_cfzs_tfps_png(event, product, file, dpi=600, **kwargs)
+    def mk_tfps_hq_png(self, event, product, file, **kwargs):
+        return self.mk_tfps_png(event, product, file, dpi=600, **kwargs)
 
-    def mk_cfzs_tfps_web_png(self, event, product, file, **kwargs):
-        return self.mk_cfzs_tfps_png(event, product, file, dpi=300, **kwargs)
+    def mk_tfps_web_png(self, event, product, file, **kwargs):
+        return self.mk_tfps_png(event, product, file, dpi=300, **kwargs)
 
-    def mk_cfzs_tfps_png(self, event, product, file, **kwargs):
+    def mk_tfps_png(self, event, product, file, **kwargs):
         if self.mk_product(event, "cfzs.gmt", **kwargs) \
                 and self.mk_product(event, "tfps.csv", **kwargs) \
                 and self.mk_product(event, "eq.csv", **kwargs):
@@ -394,20 +385,17 @@ class Products:
                 "output": "%s.ps" % file[:-4],
                 "plot_quake": "Y",
                 "quake": os.path.join(
-                    config["eventdata"]["eventdatadir"],
-                    event["_id"],
+                    event["resultsdir"],
                     "eq.csv"
                 ),
                 "plot_cfz": "Y",
                 "cfz": os.path.join(
-                    config["eventdata"]["eventdatadir"],
-                    event["_id"],
+                    event["resultsdir"],
                     "cfzs.gmt"
                 ),
                 "plot_tfp": "Y",
                 "tfp": os.path.join(
-                    config["eventdata"]["eventdatadir"],
-                    event["_id"],
+                    event["resultsdir"],
                     "tfps.csv"
                 ),
                 "dpi": str(kwargs["dpi"]) if "dpi" in kwargs else "300",
@@ -435,7 +423,7 @@ class Products:
         )
 
     def mk_cities_population_png(self, event, product, file, **kwargs):
-        if self.mk_product(event, "maxWaveHeights.grd", **kwargs) and \
+        if self.mk_product(event, "waveheights.tiff", **kwargs) and \
                 self.mk_product(event, "eq.csv", **kwargs):
             gmtargs = {
                 "output": "%s.ps" % file[:-4],
@@ -443,14 +431,12 @@ class Products:
                 "plot_world_pop": "Y",
                 "plot_quake": "Y",
                 "quake": os.path.join(
-                    config["eventdata"]["eventdatadir"],
-                    event["_id"],
+                    event["resultsdir"],
                     "eq.csv"
                 ),
                 "wave_height": os.path.join(
-                    config["eventdata"]["eventdatadir"],
-                    event["_id"],
-                    "maxWaveHeights.grd"
+                    event["resultsdir"],
+                    "waveheights.tiff"
                 ),
                 "dpi": str(kwargs["dpi"]) if "dpi" in kwargs else "300",
             }
@@ -531,38 +517,35 @@ class Products:
                 gmtargs,
                 upsert=True
             )
+
         if os.path.isfile(file):
             return True
+
         if self.mk_product(event, "cfzs.gmt", **kwargs) \
                 and self.mk_product(event, "tfps.csv", **kwargs) \
                 and self.mk_product(event, "eq.csv", **kwargs) \
-                and self.mk_product(event, "maxWaveHeights.grd", **kwargs) \
-                and self.mk_product(event, "travelTimes.grd", **kwargs):
+                and self.mk_product(event, "waveheights.tiff", **kwargs) \
+                and self.mk_product(event, "arrivaltimes.tiff", **kwargs):
             gmtargs.pop("_id", None)
             gmtargs["output"] = "%s.ps" % file[:-4]
             gmtargs["quake"] = os.path.join(
-                config["eventdata"]["eventdatadir"],
-                event["_id"],
+                event["resultsdir"],
                 "eq.csv"
             )
             gmtargs["wave_height"] = os.path.join(
-                config["eventdata"]["eventdatadir"],
-                event["_id"],
-                "maxWaveHeights.grd"
+                event["resultsdir"],
+                "waveheights.tiff"
             )
             gmtargs["wave_time"] = os.path.join(
-                config["eventdata"]["eventdatadir"],
-                event["_id"],
-                "travelTimes.grd"
+                event["resultsdir"],
+                "arrivaltimes.tiff"
             )
             gmtargs["cfz"] = os.path.join(
-                config["eventdata"]["eventdatadir"],
-                event["_id"],
+                event["resultsdir"],
                 "cfzs.gmt"
             )
             gmtargs["tfp"] = os.path.join(
-                config["eventdata"]["eventdatadir"],
-                event["_id"],
+                event["resultsdir"],
                 "tfps.csv"
             )
             self.exec_gmt(**gmtargs)
@@ -605,8 +588,7 @@ class Products:
                 "lon": lon
             }
             csvfile = os.path.join(
-                config["eventdata"]["eventdatadir"],
-                event["_id"],
+                event["resultsdir"],
                 "tl%d_%d_%d.csv" % (minint, row, col)
             )
             if os.path.isfile(csvfile):
@@ -651,21 +633,22 @@ class Products:
                     **kwargs
             ):
                 csvfile = os.path.join(
-                    config["eventdata"]["eventdatadir"],
-                    event["_id"],
+                    event["resultsdir"],
                     "tl%d_%d_%d.csv" % (minint, row, col)
                 )
                 self.rec_request(event, product, csvfile)
+
                 return self.serve_file(event, csvfile, "text/plain", **kwargs)
         elif product == "tl.csv" and "lat" in kwargs and "lon" in kwargs:
             lat = float(kwargs["lat"])
             lon = float(kwargs["lon"])
-            if self.mk_product(event, "travelTimes.grd", dt=1, **kwargs):
+
+            if self.mk_product(event, "arrivaltimes.tiff", dt=1, **kwargs):
                 inf = os.path.join(
-                    config["eventdata"]["eventdatadir"],
-                    event["_id"],
-                    "travelTimes.grd"
+                    event["resultsdir"],
+                    "arrivaltimes.tiff"
                 )
+
                 file = open(inf, "rb")
                 surf = surfer.SurferFile(file)
                 row, col = surf.getRowColFromLatLon(lat, lon)

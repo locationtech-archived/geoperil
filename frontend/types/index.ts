@@ -98,3 +98,44 @@ export interface Station {
   inst: string,
   offset: number,
 }
+
+export interface EventFiltering {
+  min: number,
+  max: number,
+  mt: boolean,
+  sea: boolean,
+  sim: boolean,
+}
+
+export interface Tfp {
+  id: string,
+  name: string,
+  country: string,
+  countryname: string,
+  lon: number,
+  lat: number,
+  eta: number,
+  ewh: number,
+}
+
+export interface GmtHelpItem {
+  flagname: string,
+  help: string,
+  variable: string,
+  dataType: string,
+  default: string,
+  group: GmtHelpGroupParameter[],
+}
+
+export interface GmtHelpGroupParameter {
+  name: string,
+  key: string,
+}
+
+export interface Product {
+  file: string,
+  shortdesc: string,
+  desc: string,
+  type: string,
+  group: string,
+}

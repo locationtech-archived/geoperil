@@ -197,6 +197,8 @@ export default class AddUser extends Vue {
         this.initialPassword = null
         this.selectedInstitution = null
         f.resetValidation()
+
+        await this.$store.dispatch('fetchAllUsers')
       } else {
         this.errorMsg = 'User could not be created. ' +
           (('errors' in data) ? data.errors.toString() : '')

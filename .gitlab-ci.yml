@@ -25,11 +25,145 @@
 #   Matthias Rüster (GFZ)
 #   Hannes Fuchs (GFZ)
 
+variables:
+  FRONTEND_DIR: ${CI_PROJECT_DIR}/frontend
+  WSGI_DIR: ${CI_PROJECT_DIR}/backend/wsgi
+  GMT_DIR: ${CI_PROJECT_DIR}/backend/GMT
+  WORKER_CPU_DIR: ${CI_PROJECT_DIR}/backend/worker/easywaveCPU/wps
+  DBMANAGER_DIR: ${CI_PROJECT_DIR}/backend/db-manager
+  SLM_DIR: ${CI_PROJECT_DIR}/backend/sealevelmonitoring
+  EVENTFEEDER_DIR: ${CI_PROJECT_DIR}/backend/eventfeeder
+
 stages:
+  - test
   - sqa
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - frontend/node_modules
+    - .pip
+
+verify_python:
+  image: python:3.7-buster
+  stage: test
+  tags:
+    - group
+  before_script:
+    - pip3 --cache-dir=.pip install -r "${WSGI_DIR}/requirements.txt"
+  script:
+    - cd "${WSGI_DIR}"
+    - find . -iname '*.py' -exec python3 -m compileall \{\} \;
+    - python3 -m unittest
+
+verify_bash:
+  image: debian:bullseye
+  stage: test
+  cache: {}
+  tags:
+    - group
+  before_script:
+    - apt-get update
+    - apt-get install -y shellcheck
+  script:
+    - find . -iname '*.sh' | xargs shellcheck -S error
+
+codestyle_python_workercpu:
+  image: python:3.7-buster
+  stage: test
+  tags:
+    - group
+  before_script:
+    - pip3 --cache-dir=.pip install -r "${WORKER_CPU_DIR}/requirements.txt"
+    - pip3 --cache-dir=.pip install pycodestyle pylint
+  script:
+    - cd "${WORKER_CPU_DIR}"
+    - find . -iname '*.py' | xargs pycodestyle
+    - find . -iname '*.py' | xargs pylint --exit-zero
+
+codestyle_python_wsgi:
+  image: python:3.7-buster
+  stage: test
+  tags:
+    - group
+  before_script:
+    - pip3 --cache-dir=.pip install -r "${WSGI_DIR}/requirements.txt"
+    - pip3 --cache-dir=.pip install pycodestyle pylint
+  script:
+    - cd "${WSGI_DIR}"
+    - find . -iname '*.py' | xargs pycodestyle
+    - find . -iname '*.py' | xargs pylint --exit-zero
+
+codestyle_python_gmt:
+  image: python:3.7-buster
+  stage: test
+  tags:
+    - group
+  before_script:
+    - pip3 --cache-dir=.pip install -r "${GMT_DIR}/requirements.txt"
+    - pip3 --cache-dir=.pip install pycodestyle pylint
+  script:
+    - cd "${GMT_DIR}"
+    - find . -iname '*.py' | xargs pycodestyle
+    - find . -iname '*.py' | xargs pylint --exit-zero
+
+codestyle_python_dbmanager:
+  image: python:3.7-buster
+  stage: test
+  tags:
+    - group
+  before_script:
+    - pip3 --cache-dir=.pip install -r "${DBMANAGER_DIR}/requirements.txt"
+    - pip3 --cache-dir=.pip install pycodestyle pylint
+  script:
+    - cd "${DBMANAGER_DIR}"
+    - find . -iname '*.py' | xargs pycodestyle
+    - find . -iname '*.py' | xargs pylint --exit-zero
+
+codestyle_python_slm:
+  image: python:3.7-buster
+  stage: test
+  tags:
+    - group
+  before_script:
+    - pip3 --cache-dir=.pip install -r "${SLM_DIR}/requirements.txt"
+    - pip3 --cache-dir=.pip install pycodestyle pylint
+  script:
+    - cd "${SLM_DIR}"
+    - find . -iname '*.py' | xargs pycodestyle
+    - find . -iname '*.py' | xargs pylint --exit-zero
+
+codestyle_python_eventfeeder:
+  image: python:3.7-buster
+  stage: test
+  tags:
+    - group
+  before_script:
+    - pip3 --cache-dir=.pip install -r "${EVENTFEEDER_DIR}/requirements.txt"
+    - pip3 --cache-dir=.pip install pycodestyle pylint
+  script:
+    - cd "${EVENTFEEDER_DIR}"
+    - find . -iname '*.py' | xargs pycodestyle
+    - find . -iname '*.py' | xargs pylint --exit-zero
+
+verify_frontend:
+  image: node:12.20.1-buster
+  stage: test
+  tags:
+    - group
+  before_script:
+    - cd "${FRONTEND_DIR}"
+    - apt-get update && apt-get install -y yarn
+    - yarn install
+  script:
+    - cd "${FRONTEND_DIR}"
+    - yarn lint
+    - yarn test --passWithNoTests
+    - yarn build
 
 sqa:
   stage: sqa
+  cache: {}
   image:
     name: "git.gfz-potsdam.de:5000/id2/software/services/fair/software-quality-assurance/software-quality-assurance:latest"
     entrypoint: [""]

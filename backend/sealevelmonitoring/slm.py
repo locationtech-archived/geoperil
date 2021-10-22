@@ -128,7 +128,7 @@ def feeddata(station):
                 timeout=TIMEOUT
             )
 
-            if (resp.ok):
+            if resp.ok:
                 print("%s: " % station["name"], resp.json())
             else:
                 print("Request failed for %s: " % station["name"], resp)

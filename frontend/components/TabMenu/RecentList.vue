@@ -37,6 +37,7 @@ Contributors:
     </v-list-item>
     <EventItem
       v-for="(item, index) in recentEvents"
+      v-show="eventMatchesFilter(item)"
       :key="index"
       :data="item"
       @change-to-compose-tab="handleChangeComposeTab"
@@ -45,9 +46,9 @@ Contributors:
 </template>
 
 <script lang="ts">
-import { Vue, Component } from 'nuxt-property-decorator'
+import { Vue, Component, Prop } from 'nuxt-property-decorator'
 import EventItem from './EventItem.vue'
-import { Event } from '~/types'
+import { Event, EventFiltering } from '~/types'
 
 @Component({
   components: {
@@ -55,12 +56,43 @@ import { Event } from '~/types'
   },
 })
 export default class RecentList extends Vue {
+  @Prop({ type: Object, default: null }) filter: EventFiltering|null = null
+
   get recentEvents (): Event[] {
     return this.$store.getters.recentEvents
   }
 
   public handleChangeComposeTab (): void {
     this.$emit('change-to-compose-tab')
+  }
+
+  public eventMatchesFilter (ev: Event): boolean {
+    if (!this.filter) {
+      return true
+    }
+
+    if (
+      ev.mag && (
+        this.filter.min > ev.mag ||
+        this.filter.max < ev.mag
+      )
+    ) {
+      return false
+    }
+
+    if (this.filter.mt && !ev.dip && !ev.strike && !ev.rake) {
+      return false
+    }
+
+    if (this.filter.sea && !ev.seaArea) {
+      return false
+    }
+
+    if (this.filter.sim && !ev.progress) {
+      return false
+    }
+
+    return true
   }
 }
 </script>

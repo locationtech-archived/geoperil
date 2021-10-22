@@ -39,6 +39,7 @@ Contributors:
       v-for="(item, index) in userEvents"
       :key="index"
       :data="item"
+      :reprocess="true"
       @change-to-compose-tab="handleChangeComposeTab"
     />
   </v-list>

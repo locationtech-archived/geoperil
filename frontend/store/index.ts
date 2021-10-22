@@ -44,6 +44,10 @@ import {
   FORM_ENCODE_CONFIG,
   UPDATE_INTERVAL_MSEC,
   API_INSTLIST_URL,
+  API_USERLIST_URL,
+  API_GET_TFPS_URL,
+  API_GET_AVAILABLE_PRODUCTS,
+  API_GET_GMT_HELP,
 } from './constants'
 import {
   RootState,
@@ -51,6 +55,10 @@ import {
   User,
   Station,
   ComputeRequest,
+  Institution,
+  GmtHelpItem,
+  Product,
+  Tfp,
 } from '~/types'
 import {
   pluginsState,
@@ -58,6 +66,7 @@ import {
   pluginsMutations,
   pluginsActions,
 } from '~/store/plugins-store'
+import { replaceNewlines } from '~/plugins/geoperil-utils'
 
 export const state = (): RootState => ({
   supportedPlugins: {},
@@ -69,7 +78,8 @@ export const state = (): RootState => ({
   selectedEvent: null,
   composeEvent: null,
   user: null,
-  allInstitutions: null,
+  allUsers: [],
+  allInstitutions: [],
   lastUpdate: null,
   selectedTab: 0,
   mapIsLoading: false,
@@ -81,6 +91,12 @@ export const state = (): RootState => ({
   stationHoveredMap: null,
   selectedStationMap: null,
   selectedStationDetail: null,
+  tfps: [],
+  availableProducts: [],
+  gmtHelp: [],
+  datadownloadEvent: null,
+  showDownloadProductDialog: false,
+  showCustomMapDialog: false,
   ...pluginsState,
 })
 
@@ -94,6 +110,7 @@ export const getters: GetterTree<RootState, RootState> = {
   selectedEvent: (state: RootState) => state.selectedEvent,
   composeEvent: (state: RootState) => state.composeEvent,
   user: (state: RootState) => state.user,
+  allUsers: (state: RootState) => state.allUsers,
   allInstitutions: (state: RootState) => state.allInstitutions,
   lastUpdate: (state: RootState) => state.lastUpdate,
   selectedTab: (state: RootState) => state.selectedTab,
@@ -151,6 +168,12 @@ export const getters: GetterTree<RootState, RootState> = {
 
     return 'admin' in user.permissions && user.permissions.admin === true
   },
+  tfps: (state: RootState) => state.tfps,
+  availableProducts: (state: RootState) => state.availableProducts,
+  gmtHelp: (state: RootState) => state.gmtHelp,
+  datadownloadEvent: (state: RootState) => state.datadownloadEvent,
+  showDownloadProductDialog: (state: RootState) => state.showDownloadProductDialog,
+  showCustomMapDialog: (state: RootState) => state.showCustomMapDialog,
   ...pluginsGetters,
 }
 
@@ -193,7 +216,10 @@ export const mutations: MutationTree<RootState> = {
   SET_USER: (state: RootState, setuser: User | null) => (
     state.user = setuser
   ),
-  SET_ALLINSTITUTIONS: (state: RootState, instArr: string[] | null) => (
+  SET_ALLUSERS: (state: RootState, userArr: User[]) => (
+    state.allUsers = userArr
+  ),
+  SET_ALLINSTITUTIONS: (state: RootState, instArr: Institution[]) => (
     state.allInstitutions = instArr
   ),
   SET_LAST_UPDATE: (state: RootState, ts: string) => (
@@ -307,12 +333,31 @@ export const mutations: MutationTree<RootState> = {
   SET_SELECTED_STATION_DETAIL: (state: RootState, selected: Station | null) => (
     state.selectedStationDetail = selected
   ),
+  SET_TFPS: (state: RootState, settfps: Tfp[]) => {
+    state.tfps = settfps
+  },
+  SET_AVAILABLE_PRODUCTS: (state: RootState, value: Product[]) => {
+    state.availableProducts = value
+  },
+  SET_GMT_HELP: (state: RootState, sethelp: GmtHelpItem[]) => {
+    state.gmtHelp = sethelp
+  },
+  SET_DATADOWNLOAD_EVENT: (state: RootState, event: Event | null) => {
+    state.datadownloadEvent = event
+  },
+  SET_SHOW_DOWNLOAD_PRODUCT_DIALOG: (state: RootState, show: boolean) => {
+    state.showDownloadProductDialog = show
+  },
+  SET_SHOW_CUSTOM_MAP_DIALOG: (state: RootState, value: boolean) => {
+    state.showCustomMapDialog = value
+  },
   ...pluginsMutations,
 }
 
 function apiToEvent (entry: any): Event {
   const props = entry.prop
-  const datetime = new Date(props.date) // this has the local timezone
+  const formatted = props.date.replace(/ /, 'T') // make compatible with Safari
+  const datetime = new Date(formatted) // this date has the local timezone
   const year = datetime.getFullYear()
   const month = datetime.getMonth()
   const day = datetime.getDate()
@@ -604,6 +649,21 @@ export const actions: ActionTree<RootState, RootState> = {
     }
   },
 
+  async fetchAllUsers ({ commit }: any) {
+    if (!this.getters.isAdmin) {
+      return
+    }
+
+    const { data } = await axios.post(API_USERLIST_URL)
+    if ('status' in data &&
+      'users' in data &&
+      data.status === 'success') {
+      commit('SET_ALLUSERS', data.users)
+    } else {
+      throw new Error('Invalid response while getting users')
+    }
+  },
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async sendCompute ({ commit }: any, compute: ComputeRequest) {
     const event = compute.event
@@ -775,6 +835,87 @@ export const actions: ActionTree<RootState, RootState> = {
     ) {
       throw new Error('Changing the password was not successful')
     }
+  },
+
+  async getTfpsForEvent ({ commit }: any, event: Event) {
+    if (!event || !event.compId) {
+      return
+    }
+
+    const { data } = await axios.post(
+      API_GET_TFPS_URL,
+      querystring.stringify({
+        evid: event.compId,
+      }),
+      FORM_ENCODE_CONFIG
+    )
+
+    if ('comp' in data && 'status' in data && data.status === 'success') {
+      const tfparr: Tfp[] = []
+
+      for (let i = 0; i < data.comp.length; i++) {
+        const cur = data.comp[i]
+        tfparr.push({
+          id: cur.code,
+          name: cur.name,
+          country: cur.country,
+          countryname: cur.countryname,
+          lon: cur.lon,
+          lat: cur.lat,
+          eta: cur.eta,
+          ewh: cur.ewh,
+        })
+      }
+
+      commit('SET_TFPS', tfparr)
+    } else {
+      console.error('Could not fetch TFPs for event ' + event.compId)
+    }
+  },
+
+  async initProducts ({ commit }: any) {
+    const { data } = await axios.get(API_GET_AVAILABLE_PRODUCTS)
+
+    if (
+      !('status' in data) || data.status !== 'success' ||
+      !('products' in data) || data.products.length === 0
+    ) {
+      throw new Error('Invalid response from endpoint')
+    }
+
+    commit('SET_AVAILABLE_PRODUCTS', data.products as Product[])
+  },
+
+  async initGmtHelp ({ commit }: any) {
+    const { data } = await axios.get(API_GET_GMT_HELP)
+
+    if (
+      !('status' in data) || data.status !== 'success' ||
+      !('gmt_params' in data) || data.gmt_params.length === 0
+    ) {
+      throw new Error('Invalid response from endpoint')
+    }
+
+    const useritems = []
+
+    for (const item of data.gmt_params) {
+      if (!item.user) {
+        continue
+      }
+
+      useritems.push(
+        {
+          flagname: item.Flagname,
+          help: replaceNewlines(item.help),
+          variable: 'gmt_' + item.variable,
+          dataType: item.data_type,
+          default: item.default,
+          group: item.group,
+        } as GmtHelpItem
+      )
+    }
+
+    commit('SET_GMT_HELP', useritems as GmtHelpItem[])
   },
 
   ...pluginsActions,

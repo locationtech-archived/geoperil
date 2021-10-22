@@ -39,10 +39,11 @@ Contributors:
   >
     <vl-interaction-select
       :features.sync="selectedFeatures"
-      :layers="['arrivaltimesId', 'wavejetsId', 'stationsId']"
+      :layers="['arrivaltimesId', 'wavejetsId', 'stationsId', 'tfpsId']"
       :hit-tolerance="5"
     >
       <vl-style-func v-if="selectedStation" :factory="selectedStationStyleFunc" />
+      <vl-style-func v-if="selectedTfp" :factory="selectedTfpStyleFunc" />
     </vl-interaction-select>
 
     <vl-overlay
@@ -59,7 +60,7 @@ Contributors:
           class="pa-0"
         >
           <v-card-text class="pa-0 pl-2">
-            <span class="mt-2">Arrival time: {{ feature.properties['time'] }} min</span>
+            <span class="mt-2">Arrival time: {{ feature.properties['time'] }} minutes</span>
             <v-btn
               class="pa-0 pl-1 pr-2"
               min-width="0"
@@ -78,7 +79,7 @@ Contributors:
           class="pa-0"
         >
           <v-card-text class="pa-0 pl-2">
-            <span>Wave heights greater than {{ feature.properties['wavemin'] }} m</span>
+            <span>Wave heights greater than {{ feature.properties['wavemin'] }} meters</span>
             <v-btn
               class="pa-0 pl-1 pr-2"
               min-width="0"
@@ -90,6 +91,30 @@ Contributors:
                 mdi-close
               </v-icon>
             </v-btn>
+          </v-card-text>
+        </v-card>
+        <v-card
+          v-if="featureHasProperty(feature, 'ewh') && featureHasProperty(feature, 'eta')"
+          class="pa-0"
+        >
+          <v-card-text class="pa-0 pl-2">
+            <b>{{ feature.properties['tfp'] }}</b>
+            <br>
+            <span v-if="feature.properties['eta'] == -1">Not affected or not covered by computation.</span>
+            <span v-else>Estimated wave height: {{ feature.properties['ewh'].toFixed(2) }} meters</span>
+            <v-btn
+              class="pa-0 pl-1 pr-2"
+              min-width="0"
+              height="16px"
+              text
+              @click="selectedFeatures = []"
+            >
+              <v-icon color="#154f8a" size="16">
+                mdi-close
+              </v-icon>
+            </v-btn>
+            <br>
+            <span v-if="feature.properties['eta'] != -1">Estimated arrival time: {{ feature.properties['eta'].toFixed(1) }} minutes</span>
           </v-card-text>
         </v-card>
       </template>
@@ -207,6 +232,15 @@ Contributors:
       <vl-source-vector ref="sourceStations" />
       <vl-style-func :factory="stationsStyleFunc" />
     </vl-layer-vector>
+
+    <vl-layer-vector
+      id="tfpsId"
+      render-mode="image"
+      :z-index="4"
+    >
+      <vl-source-vector ref="sourceTfps" />
+      <vl-style-func :factory="tfpsStyleFunc" />
+    </vl-layer-vector>
   </vl-map>
 </template>
 
@@ -222,6 +256,7 @@ import Point from 'ol/geom/Point'
 import {
   Event,
   Station,
+  Tfp,
 } from '~/types'
 
 @Component
@@ -234,6 +269,9 @@ export default class Map extends Vue {
   private rotation: Number = 0
   private selectedFeatures: any[] = []
   private stationsRendered: boolean = false
+  private selectedTfp: Tfp|null = null
+  private stationFillColor: string = '#4169E1'
+  private stationOutlineColor: string = '#000'
 
   public onRendercomplete () {
     if (this.stationsRendered) {
@@ -286,31 +324,46 @@ export default class Map extends Vue {
       return
     }
 
-    const ref: any = this.$refs.sourceStations
-    const all: Station[] = this.$store.getters.allStations
+    // reset previously selected features
+    this.$store.commit('SET_SELECTED_STATION_MAP', null)
+    this.selectedTfp = null
 
-    if (!ref || !all || all.length === 0) {
+    const ref: any = this.$refs.sourceStations
+    const allStations: Station[] = this.$store.getters.allStations
+    const allTfps: Tfp[] = this.$store.getters.tfps
+
+    if (!ref || !allStations || allStations.length === 0) {
       return
     }
 
     const filtered: Feature[] = newValue.filter(
       (feature: Feature) => {
-        return ref.featureIds.includes((feature as any).id)
+        return 'id' in feature
       }
     )
 
-    if (filtered.length === 1) {
-      const filteredStation: Station[] = all.filter(
-        (station: Station) => station.id === (filtered[0] as any).id
-      )
-
-      if (filtered.length === 1) {
-        this.$store.commit('SET_SELECTED_STATION_MAP', filteredStation[0])
-        return
-      }
+    if (filtered.length !== 1) {
+      return
     }
 
-    this.$store.commit('SET_SELECTED_STATION_MAP', null)
+    const filteredStation: Station[] = allStations.filter(
+      (station: Station) => station.id === (filtered[0] as any).id
+    )
+
+    if (filteredStation.length === 1) {
+      this.$store.commit('SET_SELECTED_STATION_MAP', filteredStation[0])
+      // found the selected feature, we are done
+      return
+    }
+
+    const filteredTfp: Tfp[] = allTfps.filter(
+      (tfp: Tfp) => tfp.id === (filtered[0] as any).id
+    )
+
+    if (filteredTfp.length === 1) {
+      this.selectedTfp = filteredTfp[0]
+      // return
+    }
   }
 
   get selectedStation (): Station[] {
@@ -319,6 +372,10 @@ export default class Map extends Vue {
 
   get userStations (): Station[] {
     return this.$store.getters.selectedStations
+  }
+
+  get tfps (): Tfp[] {
+    return this.$store.getters.tfps
   }
 
   public updateStations (newValue: Station[]) {
@@ -364,6 +421,52 @@ export default class Map extends Vue {
     this.updateStations(newValue)
   }
 
+  public updateTfps (newValue: Tfp[]) {
+    const sourceRef: any = this.$refs.sourceTfps
+    const source: VectorSource = sourceRef.$source
+
+    if (!source) {
+      return
+    }
+
+    source.clear()
+
+    if (!newValue || newValue.length === 0) {
+      return
+    }
+
+    const features: Feature[] = newValue.map((f: Tfp) => {
+      const point = new Point([f.lon, f.lat])
+      point.transform('EPSG:4326', 'EPSG:3857')
+
+      const newFeature = new Feature({
+        geometry: point,
+      })
+
+      if ('id' in f && f.id) {
+        newFeature.setId(f.id)
+      } else {
+        console.warn('Got a TFP without ID')
+        // random number
+        newFeature.setId(Math.floor(Math.random() * 999999))
+      }
+
+      newFeature.setProperties({
+        tfp: f.name,
+        eta: f.eta,
+        ewh: f.ewh,
+      })
+      return newFeature
+    })
+    source.addFeatures(features)
+  }
+
+  @Watch('tfps')
+  public onTfpsChange (newValue: Tfp[]) {
+    this.selectedFeatures = []
+    this.updateTfps(newValue)
+  }
+
   @Watch('sizeChanged')
   public onSizeChanged () {
     const map: any = this.$refs.map
@@ -376,8 +479,7 @@ export default class Map extends Vue {
     return feature &&
       'properties' in feature &&
       feature.properties &&
-      prop in feature.properties &&
-      feature.properties[prop]
+      prop in feature.properties
   }
 
   public pointOnSurface (g: any) {
@@ -411,7 +513,7 @@ export default class Map extends Vue {
         geometry: line,
       })
 
-      if ('ID' in f.properties) {
+      if ('ID' in f.properties && f.properties.ID) {
         newFeature.setId(f.properties.ID)
       } else {
         // random number
@@ -456,9 +558,13 @@ export default class Map extends Vue {
 
   @Watch('selected')
   public onSelectChange (newValue: Event | null) {
+    this.$store.commit('SET_TFPS', [])
+
     if (!newValue || !('identifier' in newValue)) {
       return
     }
+
+    this.$store.dispatch('getTfpsForEvent', newValue)
 
     const view: any = this.$refs.view
 
@@ -574,20 +680,96 @@ export default class Map extends Vue {
     }
   }
 
-  public stationsStyleFunc (): any {
-    // TODO: set colors based on computation results
+  public tfpsStyleFunc (): any {
+    return (feature: any) => {
+      const props = feature.getProperties()
+      let rgb = '173,173,173'
 
+      if ('eta' in props && props.eta !== -1) {
+        if ('ewh' in props) {
+          const ewh = props.ewh
+          if (ewh < 0.2) {
+            rgb = '0,204,255'
+          } else if (ewh < 0.5) {
+            rgb = '255,255,0'
+          } else if (ewh < 3) {
+            rgb = '255,102,0'
+          } else {
+            rgb = '255,0,0'
+          }
+        }
+      }
+
+      const style = new Style({
+        image: new RegularShape({
+          points: 4,
+          radius: 6,
+          rotation: Math.PI / 4,
+          fill: new Fill({
+            color: 'rgba(' + rgb + ',0.8)',
+          }),
+          stroke: new Stroke({
+            color: '#000',
+            width: 1,
+          }),
+        } as any),
+      })
+
+      return [style]
+    }
+  }
+
+  public selectedTfpStyleFunc (): any {
+    return (feature: any) => {
+      const props = feature.getProperties()
+      let rgb = '173,173,173'
+
+      if ('eta' in props && props.eta !== -1) {
+        if ('ewh' in props) {
+          const ewh = props.ewh
+          if (ewh < 0.2) {
+            rgb = '0,204,255'
+          } else if (ewh < 0.5) {
+            rgb = '255,255,0'
+          } else if (ewh < 3) {
+            rgb = '255,102,0'
+          } else {
+            rgb = '255,0,0'
+          }
+        }
+      }
+
+      const style = new Style({
+        image: new RegularShape({
+          points: 4,
+          radius: 6,
+          rotation: Math.PI / 4,
+          fill: new Fill({
+            color: 'rgba(' + rgb + ',0.8)',
+          }),
+          stroke: new Stroke({
+            color: '#f00',
+            width: 2,
+          }),
+        } as any),
+      })
+
+      return [style]
+    }
+  }
+
+  public stationsStyleFunc (): any {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return (feature: any) => {
       const style = new Style({
         image: new RegularShape({
           points: 3,
-          radius: 6,
+          radius: 7,
           fill: new Fill({
-            color: '#A0A1A0',
+            color: this.stationFillColor,
           }),
           stroke: new Stroke({
-            color: '#4271A7',
+            color: this.stationOutlineColor,
           }),
         } as any),
       })
@@ -597,8 +779,6 @@ export default class Map extends Vue {
   }
 
   public stationHoveredStyleFunc (): any {
-    // TODO: set colors based on computation results
-
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return (feature: any) => {
       const style = new Style({
@@ -606,10 +786,10 @@ export default class Map extends Vue {
           points: 3,
           radius: 12,
           fill: new Fill({
-            color: '#A0A1A0',
+            color: this.stationFillColor,
           }),
           stroke: new Stroke({
-            color: '#4271A7',
+            color: this.stationOutlineColor,
             width: 3,
           }),
         } as any),
@@ -620,16 +800,14 @@ export default class Map extends Vue {
   }
 
   public selectedStationStyleFunc (): any {
-    // TODO: set colors based on computation results
-
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return (feature: any) => {
       const style = new Style({
         image: new RegularShape({
           points: 3,
-          radius: 6,
+          radius: 7,
           fill: new Fill({
-            color: '#A0A1A0',
+            color: this.stationFillColor,
           }),
           stroke: new Stroke({
             color: 'red',

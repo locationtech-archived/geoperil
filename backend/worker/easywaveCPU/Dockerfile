@@ -27,25 +27,24 @@
 
 FROM python:3.7-buster
 
-ARG COMMIT_SHA=439766dce11d795eead531151319bf7e332d8582
+ARG COMMIT_SHA=012c1df1dfbaccc242abfafa42da83e6c73b6267
 ARG DOWNLOAD_URL=https://git.gfz-potsdam.de/api/v4/projects/263/repository/archive.tar.gz?sha=$COMMIT_SHA
 
 WORKDIR /root
 
 RUN wget "$DOWNLOAD_URL" -O easywave.tar.gz && \
     tar xf easywave.tar.gz && \
-    rm easywave.tar.gz
-
-RUN apt-get update && \
-    apt-get install -y \
+    rm easywave.tar.gz && \
+    DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
         autoconf \
         g++ \
         binutils \
         make \
         gdal-bin \
-        python-gdal
-
-RUN cd easyWave-$COMMIT_SHA-$COMMIT_SHA/code && \
+        python-gdal && \
+    cd easyWave-$COMMIT_SHA-$COMMIT_SHA/code && \
     /bin/sh ./bootstrap.sh && \
     ./configure --prefix=/usr && \
     make && \

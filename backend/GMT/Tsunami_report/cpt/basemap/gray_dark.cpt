@@ -1,0 +1,40 @@
+# GeoPeril - A platform for the computation and web-mapping of hazard specific
+# geospatial data, as well as for serving functionality to handle, share, and
+# communicate threat specific information in a collaborative environment.
+#
+# Copyright (C) 2021 GFZ German Research Centre for Geosciences
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the Licence is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the Licence for the specific language governing permissions and
+# limitations under the Licence.
+#
+# Contributors:
+#   Johannes Spazier (GFZ)
+#   Sven Reissland (GFZ)
+#   Martin Hammitzsch (GFZ)
+#   Matthias Rüster (GFZ)
+#   Hannes Fuchs (GFZ)
+
+# Colormap used in the ETOPO1 global relief map:
+# http://ngdc.noaa.gov/mgg/global/global.html
+#
+# Above sea level is a modified version of GMT_globe.cpt, 
+# Designed by Lester M. Anderson (CASP, UK) lester.anderson@casp.cam.ac.uk,
+# Modified by Jesse Varner and Elliot Lim (NOAA/NGDC) with a smaller band of white for the highest elevations.
+# The ocean colors are adapted from GMT_haxby.cpt, popularized by Bill Haxby, LDEO
+# COLOR_MODEL = RGB
+
+-11000	80	80	80	8500	80	80	80
+F	255	255	255				
+B	10	0	121
+N	128	128	128
