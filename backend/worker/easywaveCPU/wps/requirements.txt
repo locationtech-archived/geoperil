@@ -36,7 +36,7 @@ importlib-metadata==2.0.0
 itsdangerous==1.1.0
 Jinja2==2.11.2
 jsonschema==3.2.0
-lxml==4.6.1
+lxml==4.6.5
 MarkupSafe==1.1.1
 numpy==1.19.2
 OWSLib==0.20.0
