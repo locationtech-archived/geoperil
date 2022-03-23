@@ -28,4 +28,11 @@
 #   Hannes Fuchs (GFZ)
 
 /usr/sbin/apache2ctl start
-tail -f /var/log/apache2/error_geoperil.log
+
+touch /var/log/apache2/error_geoperil.log
+
+for i in $(seq 1 9); do
+    touch "/var/log/apache2/error_geoperil.log.$i"
+done
+
+tail -f /var/log/apache2/error*
