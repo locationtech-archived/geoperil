@@ -114,7 +114,7 @@ Contributors:
                   />
                 </v-col>
               </v-row>
-              <v-row justify="end">
+              <v-row class="station-details-btn-row" justify="end">
                 <v-col
                   cols="9"
                   class="pb-0 pl-0"
@@ -995,5 +995,9 @@ svg#station-details {
 
 .multiply-col span {
   line-height: 40px;
+}
+
+.station-details-btn-row {
+  margin: 0;
 }
 </style>

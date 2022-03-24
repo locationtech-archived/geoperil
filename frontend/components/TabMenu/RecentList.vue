@@ -99,7 +99,7 @@ export default class RecentList extends Vue {
 
 <style>
 #recent-list {
-  height: 100%;
+  height: calc(100vh - 50px - 48px - 60px);
   overflow-y: auto;
 }
 </style>

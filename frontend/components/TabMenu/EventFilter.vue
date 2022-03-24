@@ -119,10 +119,12 @@ export default class EventFilter extends Vue {
 
 .filtercheckbox {
   max-width: 60px;
+  margin-top: 16px !important;
 }
 
 .filterrow {
   height: 60px;
   width: 100%;
+  margin-top: 0;
 }
 </style>

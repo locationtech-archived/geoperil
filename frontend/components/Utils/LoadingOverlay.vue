@@ -28,7 +28,7 @@ Contributors:
 -->
 
 <template>
-  <v-layout row justify-center>
+  <v-layout class="loading-layout-row" row justify-center>
     <v-dialog
       v-model="isLoading"
       content-class="loading-dialog"
@@ -63,5 +63,9 @@ export default class LoadingOverlay extends Vue {
 .loading-dialog {
   background-color: black;
   opacity: 0.3;
+}
+
+.loading-layout-row {
+  margin: 0;
 }
 </style>

@@ -46,7 +46,7 @@ Contributors:
 
     <v-tabs-items
       v-model="tab"
-      :class="tabListClass"
+      class="fill-height-tabs"
       :show-arrows="$vuetify.breakpoint.mdAndDown"
     >
       <TabItem>
@@ -118,16 +118,6 @@ export default class TabMenu extends Vue {
     return this.$store.getters.composeEvent
   }
 
-  get tabListClass (): string {
-    let extraClass = ''
-
-    if (this.tab === 0) {
-      extraClass = ' with-filtering'
-    }
-
-    return 'fill-height-tabs' + extraClass
-  }
-
   @Watch('filter', { deep: true })
   public onFilterChange () {
     // with this we avoid changing the property of RecentList directly
@@ -143,16 +133,7 @@ export default class TabMenu extends Vue {
 }
 
 .fill-height-tabs {
-  height: calc(100% - 48px);
-}
-
-.with-filtering {
-  height: calc(100% - 109px) !important;
-}
-
-/* needed for height of v-window__container */
-.fill-height-tabs > div {
-  height: 100%;
+  height: calc(100vh - 50px - 48px);
 }
 
 #left-menu-tabs .v-slide-group__prev,
