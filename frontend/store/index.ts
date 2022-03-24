@@ -26,7 +26,7 @@
 //   Hannes Fuchs (GFZ)
 
 import querystring from 'querystring'
-import { GetterTree, ActionTree, MutationTree } from 'vuex'
+import type { GetterTree, ActionTree, MutationTree } from 'vuex'
 import axios from 'axios'
 import {
   API_PLUGINS_URL,

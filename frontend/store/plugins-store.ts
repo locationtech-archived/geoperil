@@ -27,7 +27,7 @@
 
 // add your actions and mutations for the plugins store here
 
-import { GetterTree, ActionTree, MutationTree } from 'vuex'
+import type { GetterTree, ActionTree, MutationTree } from 'vuex'
 import { PluginsState } from '~/types'
 
 // do not use a function for this variable since it will be merged into the
