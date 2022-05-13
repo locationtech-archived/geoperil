@@ -38,12 +38,20 @@ COPY requirements.txt .
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        rsyslog \
+        cron && \
     pip3 install -r requirements.txt
 
 COPY World_water_body_limits_polygons.geojson.gz .
 RUN gunzip World_water_body_limits_polygons.geojson.gz
 
+COPY cleanup-crontab /etc/cron.d/geoperil-db-cleanup
 COPY managerloop.sh .
 COPY manager.py .
+COPY cron-cleanup-db.sh .
+COPY cleanup-db.py .
+
+RUN chmod 0644 /etc/cron.d/geoperil-db-cleanup
 
 CMD [ "/opt/db-manager/managerloop.sh" ]

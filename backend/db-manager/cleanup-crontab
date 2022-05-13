@@ -1,0 +1,2 @@
+# daily at 02:15
+15 2 * * * root /bin/bash /opt/db-manager/cron-cleanup-db.sh

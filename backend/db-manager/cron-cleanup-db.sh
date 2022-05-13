@@ -27,34 +27,16 @@
 #   Matthias Rüster (GFZ)
 #   Hannes Fuchs (GFZ)
 
-# save environment variables for cron job
-# https://stackoverflow.com/a/48651061/2249798
-declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
+LOGFILE="/var/log/cleanup-db.log"
+ENVFILE="/container.env"
 
-service rsyslog start
-service cron start
+if [ ! -f "${ENVFILE}" ]; then
+    echo "Expected environment file does not exist" > "${LOGFILE}"
+    exit 0
+fi
 
-GEOFON_LAST300_URL="${GEOFON_LIST_URL}?fmt=geojson&nmax=300"
-export GEOFON_OUTPUT="geofon-last300.geojson"
+source "${ENVFILE}"
 
-LOGFILE="db-manager.log"
+echo "$(date)" > "${LOGFILE}"
 
-cd `dirname $0`
-touch "${LOGFILE}"
-
-trap "rm -f running.lock" EXIT
-
-while true; do
-    if [ ! -e running.lock ]; then
-        echo $$ > running.lock
-        if [ "$(du -s ${LOGFILE} | cut -f1)" -gt 100000 ] ; then
-            mv "${LOGFILE}" "${LOGFILE}.old"
-            touch "${LOGFILE}"
-        fi
-        rm "${GEOFON_OUTPUT}" || true
-        wget "${GEOFON_LAST300_URL}" -O "${GEOFON_OUTPUT}"
-        python3 manager.py 2>&1 | tee -a "${LOGFILE}" && rm -f running.lock &
-    fi
-
-    sleep 20
-done
+/usr/local/bin/python3 /opt/db-manager/cleanup-db.py >> "${LOGFILE}" 2>&1
