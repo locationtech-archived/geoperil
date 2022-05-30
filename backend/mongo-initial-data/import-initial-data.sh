@@ -45,6 +45,7 @@ done
 mongo --eval "db.sealeveldata.createIndex({'timestamp': 1})" "$MONGO_HOST/$MONGO_DB"
 mongo --eval "db.sealeveldata.createIndex({'inst': 1})" "$MONGO_HOST/$MONGO_DB"
 mongo --eval "db.sealeveldata.createIndex({'station': 1})" "$MONGO_HOST/$MONGO_DB"
+mongo --eval "db.sealeveldata.createIndex({'inst': 1, 'station': 1, 'timestamp': 1})" "$MONGO_HOST/$MONGO_DB"
 mongo --eval "db.simsealeveldata.createIndex({'timestamp': 1})" "$MONGO_HOST/$MONGO_DB"
 mongo --eval "db.eqs.createIndex({'prop.date': 1})" "$MONGO_HOST/$MONGO_DB"
 mongo --eval "db.eqs.createIndex({'timestamp': 1})" "$MONGO_HOST/$MONGO_DB"
