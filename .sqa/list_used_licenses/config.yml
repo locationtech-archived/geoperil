@@ -49,6 +49,18 @@ manual dependency config:
     - import name: 'data_products'
       pkg name: 'data_products'
       ignore: True
+    - import name: 'auto_extent'
+      pkg name: 'auto_extent'
+      ignore: True
+    - import name: 'build_cpt_file'
+      pkg name: 'build_cpt_file'
+      ignore: True
+    - import name: 'build_legend'
+      pkg name: 'build_legend'
+      ignore: True
+    - import name: 'tsunami_config'
+      pkg name: 'tsunami_config'
+      ignore: True
     - import name: 'bson'
       pkg name: 'pymongo'
     - import name: 'jsonschema'
