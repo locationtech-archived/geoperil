@@ -38,7 +38,7 @@ Jinja2==2.11.2
 jsonschema==3.2.0
 lxml==4.6.5
 MarkupSafe==1.1.1
-numpy==1.21.5
+numpy==1.22.0
 OWSLib==0.20.0
 pandas==1.1.2
 pathlib==1.0.1
